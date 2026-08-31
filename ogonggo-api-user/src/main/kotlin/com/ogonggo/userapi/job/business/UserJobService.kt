@@ -20,12 +20,13 @@ class UserJobService(
     private val eventPublisher: ApplicationEventPublisher,
 ) {
 
-    fun getJobs(userId: Long, page: Int, size: Int, sortType: JobSortType): UserJobPageResult {
+    /** 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다. */
+    fun getJobs(userId: Long?, page: Int, size: Int, sortType: JobSortType): UserJobPageResult {
         val result = jobReader.readPublishedPage(page, size, sortType)
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,
-            bookmarkedJobIds = jobBookmarkReader.readBookmarkedJobIds(userId, jobIds),
+            bookmarkedJobIds = readBookmarkedJobIds(userId, jobIds),
             metrics = jobMetricReader.readAll(jobIds),
         )
     }
@@ -41,9 +42,9 @@ class UserJobService(
      * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.
      * 기록이 비동기이므로 상세 응답의 조회 수에는 이번 조회가 아직 반영되지 않는다.
      */
-    fun getJob(userId: Long, jobId: Long): UserJobResult {
+    fun getJob(userId: Long?, jobId: Long): UserJobResult {
         val job = jobReader.readPublished(jobId)
-        val bookmarked = jobId in jobBookmarkReader.readBookmarkedJobIds(userId, listOf(jobId))
+        val bookmarked = jobId in readBookmarkedJobIds(userId, listOf(jobId))
         val result = UserJobResult.from(job, bookmarked, jobMetricReader.read(jobId))
         eventPublisher.publishEvent(JobViewedEvent(jobId))
         return result
@@ -58,4 +59,8 @@ class UserJobService(
         jobReader.readPublished(jobId)
         jobSourceUrlClickAppender.append(userId, jobId)
     }
+
+    /** 비로그인 조회에서는 북마크 저장소를 아예 건드리지 않는다. */
+    private fun readBookmarkedJobIds(userId: Long?, jobIds: Collection<Long>): Set<Long> =
+        if (userId == null) emptySet() else jobBookmarkReader.readBookmarkedJobIds(userId, jobIds)
 }

@@ -21,7 +21,7 @@ class UserJobController(
 ) : UserJobApi {
 
     override fun getJobs(
-        userId: Long,
+        userId: Long?,
         page: Int,
         size: Int,
         sortType: JobSortType,
@@ -39,7 +39,7 @@ class UserJobController(
     }
 
     override fun getJob(
-        userId: Long,
+        userId: Long?,
         jobId: Long,
     ): ResponseEntity<SuccessResponse<UserJobDetailResponse>> =
         SuccessResponse.ok(UserJobDetailResponse.from(userJobService.getJob(userId, jobId)))

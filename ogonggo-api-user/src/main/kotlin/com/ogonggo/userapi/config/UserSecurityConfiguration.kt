@@ -57,11 +57,14 @@ class UserSecurityConfiguration {
                     "/api/v1/auth/company/signin",
                 ).permitAll()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
-                it.requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/**").authenticated()
+                // 채용공고와 부트캠프 조회는 로그인 없이 연다.
+                // 액세스 토큰을 보내면 북마크 여부가 채워지고, 없으면 비로그인 응답을 준다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/**").permitAll()
                 // 원문 이동 기록은 채용공고 하위의 유일한 쓰기 경로이므로 메서드와 경로를 좁혀 허용한다.
+                // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/source-url-clicks").authenticated()
                 it.requestMatchers("/api/v1/job-bookmarks", "/api/v1/job-bookmarks/**").authenticated()
-                it.requestMatchers(HttpMethod.GET, "/api/v1/bootcamps", "/api/v1/bootcamps/**").authenticated()
+                it.requestMatchers(HttpMethod.GET, "/api/v1/bootcamps", "/api/v1/bootcamps/**").permitAll()
                 it.anyRequest().denyAll()
             }
             .addFilterBefore(

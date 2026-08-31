@@ -8,6 +8,7 @@ import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
@@ -18,6 +19,7 @@ import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
+import com.ogonggo.userapi.auth.error.AuthErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
@@ -275,7 +277,14 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `익명 사용자의 네 조회 API 요청은 표준 401 응답을 반환한다`() {
+    fun `익명 사용자도 공고와 부트캠프 조회 API를 호출할 수 있다`() {
+        Mockito.`when`(userJobService.getJobs(null, 0, 10, JobSortType.LATEST)).thenReturn(jobPageResult())
+        Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult())
+        Mockito.`when`(userJobService.getJobCalendar(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+            .thenReturn(emptyList())
+        Mockito.`when`(userBootcampService.getBootcamps(0, 10, BootcampSortType.LATEST)).thenReturn(bootcampPageResult())
+        Mockito.`when`(userBootcampService.getBootcamp(1L)).thenReturn(bootcampResult())
+
         listOf(
             "/api/v1/jobs",
             "/api/v1/jobs/calendar?from=2026-08-01&to=2026-08-31",
@@ -284,11 +293,40 @@ class UserReadControllerTest @Autowired constructor(
             "/api/v1/bootcamps/1",
         ).forEach { path ->
             mockMvc.perform(get(path))
-                .andExpect(status().isUnauthorized)
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
-                .andExpect(jsonPath("$.message").value("리소스 접근 권한이 없습니다."))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.code").doesNotExist())
         }
+    }
+
+    @Test
+    fun `익명 조회는 사용자 식별자 없이 서비스를 호출한다`() {
+        Mockito.`when`(userJobService.getJobs(null, 0, 10, JobSortType.LATEST))
+            .thenReturn(jobPageResult(bookmarked = false))
+        Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult(bookmarked = false))
+
+        mockMvc.perform(get("/api/v1/jobs"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].bookmarked").value(false))
+
+        mockMvc.perform(get("/api/v1/jobs/1"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.bookmarked").value(false))
+
+        Mockito.verify(userJobService).getJobs(null, 0, 10, JobSortType.LATEST)
+        Mockito.verify(userJobService).getJob(null, 1L)
+    }
+
+    @Test
+    fun `유효하지 않은 토큰으로 조회하면 401 대신 비로그인 응답을 준다`() {
+        Mockito.`when`(ogonggoTokenProvider.parseAccessToken("not-a-real-token"))
+            .thenThrow(UnauthorizedException(AuthErrorCode.INVALID_TOKEN))
+        Mockito.`when`(userJobService.getJobs(null, 0, 10, JobSortType.LATEST))
+            .thenReturn(jobPageResult(bookmarked = false))
+
+        mockMvc.perform(get("/api/v1/jobs").header("Authorization", "Bearer not-a-real-token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].bookmarked").value(false))
     }
 
     @Test
@@ -345,8 +383,9 @@ class UserReadControllerTest @Autowired constructor(
     private fun jobPageResult(
         page: Int = 0,
         size: Int = 10,
+        bookmarked: Boolean = true,
     ): UserJobPageResult = UserJobPageResult(
-        items = listOf(jobSummary()),
+        items = listOf(jobSummary(bookmarked)),
         page = page,
         size = size,
         totalElements = 1,
@@ -354,7 +393,7 @@ class UserReadControllerTest @Autowired constructor(
         hasNext = false,
     )
 
-    private fun jobSummary(): UserJobSummary = UserJobSummary(
+    private fun jobSummary(bookmarked: Boolean = true): UserJobSummary = UserJobSummary(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
@@ -368,13 +407,13 @@ class UserReadControllerTest @Autowired constructor(
         recruitmentStartAt = null,
         recruitmentEndAt = null,
         closedAt = null,
-        bookmarked = true,
+        bookmarked = bookmarked,
         viewCount = 12,
         bookmarkCount = 3,
         commentCount = 0,
     )
 
-    private fun jobResult(): UserJobResult = UserJobResult(
+    private fun jobResult(bookmarked: Boolean = true): UserJobResult = UserJobResult(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
@@ -396,7 +435,7 @@ class UserReadControllerTest @Autowired constructor(
         hiringProcess = "채용 절차",
         sourceUrl = null,
         closedAt = null,
-        bookmarked = true,
+        bookmarked = bookmarked,
         viewCount = 12,
         bookmarkCount = 3,
         commentCount = 0,

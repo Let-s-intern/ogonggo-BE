@@ -114,6 +114,32 @@ class UserJobServiceTest {
     }
 
     @Test
+    fun `비로그인 조회는 북마크 저장소를 조회하지 않고 모두 북마크되지 않은 것으로 본다`() {
+        val job = createJobMock()
+        Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
+        Mockito.`when`(jobReader.readPublishedPage(0, 20, JobSortType.LATEST)).thenReturn(
+            JobPage(
+                jobs = listOf(job),
+                page = 0,
+                size = 20,
+                totalElements = 1,
+                totalPages = 1,
+                hasNext = false,
+            ),
+        )
+        Mockito.`when`(jobMetricReader.read(1L))
+            .thenReturn(JobMetricData(viewCount = 5, bookmarkCount = 2, commentCount = 0))
+        Mockito.`when`(jobMetricReader.readAll(listOf(1L))).thenReturn(
+            mapOf(1L to JobMetricData(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
+        )
+
+        assertEquals(false, service.getJob(null, 1L).bookmarked)
+        assertEquals(false, service.getJobs(null, 0, 20, JobSortType.LATEST).items.single().bookmarked)
+
+        Mockito.verifyNoInteractions(jobBookmarkReader)
+    }
+
+    @Test
     fun `원문 이동은 게시된 공고를 확인한 뒤 사용자를 기록한다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
