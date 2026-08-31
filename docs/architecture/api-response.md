@@ -1,0 +1,139 @@
+# 오공고 API 성공 응답
+
+- 상태: Accepted
+- 결정일: 2026-08-27
+- 최종 변경일: 2026-08-28
+- 적용 범위: `ogonggo-api-user`, 향후 `ogonggo-api-admin` 도메인 API
+- 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
+- 리뷰 상태: 팀 리뷰 필요
+
+## 1. 결정
+
+도메인 API의 성공 응답은 렛츠커리어와 동일한 세 필드로 반환합니다.
+
+```json
+{
+  "status": 200,
+  "message": "요청이 성공했습니다.",
+  "data": {}
+}
+```
+
+| 필드 | 의미 |
+| --- | --- |
+| `status` | 실제 HTTP 상태 코드와 같은 숫자 |
+| `message` | 공통 성공 메시지 `요청이 성공했습니다.` |
+| `data` | 응답 데이터이며 반환할 값이 없으면 `null` |
+
+응답에는 위 세 필드만 둡니다. 실패 응답 계약은 [예외 처리 기준](error-handling.md)을 따릅니다.
+
+## 2. HTTP 상태
+
+| 작업 | 상태 | 팩토리 |
+| --- | --- | --- |
+| 조회·수정·삭제 성공 | 200 OK | `SuccessResponse.ok(...)` |
+| 생성 성공 | 201 Created | `SuccessResponse.created(...)` |
+
+성공 메시지는 현재 상태별로 다르지 않으므로 별도의 `SuccessCode` enum을 만들지 않습니다. 상태별 메시지나 추가 정책이 실제로 필요해질 때 도입을 검토합니다.
+
+## 3. 소유 위치
+
+`SuccessResponse`는 HTTP 표현 계약이므로 core가 아니라 각 API 모듈이 소유합니다. 현재 도메인 엔드포인트가 있는 사용자 API에 먼저 두며, 관리자 도메인 컨트롤러를 추가할 때 관리자 API에도 같은 외부 계약을 구현합니다.
+
+두 API의 독립 배포와 변경 경계를 유지하기 위해 API 모듈끼리 응답 클래스를 공유하지 않습니다. 작은 DTO 중복을 제거하려는 목적으로 core에 HTTP 타입을 넣거나 별도 `web-common` 모듈을 만들지 않습니다.
+
+도메인별 외부 Response는 `presentation/response`에 두고 Controller 파일에는 선언하지 않습니다. 관련된 Summary·Detail·하위 Response는 `UserJobResponses.kt`처럼 한 파일로 묶을 수 있습니다.
+
+Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반환합니다. Result는 `business`의 별도 `*Results.kt`에 두며, 단순한 엔티티나 값 하나로 충분하면 불필요한 Result를 추가하지 않습니다. Persistence 전용 projection은 core 내부에 유지하고 외부 Response로 재사용하지 않습니다.
+
+## 4. 페이지네이션
+
+목록 조회의 외부 요청과 응답은 모두 1부터 시작하는 페이지 번호를 사용합니다.
+
+| 항목 | 규칙 |
+| --- | --- |
+| 요청 파라미터 | `page`, `size` |
+| 기본값 | `page=1`, `size=10` |
+| 허용 범위 | `page >= 1`, `1 <= size <= 100` |
+| 정렬 | `sort` 파라미터로 고르며 기본값은 `LATEST` |
+
+```json
+{
+  "items": [],
+  "pageInfo": {
+    "pageNum": 1,
+    "pageSize": 10,
+    "totalElements": 0,
+    "totalPages": 0
+  }
+}
+```
+
+정렬은 서버가 정한 값 중에서만 고를 수 있습니다. 클라이언트가 임의의 정렬 필드를 전달하는 기능은 제공하지 않습니다.
+
+| `sort` | 의미 | 순서 |
+| --- | --- | --- |
+| `LATEST` | 최신순 (기본값) | `id DESC` |
+| `VIEW_COUNT` | 조회수순 | `viewCount DESC, id DESC` |
+
+조회 수는 지표 테이블이 소유하고 공고·부트캠프와 연관관계가 없으므로 정렬 시 명시적으로 조인합니다. 지표 행은 첫 조회 시점에 생기므로 아직 조회되지 않은 항목은 `0`으로 봅니다. 조회 수가 같으면 페이지가 흔들리지 않도록 식별자 내림차순으로 순서를 확정합니다. 정의되지 않은 값을 보내면 400 `BAD_REQUEST`로 응답합니다.
+
+조회 수 기록은 비동기이므로 조회수순 정렬에도 가장 최근 조회가 즉시 반영되지는 않습니다.
+
+Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core와 Spring Data는 0 기반 번호를 유지하며 `PageResponse`가 응답 번호에 1을 더합니다. 변환은 HTTP 경계에서만 수행합니다.
+
+`hasNext`는 `pageNum < totalPages`로 계산할 수 있어 응답에 두지 않습니다. Controller와 Business 계약에 Spring `Pageable`을 전달하지 않으며, 클라이언트가 임의의 정렬 필드를 전달하는 기능도 제공하지 않습니다.
+
+## 5. 적용 범위와 예외
+
+- `/api/v1` 도메인 엔드포인트에 적용합니다.
+- `/health`는 배포 환경이 직접 확인하는 운영 상태 계약이므로 감싸지 않습니다.
+- 페이지 데이터는 성공 응답의 `data` 안에 둡니다.
+
+### 채용공고 달력
+
+`GET /api/v1/jobs/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`는 요청 날짜 범위와 모집 기간이 겹치는 게시 공고를 반환합니다. 달력 항목은 `id`, `companyName`, `recruitmentStartAt`, `recruitmentEndAt`만 포함하며 마감 임박 일수와 원문 URL은 포함하지 않습니다.
+
+시작·종료 일시가 모두 있는 미삭제 `PUBLISHED` 공고만 대상으로 하고 종료 일시, 식별자 오름차순으로 정렬합니다. `ALWAYS_OPEN` 등 기간이 없는 공고는 제외합니다. D-day 문구는 클라이언트가 `recruitmentEndAt`으로 계산합니다.
+
+달력 응답에는 페이지네이션이 없어 조회 기간이 곧 응답 크기가 되므로 **`from`부터 `to`까지 최대 92일**만 허용합니다. 시작일이 종료일보다 늦거나 기간이 92일을 넘으면 400 `BAD_REQUEST`로 응답하며, 메시지는 `[from]` 또는 `[to]`로 문제가 된 파라미터를 알립니다. 더 넓은 기간이 필요하면 클라이언트가 구간을 나눠 요청합니다.
+
+### 채용공고 상세 내용
+
+채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`를 반환합니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
+
+### 지표
+
+채용공고와 부트캠프의 목록·상세 응답은 `viewCount`, `bookmarkCount`, `commentCount`를 포함합니다. 세 값은 `job_metrics`, `bootcamp_metrics`가 소유하며 지표 행이 아직 없으면 `0`으로 응답합니다. 댓글 기능은 아직 없어 `commentCount`는 항상 `0`이고, 부트캠프 북마크 API도 아직 없어 부트캠프의 `bookmarkCount`는 항상 `0`입니다. 달력 응답은 최소 필드 계약을 유지하므로 지표를 추가하지 않습니다.
+
+목록 조회는 공고 식별자 목록으로 지표를 한 번에 읽어 N+1을 만들지 않습니다.
+
+조회 수는 상세 조회에서 요청당 한 번 증가하며 사용자·세션 단위 중복 제거는 하지 않습니다. Business Service는 조회 수를 직접 올리지 않고 `JobViewedEvent`, `BootcampViewedEvent`로 조회 사실만 발행합니다. 실제 증가는 지표 전용 실행기에서 비동기로 처리하므로 **상세 응답의 `viewCount`에는 이번 조회가 반영되지 않습니다.**
+
+지표 실행기는 스레드를 하나만 두어 지표 기록이 DB 커넥션을 최대 1개만 점유하게 합니다. 지표는 조회 응답의 정확성에 필요하지 않으므로 기록이 실패하거나 대기 큐가 가득 차면 로그만 남기고 버립니다.
+
+`bookmarkCount`도 Business Service가 직접 올리지 않고 `JobBookmarkChangedEvent`, `BootcampBookmarkChangedEvent`로 변경 사실만 발행합니다. 수신자는 등록·해제를 구분하지 않고 활성 북마크를 다시 세므로 갱신을 한 번 놓쳐도 다음 변경에서 값이 스스로 복구됩니다.
+
+북마크가 롤백되면 지표도 바뀌면 안 되므로 이 이벤트는 `AFTER_COMMIT`에만 처리합니다. 그 결과 북마크 직후 목록을 다시 조회하면 이전 `bookmarkCount`가 보일 수 있습니다. 사용자 본인의 `bookmarked` 상태는 북마크 행에서 직접 읽으므로 항상 정확합니다.
+
+### 채용공고 원문 이동
+
+`POST /api/v1/jobs/{jobId}/source-url-clicks`는 사용자가 공고 원문으로 이동하는 버튼을 눌렀다는 사실을 기록합니다. 이동할 주소는 상세 응답의 `sourceUrl`을 사용하며 이 API는 주소를 반환하지 않습니다.
+
+기록은 사용자와 공고마다 한 행만 남기고 `job_source_url_clicks`의 유니크 제약으로 보장합니다. 같은 사용자가 버튼을 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한 채 200으로 응답합니다. 버튼이 항상 동작해야 하므로 북마크와 달리 409를 사용하지 않으며, 새 행이 생기지 않는 호출이 있어 201 대신 200과 `data: null`로 응답합니다.
+
+북마크와 달리 취소할 수 있는 상태가 아니라 일어난 사실이므로 소프트 삭제 컬럼을 두지 않습니다.
+
+### 채용공고 북마크
+
+일반 채용공고 목록과 상세 응답은 현재 사용자의 상태를 나타내는 `bookmarked`를 포함합니다. `GET /api/v1/job-bookmarks`는 게시 중인 미삭제 북마크 공고만 최근 북마크 순으로 반환하며 일반 목록과 같은 페이지 응답을 사용합니다. 달력 응답은 최소 필드 계약을 유지하므로 `bookmarked`를 추가하지 않습니다.
+
+## 6. 검토했지만 선택하지 않은 대안
+
+- **core에서 응답을 공유:** API 중복은 줄지만 core가 HTTP 응답 형식을 소유하게 되어 제외했습니다.
+- **`web-common` 모듈 추가:** 현재 공유 대상이 작은 DTO 하나뿐이라 모듈 비용이 더 커 제외했습니다.
+- **`ResponseBodyAdvice`로 자동 래핑:** Controller 반환형만으로 외부 계약을 알기 어렵고 예외·파일 응답을 구분하는 숨은 규칙이 생겨 제외했습니다.
+- **렛츠커리어의 페이지 번호를 그대로 복제:** 요청은 1 기반이고 응답은 0 기반인 불일치가 있어 양쪽을 1 기반으로 통일했습니다.
+- **Spring `Pageable`을 계층 전체에 전달:** Spring 타입과 임의 정렬 입력이 Business·core 계약으로 퍼지므로 제외했습니다.
+
+관리자 도메인 API를 추가할 때 이 문서의 적용 범위와 구현 상태를 갱신해야 합니다.

@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: ogonggo-api-user
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/ogonggo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:ogonggo}
+    password: ${DB_PASSWORD:ogonggo}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+ogonggo:
+  auth:
+    jwt:
+      # Base64 인코딩된 HS512 시크릿. 렛츠커리어 시크릿과 공유하지 않는다.
+      secret: 409qvcRaoh8TDusRFj0+BtsRQ6fs/utUCR4I2bE3Ha3nuIygUIcqY2v4sQD1vzpBtqLNQ52XuZNvD0V7tVptVg==
+      access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:30m}
+      refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:14d}
+  letscareer:
+    base-url: ${LETSCAREER_BASE_URL:http://localhost:8090}
+    internal-api-key: ${LETSCAREER_INTERNAL_API_KEY}
+    connect-timeout: ${LETSCAREER_CONNECT_TIMEOUT:2s}
+    read-timeout: ${LETSCAREER_READ_TIMEOUT:5s}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:true}
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  paths-to-match: /api/**
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json

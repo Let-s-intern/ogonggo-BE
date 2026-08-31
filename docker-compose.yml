@@ -1,0 +1,69 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ogonggo
+      MYSQL_USER: ogonggo
+      MYSQL_PASSWORD: ogonggo
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - ogonggo-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.2
+    command: ["redis-server", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ogonggo-api-user:
+    build:
+      context: .
+      dockerfile: ogonggo-api-user/Dockerfile
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/ogonggo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: ogonggo
+      DB_PASSWORD: ogonggo
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      LETSCAREER_BASE_URL: ${LETSCAREER_BASE_URL}
+      LETSCAREER_INTERNAL_API_KEY: ${LETSCAREER_INTERNAL_API_KEY}
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ogonggo-api-admin:
+    build:
+      context: .
+      dockerfile: ogonggo-api-admin/Dockerfile
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/ogonggo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: ogonggo
+      DB_PASSWORD: ogonggo
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  ogonggo-mysql:

@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: ogonggo-api-admin
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/ogonggo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:ogonggo}
+    password: ${DB_PASSWORD:ogonggo}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    properties:
+      hibernate:
+        format_sql: true
+
+ogonggo:
+  admin:
+    internal:
+      # 크롤러 등 내부 클라이언트가 사용하는 API 키. 값이 없으면 내부 API를 전면 차단한다.
+      api-key: ${ADMIN_INTERNAL_API_KEY:}
+
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:true}
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  paths-to-match: /api/**
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
