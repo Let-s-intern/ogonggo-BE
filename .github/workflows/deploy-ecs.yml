@@ -38,8 +38,6 @@ on:
         required: true
       ECS_SERVICE:
         required: true
-      ECS_TASK_DEFINITION_FAMILY:
-        required: true
       CONTAINER_NAME:
         required: true
       APPLICATION_SECRET:
@@ -113,14 +111,27 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      # 태스크 정의는 저장소에 두지 않고 현재 등록된 최신 리비전을 내려받아 이미지만 교체한다.
+      # 태스크 정의는 저장소에 두지 않고 이미지만 교체해 새 리비전을 등록한다.
       # 콘솔에서 CPU·메모리·환경변수를 바꿔도 배포가 그 값을 덮어쓰지 않는다.
+      #
+      # 기준은 패밀리의 최신 리비전이 아니라 서비스가 지금 실행 중인 리비전이다.
+      # 콘솔에서 이전 리비전으로 롤백해 둔 상태에서 다시 배포할 때,
+      # 패밀리 최신(불량일 수 있는) 리비전을 기반으로 삼는 것을 막는다.
       - name: 현재 태스크 정의 내려받기
         env:
-          FAMILY: ${{ secrets.ECS_TASK_DEFINITION_FAMILY }}
+          CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          SERVICE: ${{ secrets.ECS_SERVICE }}
         run: |
+          TASK_DEF_ARN=$(aws ecs describe-services \
+            --cluster "$CLUSTER" --services "$SERVICE" \
+            --query 'services[0].taskDefinition' --output text)
+          if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
+            echo "::error::서비스 $SERVICE 의 태스크 정의를 찾지 못했습니다."
+            exit 1
+          fi
+          echo "기준 태스크 정의: $TASK_DEF_ARN"
           aws ecs describe-task-definition \
-            --task-definition "$FAMILY" \
+            --task-definition "$TASK_DEF_ARN" \
             --query taskDefinition \
             > task-definition-raw.json
           jq 'del(
