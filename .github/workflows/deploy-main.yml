@@ -1,0 +1,75 @@
+##
+# main 브랜치 운영 배포.
+#
+# 두 API는 독립 배포 경계를 갖지만 하나의 DB를 공유하고 Hibernate ddl-auto로 스키마를
+# 반영한다. README의 "avoid concurrent schema updates during deployment" 원칙에 따라
+# 두 서비스를 동시에 올리지 않고 user -> admin 순서로 배포한다.
+# 운영 ddl-auto를 none으로 고정한 뒤에는 admin 잡의 needs를 지워 병렬 배포로 바꿀 수 있다.
+#
+# 시크릿은 저장소(Repository) 시크릿으로 등록한다. 재사용 워크플로에 넘길 값은
+# 호출자 컨텍스트에서 평가되므로 Environment 시크릿에 두면 해석되지 않는다.
+##
+name: Deploy to Amazon ECS
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '배포 대상'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - user
+          - admin
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  user:
+    name: ogonggo-api-user
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'user'
+    uses: ./.github/workflows/deploy-ecs.yml
+    with:
+      module: ogonggo-api-user
+      health-check-url: http://ogonggo-alb-1441877515.ap-northeast-2.elb.amazonaws.com/health
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_USER }}
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE_USER }}
+      ECS_TASK_DEFINITION_FAMILY: ${{ secrets.ECS_TASK_DEFINITION_FAMILY_USER }}
+      CONTAINER_NAME: ${{ secrets.CONTAINER_NAME_USER }}
+      APPLICATION_SECRET: ${{ secrets.APPLICATION_SECRET_USER }}
+
+  admin:
+    name: ogonggo-api-admin
+    needs: [ user ]
+    # user 배포가 실패하면 스키마 상태를 알 수 없으므로 admin 배포를 진행하지 않는다.
+    # user를 건너뛴 workflow_dispatch(target=admin)에서는 실행되어야 하므로 always()로 감싼다.
+    if: |
+      always() && !failure() && !cancelled() &&
+      (github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'admin')
+    uses: ./.github/workflows/deploy-ecs.yml
+    with:
+      module: ogonggo-api-admin
+      # 도메인과 HTTPS 리스너가 준비되면 8081 대신 그 주소로 바꾼다.
+      health-check-url: http://ogonggo-alb-1441877515.ap-northeast-2.elb.amazonaws.com:8081/health
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_ADMIN }}
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE_ADMIN }}
+      ECS_TASK_DEFINITION_FAMILY: ${{ secrets.ECS_TASK_DEFINITION_FAMILY_ADMIN }}
+      CONTAINER_NAME: ${{ secrets.CONTAINER_NAME_ADMIN }}
+      APPLICATION_SECRET: ${{ secrets.APPLICATION_SECRET_ADMIN }}
