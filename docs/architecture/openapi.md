@@ -61,6 +61,16 @@ Mapping과 검증 annotation을 인터페이스와 구현체에 나누거나 중
 
 로그인과 토큰 재발급처럼 공개된 작업에는 Security Requirement를 붙이지 않습니다. 전역 인증 요구를 선언한 뒤 공개 작업에서 해제하는 방식은 실제 Security 정책과 어긋나기 쉬워 사용하지 않습니다.
 
+### 토큰이 선택인 작업 — 확인 필요
+
+채용공고 목록·상세는 로그인 없이 호출할 수 있지만, 토큰을 보내면 응답의 `bookmarked`가 채워집니다. 인증이 필수도 아니고 무의미하지도 않은 세 번째 경우입니다.
+
+이런 작업에는 `@SecurityRequirement`를 **붙입니다.** 붙이지 않으면 Swagger UI가 토큰을 보내지 않아 `bookmarked`가 항상 `false`인 경로밖에 시험할 수 없습니다. 다만 OpenAPI에는 "선택적 인증"을 표현하는 방법이 없어, 명세만 보면 필수처럼 읽힙니다. 실제 필수 여부는 작업 description에 적습니다.
+
+`@SecurityRequirement`를 인터페이스가 아니라 메서드에 선언하는 이유도 여기에 있습니다. 한 인터페이스 안에서 공개 작업(`GET /api/v1/jobs/calendar`), 토큰 선택 작업(`GET /api/v1/jobs`), 인증 필수 작업(`POST /api/v1/jobs/{jobId}/source-url-clicks`)이 섞입니다.
+
+대안으로 `security: [{}, {BearerAuth: []}]`처럼 빈 요구사항을 함께 선언해 선택임을 표현하는 방법이 있지만 springdoc annotation으로는 표현이 번거롭고 도구별 해석이 갈립니다. **팀 논의 필요.**
+
 ## 6. 검증
 
 전체 OpenAPI JSON snapshot은 작은 구현 변경에도 깨지므로 사용하지 않습니다. `/v3/api-docs` 계약 테스트에서 다음 핵심만 검증합니다.

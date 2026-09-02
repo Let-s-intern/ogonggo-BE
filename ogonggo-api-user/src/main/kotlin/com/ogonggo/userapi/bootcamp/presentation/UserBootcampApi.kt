@@ -3,7 +3,6 @@ package com.ogonggo.userapi.bootcamp.presentation
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
-import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -12,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
-import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
@@ -24,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 
 @Tag(name = "부트캠프")
-@SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
 @RequestMapping("/api/v1/bootcamps")
 interface UserBootcampApi {
 

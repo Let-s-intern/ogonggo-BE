@@ -48,10 +48,18 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1auth~1letscareer/post").isObject)
         assertFalse(document.at("/paths/~1health").isObject)
 
+        // 목록·상세는 로그인 없이 열려 있지만, 토큰을 보내면 북마크 여부가 채워지므로 스키마는 그대로 노출한다.
         val jobList = document.at("/paths/~1api~1v1~1jobs/get")
         assertTrue(jobList.at("/security/0/BearerAuth").isArray)
         assertPageParameter(jobList, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(jobList, "size", defaultValue = "10", minimum = 1, maximum = 100)
+
+        // 부트캠프 조회와 공고 달력은 토큰을 전혀 쓰지 않으므로 Security Requirement를 붙이지 않는다.
+        assertFalse(document.at("/paths/~1api~1v1~1bootcamps/get").has("security"))
+        assertFalse(document.at("/paths/~1api~1v1~1bootcamps~1{bootcampId}/get").has("security"))
+
+        val sourceUrlClick = document.at("/paths/~1api~1v1~1jobs~1{jobId}~1source-url-clicks/post")
+        assertTrue(sourceUrlClick.at("/security/0/BearerAuth").isArray)
 
         val jobBookmarks = document.at("/paths/~1api~1v1~1job-bookmarks/get")
         assertTrue(jobBookmarks.at("/security/0/BearerAuth").isArray)
@@ -63,7 +71,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(deleteBookmark.at("/responses/200/content/application~1json/schema").isObject)
 
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
-        assertTrue(jobCalendar.at("/security/0/BearerAuth").isArray)
+        assertFalse(jobCalendar.has("security"))
         assertEquals("date", jobCalendar.parameter("from").at("/schema/format").asText())
         assertEquals("date", jobCalendar.parameter("to").at("/schema/format").asText())
 

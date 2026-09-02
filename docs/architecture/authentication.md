@@ -103,6 +103,31 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 
 마지막 행은 `letscareer_user_id` 유니크 제약이 걸린 경우입니다. 제약 위반 이후에는 트랜잭션이 롤백 대상이 되어 같은 트랜잭션에서 재조회할 수 없으므로, 같은 요청을 다시 보내도록 재시도 가능한 409로 변환합니다.
 
+## 4-1. 로그인 없이 여는 조회 API
+
+> 콘텐츠를 보는 데는 로그인을 요구하지 않는다. 로그인은 그 사람이 누구인지 응답에 담아야 할 때만 요구한다.
+
+채용공고와 부트캠프의 조회 경로는 비로그인 사용자에게 열려 있습니다. 검색 유입과 공유 링크로 들어온 사람이 로그인 화면부터 만나지 않게 하기 위해서입니다.
+
+| 경로 | 로그인 | 비고 |
+| --- | --- | --- |
+| `GET /api/v1/jobs`, `/api/v1/jobs/{jobId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
+| `GET /api/v1/jobs/calendar` | 불필요 | 응답에 사용자별 값이 없다 |
+| `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 불필요 | 응답에 사용자별 값이 없다 |
+| `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
+| `/api/v1/job-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
+| `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
+
+`anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다.
+
+### 토큰이 선택인 경로의 주의점
+
+`UserAuthenticationFilter`는 토큰이 유효하지 않으면 `SecurityContext`를 비우고 요청을 그대로 통과시킵니다. 이 동작과 `permitAll`이 만나면 **만료·위조 토큰으로 조회해도 401이 아니라 비로그인 응답(200, `bookmarked: false`)이 나갑니다.**
+
+이는 의도한 동작입니다. 조회 화면이 토큰 만료로 비는 것보다 북마크 표시만 빠진 채로 보이는 편이 낫습니다. 대신 클라이언트는 조회 응답의 401로 재발급 시점을 알 수 없으므로, 재발급은 인증이 필수인 경로(북마크, 원문 이동 기록)의 401로 판단해야 합니다.
+
+Business Service는 `userId: Long?`를 받고 `null`이면 북마크 저장소를 조회하지 않습니다. Presentation의 `@AuthenticationPrincipal`도 같은 경로에서만 nullable로 선언합니다. 인증이 필수인 경로는 `Long`을 그대로 유지해 실수로 익명 요청을 받지 않게 합니다.
+
 ## 5. 사용자 역할과 기업 회원
 
 **오공고 역할과 기업 정보의 기준 시스템은 오공고**입니다. 렛츠커리어 role(`ADMIN`/`USER`)과는 별개 축이라 동기화하지 않습니다. 렛츠커리어에서 `USER`인 사람이 오공고에서 `COMPANY`일 수 있습니다.
