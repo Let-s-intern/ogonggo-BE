@@ -24,7 +24,7 @@
 | REST URI, HTTP 메서드, 상태 전이 API, 멱등성 | [`docs/architecture/rest-api-design.md`](docs/architecture/rest-api-design.md) | API 경로·메서드·상태 코드를 추가하거나 변경할 때 |
 | OpenAPI, Swagger UI, API 계약 인터페이스, 명세 테스트 | [`docs/architecture/openapi.md`](docs/architecture/openapi.md) | Controller·Swagger 명세·API 계약 테스트를 추가하거나 변경할 때 |
 | 시간대, Clock, 현재 시각 생성, JPA Auditing, 시간 테스트 | [`docs/architecture/time-handling.md`](docs/architecture/time-handling.md) | 시간 기반 기능·엔티티 일시·스케줄러·외부 시간 연동을 추가하거나 변경할 때 |
-| 사용자 인증, 렛츠커리어 로그인 연동, 토큰 수명, 내부 API 키, 사용자 역할과 기업회원 등록 | [`docs/architecture/authentication.md`](docs/architecture/authentication.md) | 로그인·토큰·세션 흐름이나 사용자 역할을 바꾸거나 렛츠커리어 연동 지점을 수정할 때 |
+| 사용자 인증, 렛츠커리어 로그인 연동, 토큰 수명, 내부 API 키, 사용자 역할과 기업회원 등록, 브라우저 CORS 허용 오리진 | [`docs/architecture/authentication.md`](docs/architecture/authentication.md) | 로그인·토큰·세션 흐름이나 사용자 역할을 바꾸거나, 렛츠커리어 연동 지점 또는 CORS 허용 오리진을 수정할 때 |
 | 실제 Gradle 모듈과 의존성 | `settings.gradle.kts`, 루트 및 각 모듈의 `build.gradle.kts` | 모듈이나 라이브러리 의존성을 변경할 때 |
 
 표에 없는 주제는 아직 팀 규칙으로 문서화되지 않은 상태입니다. 기존 코드만 보고 새로운 규칙을 확정하지 말고 `확인 필요`로 알립니다.
