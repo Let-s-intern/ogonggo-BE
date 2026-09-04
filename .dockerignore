@@ -1,5 +1,7 @@
 .gradle
 **/build
+# 빌드 산출물 중 실행 jar만 이미지 컨텍스트에 포함한다.
+!**/build/libs/*.jar
 .git
 .idea
 *.iml
