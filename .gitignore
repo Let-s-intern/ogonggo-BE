@@ -9,4 +9,6 @@ build/
 
 application.yml
 application-dev.yml
+# 테스트 설정은 저장소에 있어야 CI가 운영 설정 없이 돌 수 있다.
+!*/src/test/resources/application.yml
 
