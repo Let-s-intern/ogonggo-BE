@@ -79,9 +79,17 @@ Administrator endpoints are still denied until the administrator authentication 
 
 ## Docker
 
+이미지는 미리 빌드된 jar를 복사만 합니다. 컨테이너 안에서 Gradle을 돌리지 않으므로 jar를 먼저 만들어야 합니다.
+
+```bash
+./gradlew :ogonggo-api-user:bootJar :ogonggo-api-admin:bootJar
+```
+
 ```bash
 docker compose up --build
 ```
+
+CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_FILE` 빌드 인자로 경로를 넘깁니다.
 
 ## Schema management
 
