@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
         "ogonggo.auth.jwt.secret=b2dvbmdnby1sb2NhbC10ZXN0LXNlY3JldC1rZXktcGxlYXNlLXJlcGxhY2UtaW4tcmVhbC1lbnZzISEwMDAwMDAwMA==",
         "ogonggo.letscareer.base-url=http://localhost:8090",
         "ogonggo.letscareer.internal-api-key=test-internal-api-key",
+        "ogonggo.advertisement.slack.inquiry-url=https://hooks.slack.com/services/T000/B000/test",
     ],
 )
 @AutoConfigureMockMvc
@@ -108,6 +109,16 @@ class UserOpenApiContractTest @Autowired constructor(
         assertFalse(companySignIn.has("security"))
         assertTrue(
             companySignIn.at("/responses/401/description").asText().startsWith("INVALID_COMPANY_CREDENTIALS"),
+        )
+
+        // 광고 문의는 오공고 계정이 없는 기업 담당자가 호출하므로 Security Requirement를 붙이지 않는다.
+        val advertisementInquiry = document.at("/paths/~1api~1v1~1advertisement-inquiries/post")
+        assertTrue(advertisementInquiry.isObject)
+        assertFalse(advertisementInquiry.has("security"))
+        assertTrue(advertisementInquiry.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(
+            advertisementInquiry.at("/responses/503/description").asText()
+                .startsWith("ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED"),
         )
 
         val publicSignIn = document.at("/paths/~1api~1v1~1auth~1letscareer/post")
