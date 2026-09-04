@@ -22,3 +22,13 @@ data class AdvertisementSlackProperties(
     val readTimeout: Duration = Duration.ofSeconds(5),
 )
 
+/**
+ * 접수 확인 메일 설정이다. SMTP 접속 정보는 Spring Boot가 spring.mail.*로 받는다.
+ *
+ * from은 Spring Boot의 표준 키가 아니라 여기서 따로 받는다.
+ * 비어 있으면 발송을 건너뛴다. 발신 주소가 없는 메일은 SES가 거절한다.
+ */
+@ConfigurationProperties(prefix = "ogonggo.advertisement.mail")
+data class AdvertisementMailProperties(
+    val from: String = "",
+)

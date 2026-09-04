@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisement.business
 
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
+import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryMailer
 import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryNotifier
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -11,17 +12,21 @@ import org.mockito.Mockito
 class AdvertisementInquiryServiceTest {
 
     private val advertisementInquiryNotifier = Mockito.mock(AdvertisementInquiryNotifier::class.java)
-    private val service = AdvertisementInquiryService(advertisementInquiryNotifier)
+    private val advertisementInquiryMailer = Mockito.mock(AdvertisementInquiryMailer::class.java)
+    private val service = AdvertisementInquiryService(advertisementInquiryNotifier, advertisementInquiryMailer)
 
     @Test
-    fun `문의 내용을 그대로 알림으로 전달한다`() {
+    fun `슬랙으로 알린 뒤 문의자에게 접수 확인 메일을 보낸다`() {
         service.createInquiry(COMMAND)
 
-        Mockito.verify(advertisementInquiryNotifier).notify(NOTIFICATION)
+        // 순서가 바뀌면 접수 실패로 응답한 문의에도 확인 메일이 나간다.
+        val inOrder = Mockito.inOrder(advertisementInquiryNotifier, advertisementInquiryMailer)
+        inOrder.verify(advertisementInquiryNotifier).notify(NOTIFICATION)
+        inOrder.verify(advertisementInquiryMailer).sendConfirmation(NOTIFICATION)
     }
 
     @Test
-    fun `알림 발송에 실패하면 접수도 실패한다`() {
+    fun `알림 발송에 실패하면 접수도 실패하고 확인 메일을 보내지 않는다`() {
         // 저장소가 없어 알림이 곧 접수 결과다. 실패를 삼키면 사라진 문의를 접수됐다고 알리게 된다.
         Mockito.doThrow(InternalServerException(AdvertisementErrorCode.ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED))
             .`when`(advertisementInquiryNotifier)
@@ -33,6 +38,7 @@ class AdvertisementInquiryServiceTest {
             AdvertisementErrorCode.ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED,
             exception.errorCode,
         )
+        Mockito.verifyNoInteractions(advertisementInquiryMailer)
     }
 
     companion object {

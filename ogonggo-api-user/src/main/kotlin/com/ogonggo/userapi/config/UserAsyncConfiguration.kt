@@ -33,7 +33,26 @@ class UserAsyncConfiguration {
         setAwaitTerminationSeconds(5)
     }
 
+    /**
+     * 광고 문의 접수 확인 메일 전용 실행기다.
+     *
+     * 지표 실행기와 나눈다. 지표는 큐가 차면 버려도 되지만 확인 메일은 버리면 담당자가 접수 여부를 알 수 없고,
+     * SMTP는 DB UPDATE보다 오래 걸려 단일 스레드를 오래 붙잡는다.
+     * 대신 큐가 가득 차면 CallerRunsPolicy로 호출한 스레드가 직접 보내 유실 대신 지연을 택한다.
+     */
+    @Bean(name = [ADVERTISEMENT_TASK_EXECUTOR])
+    fun advertisementTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        corePoolSize = 1
+        maxPoolSize = 2
+        queueCapacity = 100
+        setThreadNamePrefix("advertisement-")
+        setRejectedExecutionHandler(ThreadPoolExecutor.CallerRunsPolicy())
+        setWaitForTasksToCompleteOnShutdown(true)
+        setAwaitTerminationSeconds(5)
+    }
+
     companion object {
         const val METRIC_TASK_EXECUTOR = "metricTaskExecutor"
+        const val ADVERTISEMENT_TASK_EXECUTOR = "advertisementTaskExecutor"
     }
 }

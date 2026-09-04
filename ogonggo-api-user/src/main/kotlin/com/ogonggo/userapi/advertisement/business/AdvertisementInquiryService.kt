@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.business
 
+import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryMailer
 import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryNotifier
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service
 @Service
 class AdvertisementInquiryService(
     private val advertisementInquiryNotifier: AdvertisementInquiryNotifier,
+    private val advertisementInquiryMailer: AdvertisementInquiryMailer,
 ) {
 
     fun createInquiry(command: CreateAdvertisementInquiryCommand) {
@@ -28,7 +30,11 @@ class AdvertisementInquiryService(
             command.inquiryType,
         )
 
-        advertisementInquiryNotifier.notify(AdvertisementInquiryNotification.from(command))
+        val notification = AdvertisementInquiryNotification.from(command)
+
+        // 슬랙을 먼저 보낸다. 순서를 바꾸면 접수 실패(503)로 응답한 문의에도 확인 메일이 나간다.
+        advertisementInquiryNotifier.notify(notification)
+        advertisementInquiryMailer.sendConfirmation(notification)
     }
 
     companion object {

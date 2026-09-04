@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit
         "ogonggo.auth.jwt.secret=b2dvbmdnby1sb2NhbC10ZXN0LXNlY3JldC1rZXktcGxlYXNlLXJlcGxhY2UtaW4tcmVhbC1lbnZzISEwMDAwMDAwMA==",
         "ogonggo.letscareer.base-url=http://localhost:8090",
         "ogonggo.letscareer.internal-api-key=test-internal-api-key",
+        // spring.mail.host가 있어야 Spring Boot가 JavaMailSender를 만든다. 실제로 발송하지는 않는다.
+        "spring.mail.host=localhost",
     ],
 )
 class MetricAsyncDispatchTest @Autowired constructor(

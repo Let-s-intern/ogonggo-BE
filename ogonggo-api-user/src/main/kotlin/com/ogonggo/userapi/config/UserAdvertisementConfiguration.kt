@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.config
 
 import com.ogonggo.userapi.advertisement.implement.ADVERTISEMENT_SLACK_REST_CLIENT
+import com.ogonggo.userapi.advertisement.implement.AdvertisementMailProperties
 import com.ogonggo.userapi.advertisement.implement.AdvertisementSlackProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -9,7 +10,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestClient
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(AdvertisementSlackProperties::class)
+@EnableConfigurationProperties(AdvertisementSlackProperties::class, AdvertisementMailProperties::class)
 class UserAdvertisementConfiguration {
 
     /**
