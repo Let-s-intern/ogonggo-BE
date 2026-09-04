@@ -38,6 +38,8 @@ class AdminOpenApiContractTest @Autowired constructor(
         val document = objectMapper.readTree(response.contentAsString)
 
         assertEquals("Ogonggo Admin API", document.at("/info/title").asText())
+        // 절대 URL이면 HTTP ALB 주소가 새어 나가 HTTPS Swagger UI에서 Try it out이 막힌다.
+        assertEquals("/", document.at("/servers/0/url").asText())
         assertTrue(document.at("/components/securitySchemes/BearerAuth").isObject)
         assertFalse(document.at("/paths/~1health").isObject)
     }
