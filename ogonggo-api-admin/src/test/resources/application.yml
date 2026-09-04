@@ -1,0 +1,15 @@
+# 테스트 전용 설정이다.
+# 운영 설정(src/main/resources/application.yml)은 저장소에 없으므로 테스트가 그것에 의존하면 안 된다.
+# 데이터소스·시크릿처럼 테스트마다 달라지는 값은 각 테스트의 @SpringBootTest(properties = ...)가 정한다.
+# 여기에는 API 계약에 영향을 주는 설정만 둔다.
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  # /health를 문서에서 제외하는 근거다. OpenAPI 계약 테스트가 이 값을 검증한다.
+  paths-to-match: /api/**
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json

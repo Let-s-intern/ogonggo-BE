@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-08-28
+- 최종 변경일: 2026-09-04
 - 적용 범위: `ogonggo-api-user`, `ogonggo-core`, `lets-career-server`
 - 예상 독자: 오공고 서버와 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -118,7 +118,7 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `/api/v1/job-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 
-`anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다.
+`anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다. 브라우저 preflight(`OPTIONS`)만 예외로, 인가 규칙 첫 줄의 `CorsUtils::isPreFlightRequest`가 먼저 허용합니다([브라우저 CORS 허용 오리진](#7-2-브라우저-cors-허용-오리진) 참고).
 
 ### 토큰이 선택인 경로의 주의점
 
@@ -204,6 +204,39 @@ POST /api/v1/auth/company/signin
 키를 비교할 때는 비교에 걸린 시간으로 키를 추측할 수 없도록 상수 시간 비교를 사용합니다. 키를 설정하지 않으면 어떤 요청도 통과하지 못하므로 내부 API가 전면 차단됩니다. 키가 없거나 다르면 401 `UNAUTHORIZED`로 응답합니다.
 
 이 키는 렛츠커리어와 주고받는 `ogonggo.letscareer.internal-api-key`와 **다른 값이어야 합니다.** 두 키는 방향과 상대가 다릅니다.
+
+## 7-2. 브라우저 CORS 허용 오리진
+
+> 오리진 목록은 배포 설정이 아니라 코드로 관리한다.
+
+프론트엔드는 API와 다른 오리진에서 동작하므로 브라우저가 CORS를 강제합니다. 두 API 모듈의 SecurityFilterChain이 모두 `anyRequest().denyAll()`로 끝나기 때문에, 설정이 없으면 preflight가 인가 단계에서 막혀 모든 브라우저 호출이 실패합니다.
+
+허용 오리진은 사용자 API와 관리자 API가 각각 소유합니다. 두 모듈은 독립 배포 경계이고 화면 도메인이 서로 다르게 바뀌므로, 공통 클래스로 묶지 않고 각 모듈의 `config` 패키지에 둡니다.
+
+| 모듈 | 위치 |
+| --- | --- |
+| 사용자 API | `UserSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
+| 관리자 API | `AdminSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
+
+현재 두 목록은 같은 값입니다.
+
+| 오리진 | 용도 |
+| --- | --- |
+| `https://www.ogonggo.co.kr` | 운영 프론트엔드 |
+| `https://ogonggo.co.kr` | apex 도메인 직접 접속 |
+| `http://localhost:[*]` | 로컬 개발 서버. 포트는 사람과 프레임워크마다 달라 전부 연다 |
+
+공통 설정은 `allowedMethods = *`, `allowedHeaders = *`, `allowCredentials = true`, `maxAge = 3600`입니다.
+
+오리진은 `allowedOrigins`가 아니라 **`allowedOriginPatterns`**로 등록합니다. `allowedOrigins`는 와일드카드를 받지 않아 포트를 열 수 없고, `*` 하나만 넣는 형태는 `allowCredentials = true`와 함께 쓸 수 없습니다. `allowedOriginPatterns`는 요청 오리진을 그대로 되돌려주므로 자격증명을 켠 채로 패턴을 쓸 수 있습니다. 포트만 열렸을 뿐 호스트는 그대로라 `http://localhost.evil.com:3000` 같은 오리진은 차단되며, 이 성질도 테스트로 고정합니다.
+
+**오리진을 코드에 두는 이유**는 `application.yml`이 배포 시 GitHub Secret(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)으로 통째 덮어써지기 때문입니다. 오리진을 프로퍼티로 빼면 Secret에 키를 함께 넣어야 하고, 누락되면 운영에서만 CORS가 깨집니다. 코드에 두면 변경이 리뷰와 이력에 남습니다. 오리진을 추가하려면 해당 모듈의 `ALLOWED_ORIGIN_PATTERNS`를 고치고 배포합니다.
+
+**`allowCredentials = true`인 이유**는 현재 인증이 `Authorization` 헤더 기반이라 필요하지 않지만, 쿠키 방식으로 바뀌어도 설정이 깨지지 않게 하기 위해서입니다. 오리진을 와일드카드 없이 전부 명시하므로 임의의 사이트가 자격증명을 실어 보낼 수 없습니다. 이 성질은 두 모듈의 `*CorsConfigurationTest`가 목록 밖 오리진 preflight를 403으로 고정해 지킵니다.
+
+Swagger UI는 API와 같은 오리진에서 서빙되므로 CORS 대상이 아닙니다. 관리자 API의 내부 경로(`X-Internal-Api-Key`)도 크롤러의 서버 간 호출이라 CORS와 무관합니다. CORS는 브라우저만 강제하는 규칙이라 서버 간 호출에는 영향이 없습니다.
+
+**확인 필요**: 운영 프론트엔드는 HTTPS인데 API는 아직 ALB의 HTTP 주소(`http://ogonggo-alb-....elb.amazonaws.com`)뿐입니다. HTTPS 페이지에서 HTTP API를 호출하면 CORS 이전에 mixed content로 차단됩니다. ACM 인증서와 ALB 443 리스너, API 서브도메인이 준비되어야 운영에서 실제로 호출할 수 있습니다.
 
 ## 8. 아직 정하지 않은 것
 

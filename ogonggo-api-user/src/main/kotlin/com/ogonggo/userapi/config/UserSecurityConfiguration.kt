@@ -11,6 +11,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.CorsUtils
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableMethodSecurity
@@ -32,6 +36,7 @@ class UserSecurityConfiguration {
         userAccessDeniedHandler: UserAccessDeniedHandler,
     ): SecurityFilterChain =
         http
+            .cors { it.configurationSource(corsConfigurationSource()) }
             .csrf { it.disable() }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
@@ -41,6 +46,9 @@ class UserSecurityConfiguration {
                 it.accessDeniedHandler(userAccessDeniedHandler)
             }
             .authorizeHttpRequests {
+                // CorsFilter가 인가보다 앞에 있어 정상 preflight는 여기까지 오지 않는다.
+                // anyRequest().denyAll()로 끝나는 체인이라 안전망으로 함께 둔다.
+                it.requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 it.requestMatchers(
                     "/health",
                     "/v3/api-docs/**",
@@ -72,4 +80,42 @@ class UserSecurityConfiguration {
                 UsernamePasswordAuthenticationFilter::class.java,
             )
             .build()
+
+    /**
+     * 브라우저에서 사용자 API를 호출하는 오리진만 연다.
+     * 오리진을 명시하므로 allowCredentials를 켜도 임의 사이트가 자격증명을 실어 보낼 수 없다.
+     */
+    private fun corsConfigurationSource(): CorsConfigurationSource =
+        UrlBasedCorsConfigurationSource().apply {
+            registerCorsConfiguration(
+                "/**",
+                CorsConfiguration().apply {
+                    allowedOriginPatterns = ALLOWED_ORIGIN_PATTERNS
+                    allowedMethods = listOf("*")
+                    allowedHeaders = listOf("*")
+                    allowCredentials = true
+                    maxAge = PREFLIGHT_MAX_AGE_SECONDS
+                },
+            )
+        }
+
+    companion object {
+        /**
+         * application.yml은 배포 시 GitHub Secret으로 통째 덮어써지므로 오리진은 코드로 관리한다.
+         * 오리진을 추가하려면 이 목록을 고치고 배포한다.
+         *
+         * `allowedOrigins`가 아니라 `allowedOriginPatterns`를 쓰는 이유는 두 가지다.
+         * 전자는 와일드카드를 받지 않아 포트를 열 수 없고, `*` 하나만 넣으면
+         * `allowCredentials = true`와 함께 쓸 수 없다. 후자는 요청 오리진을 그대로 되돌려주므로
+         * 자격증명을 켠 채로 패턴을 쓸 수 있다.
+         */
+        private val ALLOWED_ORIGIN_PATTERNS = listOf(
+            "https://www.ogonggo.co.kr",
+            "https://ogonggo.co.kr",
+            // 로컬 개발 서버는 프레임워크와 사람마다 포트가 달라 전부 연다.
+            "http://localhost:[*]",
+        )
+
+        private const val PREFLIGHT_MAX_AGE_SECONDS = 3600L
+    }
 }

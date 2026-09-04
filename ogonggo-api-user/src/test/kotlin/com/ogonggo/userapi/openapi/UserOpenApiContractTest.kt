@@ -38,6 +38,8 @@ class UserOpenApiContractTest @Autowired constructor(
         val document = openApiDocument()
 
         assertEquals("Ogonggo User API", document.at("/info/title").asText())
+        // 절대 URL이면 HTTP ALB 주소가 새어 나가 HTTPS Swagger UI에서 Try it out이 막힌다.
+        assertEquals("/", document.at("/servers/0/url").asText())
         assertTrue(document.at("/components/securitySchemes/BearerAuth").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1jobs/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1jobs~1calendar/get").isObject)
