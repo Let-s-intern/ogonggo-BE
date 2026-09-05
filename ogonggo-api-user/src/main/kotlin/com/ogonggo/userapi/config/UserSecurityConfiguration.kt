@@ -116,6 +116,15 @@ class UserSecurityConfiguration {
             "https://ogonggo.co.kr",
             // 로컬 개발 서버는 프레임워크와 사람마다 포트가 달라 전부 연다.
             "http://localhost:[*]",
+            /*
+             * API Gateway 주소. 여기서 Swagger UI 를 띄워 API 를 호출한다.
+             *
+             * 같은 오리진인데도 목록에 필요하다. 브라우저는 GET/HEAD 가 아닌 요청에는 동일 오리진에도
+             * Origin 헤더를 붙이고, 스프링은 Origin 이 있으면 CORS 요청으로 처리한다.
+             * 앱은 API Gateway 뒤에 있어 자기 공개 주소를 몰라 스스로와 비교할 수도 없다.
+             * 목록에 없으면 Swagger 의 POST 가 403 Invalid CORS request 로 막힌다.
+             */
+            "https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com",
         )
 
         private const val PREFLIGHT_MAX_AGE_SECONDS = 3600L
