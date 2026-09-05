@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.implement
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
@@ -91,6 +92,11 @@ internal data class SlackMessage(
     }
 }
 
+/**
+ * section 블록은 text 와 fields 중 쓰는 쪽만 담아야 한다.
+ * 쓰지 않는 쪽을 null 로 직렬화해 보내면 슬랙이 400 invalid_blocks 로 거절한다.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 internal data class SlackBlock(
     val type: String = SECTION_TYPE,
     val text: SlackText? = null,

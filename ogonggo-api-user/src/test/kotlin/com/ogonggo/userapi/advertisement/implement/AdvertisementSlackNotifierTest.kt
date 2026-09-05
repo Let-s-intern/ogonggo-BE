@@ -41,6 +41,27 @@ class AdvertisementSlackNotifierTest {
         server.verify()
     }
 
+    /**
+     * 슬랙은 section 블록에 쓰지 않는 필드가 null 로 들어 있으면 400 invalid_blocks 로 거절한다.
+     * 직렬화 설정이 빠지면 payload 모양 검증만으로는 잡히지 않아 별도로 고정한다.
+     */
+    @Test
+    fun `쓰지 않는 블록 필드는 null 로 보내지 않는다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val notifier = AdvertisementSlackNotifier(builder.build(), properties(WEBHOOK_URL))
+
+        server.expect(requestTo(WEBHOOK_URL))
+            // 필드 블록에는 text 키가, 본문 블록에는 fields 키가 아예 없어야 한다.
+            .andExpect(jsonPath("$.blocks[0].text").doesNotExist())
+            .andExpect(jsonPath("$.blocks[1].fields").doesNotExist())
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        notifier.notify(NOTIFICATION)
+
+        server.verify()
+    }
+
     @Test
     fun `문의자가 넣은 슬랙 제어 문자를 그대로 보내지 않는다`() {
         // 이스케이프하지 않으면 <http://...|링크>나 <!channel> 같은 문법으로 해석된다.
