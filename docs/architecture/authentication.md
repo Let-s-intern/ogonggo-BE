@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-04
+- 최종 변경일: 2026-09-05
 - 적용 범위: `ogonggo-api-user`, `ogonggo-core`, `lets-career-server`
 - 예상 독자: 오공고 서버와 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -218,13 +218,14 @@ POST /api/v1/auth/company/signin
 | 사용자 API | `UserSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
 | 관리자 API | `AdminSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
 
-현재 두 목록은 같은 값입니다.
+사용자 API에는 아래의 API Gateway 주소가 하나 더 있고, 나머지는 두 목록이 같습니다.
 
-| 오리진 | 용도 |
-| --- | --- |
-| `https://www.ogonggo.co.kr` | 운영 프론트엔드 |
-| `https://ogonggo.co.kr` | apex 도메인 직접 접속 |
-| `http://localhost:[*]` | 로컬 개발 서버. 포트는 사람과 프레임워크마다 달라 전부 연다 |
+| 오리진 | 모듈 | 용도 |
+| --- | --- | --- |
+| `https://www.ogonggo.co.kr` | 공통 | 운영 프론트엔드 |
+| `https://ogonggo.co.kr` | 공통 | apex 도메인 직접 접속 |
+| `http://localhost:[*]` | 공통 | 로컬 개발 서버. 포트는 사람과 프레임워크마다 달라 전부 연다 |
+| `https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com` | 사용자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |
 
 공통 설정은 `allowedMethods = *`, `allowedHeaders = *`, `allowCredentials = true`, `maxAge = 3600`입니다.
 
@@ -234,7 +235,9 @@ POST /api/v1/auth/company/signin
 
 **`allowCredentials = true`인 이유**는 현재 인증이 `Authorization` 헤더 기반이라 필요하지 않지만, 쿠키 방식으로 바뀌어도 설정이 깨지지 않게 하기 위해서입니다. 오리진을 와일드카드 없이 전부 명시하므로 임의의 사이트가 자격증명을 실어 보낼 수 없습니다. 이 성질은 두 모듈의 `*CorsConfigurationTest`가 목록 밖 오리진 preflight를 403으로 고정해 지킵니다.
 
-Swagger UI는 API와 같은 오리진에서 서빙되므로 CORS 대상이 아닙니다. 관리자 API의 내부 경로(`X-Internal-Api-Key`)도 크롤러의 서버 간 호출이라 CORS와 무관합니다. CORS는 브라우저만 강제하는 규칙이라 서버 간 호출에는 영향이 없습니다.
+**Swagger UI가 API와 같은 오리진에 있어도 CORS 대상입니다.** 브라우저는 GET·HEAD가 아닌 요청에는 동일 오리진에도 `Origin` 헤더를 붙이고, 스프링은 `Origin`이 있으면 CORS 요청으로 처리합니다(Spring 5.0에서 동일 오리진 예외가 빠졌습니다). 게다가 앱이 API Gateway 뒤에 있어 자기 공개 주소를 알지 못해 스스로와 비교할 수도 없습니다. 그래서 Swagger를 띄우는 주소도 목록에 넣어야 하며, 넣지 않으면 조회(GET)는 되는데 `POST`만 `403 Invalid CORS request`로 막혀 원인을 찾기 어렵습니다.
+
+관리자 API의 내부 경로(`X-Internal-Api-Key`)는 크롤러의 서버 간 호출이라 CORS와 무관합니다. CORS는 브라우저만 강제하는 규칙이라 서버 간 호출에는 영향이 없습니다. 같은 이유로 `curl`로는 오리진과 무관하게 호출됩니다.
 
 **확인 필요**: 운영 프론트엔드는 HTTPS인데 API는 아직 ALB의 HTTP 주소(`http://ogonggo-alb-....elb.amazonaws.com`)뿐입니다. HTTPS 페이지에서 HTTP API를 호출하면 CORS 이전에 mixed content로 차단됩니다. ACM 인증서와 ALB 443 리스너, API 서브도메인이 준비되어야 운영에서 실제로 호출할 수 있습니다.
 

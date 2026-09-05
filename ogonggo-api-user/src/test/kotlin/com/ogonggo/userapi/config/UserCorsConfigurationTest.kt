@@ -41,6 +41,23 @@ class UserCorsConfigurationTest @Autowired constructor(
             .andExpect(header().string("Access-Control-Max-Age", "3600"))
     }
 
+    /**
+     * Swagger UI를 띄우는 API Gateway 주소다.
+     *
+     * 같은 오리진인데도 목록에 있어야 한다. 브라우저는 GET이 아닌 요청에는 동일 오리진에도
+     * Origin을 붙이고 스프링은 그걸 CORS 요청으로 처리하므로, 빠지면 Swagger의 POST만 403이 된다.
+     */
+    @Test
+    fun `API Gateway 오리진의 POST preflight는 통과한다`() {
+        mockMvc.perform(
+            options("/api/v1/advertisement-inquiries")
+                .header("Origin", API_GATEWAY_ORIGIN)
+                .header("Access-Control-Request-Method", "POST"),
+        )
+            .andExpect(status().isOk)
+            .andExpect(header().string("Access-Control-Allow-Origin", API_GATEWAY_ORIGIN))
+    }
+
     /** allowCredentials를 켜도 목록 밖 오리진은 열리지 않는다는 것이 이 테스트의 요지다. */
     @Test
     fun `허용하지 않은 오리진의 preflight는 거부한다`() {
@@ -76,5 +93,6 @@ class UserCorsConfigurationTest @Autowired constructor(
 
     companion object {
         private const val ALLOWED_ORIGIN = "https://www.ogonggo.co.kr"
+        private const val API_GATEWAY_ORIGIN = "https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com"
     }
 }
