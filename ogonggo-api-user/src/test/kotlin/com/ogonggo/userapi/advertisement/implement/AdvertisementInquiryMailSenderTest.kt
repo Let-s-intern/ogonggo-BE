@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisement.implement
 
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
+import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -53,6 +54,7 @@ class AdvertisementInquiryMailSenderTest {
         assertTrue(body.contains("김담당님"))
         assertTrue(body.contains("렛츠커리어"))
         assertTrue(body.contains("지금 바로 무료 홍보 할래요"))
+        assertTrue(body.contains("오픈채팅방 · 마케팅"))
         assertTrue(body.contains("010-1234-5678"))
         // 문의 본문은 다시 싣지 않는다. 메일함에 남는 사본이라 짧게 유지한다.
         assertTrue(!body.contains(PROMOTION_ANSWER))
@@ -105,6 +107,7 @@ class AdvertisementInquiryMailSenderTest {
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
+            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }

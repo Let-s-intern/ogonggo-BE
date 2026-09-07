@@ -33,14 +33,14 @@ class UserJobBookmarkService(
 
     @Transactional
     fun addBookmark(userId: Long, jobId: Long) {
-        jobReader.readPublishedForUpdate(jobId)
-        jobBookmarkManager.append(userId, jobId)
+        jobReader.readPublished(jobId)
+        jobBookmarkManager.append(userId, jobId, LocalDateTime.now(clock))
         eventPublisher.publishEvent(JobBookmarkChangedEvent(jobId))
     }
 
     @Transactional
     fun deleteBookmark(userId: Long, jobId: Long) {
-        jobReader.readIncludingDeletedForUpdate(jobId)
+        jobReader.readIncludingDeleted(jobId)
         jobBookmarkManager.delete(userId, jobId, LocalDateTime.now(clock))
         eventPublisher.publishEvent(JobBookmarkChangedEvent(jobId))
     }

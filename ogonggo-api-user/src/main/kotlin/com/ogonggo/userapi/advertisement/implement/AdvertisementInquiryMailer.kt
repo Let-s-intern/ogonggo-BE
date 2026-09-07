@@ -69,6 +69,7 @@ internal class AdvertisementInquiryMailSender(
         append("아래 내용으로 접수되었습니다.\n")
         append("  기업명: ").append(notification.companyName).append('\n')
         append("  신청 유형: ").append(notification.inquiryType.desc).append('\n')
+        append("  희망 홍보 채널: ").append(notification.promotionChannel.desc).append('\n')
         append("  연락처: ").append(notification.phoneNumber).append("\n\n")
         append("채용공고 홍보 상품 소개서를 첨부해 드립니다. 상품 구성과 집행 사례를 먼저 살펴봐 주세요.\n")
         append("담당자가 확인한 뒤 이 주소로 회신드리겠습니다.\n\n")

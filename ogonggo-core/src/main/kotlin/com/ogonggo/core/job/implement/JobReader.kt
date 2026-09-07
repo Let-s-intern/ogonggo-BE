@@ -3,9 +3,11 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.persistence.JobJpaRepository
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
@@ -17,16 +19,23 @@ interface JobReader {
     /** 같은 원문에서 이미 수집한 공고가 있는지 확인한다. 삭제된 공고는 다시 등록할 수 있게 제외한다. */
     fun existsBySourceUrl(sourceUrl: String): Boolean
     fun readPublished(jobId: Long): Job
-    fun readPublishedPage(page: Int, size: Int, sortType: JobSortType): JobPage
+    fun readPublishedPage(condition: JobSearchCondition, sortType: JobSortType, page: Int, size: Int): JobPage
     fun readPublishedCalendar(rangeStart: LocalDateTime, rangeEndExclusive: LocalDateTime): List<Job>
     fun readForUpdate(jobId: Long): Job
-    fun readPublishedForUpdate(jobId: Long): Job
-    fun readIncludingDeletedForUpdate(jobId: Long): Job
+
+    /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
+    fun readIncludingDeleted(jobId: Long): Job
+
+    fun readOwned(ownerUserId: Long, jobId: Long): Job
+    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage
+    fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job
+    fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job
 }
 
 @Component
 internal class JobReaderImpl(
     private val jobRepository: JobJpaRepository,
+    private val jobQueryRepository: JobQueryRepository,
 ) : JobReader {
 
     override fun read(jobId: Long): Job =
@@ -42,20 +51,19 @@ internal class JobReaderImpl(
             publicationStatus = JobPublicationStatus.PUBLISHED,
         ) ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readPublishedPage(page: Int, size: Int, sortType: JobSortType): JobPage {
+    /** 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. */
+    override fun readPublishedPage(
+        condition: JobSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+    ): JobPage {
         validatePageRequest(page, size)
-        val result = when (sortType) {
-            JobSortType.LATEST -> jobRepository.findAllByPublicationStatusAndDeletedAtIsNull(
-                publicationStatus = JobPublicationStatus.PUBLISHED,
-                pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")),
-            )
-
-            // 정렬을 JPQL이 이미 정하므로 Pageable에 정렬을 넘기지 않는다.
-            JobSortType.VIEW_COUNT -> jobRepository.findAllPublishedOrderByViewCount(
-                publicationStatus = JobPublicationStatus.PUBLISHED,
-                pageable = PageRequest.of(page, size),
-            )
-        }
+        val result = jobQueryRepository.findPublishedPage(
+            condition = condition,
+            sortType = sortType,
+            pageable = PageRequest.of(page, size),
+        )
         return JobPage(
             jobs = result.content,
             page = result.number,
@@ -82,12 +90,36 @@ internal class JobReaderImpl(
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readPublishedForUpdate(jobId: Long): Job =
-        jobRepository.findPublishedByIdForUpdate(jobId, JobPublicationStatus.PUBLISHED)
+    override fun readIncludingDeleted(jobId: Long): Job =
+        jobRepository.findIncludingDeletedById(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readIncludingDeletedForUpdate(jobId: Long): Job =
-        jobRepository.findIncludingDeletedByIdForUpdate(jobId)
+    override fun readOwned(ownerUserId: Long, jobId: Long): Job =
+        jobRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(jobId, ownerUserId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    override fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage {
+        validatePageRequest(page, size)
+        val result = jobRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
+            ownerUserId,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")),
+        )
+        return JobPage(
+            jobs = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+            hasNext = result.hasNext(),
+        )
+    }
+
+    override fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job =
+        jobRepository.findOwnedByIdForUpdate(ownerUserId, jobId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    override fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job =
+        jobRepository.findOwnedByIdForDelete(ownerUserId, jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 }
 

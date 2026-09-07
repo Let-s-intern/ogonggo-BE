@@ -129,12 +129,30 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(signOut.at("/security/0/BearerAuth").isArray)
     }
 
+    @Test
+    fun `EnumField enum은 값과 code와 설명을 문서에 노출한다`() {
+        val document = openApiDocument()
+
+        // 요청 본문 안의 enum
+        val bodyEnum = document
+            .at("/components/schemas/CreateAdvertisementInquiryRequest/properties/promotionChannel/description")
+            .asText()
+        assertTrue(bodyEnum.contains("| `OPEN_CHAT_MARKETING` | 2 | 오픈채팅방 · 마케팅 |"))
+
+        // 쿼리 파라미터로 쓰는 enum
+        val parameterEnum = document.at("/paths/~1api~1v1~1jobs/get/parameters")
+            .first { it.at("/name").asText() == "employmentType" }
+            .at("/schema/description").asText()
+        assertTrue(parameterEnum.contains("| `FULL_TIME` | 1 | 정규직 |"))
+    }
+
     private fun openApiDocument(): JsonNode {
         val response = mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)
             .andReturn()
             .response
-        return objectMapper.readTree(response.contentAsString)
+        // MockMvc 는 인코딩이 없으면 ISO-8859-1 로 읽어 한글 설명이 깨진다.
+        return objectMapper.readTree(response.getContentAsString(Charsets.UTF_8))
     }
 
     private fun assertPageParameter(

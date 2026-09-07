@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+import java.time.Clock
+import java.time.LocalDateTime
 
 /**
  * 북마크 수를 북마크 트랜잭션 밖에서 맞춘다.
@@ -23,6 +25,7 @@ import org.springframework.transaction.event.TransactionalEventListener
 @Component
 class BootcampBookmarkChangedEventListener(
     private val bootcampMetricManager: BootcampMetricManager,
+    private val clock: Clock,
 ) {
 
     @Async(METRIC_TASK_EXECUTOR)
@@ -30,7 +33,7 @@ class BootcampBookmarkChangedEventListener(
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handle(event: BootcampBookmarkChangedEvent) {
         try {
-            bootcampMetricManager.syncBookmarkCount(event.bootcampId)
+            bootcampMetricManager.syncBookmarkCount(event.bootcampId, LocalDateTime.now(clock))
         } catch (exception: Exception) {
             log.warn("부트캠프 북마크 수 갱신에 실패했습니다. bootcampId={}", event.bootcampId, exception)
         }

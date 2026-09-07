@@ -3,6 +3,7 @@ package com.ogonggo.userapi.advertisement.presentation
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryService
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
+import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
 import com.ogonggo.userapi.advertisement.business.CreateAdvertisementInquiryCommand
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -83,6 +84,16 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `정의되지 않은 홍보 채널은 400으로 응답한다`() {
+        mockMvc.perform(
+            post("/api/v1/advertisement-inquiries")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body(promotionChannel = "BLOG")),
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
     fun `정의되지 않은 신청 유형은 400으로 응답한다`() {
         mockMvc.perform(
             post("/api/v1/advertisement-inquiries")
@@ -104,6 +115,7 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             email: String = "manager@ogonggo.co.kr",
             phoneNumber: String = "010-1234-5678",
             inquiryType: String = "FREE_PROMOTION",
+            promotionChannel: String = "OPEN_CHAT_MARKETING",
             promotionAnswer: String = PROMOTION_ANSWER,
         ): String = """
             {
@@ -112,6 +124,7 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
               "email": "$email",
               "phoneNumber": "$phoneNumber",
               "inquiryType": "$inquiryType",
+              "promotionChannel": "$promotionChannel",
               "promotionAnswer": "$promotionAnswer"
             }
         """.trimIndent()
@@ -124,6 +137,7 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
+            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }

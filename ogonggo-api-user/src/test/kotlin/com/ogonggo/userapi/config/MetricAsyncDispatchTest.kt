@@ -111,7 +111,7 @@ class RecordingJobMetricManager : JobMetricManager {
         viewCountThreads.put(Thread.currentThread().name)
     }
 
-    override fun syncBookmarkCount(jobId: Long) {
+    override fun syncBookmarkCount(jobId: Long, now: LocalDateTime) {
         bookmarkCountThreads.put(Thread.currentThread().name)
     }
 

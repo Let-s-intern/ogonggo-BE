@@ -10,7 +10,9 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
@@ -29,13 +31,16 @@ import java.time.LocalDateTime
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
     JobReaderImpl::class,
+    JobQueryRepository::class,
     JobAppenderImpl::class,
     JobManagerImpl::class,
     JobBookmarkReaderImpl::class,
     JobBookmarkManagerImpl::class,
     JobMetricReaderImpl::class,
     JobMetricManagerImpl::class,
+    JobMetricRegistrar::class,
     JobTagAppenderImpl::class,
+    TagRegistrar::class,
     JobSourceUrlClickAppenderImpl::class,
 )
 internal class JobImplementPersistenceTest @Autowired constructor(
@@ -85,8 +90,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(first, deleted, latest).forEach(jobManager::publish)
         jobManager.delete(deleted, java.time.LocalDateTime.of(2026, 8, 27, 12, 0))
 
-        val firstPage = jobReader.readPublishedPage(page = 0, size = 1, sortType = JobSortType.LATEST)
-        val secondPage = jobReader.readPublishedPage(page = 1, size = 1, sortType = JobSortType.LATEST)
+        val firstPage = readPage(page = 0, size = 1, sortType = JobSortType.LATEST)
+        val secondPage = readPage(page = 1, size = 1, sortType = JobSortType.LATEST)
 
         assertEquals(listOf(latest.id), firstPage.jobs.map { it.id })
         assertEquals(listOf(first.id), secondPage.jobs.map { it.id })
@@ -97,9 +102,9 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `사용자 공고 목록의 페이지 범위를 검증한다`() {
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPublishedPage(-1, 20, JobSortType.LATEST) }
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPublishedPage(0, 0, JobSortType.LATEST) }
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPublishedPage(0, 101, JobSortType.LATEST) }
+        assertThrows(IllegalArgumentException::class.java) { readPage(page = -1, size = 20) }
+        assertThrows(IllegalArgumentException::class.java) { readPage(page = 0, size = 0) }
+        assertThrows(IllegalArgumentException::class.java) { readPage(page = 0, size = 101) }
     }
 
     @Test
@@ -165,31 +170,45 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val jobId = checkNotNull(job.id)
         jobManager.publish(job)
 
-        jobReader.readPublishedForUpdate(jobId)
-        jobBookmarkManager.append(USER_ID, jobId)
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobReader.readPublished(jobId)
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         assertEquals(setOf(jobId), jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(jobId)))
         assertEquals(1L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
-        val duplicate = assertThrows(ConflictException::class.java) {
-            jobBookmarkManager.append(USER_ID, jobId)
-        }
-        assertEquals(JobErrorCode.JOB_BOOKMARK_ALREADY_EXISTS, duplicate.errorCode)
 
-        jobBookmarkManager.delete(USER_ID, jobId, NOW)
         jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(1))
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(2))
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         assertEquals(emptySet<Long>(), jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(jobId)))
         assertEquals(0L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
-        assertEquals(NOW, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
+        // 이미 해제된 북마크를 다시 해제해도 최초 해제 일시가 덮어써지지 않는다.
+        assertEquals(NOW.plusMinutes(1), jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
 
-        jobBookmarkManager.append(USER_ID, jobId)
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(3))
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
+        val restored = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
         assertEquals(1L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
-        assertEquals(null, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
+        assertEquals(null, restored?.deletedAt)
+        // 북마크 목록이 수정 일시로 정렬하므로 복구는 벌크 갱신에서도 수정 일시를 남겨야 한다.
+        assertEquals(NOW.plusMinutes(3), restored?.updatedAt)
         assertEquals(1L, jobBookmarkRepository.count())
+    }
+
+    @Test
+    fun `이미 등록한 북마크를 다시 등록하면 유니크 제약이 막는다`() {
+        val job = jobAppender.append(createCommand())
+        val jobId = checkNotNull(job.id)
+        jobManager.publish(job)
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+
+        val duplicate = assertThrows(ConflictException::class.java) {
+            jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(1))
+        }
+
+        assertEquals(JobErrorCode.JOB_BOOKMARK_ALREADY_EXISTS, duplicate.errorCode)
     }
 
     @Test
@@ -204,7 +223,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobMetricManager.increaseViewCount(jobId, NOW.plusMinutes(1))
 
         assertEquals(2L, jobMetricReader.read(jobId).viewCount)
-        assertEquals(1L, jobMetricRepository.count())
+        assertEquals(1, jobMetricRepository.findAllByJobIdIn(listOf(jobId)).size)
     }
 
     @Test
@@ -226,14 +245,14 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     fun `북마크 수 갱신은 여러 번 실행해도 결과가 같다`() {
         val job = jobAppender.append(createCommand())
         val jobId = checkNotNull(job.id)
-        jobBookmarkManager.append(USER_ID, jobId)
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
 
-        jobMetricManager.syncBookmarkCount(jobId)
-        jobMetricManager.syncBookmarkCount(jobId)
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         assertEquals(1L, jobMetricReader.read(jobId).bookmarkCount)
-        assertEquals(1L, jobMetricRepository.count())
+        assertEquals(1, jobMetricRepository.findAllByJobIdIn(listOf(jobId)).size)
     }
 
     @Test
@@ -247,7 +266,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobMetricManager.increaseViewCount(checkNotNull(tiedOlder.id), NOW)
         jobMetricManager.increaseViewCount(checkNotNull(tiedNewer.id), NOW)
 
-        val page = jobReader.readPublishedPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
+        val page = readPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
 
         assertEquals(
             listOf(popular.id, tiedNewer.id, tiedOlder.id, quiet.id),
@@ -264,7 +283,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(published, deleted).forEach(jobManager::publish)
         jobManager.delete(deleted, NOW)
 
-        val page = jobReader.readPublishedPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
+        val page = readPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
 
         assertEquals(listOf(published.id), page.jobs.map { it.id })
         assertEquals(1L, page.totalElements)
@@ -323,8 +342,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val published = jobAppender.append(createCommand())
         val draft = jobAppender.append(createCommand())
         jobManager.publish(published)
-        jobBookmarkManager.append(USER_ID, checkNotNull(published.id))
-        jobBookmarkManager.append(USER_ID, checkNotNull(draft.id))
+        jobBookmarkManager.append(USER_ID, checkNotNull(published.id), NOW)
+        jobBookmarkManager.append(USER_ID, checkNotNull(draft.id), NOW)
 
         val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, page = 0, size = 10)
 
@@ -332,17 +351,196 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(1L, result.totalElements)
     }
 
+    @Test
+    fun `선택 필터는 지정한 값만 남기고 지정하지 않으면 적용되지 않는다`() {
+        val fullTimeExperienced = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        val fullTimeNewcomer = publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
+        val internExperienced = publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+
+        assertEquals(
+            listOf(internExperienced, fullTimeNewcomer, fullTimeExperienced),
+            readIds(JobSearchCondition.NONE),
+        )
+        assertEquals(
+            listOf(fullTimeNewcomer, fullTimeExperienced),
+            readIds(JobSearchCondition(employmentType = EmploymentType.FULL_TIME)),
+        )
+        assertEquals(
+            listOf(internExperienced, fullTimeExperienced),
+            readIds(JobSearchCondition(experienceType = ExperienceType.EXPERIENCED)),
+        )
+    }
+
+    @Test
+    fun `두 필터를 함께 지정하면 모두 만족하는 공고만 남는다`() {
+        val target = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
+        publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+
+        val page = readPage(
+            page = 0,
+            size = 10,
+            condition = JobSearchCondition(
+                employmentType = EmploymentType.FULL_TIME,
+                experienceType = ExperienceType.EXPERIENCED,
+            ),
+        )
+
+        assertEquals(listOf(target), page.jobs.map { it.id })
+        assertEquals(1L, page.totalElements)
+    }
+
+    @Test
+    fun `필터는 정렬과 함께 적용되며 전체 건수도 필터를 반영한다`() {
+        val quiet = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        val popular = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+        jobMetricManager.increaseViewCount(popular, NOW)
+
+        val page = readPage(
+            page = 0,
+            size = 10,
+            sortType = JobSortType.VIEW_COUNT,
+            condition = JobSearchCondition(employmentType = EmploymentType.FULL_TIME),
+        )
+
+        assertEquals(listOf(popular, quiet), page.jobs.map { it.id })
+        assertEquals(2L, page.totalElements)
+    }
+
+    @Test
+    fun `검색어는 회사명과 제목을 모두 대상으로 하고 대소문자를 가리지 않는다`() {
+        val byTitle = publishNamed(companyName = "오공고", title = "iOS 개발자")
+        val byCompany = publishNamed(companyName = "IOS컴퍼니", title = "백엔드 개발자")
+        publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
+
+        assertEquals(
+            listOf(byCompany, byTitle),
+            readIds(JobSearchCondition(keyword = "ios")),
+        )
+    }
+
+    @Test
+    fun `검색어가 비어 있으면 검색 조건을 적용하지 않는다`() {
+        val first = publishNamed(companyName = "오공고", title = "백엔드 개발자")
+        val second = publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
+
+        assertEquals(listOf(second, first), readIds(JobSearchCondition(keyword = "   ")))
+        assertEquals(listOf(second, first), readIds(JobSearchCondition(keyword = null)))
+    }
+
+    @Test
+    fun `검색어의 와일드카드는 문자 그대로 취급해 전체 조회를 유발하지 않는다`() {
+        publishNamed(companyName = "오공고", title = "백엔드 개발자")
+        val literal = publishNamed(companyName = "오공고", title = "연봉 100% 인상 백엔드")
+
+        assertEquals(emptyList<Long>(), readIds(JobSearchCondition(keyword = "_")))
+        assertEquals(listOf(literal), readIds(JobSearchCondition(keyword = "100%")))
+    }
+
+    @Test
+    fun `검색어는 필터 정렬과 함께 적용된다`() {
+        val target = publishNamed(
+            companyName = "오공고",
+            title = "백엔드 개발자",
+            employmentType = EmploymentType.INTERN,
+        )
+        publishNamed(companyName = "오공고", title = "백엔드 개발자", employmentType = EmploymentType.FULL_TIME)
+        publishNamed(companyName = "오공고", title = "데이터 엔지니어", employmentType = EmploymentType.INTERN)
+
+        val page = readPage(
+            page = 0,
+            size = 10,
+            sortType = JobSortType.VIEW_COUNT,
+            condition = JobSearchCondition(employmentType = EmploymentType.INTERN, keyword = "백엔드"),
+        )
+
+        assertEquals(listOf(target), page.jobs.map { it.id })
+        assertEquals(1L, page.totalElements)
+    }
+
+    private fun publishNamed(
+        companyName: String,
+        title: String,
+        employmentType: EmploymentType = EmploymentType.FULL_TIME,
+    ): Long {
+        val job = jobAppender.append(
+            createCommand(employmentType = employmentType, companyName = companyName, title = title),
+        )
+        jobManager.publish(job)
+        return checkNotNull(job.id)
+    }
+
+    @Test
+    fun `기업회원은 자기 공고만 조회하고 남의 공고는 찾지 못한다`() {
+        val mine = jobAppender.append(createCommand(ownerUserId = USER_ID))
+        val others = jobAppender.append(createCommand(ownerUserId = OTHER_USER_ID))
+        val collected = jobAppender.append(createCommand())
+        val mineId = checkNotNull(mine.id)
+
+        val page = jobReader.readOwnedPage(USER_ID, page = 0, size = 10)
+
+        assertEquals(listOf(mineId), page.jobs.map { it.id })
+        assertEquals(1L, page.totalElements)
+        assertEquals(mineId, jobReader.readOwned(USER_ID, mineId).id)
+        assertThrows(EntityNotFoundException::class.java) {
+            jobReader.readOwned(USER_ID, checkNotNull(others.id))
+        }
+        // 수집한 공고는 소유자가 없으므로 어떤 기업회원에게도 보이지 않는다.
+        assertThrows(EntityNotFoundException::class.java) {
+            jobReader.readOwned(USER_ID, checkNotNull(collected.id))
+        }
+    }
+
+    @Test
+    fun `삭제 조회만 이미 삭제된 내 공고를 찾아 삭제를 멱등하게 만든다`() {
+        val job = jobAppender.append(createCommand(ownerUserId = USER_ID))
+        val jobId = checkNotNull(job.id)
+        jobManager.delete(jobReader.readOwnedForDelete(USER_ID, jobId), NOW)
+
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readOwned(USER_ID, jobId) }
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readOwnedForUpdate(USER_ID, jobId) }
+
+        jobManager.delete(jobReader.readOwnedForDelete(USER_ID, jobId), NOW.plusDays(1))
+
+        assertEquals(NOW, jobReader.readIncludingDeleted(jobId).deletedAt)
+    }
+
+    private fun publish(employmentType: EmploymentType, experienceType: ExperienceType): Long {
+        val job = jobAppender.append(
+            createCommand(employmentType = employmentType, experienceType = experienceType),
+        )
+        jobManager.publish(job)
+        return checkNotNull(job.id)
+    }
+
+    private fun readIds(condition: JobSearchCondition): List<Long?> =
+        readPage(page = 0, size = 10, condition = condition).jobs.map { it.id }
+
+    private fun readPage(
+        page: Int,
+        size: Int,
+        sortType: JobSortType = JobSortType.LATEST,
+        condition: JobSearchCondition = JobSearchCondition.NONE,
+    ): JobPage = jobReader.readPublishedPage(condition, sortType, page, size)
+
     private fun createCommand(
         recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
         sourceUrl: String? = "https://example.com/jobs/1",
+        employmentType: EmploymentType = EmploymentType.FULL_TIME,
+        experienceType: ExperienceType = ExperienceType.EXPERIENCED,
+        companyName: String = "오공고",
+        title: String = "백엔드 개발자",
+        ownerUserId: Long? = null,
     ): JobAppendCommand = JobAppendCommand(
-        companyName = "오공고",
-        title = "백엔드 개발자",
+        ownerUserId = ownerUserId,
+        companyName = companyName,
+        title = title,
         sourceUrl = sourceUrl,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = employmentType,
+        experienceType = experienceType,
         experienceMinYears = 1,
         experienceMaxYears = 3,
         educationLevel = EducationLevel.ANY,

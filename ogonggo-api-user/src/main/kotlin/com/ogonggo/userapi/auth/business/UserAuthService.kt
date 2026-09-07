@@ -14,7 +14,7 @@ import com.ogonggo.userapi.auth.implement.RefreshTokenStore
 import com.ogonggo.userapi.auth.implement.SignInValidator
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
 import java.time.LocalDateTime
 
@@ -28,18 +28,32 @@ class UserAuthService(
     private val refreshTokenStore: RefreshTokenStore,
     private val signInValidator: SignInValidator,
     private val jwtProperties: JwtProperties,
+    private val transactionTemplate: TransactionTemplate,
     private val clock: Clock,
 ) {
 
     /**
      * 렛츠커리어 액세스 토큰을 오공고 세션으로 교환한다.
      * 오공고에 계정이 없으면 이 시점에 만들고, 있으면 프로필만 동기화한다.
+     *
+     * 계정과 프로필을 다루는 구간만 트랜잭션으로 묶는다.
+     * 렛츠커리어 호출을 트랜잭션 안에 두면 응답을 기다리는 동안 DB 커넥션을 잡고 있어,
+     * 렛츠커리어가 느려질 때 로그인과 무관한 API까지 커넥션이 없어 함께 실패한다.
+     * 토큰 발급도 DB를 쓰지 않으므로 커밋 이후로 보낸다.
      */
-    @Transactional
     fun signInWithLetsCareer(letsCareerAccessToken: String): SignInResult {
         val letsCareerUser = letsCareerAuthClient.verify(letsCareerAccessToken)
         val now = LocalDateTime.now(clock)
 
+        val account = checkNotNull(transactionTemplate.execute { synchronizeAccount(letsCareerUser, now) })
+
+        return SignInResult(
+            tokens = issueTokens(account.userId),
+            isNewUser = account.isNewUser,
+        )
+    }
+
+    private fun synchronizeAccount(letsCareerUser: LetsCareerUser, now: LocalDateTime): SynchronizedAccount {
         val existingAccount = userReader.readByLetsCareerUserId(letsCareerUser.userId)
         val account = existingAccount ?: userAppender.append(
             UserAppendCommand(letsCareerUserId = letsCareerUser.userId, joinedAt = now),
@@ -48,10 +62,7 @@ class UserAuthService(
 
         userProfileManager.sync(letsCareerUser.toSyncCommand(account.userId, now))
 
-        return SignInResult(
-            tokens = issueTokens(account.userId),
-            isNewUser = existingAccount == null,
-        )
+        return SynchronizedAccount(userId = account.userId, isNewUser = existingAccount == null)
     }
 
     /**
@@ -95,3 +106,5 @@ private fun LetsCareerUser.toSyncCommand(userId: Long, now: LocalDateTime): User
         letsCareerUpdatedAt = updatedAt,
         syncedAt = now,
     )
+
+private data class SynchronizedAccount(val userId: Long, val isNewUser: Boolean)

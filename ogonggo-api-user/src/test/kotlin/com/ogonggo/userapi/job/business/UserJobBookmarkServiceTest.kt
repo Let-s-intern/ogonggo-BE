@@ -39,20 +39,20 @@ class UserJobBookmarkServiceTest {
     @Test
     fun `게시된 공고를 확인한 뒤 북마크를 등록한다`() {
         val job = Mockito.mock(Job::class.java)
-        Mockito.`when`(jobReader.readPublishedForUpdate(JOB_ID)).thenReturn(job)
+        Mockito.`when`(jobReader.readPublished(JOB_ID)).thenReturn(job)
 
         service.addBookmark(USER_ID, JOB_ID)
 
         val inOrder = Mockito.inOrder(jobReader, jobBookmarkManager, eventPublisher)
-        inOrder.verify(jobReader).readPublishedForUpdate(JOB_ID)
-        inOrder.verify(jobBookmarkManager).append(USER_ID, JOB_ID)
+        inOrder.verify(jobReader).readPublished(JOB_ID)
+        inOrder.verify(jobBookmarkManager).append(USER_ID, JOB_ID, NOW)
         inOrder.verify(eventPublisher).publishEvent(JobBookmarkChangedEvent(JOB_ID))
     }
 
     @Test
-    fun `삭제된 공고도 잠근 뒤 북마크를 멱등하게 해제한다`() {
+    fun `삭제된 공고의 북마크도 멱등하게 해제한다`() {
         val job = Mockito.mock(Job::class.java)
-        Mockito.`when`(jobReader.readIncludingDeletedForUpdate(JOB_ID)).thenReturn(job)
+        Mockito.`when`(jobReader.readIncludingDeleted(JOB_ID)).thenReturn(job)
 
         service.deleteBookmark(USER_ID, JOB_ID)
 

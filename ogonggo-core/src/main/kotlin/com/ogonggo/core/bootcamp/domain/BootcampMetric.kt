@@ -61,11 +61,6 @@ internal class BootcampMetric(
         bookmarkCount--
     }
 
-    fun updateBookmarkCount(count: Long) {
-        require(count >= 0) { "북마크 수는 음수일 수 없습니다." }
-        bookmarkCount = count
-    }
-
     fun increaseCommentCount() {
         commentCount++
     }

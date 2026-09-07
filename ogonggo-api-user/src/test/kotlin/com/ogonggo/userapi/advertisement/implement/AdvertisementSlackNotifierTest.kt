@@ -3,6 +3,7 @@ package com.ogonggo.userapi.advertisement.implement
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
+import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -33,6 +34,9 @@ class AdvertisementSlackNotifierTest {
             .andExpect(jsonPath("$.blocks[0].fields[0].text").value("*기업명*\n렛츠커리어"))
             .andExpect(jsonPath("$.blocks[0].fields[2].text").value("*이메일*\nmanager@ogonggo.co.kr"))
             .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*신청 유형*\n지금 바로 무료 홍보 할래요"))
+            .andExpect(
+                jsonPath("$.blocks[0].fields[5].text").value("*희망 홍보 채널*\n오픈채팅방 · 마케팅"),
+            )
             .andExpect(jsonPath("$.blocks[1].text.text").value("*현재 홍보 채널 · 어려운 점*\n$PROMOTION_ANSWER"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
@@ -117,6 +121,7 @@ class AdvertisementSlackNotifierTest {
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
+            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }

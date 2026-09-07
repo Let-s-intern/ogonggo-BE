@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
@@ -19,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.Size
 import java.time.LocalDate
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
@@ -40,6 +43,13 @@ interface UserJobApi {
             보내지 않으면 항상 false입니다.
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
+
+            employmentType과 experienceType으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
+            보내지 않으면 해당 조건을 적용하지 않습니다. 두 필터와 정렬은 함께 사용할 수 있습니다.
+
+            keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
+            2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
+            검색도 필터·정렬과 함께 사용할 수 있습니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -57,6 +67,13 @@ interface UserJobApi {
         size: Int,
         @RequestParam(name = "sort", defaultValue = "LATEST")
         sortType: JobSortType,
+        @RequestParam(name = "employmentType", required = false)
+        employmentType: EmploymentType?,
+        @RequestParam(name = "experienceType", required = false)
+        experienceType: ExperienceType?,
+        @RequestParam(name = "keyword", required = false)
+        @Size(min = 2, max = 100)
+        keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(

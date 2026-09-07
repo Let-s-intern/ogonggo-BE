@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -8,7 +9,6 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
 @Service
@@ -21,8 +21,14 @@ class UserJobService(
 ) {
 
     /** 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다. */
-    fun getJobs(userId: Long?, page: Int, size: Int, sortType: JobSortType): UserJobPageResult {
-        val result = jobReader.readPublishedPage(page, size, sortType)
+    fun getJobs(
+        userId: Long?,
+        condition: JobSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+    ): UserJobPageResult {
+        val result = jobReader.readPublishedPage(condition, sortType, page, size)
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,
@@ -53,8 +59,11 @@ class UserJobService(
     /**
      * 원문으로 이동한 사용자를 기록한다.
      * 같은 사용자가 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한다.
+     *
+     * 쓰기가 한 건뿐이라 묶어야 할 원자성이 없으므로 트랜잭션을 열지 않는다.
+     * 열어 두면 동시에 누른 두 요청 중 하나가 유니크 제약에 걸릴 때
+     * 그 실패가 트랜잭션을 롤백 대상으로 만들어, 기록은 이미 남았는데도 응답이 실패한다.
      */
-    @Transactional
     fun recordSourceUrlClick(userId: Long, jobId: Long) {
         jobReader.readPublished(jobId)
         jobSourceUrlClickAppender.append(userId, jobId)

@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisement.presentation.request
 
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
+import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
 import com.ogonggo.userapi.advertisement.business.CreateAdvertisementInquiryCommand
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -28,6 +29,9 @@ data class CreateAdvertisementInquiryRequest(
     val phoneNumber: String,
     @field:NotNull
     val inquiryType: AdvertisementInquiryType,
+    /** 폼에서 한 곳만 고르므로 목록이 아니라 단일 값으로 받는다. */
+    @field:NotNull
+    val promotionChannel: AdvertisementPromotionChannel,
     /** 슬랙 section 블록의 3000자 제한 안에 들어가도록 상한을 둔다. */
     @field:NotBlank
     @field:Size(max = 2000)
@@ -39,6 +43,7 @@ data class CreateAdvertisementInquiryRequest(
         email = email,
         phoneNumber = phoneNumber,
         inquiryType = inquiryType,
+        promotionChannel = promotionChannel,
         promotionAnswer = promotionAnswer,
     )
 }

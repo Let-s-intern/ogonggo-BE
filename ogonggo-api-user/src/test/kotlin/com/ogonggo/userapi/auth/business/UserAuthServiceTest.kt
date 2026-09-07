@@ -24,6 +24,11 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.SimpleTransactionStatus
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -39,6 +44,7 @@ class UserAuthServiceTest {
     private val tokenProvider = Mockito.mock(OgonggoTokenProvider::class.java)
     private val refreshTokenStore = Mockito.mock(RefreshTokenStore::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-27T01:00:00Z"), ZONE)
+    private val transactionTemplate = TransactionTemplate(NoOpTransactionManager())
 
     private val service = UserAuthService(
         letsCareerAuthClient = letsCareerAuthClient,
@@ -49,6 +55,7 @@ class UserAuthServiceTest {
         refreshTokenStore = refreshTokenStore,
         signInValidator = SignInValidator(),
         jwtProperties = JWT_PROPERTIES,
+        transactionTemplate = transactionTemplate,
         clock = clock,
     )
 
@@ -192,4 +199,11 @@ class UserAuthServiceTest {
             refreshTokenValidity = Duration.ofDays(14),
         )
     }
+}
+
+/** 트랜잭션 경계만 흉내낸다. 이 테스트는 경계 안에서 무엇을 호출하는지만 검증한다. */
+private class NoOpTransactionManager : PlatformTransactionManager {
+    override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+    override fun commit(status: TransactionStatus) = Unit
+    override fun rollback(status: TransactionStatus) = Unit
 }

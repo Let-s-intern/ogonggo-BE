@@ -81,6 +81,7 @@ internal data class SlackMessage(
                             SlackText.labeled("이메일", notification.email),
                             SlackText.labeled("전화번호", notification.phoneNumber),
                             SlackText.labeled("신청 유형", notification.inquiryType.desc),
+                            SlackText.labeled("희망 홍보 채널", notification.promotionChannel.desc),
                         ),
                     ),
                     SlackBlock.text(

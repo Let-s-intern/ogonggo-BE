@@ -23,7 +23,10 @@ internal class JobManagerImpl(
         job.update(
             companyName = command.companyName,
             parentCompanyName = command.parentCompanyName,
+            companyLogoUrl = command.companyLogoUrl,
             title = command.title,
+            jobField = command.jobField,
+            coverImageUrl = command.coverImageUrl,
             employmentType = command.employmentType,
             experienceType = command.experienceType,
             experienceMinYears = command.experienceMinYears,
@@ -31,8 +34,11 @@ internal class JobManagerImpl(
             educationLevel = command.educationLevel,
             region = command.region,
             recruitmentType = command.recruitmentType,
+            recruitmentHeadcount = command.recruitmentHeadcount,
             recruitmentStartAt = command.recruitmentStartAt,
             recruitmentEndAt = command.recruitmentEndAt,
+            closesWhenFilled = command.closesWhenFilled,
+            autoCloseEnabled = command.autoCloseEnabled,
             companyAndTeamIntroduction = command.companyAndTeamIntroduction,
             responsibilities = command.responsibilities,
             qualifications = command.qualifications,
@@ -40,6 +46,8 @@ internal class JobManagerImpl(
             compensation = command.compensation,
             benefits = command.benefits,
             hiringProcess = command.hiringProcess,
+            recruitmentNotice = command.recruitmentNotice,
+            applicationMethod = command.applicationMethod,
             sourceUrl = command.sourceUrl,
         )
         jobRepository.save(job)

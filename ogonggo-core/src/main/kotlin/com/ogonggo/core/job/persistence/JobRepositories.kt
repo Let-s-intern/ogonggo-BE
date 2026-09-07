@@ -27,11 +27,6 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
         publicationStatus: JobPublicationStatus,
     ): Job?
 
-    fun findAllByPublicationStatusAndDeletedAtIsNull(
-        publicationStatus: JobPublicationStatus,
-        pageable: Pageable,
-    ): Page<Job>
-
     @Query(
         value = """
             select job
@@ -82,50 +77,36 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     @Query("select job from Job job where job.id = :jobId and job.deletedAt is null")
     fun findByIdForUpdate(@Param("jobId") jobId: Long): Job?
 
+    /** 북마크 해제는 이미 삭제된 공고에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
+    @Query("select job from Job job where job.id = :jobId")
+    fun findIncludingDeletedById(@Param("jobId") jobId: Long): Job?
+
+    fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Job?
+
+    fun findAllByOwnerUserIdAndDeletedAtIsNull(ownerUserId: Long, pageable: Pageable): Page<Job>
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         """
         select job
         from Job job
         where job.id = :jobId
-          and job.publicationStatus = :publicationStatus
+          and job.ownerUserId = :ownerUserId
           and job.deletedAt is null
         """,
     )
-    fun findPublishedByIdForUpdate(
+    fun findOwnedByIdForUpdate(
+        @Param("ownerUserId") ownerUserId: Long,
         @Param("jobId") jobId: Long,
-        @Param("publicationStatus") publicationStatus: JobPublicationStatus,
     ): Job?
 
+    /** 삭제는 멱등해야 하므로 이미 삭제된 공고도 찾는다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select job from Job job where job.id = :jobId")
-    fun findIncludingDeletedByIdForUpdate(@Param("jobId") jobId: Long): Job?
-
-    /**
-     * 조회 수는 지표 테이블이 소유하고 공고와 연관관계가 없으므로 명시적으로 조인한다.
-     * 지표 행은 첫 조회 시점에 생기므로 아직 없는 공고는 0으로 본다.
-     * 조회 수가 같을 때 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
-     */
-    @Query(
-        value = """
-        select job
-        from Job job
-        left join JobMetric metric on metric.jobId = job.id
-        where job.publicationStatus = :publicationStatus
-          and job.deletedAt is null
-        order by coalesce(metric.viewCount, 0) desc, job.id desc
-        """,
-        countQuery = """
-        select count(job)
-        from Job job
-        where job.publicationStatus = :publicationStatus
-          and job.deletedAt is null
-        """,
-    )
-    fun findAllPublishedOrderByViewCount(
-        @Param("publicationStatus") publicationStatus: JobPublicationStatus,
-        pageable: Pageable,
-    ): Page<Job>
+    @Query("select job from Job job where job.id = :jobId and job.ownerUserId = :ownerUserId")
+    fun findOwnedByIdForDelete(
+        @Param("ownerUserId") ownerUserId: Long,
+        @Param("jobId") jobId: Long,
+    ): Job?
 }
 
 internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {
@@ -144,11 +125,70 @@ internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {
         """,
     )
     fun increaseViewCount(@Param("jobId") jobId: Long, @Param("now") now: LocalDateTime): Int
+
+    /**
+     * 활성 북마크를 다시 세어 맞춘다.
+     * 세는 일을 UPDATE 안에서 처리해 읽고 쓰는 사이에 다른 갱신이 끼어들지 못하게 한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update JobMetric metric
+        set metric.bookmarkCount = (
+                select count(bookmark)
+                from JobBookmark bookmark
+                where bookmark.jobId = :jobId
+                  and bookmark.deletedAt is null
+            ),
+            metric.updatedAt = :now
+        where metric.jobId = :jobId
+        """,
+    )
+    fun syncBookmarkCount(@Param("jobId") jobId: Long, @Param("now") now: LocalDateTime): Int
 }
 
 internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     fun findByJobIdAndUserId(jobId: Long, userId: Long): JobBookmark?
-    fun countByJobIdAndDeletedAtIsNull(jobId: Long): Long
+
+    /**
+     * 해제된 북마크를 다시 활성으로 되돌린다.
+     * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.
+     * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update JobBookmark bookmark
+        set bookmark.deletedAt = null,
+            bookmark.updatedAt = :now
+        where bookmark.jobId = :jobId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is not null
+        """,
+    )
+    fun restore(
+        @Param("jobId") jobId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update JobBookmark bookmark
+        set bookmark.deletedAt = :now,
+            bookmark.updatedAt = :now
+        where bookmark.jobId = :jobId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun softDelete(
+        @Param("jobId") jobId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
 
     @Query(
         """
