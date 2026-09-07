@@ -30,10 +30,15 @@ class UserJobController(
         sortType: JobSortType,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
+        keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
             userId = userId,
-            condition = JobSearchCondition(employmentType = employmentType, experienceType = experienceType),
+            condition = JobSearchCondition(
+                employmentType = employmentType,
+                experienceType = experienceType,
+                keyword = keyword,
+            ),
             sortType = sortType,
             page = page - 1,
             size = size,

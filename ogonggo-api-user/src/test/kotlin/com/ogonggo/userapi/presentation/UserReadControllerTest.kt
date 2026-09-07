@@ -186,6 +186,33 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `검색어는 필터 정렬과 함께 조회 조건으로 전달된다`() {
+        val condition = JobSearchCondition(
+            employmentType = EmploymentType.INTERN,
+            keyword = "백엔드",
+        )
+        Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
+            .thenReturn(jobPageResult())
+
+        mockMvc.perform(
+            get("/api/v1/jobs")
+                .param("employmentType", "INTERN")
+                .param("keyword", "백엔드")
+                .param("sort", "VIEW_COUNT")
+                .with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        Mockito.verify(userJobService).getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10)
+    }
+
+    @Test
+    fun `검색어가 최대 길이를 넘으면 400으로 응답한다`() {
+        mockMvc.perform(
+            get("/api/v1/jobs").param("keyword", "가".repeat(101)).with(authenticatedUser()),
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
     fun `알 수 없는 필터 값은 400으로 응답한다`() {
         mockMvc.perform(
             get("/api/v1/jobs").param("employmentType", "UNKNOWN").with(authenticatedUser()),

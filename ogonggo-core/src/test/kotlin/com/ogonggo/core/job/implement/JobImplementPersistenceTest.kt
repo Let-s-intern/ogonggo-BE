@@ -406,6 +406,69 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(2L, page.totalElements)
     }
 
+    @Test
+    fun `검색어는 회사명과 제목을 모두 대상으로 하고 대소문자를 가리지 않는다`() {
+        val byTitle = publishNamed(companyName = "오공고", title = "iOS 개발자")
+        val byCompany = publishNamed(companyName = "IOS컴퍼니", title = "백엔드 개발자")
+        publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
+
+        assertEquals(
+            listOf(byCompany, byTitle),
+            readIds(JobSearchCondition(keyword = "ios")),
+        )
+    }
+
+    @Test
+    fun `검색어가 비어 있으면 검색 조건을 적용하지 않는다`() {
+        val first = publishNamed(companyName = "오공고", title = "백엔드 개발자")
+        val second = publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
+
+        assertEquals(listOf(second, first), readIds(JobSearchCondition(keyword = "   ")))
+        assertEquals(listOf(second, first), readIds(JobSearchCondition(keyword = null)))
+    }
+
+    @Test
+    fun `검색어의 와일드카드는 문자 그대로 취급해 전체 조회를 유발하지 않는다`() {
+        publishNamed(companyName = "오공고", title = "백엔드 개발자")
+        val literal = publishNamed(companyName = "오공고", title = "연봉 100% 인상 백엔드")
+
+        assertEquals(emptyList<Long>(), readIds(JobSearchCondition(keyword = "_")))
+        assertEquals(listOf(literal), readIds(JobSearchCondition(keyword = "100%")))
+    }
+
+    @Test
+    fun `검색어는 필터 정렬과 함께 적용된다`() {
+        val target = publishNamed(
+            companyName = "오공고",
+            title = "백엔드 개발자",
+            employmentType = EmploymentType.INTERN,
+        )
+        publishNamed(companyName = "오공고", title = "백엔드 개발자", employmentType = EmploymentType.FULL_TIME)
+        publishNamed(companyName = "오공고", title = "데이터 엔지니어", employmentType = EmploymentType.INTERN)
+
+        val page = readPage(
+            page = 0,
+            size = 10,
+            sortType = JobSortType.VIEW_COUNT,
+            condition = JobSearchCondition(employmentType = EmploymentType.INTERN, keyword = "백엔드"),
+        )
+
+        assertEquals(listOf(target), page.jobs.map { it.id })
+        assertEquals(1L, page.totalElements)
+    }
+
+    private fun publishNamed(
+        companyName: String,
+        title: String,
+        employmentType: EmploymentType = EmploymentType.FULL_TIME,
+    ): Long {
+        val job = jobAppender.append(
+            createCommand(employmentType = employmentType, companyName = companyName, title = title),
+        )
+        jobManager.publish(job)
+        return checkNotNull(job.id)
+    }
+
     private fun publish(employmentType: EmploymentType, experienceType: ExperienceType): Long {
         val job = jobAppender.append(
             createCommand(employmentType = employmentType, experienceType = experienceType),
@@ -431,9 +494,11 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         sourceUrl: String? = "https://example.com/jobs/1",
         employmentType: EmploymentType = EmploymentType.FULL_TIME,
         experienceType: ExperienceType = ExperienceType.EXPERIENCED,
+        companyName: String = "오공고",
+        title: String = "백엔드 개발자",
     ): JobAppendCommand = JobAppendCommand(
-        companyName = "오공고",
-        title = "백엔드 개발자",
+        companyName = companyName,
+        title = title,
         sourceUrl = sourceUrl,
         employmentType = employmentType,
         experienceType = experienceType,

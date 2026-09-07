@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.Size
 import java.time.LocalDate
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
@@ -45,6 +46,9 @@ interface UserJobApi {
 
             employmentType과 experienceType으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
             보내지 않으면 해당 조건을 적용하지 않습니다. 두 필터와 정렬은 함께 사용할 수 있습니다.
+
+            keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
+            공백만 보내면 검색하지 않습니다. 검색도 필터·정렬과 함께 사용할 수 있습니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -66,6 +70,9 @@ interface UserJobApi {
         employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false)
         experienceType: ExperienceType?,
+        @RequestParam(name = "keyword", required = false)
+        @Size(max = 100)
+        keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(

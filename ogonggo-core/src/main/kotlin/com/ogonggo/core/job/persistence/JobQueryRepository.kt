@@ -54,6 +54,7 @@ internal class JobQueryRepository(
         job.deletedAt.isNull,
         employmentTypeEq(condition.employmentType),
         experienceTypeEq(condition.experienceType),
+        keywordContains(condition.keyword),
     )
 
     private fun employmentTypeEq(employmentType: EmploymentType?): BooleanExpression? =
@@ -61,6 +62,19 @@ internal class JobQueryRepository(
 
     private fun experienceTypeEq(experienceType: ExperienceType?): BooleanExpression? =
         experienceType?.let(job.experienceType::eq)
+
+    /**
+     * 검색어는 인덱스로 좁힐 수 없어 다른 조건으로 고른 행을 차례로 확인한다.
+     * 대소문자를 가리지 않아 영문 직무명을 어떻게 입력해도 같은 결과를 준다.
+     * 검색어의 와일드카드는 QueryDSL이 이스케이프하므로 사용자가 전체 조회를 유발할 수 없다.
+     */
+    private fun keywordContains(keyword: String?): BooleanExpression? {
+        if (keyword.isNullOrBlank()) {
+            return null
+        }
+        return job.title.containsIgnoreCase(keyword)
+            .or(job.companyName.containsIgnoreCase(keyword))
+    }
 
     /**
      * 지표 조인은 조회수순에만 필요하므로 그 정렬에서만 건다.
