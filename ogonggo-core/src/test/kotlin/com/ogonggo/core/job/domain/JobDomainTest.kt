@@ -18,6 +18,10 @@ class JobDomainTest {
             title = "백엔드 인턴",
             employmentType = EmploymentType.INTERN,
             parentCompanyName = "변경 모회사",
+            companyLogoUrl = "https://example.com/logo2.png",
+            jobField = "서버 개발",
+            coverImageUrl = "https://example.com/cover2.png",
+            recruitmentHeadcount = 5,
             experienceType = ExperienceType.NEWCOMER,
             experienceMinYears = 0,
             experienceMaxYears = 1,
@@ -38,7 +42,11 @@ class JobDomainTest {
 
         assertEquals("변경 회사", job.companyName)
         assertEquals("변경 모회사", job.parentCompanyName)
+        assertEquals("https://example.com/logo2.png", job.companyLogoUrl)
         assertEquals("백엔드 인턴", job.title)
+        assertEquals("서버 개발", job.jobField)
+        assertEquals("https://example.com/cover2.png", job.coverImageUrl)
+        assertEquals(5, job.recruitmentHeadcount)
         assertEquals(EmploymentType.INTERN, job.employmentType)
         assertEquals(startAt, job.recruitmentStartAt)
         assertEquals(endAt, job.recruitmentEndAt)
@@ -56,6 +64,10 @@ class JobDomainTest {
         assertThrows(IllegalArgumentException::class.java) { createJob(companyName = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(parentCompanyName = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(region = " ") }
+        assertThrows(IllegalArgumentException::class.java) { createJob(companyLogoUrl = " ") }
+        assertThrows(IllegalArgumentException::class.java) { createJob(jobField = " ") }
+        assertThrows(IllegalArgumentException::class.java) { createJob(coverImageUrl = " ") }
+        assertThrows(IllegalArgumentException::class.java) { createJob(recruitmentHeadcount = 0) }
         assertThrows(IllegalArgumentException::class.java) { createJob(experienceMinYears = -1) }
         assertThrows(IllegalArgumentException::class.java) {
             createJob(experienceMinYears = 5, experienceMaxYears = 3)
@@ -105,6 +117,10 @@ class JobDomainTest {
     private fun createJob(
         companyName: String = "오공고",
         parentCompanyName: String? = null,
+        companyLogoUrl: String? = null,
+        jobField: String? = null,
+        coverImageUrl: String? = null,
+        recruitmentHeadcount: Int? = null,
         region: String? = "서울",
         experienceMinYears: Int? = 1,
         experienceMaxYears: Int? = 3,
@@ -113,7 +129,10 @@ class JobDomainTest {
     ): Job = Job(
         companyName = companyName,
         parentCompanyName = parentCompanyName,
+        companyLogoUrl = companyLogoUrl,
         title = "백엔드 개발자",
+        jobField = jobField,
+        coverImageUrl = coverImageUrl,
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = experienceMinYears,
@@ -121,6 +140,7 @@ class JobDomainTest {
         educationLevel = EducationLevel.ANY,
         region = region,
         recruitmentType = JobRecruitmentType.PERIOD,
+        recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
         companyAndTeamIntroduction = "회사 및 팀 소개",
