@@ -30,6 +30,8 @@ class JobDomainTest {
             recruitmentType = JobRecruitmentType.PERIOD,
             recruitmentStartAt = startAt,
             recruitmentEndAt = endAt,
+            closesWhenFilled = true,
+            autoCloseEnabled = false,
             companyAndTeamIntroduction = "변경된 회사 및 팀 소개",
             responsibilities = "변경된 주요 업무",
             qualifications = "변경된 자격 요건",
@@ -37,6 +39,8 @@ class JobDomainTest {
             compensation = "변경된 급여 및 처우",
             benefits = "변경된 복지 및 혜택",
             hiringProcess = "변경된 채용 절차",
+            recruitmentNotice = "변경된 채용 안내사항",
+            applicationMethod = JobApplicationMethod.EMAIL,
             sourceUrl = "https://example.com/jobs/2",
         )
 
@@ -57,6 +61,10 @@ class JobDomainTest {
         assertEquals("변경된 급여 및 처우", job.compensation)
         assertEquals("변경된 복지 및 혜택", job.benefits)
         assertEquals("변경된 채용 절차", job.hiringProcess)
+        assertEquals("변경된 채용 안내사항", job.recruitmentNotice)
+        assertEquals(JobApplicationMethod.EMAIL, job.applicationMethod)
+        assertEquals(true, job.closesWhenFilled)
+        assertEquals(false, job.autoCloseEnabled)
     }
 
     @Test

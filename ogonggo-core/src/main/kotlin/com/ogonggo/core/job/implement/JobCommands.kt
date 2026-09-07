@@ -3,6 +3,7 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import java.time.LocalDateTime
@@ -24,6 +25,8 @@ data class JobAppendCommand(
     val recruitmentHeadcount: Int? = null,
     val recruitmentStartAt: LocalDateTime? = null,
     val recruitmentEndAt: LocalDateTime? = null,
+    val closesWhenFilled: Boolean? = null,
+    val autoCloseEnabled: Boolean? = null,
     val companyAndTeamIntroduction: String? = null,
     val responsibilities: String? = null,
     val qualifications: String? = null,
@@ -31,6 +34,8 @@ data class JobAppendCommand(
     val compensation: String? = null,
     val benefits: String? = null,
     val hiringProcess: String? = null,
+    val recruitmentNotice: String? = null,
+    val applicationMethod: JobApplicationMethod? = null,
     val sourceUrl: String? = null,
     val publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
 )
@@ -52,6 +57,8 @@ data class JobUpdateCommand(
     val recruitmentHeadcount: Int? = null,
     val recruitmentStartAt: LocalDateTime? = null,
     val recruitmentEndAt: LocalDateTime? = null,
+    val closesWhenFilled: Boolean? = null,
+    val autoCloseEnabled: Boolean? = null,
     val companyAndTeamIntroduction: String? = null,
     val responsibilities: String? = null,
     val qualifications: String? = null,
@@ -59,5 +66,7 @@ data class JobUpdateCommand(
     val compensation: String? = null,
     val benefits: String? = null,
     val hiringProcess: String? = null,
+    val recruitmentNotice: String? = null,
+    val applicationMethod: JobApplicationMethod? = null,
     val sourceUrl: String? = null,
 )

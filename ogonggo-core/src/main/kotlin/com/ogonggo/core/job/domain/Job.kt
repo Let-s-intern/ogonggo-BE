@@ -56,6 +56,8 @@ class Job internal constructor(
     recruitmentHeadcount: Int? = null,
     recruitmentStartAt: LocalDateTime? = null,
     recruitmentEndAt: LocalDateTime? = null,
+    closesWhenFilled: Boolean? = null,
+    autoCloseEnabled: Boolean? = null,
     companyAndTeamIntroduction: String? = null,
     responsibilities: String? = null,
     qualifications: String? = null,
@@ -63,6 +65,8 @@ class Job internal constructor(
     compensation: String? = null,
     benefits: String? = null,
     hiringProcess: String? = null,
+    recruitmentNotice: String? = null,
+    applicationMethod: JobApplicationMethod? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
 ) : BaseTimeEntity() {
@@ -158,6 +162,16 @@ class Job internal constructor(
     var recruitmentEndAt: LocalDateTime? = recruitmentEndAt /* 공고 모집 종료 일시 */
         protected set
 
+    /** 적합한 지원자를 뽑으면 마감일 전이라도 모집을 끝내는 공고인지 나타낸다. */
+    @Column(name = "closes_when_filled")
+    var closesWhenFilled: Boolean? = closesWhenFilled /* 접수 시 마감 여부 */
+        protected set
+
+    /** 모집 종료 일시가 지나면 별도 조작 없이 마감으로 넘길지 나타낸다. */
+    @Column(name = "auto_close_enabled")
+    var autoCloseEnabled: Boolean? = autoCloseEnabled /* 자동 모집 종료 여부 */
+        protected set
+
     @Column(name = "company_and_team_introduction", columnDefinition = "LONGTEXT")
     var companyAndTeamIntroduction: String? = companyAndTeamIntroduction /* 회사 및 팀 소개 */
         protected set
@@ -184,6 +198,15 @@ class Job internal constructor(
 
     @Column(name = "hiring_process", columnDefinition = "LONGTEXT")
     var hiringProcess: String? = hiringProcess /* 채용 절차 */
+        protected set
+
+    @Column(name = "recruitment_notice", columnDefinition = "LONGTEXT")
+    var recruitmentNotice: String? = recruitmentNotice /* 채용 안내사항 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "application_method", length = 20)
+    var applicationMethod: JobApplicationMethod? = applicationMethod /* 지원 방법 */
         protected set
 
     @Column(name = "source_url", length = 2048)
@@ -220,6 +243,8 @@ class Job internal constructor(
         recruitmentHeadcount: Int?,
         recruitmentStartAt: LocalDateTime?,
         recruitmentEndAt: LocalDateTime?,
+        closesWhenFilled: Boolean?,
+        autoCloseEnabled: Boolean?,
         companyAndTeamIntroduction: String?,
         responsibilities: String?,
         qualifications: String?,
@@ -227,6 +252,8 @@ class Job internal constructor(
         compensation: String?,
         benefits: String?,
         hiringProcess: String?,
+        recruitmentNotice: String?,
+        applicationMethod: JobApplicationMethod?,
         sourceUrl: String?,
     ) {
         checkModifiable()
@@ -261,6 +288,8 @@ class Job internal constructor(
         this.recruitmentHeadcount = recruitmentHeadcount
         this.recruitmentStartAt = recruitmentStartAt
         this.recruitmentEndAt = recruitmentEndAt
+        this.closesWhenFilled = closesWhenFilled
+        this.autoCloseEnabled = autoCloseEnabled
         this.companyAndTeamIntroduction = companyAndTeamIntroduction
         this.responsibilities = responsibilities
         this.qualifications = qualifications
@@ -268,6 +297,8 @@ class Job internal constructor(
         this.compensation = compensation
         this.benefits = benefits
         this.hiringProcess = hiringProcess
+        this.recruitmentNotice = recruitmentNotice
+        this.applicationMethod = applicationMethod
         this.sourceUrl = sourceUrl
     }
 
