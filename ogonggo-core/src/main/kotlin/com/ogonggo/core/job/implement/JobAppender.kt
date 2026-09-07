@@ -16,6 +16,7 @@ internal class JobAppenderImpl(
     override fun append(command: JobAppendCommand): Job =
         jobRepository.save(
             Job(
+                ownerUserId = command.ownerUserId,
                 companyName = command.companyName,
                 parentCompanyName = command.parentCompanyName,
                 companyLogoUrl = command.companyLogoUrl,

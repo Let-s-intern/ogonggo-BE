@@ -67,6 +67,7 @@ class UserSecurityConfiguration {
                 // 광고 문의는 오공고 계정이 없는 기업 담당자가 소개 페이지에서 남긴다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-inquiries").permitAll()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
+                it.requestMatchers("/api/v1/users/me/jobs", "/api/v1/users/me/jobs/**").authenticated()
                 // 채용공고와 부트캠프 조회는 로그인 없이 연다.
                 // 액세스 토큰을 보내면 북마크 여부가 채워지고, 없으면 비로그인 응답을 준다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/**").permitAll()

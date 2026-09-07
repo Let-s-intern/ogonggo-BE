@@ -9,6 +9,7 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
@@ -24,6 +25,11 @@ interface JobReader {
 
     /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
     fun readIncludingDeleted(jobId: Long): Job
+
+    fun readOwned(ownerUserId: Long, jobId: Long): Job
+    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage
+    fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job
+    fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job
 }
 
 @Component
@@ -86,6 +92,34 @@ internal class JobReaderImpl(
 
     override fun readIncludingDeleted(jobId: Long): Job =
         jobRepository.findIncludingDeletedById(jobId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    override fun readOwned(ownerUserId: Long, jobId: Long): Job =
+        jobRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(jobId, ownerUserId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    override fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage {
+        validatePageRequest(page, size)
+        val result = jobRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
+            ownerUserId,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")),
+        )
+        return JobPage(
+            jobs = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+            hasNext = result.hasNext(),
+        )
+    }
+
+    override fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job =
+        jobRepository.findOwnedByIdForUpdate(ownerUserId, jobId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    override fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job =
+        jobRepository.findOwnedByIdForDelete(ownerUserId, jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 }
 

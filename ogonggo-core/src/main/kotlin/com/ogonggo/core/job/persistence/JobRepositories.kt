@@ -80,6 +80,33 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     /** 북마크 해제는 이미 삭제된 공고에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select job from Job job where job.id = :jobId")
     fun findIncludingDeletedById(@Param("jobId") jobId: Long): Job?
+
+    fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Job?
+
+    fun findAllByOwnerUserIdAndDeletedAtIsNull(ownerUserId: Long, pageable: Pageable): Page<Job>
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select job
+        from Job job
+        where job.id = :jobId
+          and job.ownerUserId = :ownerUserId
+          and job.deletedAt is null
+        """,
+    )
+    fun findOwnedByIdForUpdate(
+        @Param("ownerUserId") ownerUserId: Long,
+        @Param("jobId") jobId: Long,
+    ): Job?
+
+    /** 삭제는 멱등해야 하므로 이미 삭제된 공고도 찾는다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select job from Job job where job.id = :jobId and job.ownerUserId = :ownerUserId")
+    fun findOwnedByIdForDelete(
+        @Param("ownerUserId") ownerUserId: Long,
+        @Param("jobId") jobId: Long,
+    ): Job?
 }
 
 internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {

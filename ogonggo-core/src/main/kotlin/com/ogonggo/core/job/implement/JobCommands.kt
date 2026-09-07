@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import java.time.LocalDateTime
 
 data class JobAppendCommand(
+    val ownerUserId: Long? = null,
     val companyName: String,
     val parentCompanyName: String? = null,
     val companyLogoUrl: String? = null,

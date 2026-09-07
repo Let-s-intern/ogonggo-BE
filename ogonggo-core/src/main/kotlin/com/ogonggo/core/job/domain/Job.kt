@@ -37,9 +37,14 @@ import java.time.LocalDateTime
             name = "idx_jobs_published_experience",
             columnList = "publication_status, deleted_at, experience_type",
         ),
+        Index(
+            name = "idx_jobs_owner",
+            columnList = "owner_user_id, deleted_at",
+        ),
     ],
 )
 class Job internal constructor(
+    ownerUserId: Long? = null,
     companyName: String,
     parentCompanyName: String? = null,
     companyLogoUrl: String? = null,
@@ -72,6 +77,7 @@ class Job internal constructor(
 ) : BaseTimeEntity() {
 
     init {
+        require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
@@ -91,6 +97,11 @@ class Job internal constructor(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null /* 채용공고 식별자 */
+        protected set
+
+    /** 기업회원이 직접 등록한 공고의 소유자다. 수집한 공고는 소유자가 없어 null이다. */
+    @Column(name = "owner_user_id")
+    var ownerUserId: Long? = ownerUserId /* 공고를 등록한 사용자 식별자 */
         protected set
 
     @Column(name = "company_name", nullable = false, length = 150)

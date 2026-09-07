@@ -469,6 +469,41 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         return checkNotNull(job.id)
     }
 
+    @Test
+    fun `기업회원은 자기 공고만 조회하고 남의 공고는 찾지 못한다`() {
+        val mine = jobAppender.append(createCommand(ownerUserId = USER_ID))
+        val others = jobAppender.append(createCommand(ownerUserId = OTHER_USER_ID))
+        val collected = jobAppender.append(createCommand())
+        val mineId = checkNotNull(mine.id)
+
+        val page = jobReader.readOwnedPage(USER_ID, page = 0, size = 10)
+
+        assertEquals(listOf(mineId), page.jobs.map { it.id })
+        assertEquals(1L, page.totalElements)
+        assertEquals(mineId, jobReader.readOwned(USER_ID, mineId).id)
+        assertThrows(EntityNotFoundException::class.java) {
+            jobReader.readOwned(USER_ID, checkNotNull(others.id))
+        }
+        // 수집한 공고는 소유자가 없으므로 어떤 기업회원에게도 보이지 않는다.
+        assertThrows(EntityNotFoundException::class.java) {
+            jobReader.readOwned(USER_ID, checkNotNull(collected.id))
+        }
+    }
+
+    @Test
+    fun `삭제 조회만 이미 삭제된 내 공고를 찾아 삭제를 멱등하게 만든다`() {
+        val job = jobAppender.append(createCommand(ownerUserId = USER_ID))
+        val jobId = checkNotNull(job.id)
+        jobManager.delete(jobReader.readOwnedForDelete(USER_ID, jobId), NOW)
+
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readOwned(USER_ID, jobId) }
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readOwnedForUpdate(USER_ID, jobId) }
+
+        jobManager.delete(jobReader.readOwnedForDelete(USER_ID, jobId), NOW.plusDays(1))
+
+        assertEquals(NOW, jobReader.readIncludingDeleted(jobId).deletedAt)
+    }
+
     private fun publish(employmentType: EmploymentType, experienceType: ExperienceType): Long {
         val job = jobAppender.append(
             createCommand(employmentType = employmentType, experienceType = experienceType),
@@ -496,7 +531,9 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         experienceType: ExperienceType = ExperienceType.EXPERIENCED,
         companyName: String = "오공고",
         title: String = "백엔드 개발자",
+        ownerUserId: Long? = null,
     ): JobAppendCommand = JobAppendCommand(
+        ownerUserId = ownerUserId,
         companyName = companyName,
         title = title,
         sourceUrl = sourceUrl,
