@@ -48,6 +48,7 @@ data class CreateAdvertisementInquiryCommand(
     val email: String,
     val phoneNumber: String,
     val inquiryType: AdvertisementInquiryType,
+    val promotionChannel: AdvertisementPromotionChannel,
     val promotionAnswer: String,
 )
 
@@ -58,6 +59,7 @@ data class AdvertisementInquiryNotification(
     val email: String,
     val phoneNumber: String,
     val inquiryType: AdvertisementInquiryType,
+    val promotionChannel: AdvertisementPromotionChannel,
     val promotionAnswer: String,
 ) {
     companion object {
@@ -68,6 +70,7 @@ data class AdvertisementInquiryNotification(
                 email = command.email,
                 phoneNumber = command.phoneNumber,
                 inquiryType = command.inquiryType,
+                promotionChannel = command.promotionChannel,
                 promotionAnswer = command.promotionAnswer,
             )
     }

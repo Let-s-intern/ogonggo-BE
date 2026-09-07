@@ -49,6 +49,7 @@ class AdvertisementInquiryServiceTest {
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
+            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
         private val NOTIFICATION = AdvertisementInquiryNotification(
@@ -57,6 +58,7 @@ class AdvertisementInquiryServiceTest {
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
+            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }
