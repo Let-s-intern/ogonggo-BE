@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -21,8 +22,14 @@ class UserJobService(
 ) {
 
     /** 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다. */
-    fun getJobs(userId: Long?, page: Int, size: Int, sortType: JobSortType): UserJobPageResult {
-        val result = jobReader.readPublishedPage(page, size, sortType)
+    fun getJobs(
+        userId: Long?,
+        condition: JobSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+    ): UserJobPageResult {
+        val result = jobReader.readPublishedPage(condition, sortType, page, size)
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,

@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobPage
 import com.ogonggo.core.job.implement.JobBookmarkReader
@@ -87,7 +88,7 @@ class UserJobServiceTest {
     @Test
     fun `게시된 공고 목록을 페이지 결과로 변환한다`() {
         val job = createJobMock()
-        Mockito.`when`(jobReader.readPublishedPage(0, 20, JobSortType.LATEST)).thenReturn(
+        Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)).thenReturn(
             JobPage(
                 jobs = listOf(job),
                 page = 0,
@@ -102,7 +103,7 @@ class UserJobServiceTest {
             mapOf(1L to JobMetricData(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
         )
 
-        val result = service.getJobs(USER_ID, 0, 20, JobSortType.LATEST)
+        val result = service.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)
 
         assertEquals(1, result.items.size)
         assertEquals(1L, result.totalElements)
@@ -110,14 +111,14 @@ class UserJobServiceTest {
         assertEquals(false, result.items.single().bookmarked)
         assertEquals(5L, result.items.single().viewCount)
         assertEquals(2L, result.items.single().bookmarkCount)
-        Mockito.verify(jobReader).readPublishedPage(0, 20, JobSortType.LATEST)
+        Mockito.verify(jobReader).readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)
     }
 
     @Test
     fun `비로그인 조회는 북마크 저장소를 조회하지 않고 모두 북마크되지 않은 것으로 본다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
-        Mockito.`when`(jobReader.readPublishedPage(0, 20, JobSortType.LATEST)).thenReturn(
+        Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)).thenReturn(
             JobPage(
                 jobs = listOf(job),
                 page = 0,
@@ -134,7 +135,7 @@ class UserJobServiceTest {
         )
 
         assertEquals(false, service.getJob(null, 1L).bookmarked)
-        assertEquals(false, service.getJobs(null, 0, 20, JobSortType.LATEST).items.single().bookmarked)
+        assertEquals(false, service.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 20).items.single().bookmarked)
 
         Mockito.verifyNoInteractions(jobBookmarkReader)
     }

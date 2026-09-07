@@ -27,11 +27,6 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
         publicationStatus: JobPublicationStatus,
     ): Job?
 
-    fun findAllByPublicationStatusAndDeletedAtIsNull(
-        publicationStatus: JobPublicationStatus,
-        pageable: Pageable,
-    ): Page<Job>
-
     @Query(
         value = """
             select job
@@ -85,32 +80,6 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     /** 북마크 해제는 이미 삭제된 공고에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select job from Job job where job.id = :jobId")
     fun findIncludingDeletedById(@Param("jobId") jobId: Long): Job?
-
-    /**
-     * 조회 수는 지표 테이블이 소유하고 공고와 연관관계가 없으므로 명시적으로 조인한다.
-     * 지표 행은 첫 조회 시점에 생기므로 아직 없는 공고는 0으로 본다.
-     * 조회 수가 같을 때 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
-     */
-    @Query(
-        value = """
-        select job
-        from Job job
-        left join JobMetric metric on metric.jobId = job.id
-        where job.publicationStatus = :publicationStatus
-          and job.deletedAt is null
-        order by coalesce(metric.viewCount, 0) desc, job.id desc
-        """,
-        countQuery = """
-        select count(job)
-        from Job job
-        where job.publicationStatus = :publicationStatus
-          and job.deletedAt is null
-        """,
-    )
-    fun findAllPublishedOrderByViewCount(
-        @Param("publicationStatus") publicationStatus: JobPublicationStatus,
-        pageable: Pageable,
-    ): Page<Job>
 }
 
 internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {

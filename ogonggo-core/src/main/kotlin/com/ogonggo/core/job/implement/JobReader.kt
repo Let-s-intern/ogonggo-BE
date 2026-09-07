@@ -3,11 +3,12 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.persistence.JobJpaRepository
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
@@ -17,7 +18,7 @@ interface JobReader {
     /** 같은 원문에서 이미 수집한 공고가 있는지 확인한다. 삭제된 공고는 다시 등록할 수 있게 제외한다. */
     fun existsBySourceUrl(sourceUrl: String): Boolean
     fun readPublished(jobId: Long): Job
-    fun readPublishedPage(page: Int, size: Int, sortType: JobSortType): JobPage
+    fun readPublishedPage(condition: JobSearchCondition, sortType: JobSortType, page: Int, size: Int): JobPage
     fun readPublishedCalendar(rangeStart: LocalDateTime, rangeEndExclusive: LocalDateTime): List<Job>
     fun readForUpdate(jobId: Long): Job
 
@@ -28,6 +29,7 @@ interface JobReader {
 @Component
 internal class JobReaderImpl(
     private val jobRepository: JobJpaRepository,
+    private val jobQueryRepository: JobQueryRepository,
 ) : JobReader {
 
     override fun read(jobId: Long): Job =
@@ -43,20 +45,19 @@ internal class JobReaderImpl(
             publicationStatus = JobPublicationStatus.PUBLISHED,
         ) ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readPublishedPage(page: Int, size: Int, sortType: JobSortType): JobPage {
+    /** 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. */
+    override fun readPublishedPage(
+        condition: JobSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+    ): JobPage {
         validatePageRequest(page, size)
-        val result = when (sortType) {
-            JobSortType.LATEST -> jobRepository.findAllByPublicationStatusAndDeletedAtIsNull(
-                publicationStatus = JobPublicationStatus.PUBLISHED,
-                pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")),
-            )
-
-            // 정렬을 JPQL이 이미 정하므로 Pageable에 정렬을 넘기지 않는다.
-            JobSortType.VIEW_COUNT -> jobRepository.findAllPublishedOrderByViewCount(
-                publicationStatus = JobPublicationStatus.PUBLISHED,
-                pageable = PageRequest.of(page, size),
-            )
-        }
+        val result = jobQueryRepository.findPublishedPage(
+            condition = condition,
+            sortType = sortType,
+            pageable = PageRequest.of(page, size),
+        )
         return JobPage(
             jobs = result.content,
             page = result.number,

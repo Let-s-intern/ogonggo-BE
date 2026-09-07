@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.userapi.error.InvalidRequestParameterException
 import com.ogonggo.userapi.job.business.UserJobService
@@ -25,8 +28,16 @@ class UserJobController(
         page: Int,
         size: Int,
         sortType: JobSortType,
+        employmentType: EmploymentType?,
+        experienceType: ExperienceType?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
-        val result = userJobService.getJobs(userId, page - 1, size, sortType)
+        val result = userJobService.getJobs(
+            userId = userId,
+            condition = JobSearchCondition(employmentType = employmentType, experienceType = experienceType),
+            sortType = sortType,
+            page = page - 1,
+            size = size,
+        )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
                 items = result.items.map(UserJobSummaryResponse::from),

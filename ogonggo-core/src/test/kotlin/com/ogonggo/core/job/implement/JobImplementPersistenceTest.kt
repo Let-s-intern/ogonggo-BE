@@ -10,7 +10,9 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
@@ -29,6 +31,7 @@ import java.time.LocalDateTime
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
     JobReaderImpl::class,
+    JobQueryRepository::class,
     JobAppenderImpl::class,
     JobManagerImpl::class,
     JobBookmarkReaderImpl::class,
@@ -85,8 +88,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(first, deleted, latest).forEach(jobManager::publish)
         jobManager.delete(deleted, java.time.LocalDateTime.of(2026, 8, 27, 12, 0))
 
-        val firstPage = jobReader.readPublishedPage(page = 0, size = 1, sortType = JobSortType.LATEST)
-        val secondPage = jobReader.readPublishedPage(page = 1, size = 1, sortType = JobSortType.LATEST)
+        val firstPage = readPage(page = 0, size = 1, sortType = JobSortType.LATEST)
+        val secondPage = readPage(page = 1, size = 1, sortType = JobSortType.LATEST)
 
         assertEquals(listOf(latest.id), firstPage.jobs.map { it.id })
         assertEquals(listOf(first.id), secondPage.jobs.map { it.id })
@@ -97,9 +100,9 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `사용자 공고 목록의 페이지 범위를 검증한다`() {
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPublishedPage(-1, 20, JobSortType.LATEST) }
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPublishedPage(0, 0, JobSortType.LATEST) }
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPublishedPage(0, 101, JobSortType.LATEST) }
+        assertThrows(IllegalArgumentException::class.java) { readPage(page = -1, size = 20) }
+        assertThrows(IllegalArgumentException::class.java) { readPage(page = 0, size = 0) }
+        assertThrows(IllegalArgumentException::class.java) { readPage(page = 0, size = 101) }
     }
 
     @Test
@@ -261,7 +264,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobMetricManager.increaseViewCount(checkNotNull(tiedOlder.id), NOW)
         jobMetricManager.increaseViewCount(checkNotNull(tiedNewer.id), NOW)
 
-        val page = jobReader.readPublishedPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
+        val page = readPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
 
         assertEquals(
             listOf(popular.id, tiedNewer.id, tiedOlder.id, quiet.id),
@@ -278,7 +281,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(published, deleted).forEach(jobManager::publish)
         jobManager.delete(deleted, NOW)
 
-        val page = jobReader.readPublishedPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
+        val page = readPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT)
 
         assertEquals(listOf(published.id), page.jobs.map { it.id })
         assertEquals(1L, page.totalElements)
@@ -346,17 +349,94 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(1L, result.totalElements)
     }
 
+    @Test
+    fun `선택 필터는 지정한 값만 남기고 지정하지 않으면 적용되지 않는다`() {
+        val fullTimeExperienced = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        val fullTimeNewcomer = publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
+        val internExperienced = publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+
+        assertEquals(
+            listOf(internExperienced, fullTimeNewcomer, fullTimeExperienced),
+            readIds(JobSearchCondition.NONE),
+        )
+        assertEquals(
+            listOf(fullTimeNewcomer, fullTimeExperienced),
+            readIds(JobSearchCondition(employmentType = EmploymentType.FULL_TIME)),
+        )
+        assertEquals(
+            listOf(internExperienced, fullTimeExperienced),
+            readIds(JobSearchCondition(experienceType = ExperienceType.EXPERIENCED)),
+        )
+    }
+
+    @Test
+    fun `두 필터를 함께 지정하면 모두 만족하는 공고만 남는다`() {
+        val target = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
+        publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+
+        val page = readPage(
+            page = 0,
+            size = 10,
+            condition = JobSearchCondition(
+                employmentType = EmploymentType.FULL_TIME,
+                experienceType = ExperienceType.EXPERIENCED,
+            ),
+        )
+
+        assertEquals(listOf(target), page.jobs.map { it.id })
+        assertEquals(1L, page.totalElements)
+    }
+
+    @Test
+    fun `필터는 정렬과 함께 적용되며 전체 건수도 필터를 반영한다`() {
+        val quiet = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        val popular = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
+        publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+        jobMetricManager.increaseViewCount(popular, NOW)
+
+        val page = readPage(
+            page = 0,
+            size = 10,
+            sortType = JobSortType.VIEW_COUNT,
+            condition = JobSearchCondition(employmentType = EmploymentType.FULL_TIME),
+        )
+
+        assertEquals(listOf(popular, quiet), page.jobs.map { it.id })
+        assertEquals(2L, page.totalElements)
+    }
+
+    private fun publish(employmentType: EmploymentType, experienceType: ExperienceType): Long {
+        val job = jobAppender.append(
+            createCommand(employmentType = employmentType, experienceType = experienceType),
+        )
+        jobManager.publish(job)
+        return checkNotNull(job.id)
+    }
+
+    private fun readIds(condition: JobSearchCondition): List<Long?> =
+        readPage(page = 0, size = 10, condition = condition).jobs.map { it.id }
+
+    private fun readPage(
+        page: Int,
+        size: Int,
+        sortType: JobSortType = JobSortType.LATEST,
+        condition: JobSearchCondition = JobSearchCondition.NONE,
+    ): JobPage = jobReader.readPublishedPage(condition, sortType, page, size)
+
     private fun createCommand(
         recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
         sourceUrl: String? = "https://example.com/jobs/1",
+        employmentType: EmploymentType = EmploymentType.FULL_TIME,
+        experienceType: ExperienceType = ExperienceType.EXPERIENCED,
     ): JobAppendCommand = JobAppendCommand(
         companyName = "오공고",
         title = "백엔드 개발자",
         sourceUrl = sourceUrl,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = employmentType,
+        experienceType = experienceType,
         experienceMinYears = 1,
         experienceMaxYears = 3,
         educationLevel = EducationLevel.ANY,

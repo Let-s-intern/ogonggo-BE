@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
@@ -40,6 +42,9 @@ interface UserJobApi {
             보내지 않으면 항상 false입니다.
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
+
+            employmentType과 experienceType으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
+            보내지 않으면 해당 조건을 적용하지 않습니다. 두 필터와 정렬은 함께 사용할 수 있습니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -57,6 +62,10 @@ interface UserJobApi {
         size: Int,
         @RequestParam(name = "sort", defaultValue = "LATEST")
         sortType: JobSortType,
+        @RequestParam(name = "employmentType", required = false)
+        employmentType: EmploymentType?,
+        @RequestParam(name = "experienceType", required = false)
+        experienceType: ExperienceType?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(
