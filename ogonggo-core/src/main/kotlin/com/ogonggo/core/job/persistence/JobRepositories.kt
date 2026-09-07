@@ -82,24 +82,9 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     @Query("select job from Job job where job.id = :jobId and job.deletedAt is null")
     fun findByIdForUpdate(@Param("jobId") jobId: Long): Job?
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query(
-        """
-        select job
-        from Job job
-        where job.id = :jobId
-          and job.publicationStatus = :publicationStatus
-          and job.deletedAt is null
-        """,
-    )
-    fun findPublishedByIdForUpdate(
-        @Param("jobId") jobId: Long,
-        @Param("publicationStatus") publicationStatus: JobPublicationStatus,
-    ): Job?
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    /** 북마크 해제는 이미 삭제된 공고에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select job from Job job where job.id = :jobId")
-    fun findIncludingDeletedByIdForUpdate(@Param("jobId") jobId: Long): Job?
+    fun findIncludingDeletedById(@Param("jobId") jobId: Long): Job?
 
     /**
      * 조회 수는 지표 테이블이 소유하고 공고와 연관관계가 없으므로 명시적으로 조인한다.
@@ -149,6 +134,46 @@ internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {
 internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     fun findByJobIdAndUserId(jobId: Long, userId: Long): JobBookmark?
     fun countByJobIdAndDeletedAtIsNull(jobId: Long): Long
+
+    /**
+     * 해제된 북마크를 다시 활성으로 되돌린다.
+     * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.
+     * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update JobBookmark bookmark
+        set bookmark.deletedAt = null,
+            bookmark.updatedAt = :now
+        where bookmark.jobId = :jobId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is not null
+        """,
+    )
+    fun restore(
+        @Param("jobId") jobId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update JobBookmark bookmark
+        set bookmark.deletedAt = :now,
+            bookmark.updatedAt = :now
+        where bookmark.jobId = :jobId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun softDelete(
+        @Param("jobId") jobId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
 
     @Query(
         """

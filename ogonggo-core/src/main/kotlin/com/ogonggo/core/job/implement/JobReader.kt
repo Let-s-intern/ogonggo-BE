@@ -20,8 +20,9 @@ interface JobReader {
     fun readPublishedPage(page: Int, size: Int, sortType: JobSortType): JobPage
     fun readPublishedCalendar(rangeStart: LocalDateTime, rangeEndExclusive: LocalDateTime): List<Job>
     fun readForUpdate(jobId: Long): Job
-    fun readPublishedForUpdate(jobId: Long): Job
-    fun readIncludingDeletedForUpdate(jobId: Long): Job
+
+    /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
+    fun readIncludingDeleted(jobId: Long): Job
 }
 
 @Component
@@ -82,12 +83,8 @@ internal class JobReaderImpl(
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readPublishedForUpdate(jobId: Long): Job =
-        jobRepository.findPublishedByIdForUpdate(jobId, JobPublicationStatus.PUBLISHED)
-            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
-
-    override fun readIncludingDeletedForUpdate(jobId: Long): Job =
-        jobRepository.findIncludingDeletedByIdForUpdate(jobId)
+    override fun readIncludingDeleted(jobId: Long): Job =
+        jobRepository.findIncludingDeletedById(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 }
 

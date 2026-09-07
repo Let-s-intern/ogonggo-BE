@@ -38,17 +38,4 @@ internal class JobBookmark(
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 북마크 해제 일시 */
         protected set
-
-    val isActive: Boolean
-        get() = deletedAt == null
-
-    fun restore() {
-        deletedAt = null
-    }
-
-    fun delete(now: LocalDateTime) {
-        if (deletedAt == null) {
-            deletedAt = now
-        }
-    }
 }

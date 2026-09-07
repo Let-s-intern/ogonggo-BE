@@ -165,31 +165,45 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val jobId = checkNotNull(job.id)
         jobManager.publish(job)
 
-        jobReader.readPublishedForUpdate(jobId)
-        jobBookmarkManager.append(USER_ID, jobId)
+        jobReader.readPublished(jobId)
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
         jobMetricManager.syncBookmarkCount(jobId)
 
         assertEquals(setOf(jobId), jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(jobId)))
         assertEquals(1L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
-        val duplicate = assertThrows(ConflictException::class.java) {
-            jobBookmarkManager.append(USER_ID, jobId)
-        }
-        assertEquals(JobErrorCode.JOB_BOOKMARK_ALREADY_EXISTS, duplicate.errorCode)
 
-        jobBookmarkManager.delete(USER_ID, jobId, NOW)
         jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(1))
+        jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(2))
         jobMetricManager.syncBookmarkCount(jobId)
 
         assertEquals(emptySet<Long>(), jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(jobId)))
         assertEquals(0L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
-        assertEquals(NOW, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
+        // 이미 해제된 북마크를 다시 해제해도 최초 해제 일시가 덮어써지지 않는다.
+        assertEquals(NOW.plusMinutes(1), jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
 
-        jobBookmarkManager.append(USER_ID, jobId)
+        jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(3))
         jobMetricManager.syncBookmarkCount(jobId)
 
+        val restored = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
         assertEquals(1L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
-        assertEquals(null, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
+        assertEquals(null, restored?.deletedAt)
+        // 북마크 목록이 수정 일시로 정렬하므로 복구는 벌크 갱신에서도 수정 일시를 남겨야 한다.
+        assertEquals(NOW.plusMinutes(3), restored?.updatedAt)
         assertEquals(1L, jobBookmarkRepository.count())
+    }
+
+    @Test
+    fun `이미 등록한 북마크를 다시 등록하면 유니크 제약이 막는다`() {
+        val job = jobAppender.append(createCommand())
+        val jobId = checkNotNull(job.id)
+        jobManager.publish(job)
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+
+        val duplicate = assertThrows(ConflictException::class.java) {
+            jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(1))
+        }
+
+        assertEquals(JobErrorCode.JOB_BOOKMARK_ALREADY_EXISTS, duplicate.errorCode)
     }
 
     @Test
@@ -226,7 +240,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     fun `북마크 수 갱신은 여러 번 실행해도 결과가 같다`() {
         val job = jobAppender.append(createCommand())
         val jobId = checkNotNull(job.id)
-        jobBookmarkManager.append(USER_ID, jobId)
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
 
         jobMetricManager.syncBookmarkCount(jobId)
         jobMetricManager.syncBookmarkCount(jobId)
@@ -323,8 +337,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val published = jobAppender.append(createCommand())
         val draft = jobAppender.append(createCommand())
         jobManager.publish(published)
-        jobBookmarkManager.append(USER_ID, checkNotNull(published.id))
-        jobBookmarkManager.append(USER_ID, checkNotNull(draft.id))
+        jobBookmarkManager.append(USER_ID, checkNotNull(published.id), NOW)
+        jobBookmarkManager.append(USER_ID, checkNotNull(draft.id), NOW)
 
         val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, page = 0, size = 10)
 
