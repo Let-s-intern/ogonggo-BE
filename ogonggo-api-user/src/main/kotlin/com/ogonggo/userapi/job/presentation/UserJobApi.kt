@@ -48,7 +48,8 @@ interface UserJobApi {
             보내지 않으면 해당 조건을 적용하지 않습니다. 두 필터와 정렬은 함께 사용할 수 있습니다.
 
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
-            공백만 보내면 검색하지 않습니다. 검색도 필터·정렬과 함께 사용할 수 있습니다.
+            2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
+            검색도 필터·정렬과 함께 사용할 수 있습니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -71,7 +72,7 @@ interface UserJobApi {
         @RequestParam(name = "experienceType", required = false)
         experienceType: ExperienceType?,
         @RequestParam(name = "keyword", required = false)
-        @Size(max = 100)
+        @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 

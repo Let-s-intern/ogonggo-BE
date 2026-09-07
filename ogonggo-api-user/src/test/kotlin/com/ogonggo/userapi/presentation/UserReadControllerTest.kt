@@ -206,10 +206,12 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `검색어가 최대 길이를 넘으면 400으로 응답한다`() {
-        mockMvc.perform(
-            get("/api/v1/jobs").param("keyword", "가".repeat(101)).with(authenticatedUser()),
-        ).andExpect(status().isBadRequest)
+    fun `검색어가 허용 길이를 벗어나면 400으로 응답한다`() {
+        listOf("", "가", "가".repeat(101)).forEach { keyword ->
+            mockMvc.perform(
+                get("/api/v1/jobs").param("keyword", keyword).with(authenticatedUser()),
+            ).andExpect(status().isBadRequest)
+        }
     }
 
     @Test
