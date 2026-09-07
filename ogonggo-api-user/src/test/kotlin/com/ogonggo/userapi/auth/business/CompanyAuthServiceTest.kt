@@ -147,6 +147,7 @@ class CompanyAuthServiceTest {
         email = EMAIL,
         status = UserStatus.ACTIVE,
         role = UserRole.COMPANY,
+        joinedAt = JOINED_AT,
     )
 
     private fun credential(status: UserStatus = UserStatus.ACTIVE): UserCredential = UserCredential(
@@ -159,6 +160,7 @@ class CompanyAuthServiceTest {
     companion object {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private const val USER_ID = 17L
         private const val EMAIL = "company@example.com"
         private const val RAW_PASSWORD = "password1234"

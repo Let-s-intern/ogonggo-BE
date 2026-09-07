@@ -2,6 +2,7 @@ package com.ogonggo.userapi.presentation
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
@@ -103,8 +104,9 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `인증 사용자는 부트캠프 목록과 상세를 조회한다`() {
-        Mockito.`when`(userBootcampService.getBootcamps(0, 10, BootcampSortType.LATEST)).thenReturn(bootcampPageResult())
-        Mockito.`when`(userBootcampService.getBootcamp(1L)).thenReturn(bootcampResult())
+        Mockito.`when`(userBootcampService.getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))
+            .thenReturn(bootcampPageResult())
+        Mockito.`when`(userBootcampService.getBootcamp(USER_ID, 1L)).thenReturn(bootcampResult())
 
         mockMvc.perform(get("/api/v1/bootcamps").with(authenticatedUser()))
             .andExpect(status().isOk)
@@ -113,6 +115,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].representativeImageUrl").value("https://example.com/image.png"))
             .andExpect(jsonPath("$.data.items[0].viewCount").value(21))
             .andExpect(jsonPath("$.data.items[0].bookmarkCount").value(5))
+            .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(10))
 
@@ -124,6 +127,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.curriculums[0].subtitle").value("Spring 기초"))
             .andExpect(jsonPath("$.data.viewCount").value(21))
             .andExpect(jsonPath("$.data.bookmarkCount").value(5))
+            .andExpect(jsonPath("$.data.bookmarked").value(true))
             .andExpect(jsonPath("$.data.commentCount").value(0))
     }
 
@@ -150,7 +154,7 @@ class UserReadControllerTest @Autowired constructor(
     fun `정렬을 지정하지 않으면 최신순으로 조회하고 조회수순도 고를 수 있다`() {
         Mockito.`when`(userJobService.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userJobService.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.VIEW_COUNT, 0, 10)).thenReturn(jobPageResult())
-        Mockito.`when`(userBootcampService.getBootcamps(0, 10, BootcampSortType.VIEW_COUNT))
+        Mockito.`when`(userBootcampService.getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.VIEW_COUNT, 0, 10))
             .thenReturn(bootcampPageResult())
 
         mockMvc.perform(get("/api/v1/jobs").with(authenticatedUser()))
@@ -162,7 +166,7 @@ class UserReadControllerTest @Autowired constructor(
 
         Mockito.verify(userJobService).getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)
         Mockito.verify(userJobService).getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.VIEW_COUNT, 0, 10)
-        Mockito.verify(userBootcampService).getBootcamps(0, 10, BootcampSortType.VIEW_COUNT)
+        Mockito.verify(userBootcampService).getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.VIEW_COUNT, 0, 10)
     }
 
     @Test
@@ -203,6 +207,83 @@ class UserReadControllerTest @Autowired constructor(
         ).andExpect(status().isOk)
 
         Mockito.verify(userJobService).getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10)
+    }
+
+    @Test
+    fun `부트캠프 지원 페이지 이동을 기록하고 반복 호출도 성공으로 응답한다`() {
+        repeat(2) {
+            mockMvc.perform(
+                post("/api/v1/bootcamps/{bootcampId}/application-url-clicks", 1L).with(authenticatedUser()),
+            )
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").isEmpty)
+        }
+
+        Mockito.verify(userBootcampService, Mockito.times(2)).recordApplicationUrlClick(USER_ID, 1L)
+    }
+
+    @Test
+    fun `게시되지 않은 부트캠프의 지원 페이지 이동은 404로 응답한다`() {
+        Mockito.doThrow(EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND))
+            .`when`(userBootcampService).recordApplicationUrlClick(USER_ID, 99L)
+
+        mockMvc.perform(
+            post("/api/v1/bootcamps/{bootcampId}/application-url-clicks", 99L).with(authenticatedUser()),
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("BOOTCAMP_NOT_FOUND"))
+    }
+
+    @Test
+    fun `인증 없이 부트캠프 지원 페이지 이동을 기록할 수 없다`() {
+        mockMvc.perform(post("/api/v1/bootcamps/1/application-url-clicks"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(userBootcampService)
+    }
+
+    @Test
+    fun `부트캠프 수강료 유형과 모집 상태와 검색어는 조회 조건으로 전달된다`() {
+        val condition = BootcampSearchCondition(
+            tuitionType = TuitionType.FREE,
+            status = BootcampStatus.RECRUITING,
+            keyword = "백엔드",
+        )
+        Mockito.`when`(userBootcampService.getBootcamps(USER_ID, condition, BootcampSortType.VIEW_COUNT, 0, 10))
+            .thenReturn(bootcampPageResult())
+
+        mockMvc.perform(
+            get("/api/v1/bootcamps")
+                .param("tuitionType", "FREE")
+                .param("status", "RECRUITING")
+                .param("keyword", "백엔드")
+                .param("sort", "VIEW_COUNT")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+
+        Mockito.verify(userBootcampService)
+            .getBootcamps(USER_ID, condition, BootcampSortType.VIEW_COUNT, 0, 10)
+    }
+
+    @Test
+    fun `공개 목록에서 고를 수 없는 모집 상태는 파라미터명이 포함된 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/bootcamps").param("status", "DRAFT").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message").value(startsWith("[status] ")))
+
+        Mockito.verifyNoInteractions(userBootcampService)
+    }
+
+    @Test
+    fun `부트캠프 검색어가 허용 길이를 벗어나면 400으로 응답한다`() {
+        mockMvc.perform(get("/api/v1/bootcamps").param("keyword", "가").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
     }
 
     @Test
@@ -339,8 +420,9 @@ class UserReadControllerTest @Autowired constructor(
         Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult())
         Mockito.`when`(userJobService.getJobCalendar(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
             .thenReturn(emptyList())
-        Mockito.`when`(userBootcampService.getBootcamps(0, 10, BootcampSortType.LATEST)).thenReturn(bootcampPageResult())
-        Mockito.`when`(userBootcampService.getBootcamp(1L)).thenReturn(bootcampResult())
+        Mockito.`when`(userBootcampService.getBootcamps(null, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))
+            .thenReturn(bootcampPageResult())
+        Mockito.`when`(userBootcampService.getBootcamp(null, 1L)).thenReturn(bootcampResult())
 
         listOf(
             "/api/v1/jobs",
@@ -421,7 +503,7 @@ class UserReadControllerTest @Autowired constructor(
     fun `존재하지 않는 공개 데이터는 404를 반환한다`() {
         Mockito.`when`(userJobService.getJob(USER_ID, 99L))
             .thenThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND))
-        Mockito.`when`(userBootcampService.getBootcamp(99L))
+        Mockito.`when`(userBootcampService.getBootcamp(USER_ID, 99L))
             .thenThrow(EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND))
 
         mockMvc.perform(get("/api/v1/jobs/99").with(authenticatedUser()))
@@ -529,6 +611,7 @@ class UserReadControllerTest @Autowired constructor(
         shortDescription = "백엔드 개발자로 성장하는 12주",
         status = BootcampStatus.RECRUITING,
         closedAt = null,
+        bookmarked = true,
         viewCount = 21,
         bookmarkCount = 5,
         commentCount = 0,
@@ -561,6 +644,7 @@ class UserReadControllerTest @Autowired constructor(
         sourceUrl = null,
         status = BootcampStatus.RECRUITING,
         closedAt = null,
+        bookmarked = true,
         viewCount = 21,
         bookmarkCount = 5,
         commentCount = 0,
