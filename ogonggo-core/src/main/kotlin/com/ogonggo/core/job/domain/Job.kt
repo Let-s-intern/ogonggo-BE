@@ -8,11 +8,37 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
+/**
+ * 목록 조회는 게시 상태와 미삭제를 항상 등가로 고정하므로 두 컬럼을 모든 인덱스의 앞에 둔다.
+ * 그 뒤에는 InnoDB가 기본 키를 붙이므로 최신순 정렬이 인덱스 순서로 해결되고 LIMIT에서 조기에 끝난다.
+ *
+ * 필터 조합용 인덱스는 만들지 않고 필터마다 하나씩만 둔다.
+ * 조합 인덱스는 필터 컬럼 뒤에 다른 필터가 끼어 식별자 정렬이 깨지므로,
+ * 선택도가 높은 값에서 조건에 맞는 행을 전부 읽은 뒤에야 상위 몇 건을 고르게 된다.
+ * 필터를 여러 개 지정한 조회는 그중 한 인덱스로 좁히고 나머지는 행 조건으로 거른다.
+ */
 @Entity
-@Table(name = "jobs")
+@Table(
+    name = "jobs",
+    indexes = [
+        Index(
+            name = "idx_jobs_published_latest",
+            columnList = "publication_status, deleted_at",
+        ),
+        Index(
+            name = "idx_jobs_published_employment",
+            columnList = "publication_status, deleted_at, employment_type",
+        ),
+        Index(
+            name = "idx_jobs_published_experience",
+            columnList = "publication_status, deleted_at, experience_type",
+        ),
+    ],
+)
 class Job internal constructor(
     companyName: String,
     parentCompanyName: String? = null,
