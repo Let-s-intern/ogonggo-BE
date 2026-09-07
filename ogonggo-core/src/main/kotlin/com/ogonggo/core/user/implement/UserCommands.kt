@@ -13,6 +13,7 @@ data class UserAccount(
     val email: String?,
     val status: UserStatus,
     val role: UserRole,
+    val joinedAt: LocalDateTime,
 )
 
 /**

@@ -25,13 +25,17 @@ import java.time.LocalDateTime
     UserReaderImpl::class,
     UserAppenderImpl::class,
     UserProfileManagerImpl::class,
+    UserProfileReaderImpl::class,
     CompanyProfileAppenderImpl::class,
+    CompanyProfileReaderImpl::class,
 )
 internal class UserImplementPersistenceTest @Autowired constructor(
     private val userReader: UserReader,
     private val userAppender: UserAppender,
     private val userProfileManager: UserProfileManager,
+    private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
+    private val companyProfileReader: CompanyProfileReader,
     private val userProfileRepository: UserProfileJpaRepository,
     private val companyProfileRepository: CompanyProfileJpaRepository,
 ) {
@@ -94,6 +98,47 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         val profile = userProfileRepository.findByUserId(account.userId)
         assertEquals("김렛츠", profile?.name)
         assertEquals(NOW, profile?.lastSyncedAt)
+    }
+
+    @Test
+    fun `Reader는 계정 종류에 없는 프로필을 null로 반환한다`() {
+        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+
+        val profile = userProfileReader.read(account.userId)
+
+        assertEquals("김렛츠", profile?.name)
+        assertEquals("lets@career.co.kr", profile?.email)
+        assertEquals("렛츠", profile?.nickname)
+        // 일반 회원에게는 기업 정보가 없다.
+        assertNull(companyProfileReader.read(account.userId))
+
+        val companyAccount = userAppender.appendCompany(
+            CompanyAccountAppendCommand(
+                email = "company@example.com",
+                encodedPassword = "encoded-password",
+                joinedAt = NOW,
+            ),
+        )
+        companyProfileAppender.append(
+            CompanyProfileAppendCommand(
+                userId = companyAccount.userId,
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+            ),
+        )
+
+        assertEquals("렛츠커리어", companyProfileReader.read(companyAccount.userId)?.organizationName)
+        assertEquals("김담당", companyProfileReader.read(companyAccount.userId)?.managerName)
+        // 기업 회원에게는 렛츠커리어 프로필이 없다.
+        assertNull(userProfileReader.read(companyAccount.userId))
+    }
+
+    @Test
+    fun `계정 조회는 가입 일시를 함께 담는다`() {
+        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        assertEquals(NOW, userReader.read(account.userId).joinedAt)
     }
 
     @Test

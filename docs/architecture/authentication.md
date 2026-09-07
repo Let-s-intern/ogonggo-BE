@@ -113,10 +113,12 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | --- | --- | --- |
 | `GET /api/v1/jobs`, `/api/v1/jobs/{jobId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `GET /api/v1/jobs/calendar` | 불필요 | 응답에 사용자별 값이 없다 |
-| `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 불필요 | 응답에 사용자별 값이 없다 |
+| `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
-| `/api/v1/job-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
+| `POST /api/v1/bootcamps/{bootcampId}/application-url-clicks` | 필수 | `bootcamp_application_url_clicks.user_id`가 NOT NULL이다 |
+| `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
+| `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
 
 `anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다. 브라우저 preflight(`OPTIONS`)만 예외로, 인가 규칙 첫 줄의 `CorsUtils::isPreFlightRequest`가 먼저 허용합니다([브라우저 CORS 허용 오리진](#7-2-브라우저-cors-허용-오리진) 참고).
 
@@ -175,6 +177,22 @@ POST /api/v1/auth/company/signin
 ### 역할을 토큰에 담지 않는 이유
 
 `OG-access`는 사용자 식별자만 담고 역할은 담지 않습니다. 역할을 클레임에 넣으면 최대 액세스 토큰 수명(30분)만큼 낡은 역할이 남습니다. 역할이 필요한 엔드포인트는 Business Service가 `UserReader`로 현재 역할을 조회합니다.
+
+그래서 클라이언트도 토큰을 열어 역할을 알 수 없고, `GET /api/v1/users/me`로 읽습니다. 기업 회원 화면을 열지 판단하는 기준은 이 응답의 `role`입니다.
+
+```text
+GET /api/v1/users/me
+→ 200 {
+    "userId": 17, "role": "USER", "status": "ACTIVE",
+    "email": "...", "joinedAt": "...",
+    "profile": { "name": "...", "nickname": "...", "profileImageUrl": "..." },
+    "companyProfile": null
+  }
+```
+
+`role`이 `COMPANY`이면 `companyProfile`이, 그 밖이면 `profile`이 채워지고 반대쪽은 `null`입니다. 계정 종류에 없는 프로필 테이블은 조회하지 않습니다.
+
+**정지·탈퇴한 계정도 403이 아니라 200으로 응답하고 `status`에 현재 상태를 담습니다.** 다른 기업 회원 엔드포인트는 `verifyCompany`에서 403 `USER_SUSPENDED`·`USER_WITHDRAWN`으로 막지만, 이 경로는 자기 자신을 보는 조회이고 상태가 바뀐 뒤에도 액세스 토큰이 만료까지 유효하므로 클라이언트가 왜 다른 요청이 막히는지 알 수 있어야 합니다.
 
 ## 6. 렛츠커리어 내부 API
 
@@ -253,6 +271,7 @@ POST /api/v1/auth/company/signin
 | 탈퇴 사용자의 재로그인 | 확인 필요 | 403으로 막는다. 현재 도메인은 탈퇴를 되돌릴 수 없다고 선언하고 있다 |
 | 렛츠커리어 로그아웃 시 오공고 동시 로그아웃 | 미정 | 오공고 세션은 유지된다 |
 | `ADMIN` 역할 부여 경로 | 미정 | enum 값만 있고 부여하는 코드가 없다. 렛츠커리어의 `isAdmin`은 반영하지 않는다 |
+| 프로필 수정 | 미정 | 조회만 있다. 일반 회원 프로필은 로그인 시 렛츠커리어 값으로만 갱신되고, 기업 정보는 가입 이후 바꾸는 경로가 없다 |
 
 앞의 세 가지는 서로 얽혀 있으므로 함께 결정합니다. 재발급 시점에 렛츠커리어를 재검증하는 방식(`last_synced_at`이 일정 기간을 넘겼을 때만 호출)이 전파 지연을 좁히는 후보이며, 탈퇴 정책이 정해진 뒤 함께 검토합니다.
 

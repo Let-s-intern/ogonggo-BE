@@ -46,6 +46,7 @@ internal fun User.toAccount(): UserAccount = UserAccount(
     email = email,
     status = status,
     role = role,
+    joinedAt = joinedAt,
 )
 
 private fun User.requiredId(): Long = checkNotNull(id) { "사용자 식별자가 없습니다." }

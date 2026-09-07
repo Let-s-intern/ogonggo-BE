@@ -103,6 +103,7 @@ class CompanyJobServiceTest {
                 email = "company@example.com",
                 status = status,
                 role = role,
+                joinedAt = JOINED_AT,
             ),
         )
     }
@@ -118,6 +119,7 @@ class CompanyJobServiceTest {
     companion object {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private const val USER_ID = 17L
         private const val JOB_ID = 3L
     }

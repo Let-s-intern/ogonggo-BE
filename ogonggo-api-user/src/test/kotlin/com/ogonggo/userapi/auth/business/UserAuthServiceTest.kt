@@ -184,11 +184,13 @@ class UserAuthServiceTest {
             email = null,
             status = status,
             role = UserRole.USER,
+            joinedAt = JOINED_AT,
         )
 
     companion object {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 27, 10, 0)
+        private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private val LETSCAREER_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 20, 9, 0)
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L

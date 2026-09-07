@@ -3,10 +3,13 @@ package com.ogonggo.userapi.bootcamp.business
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.implement.BootcampApplicationUrlClickAppender
+import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampCurriculumData
 import com.ogonggo.core.bootcamp.implement.BootcampMetricData
@@ -23,12 +26,17 @@ import java.time.LocalDate
 class UserBootcampServiceTest {
 
     private val bootcampReader = Mockito.mock(BootcampReader::class.java)
+    private val bootcampBookmarkReader = Mockito.mock(BootcampBookmarkReader::class.java)
     private val bootcampContentReader = Mockito.mock(BootcampContentReader::class.java)
+    private val bootcampApplicationUrlClickAppender =
+        Mockito.mock(BootcampApplicationUrlClickAppender::class.java)
     private val bootcampMetricReader = Mockito.mock(BootcampMetricReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val service = UserBootcampService(
         bootcampReader,
+        bootcampBookmarkReader,
         bootcampContentReader,
+        bootcampApplicationUrlClickAppender,
         bootcampMetricReader,
         eventPublisher,
     )
@@ -47,9 +55,13 @@ class UserBootcampServiceTest {
             BootcampMetricData(viewCount = 9, bookmarkCount = 4, commentCount = 0),
         )
 
-        val result = service.getBootcamp(1L)
+        Mockito.`when`(bootcampBookmarkReader.readBookmarkedBootcampIds(USER_ID, listOf(1L)))
+            .thenReturn(setOf(1L))
+
+        val result = service.getBootcamp(USER_ID, 1L)
 
         assertEquals(1L, result.id)
+        assertEquals(true, result.bookmarked)
         assertEquals("오공고 교육사", result.companyName)
         assertEquals("백엔드 부트캠프", result.title)
         assertEquals("파트너사", result.partners.single().name)
@@ -68,7 +80,7 @@ class UserBootcampServiceTest {
             BootcampMetricData(viewCount = 1, bookmarkCount = 0, commentCount = 0),
         )
 
-        val result = service.getBootcamp(1L)
+        val result = service.getBootcamp(USER_ID, 1L)
 
         val inOrder = Mockito.inOrder(bootcampMetricReader, eventPublisher)
         inOrder.verify(bootcampMetricReader).read(1L)
@@ -79,7 +91,9 @@ class UserBootcampServiceTest {
     @Test
     fun `게시된 부트캠프 목록을 페이지 결과로 변환한다`() {
         val bootcamp = createBootcampMock()
-        Mockito.`when`(bootcampReader.readPublicPage(0, 20, BootcampSortType.LATEST)).thenReturn(
+        Mockito.`when`(
+            bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20),
+        ).thenReturn(
             BootcampPage(
                 bootcamps = listOf(bootcamp),
                 page = 0,
@@ -94,14 +108,43 @@ class UserBootcampServiceTest {
             mapOf(1L to BootcampMetricData(viewCount = 7, bookmarkCount = 2, commentCount = 0)),
         )
 
-        val result = service.getBootcamps(0, 20, BootcampSortType.LATEST)
+        Mockito.`when`(bootcampBookmarkReader.readBookmarkedBootcampIds(USER_ID, listOf(1L)))
+            .thenReturn(setOf(1L))
+
+        val result = service.getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20)
 
         assertEquals(1, result.items.size)
+        assertEquals(true, result.items.single().bookmarked)
         assertEquals(1L, result.totalElements)
         assertEquals("백엔드 부트캠프", result.items.single().title)
         assertEquals(7L, result.items.single().viewCount)
         assertEquals(2L, result.items.single().bookmarkCount)
-        Mockito.verify(bootcampReader).readPublicPage(0, 20, BootcampSortType.LATEST)
+        Mockito.verify(bootcampReader)
+            .readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20)
+    }
+
+    @Test
+    fun `비로그인 조회는 북마크 저장소를 읽지 않고 북마크를 false로 채운다`() {
+        val bootcamp = createBootcampMock()
+        Mockito.`when`(bootcampReader.readPublic(1L)).thenReturn(bootcamp)
+        Mockito.`when`(bootcampMetricReader.read(1L)).thenReturn(BootcampMetricData.EMPTY)
+
+        val result = service.getBootcamp(null, 1L)
+
+        assertEquals(false, result.bookmarked)
+        Mockito.verifyNoInteractions(bootcampBookmarkReader)
+    }
+
+    @Test
+    fun `게시된 부트캠프를 확인한 뒤 지원 페이지 이동을 기록한다`() {
+        val bootcamp = Mockito.mock(Bootcamp::class.java)
+        Mockito.`when`(bootcampReader.readPublic(1L)).thenReturn(bootcamp)
+
+        service.recordApplicationUrlClick(USER_ID, 1L)
+
+        val inOrder = Mockito.inOrder(bootcampReader, bootcampApplicationUrlClickAppender)
+        inOrder.verify(bootcampReader).readPublic(1L)
+        inOrder.verify(bootcampApplicationUrlClickAppender).append(USER_ID, 1L)
     }
 
     private fun createBootcampMock(): Bootcamp = Mockito.mock(Bootcamp::class.java).also { bootcamp ->
@@ -119,5 +162,9 @@ class UserBootcampServiceTest {
         Mockito.`when`(bootcamp.status).thenReturn(BootcampStatus.RECRUITING)
         Mockito.`when`(bootcamp.content).thenReturn("부트캠프 상세 내용")
         Mockito.`when`(bootcamp.applicationMethod).thenReturn(ApplicationMethod.EXTERNAL_PAGE)
+    }
+
+    companion object {
+        private const val USER_ID = 17L
     }
 }
