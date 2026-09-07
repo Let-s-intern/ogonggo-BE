@@ -132,11 +132,33 @@ internal interface BootcampMetricJpaRepository : JpaRepository<BootcampMetric, L
         @Param("bootcampId") bootcampId: Long,
         @Param("now") now: LocalDateTime,
     ): Int
+
+    /**
+     * 활성 북마크를 다시 세어 맞춘다.
+     * 세는 일을 UPDATE 안에서 처리해 읽고 쓰는 사이에 다른 갱신이 끼어들지 못하게 한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update BootcampMetric metric
+        set metric.bookmarkCount = (
+                select count(bookmark)
+                from BootcampBookmark bookmark
+                where bookmark.bootcampId = :bootcampId
+                  and bookmark.deletedAt is null
+            ),
+            metric.updatedAt = :now
+        where metric.bootcampId = :bootcampId
+        """,
+    )
+    fun syncBookmarkCount(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
 }
 
 internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmark, Long> {
     fun findByBootcampIdAndUserId(bootcampId: Long, userId: Long): BootcampBookmark?
-    fun countByBootcampIdAndDeletedAtIsNull(bootcampId: Long): Long
 }
 
 internal interface BootcampPartnerJpaRepository : JpaRepository<BootcampPartner, Long> {

@@ -9,7 +9,6 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
 @Service
@@ -60,8 +59,11 @@ class UserJobService(
     /**
      * 원문으로 이동한 사용자를 기록한다.
      * 같은 사용자가 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한다.
+     *
+     * 쓰기가 한 건뿐이라 묶어야 할 원자성이 없으므로 트랜잭션을 열지 않는다.
+     * 열어 두면 동시에 누른 두 요청 중 하나가 유니크 제약에 걸릴 때
+     * 그 실패가 트랜잭션을 롤백 대상으로 만들어, 기록은 이미 남았는데도 응답이 실패한다.
      */
-    @Transactional
     fun recordSourceUrlClick(userId: Long, jobId: Long) {
         jobReader.readPublished(jobId)
         jobSourceUrlClickAppender.append(userId, jobId)

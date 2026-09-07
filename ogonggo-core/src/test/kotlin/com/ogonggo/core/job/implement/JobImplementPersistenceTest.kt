@@ -38,7 +38,9 @@ import java.time.LocalDateTime
     JobBookmarkManagerImpl::class,
     JobMetricReaderImpl::class,
     JobMetricManagerImpl::class,
+    JobMetricRegistrar::class,
     JobTagAppenderImpl::class,
+    TagRegistrar::class,
     JobSourceUrlClickAppenderImpl::class,
 )
 internal class JobImplementPersistenceTest @Autowired constructor(
@@ -170,14 +172,14 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
         jobReader.readPublished(jobId)
         jobBookmarkManager.append(USER_ID, jobId, NOW)
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         assertEquals(setOf(jobId), jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(jobId)))
         assertEquals(1L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
 
         jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(1))
         jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(2))
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         assertEquals(emptySet<Long>(), jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(jobId)))
         assertEquals(0L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
@@ -185,7 +187,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(NOW.plusMinutes(1), jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.deletedAt)
 
         jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(3))
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         val restored = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
         assertEquals(1L, jobMetricRepository.findByJobId(jobId)?.bookmarkCount)
@@ -221,7 +223,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobMetricManager.increaseViewCount(jobId, NOW.plusMinutes(1))
 
         assertEquals(2L, jobMetricReader.read(jobId).viewCount)
-        assertEquals(1L, jobMetricRepository.count())
+        assertEquals(1, jobMetricRepository.findAllByJobIdIn(listOf(jobId)).size)
     }
 
     @Test
@@ -245,12 +247,12 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val jobId = checkNotNull(job.id)
         jobBookmarkManager.append(USER_ID, jobId, NOW)
 
-        jobMetricManager.syncBookmarkCount(jobId)
-        jobMetricManager.syncBookmarkCount(jobId)
-        jobMetricManager.syncBookmarkCount(jobId)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
+        jobMetricManager.syncBookmarkCount(jobId, NOW)
 
         assertEquals(1L, jobMetricReader.read(jobId).bookmarkCount)
-        assertEquals(1L, jobMetricRepository.count())
+        assertEquals(1, jobMetricRepository.findAllByJobIdIn(listOf(jobId)).size)
     }
 
     @Test

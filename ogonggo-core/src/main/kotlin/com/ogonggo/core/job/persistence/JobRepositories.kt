@@ -125,11 +125,30 @@ internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {
         """,
     )
     fun increaseViewCount(@Param("jobId") jobId: Long, @Param("now") now: LocalDateTime): Int
+
+    /**
+     * 활성 북마크를 다시 세어 맞춘다.
+     * 세는 일을 UPDATE 안에서 처리해 읽고 쓰는 사이에 다른 갱신이 끼어들지 못하게 한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update JobMetric metric
+        set metric.bookmarkCount = (
+                select count(bookmark)
+                from JobBookmark bookmark
+                where bookmark.jobId = :jobId
+                  and bookmark.deletedAt is null
+            ),
+            metric.updatedAt = :now
+        where metric.jobId = :jobId
+        """,
+    )
+    fun syncBookmarkCount(@Param("jobId") jobId: Long, @Param("now") now: LocalDateTime): Int
 }
 
 internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     fun findByJobIdAndUserId(jobId: Long, userId: Long): JobBookmark?
-    fun countByJobIdAndDeletedAtIsNull(jobId: Long): Long
 
     /**
      * 해제된 북마크를 다시 활성으로 되돌린다.

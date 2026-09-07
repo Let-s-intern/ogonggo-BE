@@ -34,6 +34,7 @@ import java.time.LocalDateTime
     BootcampManagerImpl::class,
     BootcampMetricReaderImpl::class,
     BootcampMetricManagerImpl::class,
+    BootcampMetricRegistrar::class,
     BootcampBookmarkManagerImpl::class,
 )
 internal class BootcampImplementPersistenceTest @Autowired constructor(
@@ -334,7 +335,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampMetricManager.increaseViewCount(bootcampId, NOW.plusMinutes(1))
 
         assertEquals(2L, bootcampMetricReader.read(bootcampId).viewCount)
-        assertEquals(1L, bootcampMetricRepository.count())
+        assertEquals(1, bootcampMetricRepository.findAllByBootcampIdIn(listOf(bootcampId)).size)
     }
 
     @Test
@@ -355,7 +356,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         val bootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
 
         bootcampBookmarkManager.append(USER_ID, bootcampId)
-        bootcampMetricManager.syncBookmarkCount(bootcampId)
+        bootcampMetricManager.syncBookmarkCount(bootcampId, NOW)
 
         assertEquals(1L, bootcampMetricReader.read(bootcampId).bookmarkCount)
         val duplicate = assertThrows(ConflictException::class.java) {
@@ -365,13 +366,13 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         bootcampBookmarkManager.delete(USER_ID, bootcampId, NOW)
         bootcampBookmarkManager.delete(USER_ID, bootcampId, NOW.plusMinutes(1))
-        bootcampMetricManager.syncBookmarkCount(bootcampId)
+        bootcampMetricManager.syncBookmarkCount(bootcampId, NOW)
 
         assertEquals(0L, bootcampMetricReader.read(bootcampId).bookmarkCount)
         assertEquals(NOW, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.deletedAt)
 
         bootcampBookmarkManager.append(USER_ID, bootcampId)
-        bootcampMetricManager.syncBookmarkCount(bootcampId)
+        bootcampMetricManager.syncBookmarkCount(bootcampId, NOW)
 
         assertEquals(1L, bootcampMetricReader.read(bootcampId).bookmarkCount)
         assertEquals(null, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.deletedAt)
