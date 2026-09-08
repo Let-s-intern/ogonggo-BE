@@ -39,13 +39,9 @@ class LetsCareerUserClient(
 ) {
 
     /**
-
-    * 가져오지 못하면 예외 대신 null을 반환한다.
-
-    * 학력과 희망 조건은 로그인의 성공 조건이 아니므로 이 호출이 가입을 실패로 만들면 안 된다.
-
-    */
-
+     * 가져오지 못하면 예외 대신 null을 반환한다.
+     * 학력과 희망 조건은 로그인의 성공 조건이 아니므로 이 호출이 가입을 실패로 만들면 안 된다.
+     */
     fun readJobProfile(letsCareerUserId: Long): LetsCareerJobProfile? {
         val response = try {
             letsCareerRestClient.get()
@@ -59,19 +55,7 @@ class LetsCareerUserClient(
             return null
         }
 
-        val data = response?.data ?: return null
-
-        return LetsCareerJobProfile(
-            university = data.university,
-            major = data.major,
-            // 렛츠커리어가 오공고에 없는 학년을 추가해도 가입이 막히지 않도록 모르는 값은 비운다.
-            grade = data.grade?.let { name -> UserGrade.entries.firstOrNull { it.name == name } },
-            wishField = data.wishField,
-            wishJob = data.wishJob,
-            wishIndustry = data.wishIndustry,
-            wishEmploymentType = data.wishEmploymentType,
-            wishCompany = data.wishCompany,
-        )
+        return response?.data?.toResult()
     }
 
     companion object {
@@ -98,4 +82,17 @@ internal data class JobProfileResponse(
     val wishIndustry: String?,
     val wishEmploymentType: String?,
     val wishCompany: String?,
-)
+) {
+    /** 렛츠커리어가 주는 형태를 오공고가 쓰는 형태로 옮긴다. */
+    fun toResult(): LetsCareerJobProfile = LetsCareerJobProfile(
+        university = university,
+        major = major,
+        // 렛츠커리어가 오공고에 없는 학년을 추가해도 가입이 막히지 않도록 모르는 값은 비운다.
+        grade = grade?.let { name -> UserGrade.entries.find { it.name == name } },
+        wishField = wishField,
+        wishJob = wishJob,
+        wishIndustry = wishIndustry,
+        wishEmploymentType = wishEmploymentType,
+        wishCompany = wishCompany,
+    )
+}
