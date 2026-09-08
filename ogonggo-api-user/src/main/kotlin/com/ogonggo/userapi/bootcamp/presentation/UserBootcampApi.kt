@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam
 interface UserBootcampApi {
 
     @Operation(
+        operationId = "listPublicBootcamps",
         summary = "부트캠프 목록 조회",
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
@@ -85,6 +86,7 @@ interface UserBootcampApi {
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(
+        operationId = "createBootcampApplicationUrlClick",
         summary = "부트캠프 지원 페이지 이동 기록",
         description = """
             사용자가 부트캠프의 외부 지원 페이지로 이동하는 버튼을 눌렀다는 사실을 기록합니다.
@@ -121,6 +123,7 @@ interface UserBootcampApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "getPublicBootcamp",
         summary = "부트캠프 상세 조회",
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,

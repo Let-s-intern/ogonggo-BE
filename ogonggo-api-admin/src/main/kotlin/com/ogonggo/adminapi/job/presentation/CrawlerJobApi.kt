@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface CrawlerJobApi {
 
     @Operation(
+        operationId = "createCrawlerJob",
         summary = "크롤러 채용공고 등록",
         description = """
             크롤러가 수집한 채용공고를 게시 상태로 등록합니다.

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface CompanyAuthApi {
 
     @Operation(
+        operationId = "signUpCompany",
         summary = "기업 회원가입",
         description = "렛츠커리어를 거치지 않고 오공고 계정을 만듭니다. 승인 절차가 없어 가입 즉시 세션을 발급합니다.",
     )
@@ -42,7 +43,7 @@ interface CompanyAuthApi {
         request: CompanySignUpRequest,
     ): ResponseEntity<SuccessResponse<AuthTokenResponse>>
 
-    @Operation(summary = "기업 로그인")
+    @Operation(operationId = "signInCompany", summary = "기업 로그인")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
