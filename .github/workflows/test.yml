@@ -39,7 +39,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          junit_files: '**/build/test-results/test/TEST-*.xml'
+          files: '**/build/test-results/test/TEST-*.xml'
 
   # 배포를 막는 장치도 코드다. 검증기가 조용히 전부 통과시키면 없느니만 못하므로
   # 실제로 잘못된 설정을 거르는지 PR에서 확인한다.

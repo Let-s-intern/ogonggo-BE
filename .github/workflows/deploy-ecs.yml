@@ -414,7 +414,7 @@ jobs:
             redis:7.2 redis-server --appendonly no >/dev/null
 
           echo "MySQL 준비를 기다립니다."
-          for i in $(seq 1 40); do
+          for _ in $(seq 1 40); do
             if [ "$(docker inspect -f '{{.State.Health.Status}}' ci-mysql)" = "healthy" ]; then
               break
             fi
@@ -437,7 +437,7 @@ jobs:
 
           echo "애플리케이션 기동을 기다립니다."
           ok=0
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if [ "$(docker inspect -f '{{.State.Running}}' ci-app)" != "true" ]; then
               echo "::error::컨테이너가 종료되었습니다. 애플리케이션이 기동 중 죽습니다."
               break
