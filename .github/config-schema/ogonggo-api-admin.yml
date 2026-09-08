@@ -1,0 +1,77 @@
+##
+# ogonggo-api-admin 운영 설정 계약.
+#
+# GitHub 시크릿 APPLICATION_SECRET_ADMIN 의 내용이 이 계약을 지키는지 배포 전에 검사한다.
+# 검사기는 .github/scripts/validate_application_yml.py 다.
+#
+# 관리자 API는 사용자 API와 독립 배포 경계를 갖는다. 계약도 따로 둔다.
+# 사용자 API에만 있는 설정(JWT, 렛츠커리어 연동, 메일, Redis)을 여기에 넣지 않는다.
+##
+module: ogonggo-api-admin
+
+# 관리자 모듈은 Redis와 메일 스타터를 의존성에 두지 않는다.
+# 그래서 spring.data.redis, spring.mail 을 일부러 허용하지 않는다.
+# 그런 키가 들어오면 사용자 설정을 잘못 붙여 넣었거나 들여쓰기가 어긋난 것이다.
+allowed-prefixes:
+  - spring.application.name
+  - spring.datasource
+  # spring.jpa 전체를 열지 않는 이유는 사용자 계약과 같다.
+  - spring.jpa.open-in-view
+  - spring.jpa.show-sql
+  - spring.jpa.database-platform
+  - spring.jpa.hibernate
+  - spring.jpa.properties.hibernate
+  - spring.threads
+  - spring.lifecycle
+  - ogonggo.admin.internal
+  - server
+  - springdoc
+  - logging
+
+rules:
+  - path: spring.application.name
+    equals: ogonggo-api-admin
+
+  - path: spring.datasource.url
+    pattern: '^jdbc:mysql://[^/\s]+:\d+/\S+'
+    forbid-substrings: [ localhost, 127.0.0.1, ' ' ]
+    reason: 'RDS 엔드포인트를 가리키는 jdbc:mysql URL 이어야 합니다.'
+  - path: spring.datasource.username
+  - path: spring.datasource.password
+    sensitive: true
+    min-length: 8
+  - path: spring.datasource.driver-class-name
+    required: false
+    equals: com.mysql.cj.jdbc.Driver
+
+  - path: spring.jpa.open-in-view
+    type: bool
+    equals: false
+    reason: 'docs/architecture/layers-and-modules.md 의 OSIV 규칙입니다.'
+  # 두 서비스가 한 DB를 공유한다. 스키마 반영은 사용자 API 배포가 맡는다.
+  - path: spring.jpa.hibernate.ddl-auto
+    one-of: [ none, validate, update ]
+    reason: 'create/create-drop 은 운영 데이터를 지웁니다.'
+
+  # 값이 없으면 코드가 내부 API를 전면 차단한다. 크롤러가 조용히 죽는 상황을 막는다.
+  - path: ogonggo.admin.internal.api-key
+    sensitive: true
+    min-length: 32
+    reason: '비어 있으면 내부 API가 전면 차단되어 크롤러 수집이 멈춥니다.'
+
+  # ALB 타겟 그룹과 Dockerfile EXPOSE 가 8081 이다.
+  - path: server.port
+    type: int
+    equals: 8081
+  - path: server.shutdown
+    equals: graceful
+    reason: '롤링 업데이트 중 처리 중인 요청을 끊지 않기 위한 설정입니다.'
+
+  - path: springdoc.paths-to-match
+    equals: /api/**
+
+forbidden-paths:
+  - path: ogonggo.auth.jwt.secret
+    reason: '관리자 API는 오공고 JWT를 발급하지 않습니다. 사용자 설정을 붙여 넣은 것 같습니다.'
+  - path: spring.jpa.properties.data.redis.host
+    reason: '들여쓰기가 어긋났습니다. 관리자 모듈은 Redis를 쓰지 않습니다.'

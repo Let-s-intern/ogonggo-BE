@@ -39,4 +39,52 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          junit_files: '**/build/test-results/test/TEST-*.xml'
+          files: '**/build/test-results/test/TEST-*.xml'
+
+  # 배포를 막는 장치도 코드다. 검증기가 조용히 전부 통과시키면 없느니만 못하므로
+  # 실제로 잘못된 설정을 거르는지 PR에서 확인한다.
+  # 운영 시크릿 없이 도는 검사라 PR 빌드에서 안전하게 실행할 수 있다.
+  deploy-checks:
+    name: Deploy checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 검증 도구 설치
+        run: python3 -m pip install --quiet --disable-pip-version-check 'pyyaml==6.0.2'
+
+      # 규칙 필드 오타, allowed-prefixes 누락처럼 계약 파일 자체가 깨진 경우를 잡는다.
+      - name: 설정 계약 파일 검사
+        run: |
+          for spec in .github/config-schema/*.yml; do
+            python3 .github/scripts/validate_application_yml.py --spec "$spec" --check-spec
+          done
+
+      # 검증기가 실제로 사고를 거르는지 확인한다.
+      - name: 설정 검증기 테스트
+        run: python3 .github/scripts/test_validate_application_yml.py
+
+      # 배포 워크플로 자체의 문법·표현식 오류는 main에 머지된 뒤에야 드러난다.
+      # 그때는 배포가 통째로 멈추므로 PR에서 미리 본다.
+      - name: 워크플로 정적 검사
+        uses: raven-actions/actionlint@v2
+        with:
+          files: '.github/workflows/*.yml'
+
+      # 모듈이 늘었는데 계약 파일을 만들지 않으면, 배포 시 계약 없이 통과할 위험이 있다.
+      - name: 모듈별 계약 존재 확인
+        run: |
+          failed=0
+          for module in ogonggo-api-user ogonggo-api-admin; do
+            if [ ! -f ".github/config-schema/$module.yml" ]; then
+              echo "::error::$module 의 설정 계약(.github/config-schema/$module.yml)이 없습니다."
+              failed=1
+            fi
+          done
+          [ "$failed" -eq 0 ] || exit 1
