@@ -8,26 +8,16 @@ import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
-interface UserProfileManager {
-    fun sync(command: UserProfileSyncCommand)
-
-    /**
-     * 사용자가 오공고에서 직접 입력하는 학력과 희망 조건을 함께 교체한다.
-     * 아직 프로필 행이 없으면 만든다. 보내지 않은 값은 비우는 것으로 본다.
-     */
-    fun replaceJobInfo(userId: Long, command: UserProfileJobInfoCommand, now: LocalDateTime)
-}
-
 @Component
-internal class UserProfileManagerImpl(
+class UserProfileManager internal constructor(
     private val userProfileRepository: UserProfileJpaRepository,
-) : UserProfileManager {
+) {
 
     /**
      * 프로필이 없으면 만들고, 있으면 렛츠커리어의 최종 수정 일시가 달라졌을 때만 갱신한다.
      * 로그인마다 무조건 UPDATE 하지 않기 위해 letscareer_updated_at 을 비교 기준으로 사용한다.
      */
-    override fun sync(command: UserProfileSyncCommand) {
+    fun sync(command: UserProfileSyncCommand) {
         val profile = userProfileRepository.findByUserId(command.userId)
 
         if (profile == null) {
@@ -69,7 +59,7 @@ internal class UserProfileManagerImpl(
      * 제약 위반은 트랜잭션을 롤백 대상으로 만들어 같은 트랜잭션에서 이어갈 수 없으므로
      * 조용히 삼키지 않고 재시도할 수 있는 충돌로 알린다.
      */
-    override fun replaceJobInfo(userId: Long, command: UserProfileJobInfoCommand, now: LocalDateTime) {
+    fun replaceJobInfo(userId: Long, command: UserProfileJobInfoCommand, now: LocalDateTime) {
         val profile = userProfileRepository.findByUserId(userId)
             ?: return createWithJobInfo(userId, command, now)
 

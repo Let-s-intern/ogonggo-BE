@@ -5,17 +5,14 @@ import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.persistence.UserProfileJpaRepository
 import org.springframework.stereotype.Component
 
-interface UserProfileReader {
-    /** 일반 회원의 프로필을 읽는다. 기업 회원에게는 프로필 행이 없으므로 null을 반환한다. */
-    fun read(userId: Long): UserProfileData?
-}
-
 @Component
-internal class UserProfileReaderImpl(
+class UserProfileReader internal constructor(
     private val userProfileRepository: UserProfileJpaRepository,
-) : UserProfileReader {
+) {
 
-    override fun read(userId: Long): UserProfileData? =
+    /** 일반 회원의 프로필을 읽는다. 기업 회원에게는 프로필 행이 없으므로 null을 반환한다. */
+
+    fun read(userId: Long): UserProfileData? =
         userProfileRepository.findByUserId(userId)?.let(UserProfileData::from)
 }
 

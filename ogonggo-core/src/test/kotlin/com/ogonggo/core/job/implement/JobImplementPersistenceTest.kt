@@ -30,18 +30,18 @@ import java.time.LocalDateTime
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
-    JobReaderImpl::class,
+    JobReader::class,
     JobQueryRepository::class,
-    JobAppenderImpl::class,
-    JobManagerImpl::class,
-    JobBookmarkReaderImpl::class,
-    JobBookmarkManagerImpl::class,
-    JobMetricReaderImpl::class,
-    JobMetricManagerImpl::class,
+    JobAppender::class,
+    JobManager::class,
+    JobBookmarkReader::class,
+    JobBookmarkManager::class,
+    JobMetricReader::class,
+    JobMetricManager::class,
     JobMetricRegistrar::class,
-    JobTagAppenderImpl::class,
+    JobTagAppender::class,
     TagRegistrar::class,
-    JobSourceUrlClickAppenderImpl::class,
+    JobSourceUrlClickAppender::class,
 )
 internal class JobImplementPersistenceTest @Autowired constructor(
     private val jobReader: JobReader,

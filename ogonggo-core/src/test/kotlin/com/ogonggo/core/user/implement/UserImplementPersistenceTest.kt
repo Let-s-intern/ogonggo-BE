@@ -23,12 +23,12 @@ import java.time.LocalDateTime
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
-    UserReaderImpl::class,
-    UserAppenderImpl::class,
-    UserProfileManagerImpl::class,
-    UserProfileReaderImpl::class,
-    CompanyProfileAppenderImpl::class,
-    CompanyProfileReaderImpl::class,
+    UserReader::class,
+    UserAppender::class,
+    UserProfileManager::class,
+    UserProfileReader::class,
+    CompanyProfileAppender::class,
+    CompanyProfileReader::class,
 )
 internal class UserImplementPersistenceTest @Autowired constructor(
     private val userReader: UserReader,

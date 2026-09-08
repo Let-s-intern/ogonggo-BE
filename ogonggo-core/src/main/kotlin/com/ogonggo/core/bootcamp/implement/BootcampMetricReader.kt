@@ -4,23 +4,18 @@ import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.persistence.BootcampMetricJpaRepository
 import org.springframework.stereotype.Component
 
-interface BootcampMetricReader {
-    fun read(bootcampId: Long): BootcampMetricData
-
-    /** 목록 조회의 N+1을 피하기 위해 한 번에 조회하며, 지표 행이 없는 부트캠프는 0으로 채운다. */
-    fun readAll(bootcampIds: Collection<Long>): Map<Long, BootcampMetricData>
-}
-
 @Component
-internal class BootcampMetricReaderImpl(
+class BootcampMetricReader internal constructor(
     private val bootcampMetricRepository: BootcampMetricJpaRepository,
-) : BootcampMetricReader {
+) {
 
-    override fun read(bootcampId: Long): BootcampMetricData =
+    fun read(bootcampId: Long): BootcampMetricData =
         bootcampMetricRepository.findByBootcampId(bootcampId)?.let(BootcampMetricData::from)
             ?: BootcampMetricData.EMPTY
 
-    override fun readAll(bootcampIds: Collection<Long>): Map<Long, BootcampMetricData> {
+    /** 목록 조회의 N+1을 피하기 위해 한 번에 조회하며, 지표 행이 없는 부트캠프는 0으로 채운다. */
+
+    fun readAll(bootcampIds: Collection<Long>): Map<Long, BootcampMetricData> {
         if (bootcampIds.isEmpty()) {
             return emptyMap()
         }

@@ -31,17 +31,17 @@ import java.time.LocalDateTime
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
-    BootcampReaderImpl::class,
+    BootcampReader::class,
     BootcampQueryRepository::class,
-    BootcampContentReaderImpl::class,
-    BootcampAppenderImpl::class,
-    BootcampManagerImpl::class,
-    BootcampMetricReaderImpl::class,
-    BootcampMetricManagerImpl::class,
+    BootcampContentReader::class,
+    BootcampAppender::class,
+    BootcampManager::class,
+    BootcampMetricReader::class,
+    BootcampMetricManager::class,
     BootcampMetricRegistrar::class,
-    BootcampBookmarkManagerImpl::class,
-    BootcampBookmarkReaderImpl::class,
-    BootcampApplicationUrlClickAppenderImpl::class,
+    BootcampBookmarkManager::class,
+    BootcampBookmarkReader::class,
+    BootcampApplicationUrlClickAppender::class,
 )
 internal class BootcampImplementPersistenceTest @Autowired constructor(
     private val bootcampReader: BootcampReader,

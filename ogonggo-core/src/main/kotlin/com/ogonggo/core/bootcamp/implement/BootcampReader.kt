@@ -14,52 +14,32 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
 
-interface BootcampReader {
-    fun read(bootcampId: Long): Bootcamp
-    fun readIncludingDeleted(bootcampId: Long): Bootcamp
-    fun readPublic(bootcampId: Long): Bootcamp
-    fun readPublic(bootcampId: Long, now: LocalDateTime): Bootcamp
-    fun readPublicPage(condition: BootcampSearchCondition, sortType: BootcampSortType, page: Int, size: Int): BootcampPage
-    fun readPublicPage(
-        condition: BootcampSearchCondition,
-        sortType: BootcampSortType,
-        page: Int,
-        size: Int,
-        now: LocalDateTime,
-    ): BootcampPage
-    fun readOwned(ownerUserId: Long, bootcampId: Long): Bootcamp
-    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): BootcampPage
-    fun readOwnedForUpdate(ownerUserId: Long, bootcampId: Long): Bootcamp
-    fun readOwnedForDelete(ownerUserId: Long, bootcampId: Long): Bootcamp
-    fun readForUpdate(bootcampId: Long): Bootcamp
-}
-
 @Component
-internal class BootcampReaderImpl(
+class BootcampReader internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampQueryRepository: BootcampQueryRepository,
     private val clock: Clock,
-) : BootcampReader {
+) {
 
-    override fun read(bootcampId: Long): Bootcamp =
+    fun read(bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdAndDeletedAtIsNull(bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
-    override fun readIncludingDeleted(bootcampId: Long): Bootcamp =
+    fun readIncludingDeleted(bootcampId: Long): Bootcamp =
         bootcampRepository.findIncludingDeletedById(bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
-    override fun readPublic(bootcampId: Long): Bootcamp =
+    fun readPublic(bootcampId: Long): Bootcamp =
         readPublic(bootcampId, LocalDateTime.now(clock))
 
-    override fun readPublic(bootcampId: Long, now: LocalDateTime): Bootcamp =
+    fun readPublic(bootcampId: Long, now: LocalDateTime): Bootcamp =
         bootcampRepository.findPublicById(
             bootcampId = bootcampId,
             statuses = PUBLIC_STATUSES,
             now = now,
         ) ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
-    override fun readPublicPage(
+    fun readPublicPage(
         condition: BootcampSearchCondition,
         sortType: BootcampSortType,
         page: Int,
@@ -67,7 +47,7 @@ internal class BootcampReaderImpl(
     ): BootcampPage = readPublicPage(condition, sortType, page, size, LocalDateTime.now(clock))
 
     /** 공개 조건과 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. */
-    override fun readPublicPage(
+    fun readPublicPage(
         condition: BootcampSearchCondition,
         sortType: BootcampSortType,
         page: Int,
@@ -92,11 +72,11 @@ internal class BootcampReaderImpl(
         )
     }
 
-    override fun readOwned(ownerUserId: Long, bootcampId: Long): Bootcamp =
+    fun readOwned(ownerUserId: Long, bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(bootcampId, ownerUserId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
-    override fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): BootcampPage {
+    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): BootcampPage {
         validatePageRequest(page, size)
         val result = bootcampRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
             ownerUserId,
@@ -112,15 +92,15 @@ internal class BootcampReaderImpl(
         )
     }
 
-    override fun readOwnedForUpdate(ownerUserId: Long, bootcampId: Long): Bootcamp =
+    fun readOwnedForUpdate(ownerUserId: Long, bootcampId: Long): Bootcamp =
         bootcampRepository.findOwnedByIdForUpdate(ownerUserId, bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
-    override fun readOwnedForDelete(ownerUserId: Long, bootcampId: Long): Bootcamp =
+    fun readOwnedForDelete(ownerUserId: Long, bootcampId: Long): Bootcamp =
         bootcampRepository.findOwnedByIdForDelete(ownerUserId, bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
-    override fun readForUpdate(bootcampId: Long): Bootcamp =
+    fun readForUpdate(bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdForUpdate(bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 }

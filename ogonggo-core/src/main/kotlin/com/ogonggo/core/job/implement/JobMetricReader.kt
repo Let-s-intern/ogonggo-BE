@@ -4,22 +4,17 @@ import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
 import org.springframework.stereotype.Component
 
-interface JobMetricReader {
-    fun read(jobId: Long): JobMetricData
-
-    /** 목록 조회의 N+1을 피하기 위해 한 번에 조회하며, 지표 행이 없는 공고는 0으로 채운다. */
-    fun readAll(jobIds: Collection<Long>): Map<Long, JobMetricData>
-}
-
 @Component
-internal class JobMetricReaderImpl(
+class JobMetricReader internal constructor(
     private val jobMetricRepository: JobMetricJpaRepository,
-) : JobMetricReader {
+) {
 
-    override fun read(jobId: Long): JobMetricData =
+    fun read(jobId: Long): JobMetricData =
         jobMetricRepository.findByJobId(jobId)?.let(JobMetricData::from) ?: JobMetricData.EMPTY
 
-    override fun readAll(jobIds: Collection<Long>): Map<Long, JobMetricData> {
+    /** 목록 조회의 N+1을 피하기 위해 한 번에 조회하며, 지표 행이 없는 공고는 0으로 채운다. */
+
+    fun readAll(jobIds: Collection<Long>): Map<Long, JobMetricData> {
         if (jobIds.isEmpty()) {
             return emptyMap()
         }
