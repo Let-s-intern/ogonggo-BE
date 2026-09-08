@@ -52,6 +52,39 @@ Mapping과 검증 annotation을 인터페이스와 구현체에 나누거나 중
 - 성공 응답은 구체적인 메서드 반환형에서 자동 생성합니다. 오류 `@ApiResponses` 선언으로 자동 성공 응답이 대체되는 메서드는 200 응답에 `useReturnTypeSchema = true`를 선언해 실제 반환형 스키마를 유지합니다.
 - 클라이언트가 대응할 수 있는 예상 비즈니스 오류를 상태·ErrorCode와 함께 명시합니다.
 - 모든 Controller에 공통 500 응답을 반복해서 나열하지 않습니다.
+- 모든 작업에 `operationId`를 명시합니다. 자동 생성에 맡기지 않습니다.
+
+### operationId
+
+> `operationId`는 명세를 읽는 쪽이 작업을 가리키는 유일한 이름이므로 코드에서 직접 정한다.
+
+springdoc은 `operationId`를 주지 않으면 **메서드 이름**에서 만들고, 겹치면 스캔 순서대로 `_1`, `_2`를 붙입니다.
+
+이 저장소는 행위자로 API를 나누므로 이름이 겹치는 것이 정상입니다. `UserJobApi.getJobs`와 `CompanyJobApi.getJobs`는 같은 행위를 다른 행위자에게 제공하며, 행위자 구분은 **클래스가** 지고 있습니다. 그런데 OpenAPI의 `operationId`에는 클래스라는 개념이 없어 전역 이름 하나뿐이므로, 그 구분이 명세로 넘어가면서 사라집니다.
+
+문제는 붙는 접미사가 아무것도 식별하지 않는다는 점입니다. `getJobs_1`은 "두 번째로 스캔된 `getJobs`"라는 뜻일 뿐입니다. 스캔 순서는 계약이 아니어서 Controller를 추가하거나 클래스를 옮기면 뒤집히고, 그러면 이름과 경로의 짝이 조용히 바뀝니다. 이 명세로 클라이언트 코드를 생성하는 쪽은 같은 함수 이름으로 **다른 API를 호출하게 됩니다.** 반환 타입이 같은 작업끼리 뒤바뀌면 컴파일도 통과합니다.
+
+이름은 `<동사><소유><리소스>`로 짓습니다.
+
+| 자리 | 값 |
+| --- | --- |
+| 동사 | HTTP 메서드를 따릅니다. GET 컬렉션은 `list`, GET 단건은 `get`, POST는 `create`, PUT은 `replace`, DELETE는 `delete` |
+| 소유 | 로그인한 사용자의 것이면 `My`, 로그인 없이 보는 것이면 `Public`. 해당하지 않으면 생략합니다 |
+| 리소스 | 컬렉션은 복수형, 단건은 단수형 |
+
+```text
+GET  /api/v1/jobs                    listPublicJobs
+GET  /api/v1/jobs/{jobId}            getPublicJob
+GET  /api/v1/users/me/jobs           listMyJobs
+GET  /api/v1/users/me/jobs/{jobId}   getMyJob
+PUT  /api/v1/users/me/jobs/{jobId}   replaceMyJob
+```
+
+상태 전이는 CRUD로 의도가 드러나지 않으므로 도메인 동사를 씁니다: `publishMyJob`, `closeMyJob`, `startMyBootcampRecruitment`.
+
+공개 목록에도 `Public`을 붙여 양쪽을 모두 한정합니다. 한쪽을 기본 이름으로 두면 그 이름이 가리키는 경로가 바뀔 때 클라이언트가 알아채지 못합니다.
+
+계약 테스트가 모든 `operationId`의 존재와 유일성, `_숫자` 접미사가 없음을 검증합니다. 이름이 겹치면 빌드가 깨지므로 명세가 조용히 어긋나지 않습니다.
 
 오류 content는 API가 소유한 `ErrorResponse` 스키마를 사용합니다. 도메인 ErrorCode를 별도 `SwaggerEnum`으로 다시 모으지 않습니다. 오류 annotation 반복이 커지면 ErrorCode를 원본으로 사용하는 자동화 방식을 검토합니다.
 
@@ -75,6 +108,7 @@ Mapping과 검증 annotation을 인터페이스와 구현체에 나누거나 중
 
 전체 OpenAPI JSON snapshot은 작은 구현 변경에도 깨지므로 사용하지 않습니다. `/v3/api-docs` 계약 테스트에서 다음 핵심만 검증합니다.
 
+- 모든 작업의 `operationId` 존재·유일성과 자동 생성 접미사 부재
 - API별 title과 Bearer 인증 스키마
 - 대표 경로와 공개·인증 작업의 Security Requirement
 - 페이지 기본값과 검증 범위

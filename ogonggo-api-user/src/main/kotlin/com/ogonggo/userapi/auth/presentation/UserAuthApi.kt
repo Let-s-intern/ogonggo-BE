@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface UserAuthApi {
 
     @Operation(
+        operationId = "signInWithLetsCareer",
         summary = "렛츠커리어 토큰으로 로그인",
         description = "최초 로그인은 오공고 계정을 함께 생성하며 신규 여부는 isNewUser로 구분합니다.",
     )
@@ -51,7 +52,7 @@ interface UserAuthApi {
         request: LetsCareerSignInRequest,
     ): ResponseEntity<SuccessResponse<SignInResponse>>
 
-    @Operation(summary = "액세스 토큰 재발급")
+    @Operation(operationId = "reissueAccessToken", summary = "액세스 토큰 재발급")
     @ApiResponses(
         value = [
             ApiResponse(
@@ -78,7 +79,7 @@ interface UserAuthApi {
         request: TokenReissueRequest,
     ): ResponseEntity<SuccessResponse<AccessTokenResponse>>
 
-    @Operation(summary = "로그아웃")
+    @Operation(operationId = "signOut", summary = "로그아웃")
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponse(
         responseCode = "401",

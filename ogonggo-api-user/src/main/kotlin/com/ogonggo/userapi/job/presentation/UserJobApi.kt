@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam
 interface UserJobApi {
 
     @Operation(
+        operationId = "listPublicJobs",
         summary = "채용공고 목록 조회",
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
@@ -77,6 +78,7 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(
+        operationId = "createJobSourceUrlClick",
         summary = "채용공고 원문 이동 기록",
         description = """
             사용자가 채용공고 원문으로 이동하는 버튼을 눌렀다는 사실을 기록합니다.
@@ -113,6 +115,7 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "listPublicJobCalendar",
         summary = "채용공고 달력 조회",
         description = """
             모집 기간이 조회 범위와 **겹치는** 게시 공고를 반환합니다.
@@ -154,6 +157,7 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>>
 
     @Operation(
+        operationId = "getPublicJob",
         summary = "채용공고 상세 조회",
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,

@@ -43,6 +43,7 @@ private const val JOB_NOT_FOUND_DESCRIPTION =
 interface CompanyJobApi {
 
     @Operation(
+        operationId = "createMyJob",
         summary = "채용공고 등록",
         description = """
             등록한 공고는 항상 임시저장 상태로 만들어집니다. 지원자에게 노출하려면 게시를 따로 요청해야 합니다.
@@ -64,7 +65,8 @@ interface CompanyJobApi {
         @RequestBody @Valid request: CreateCompanyJobRequest,
     ): ResponseEntity<SuccessResponse<CreateCompanyJobResponse>>
 
-    @Operation(summary = "내 채용공고 목록 조회", description = "최근에 등록한 공고부터 반환합니다.")
+    @Operation(operationId = "listMyJobs",
+summary = "내 채용공고 목록 조회", description = "최근에 등록한 공고부터 반환합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -82,7 +84,7 @@ interface CompanyJobApi {
         @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) size: Int,
     ): ResponseEntity<SuccessResponse<PageResponse<CompanyJobSummaryResponse>>>
 
-    @Operation(summary = "내 채용공고 상세 조회")
+    @Operation(operationId = "getMyJob", summary = "내 채용공고 상세 조회")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -99,7 +101,8 @@ interface CompanyJobApi {
         @PathVariable("jobId") @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<CompanyJobDetailResponse>>
 
-    @Operation(summary = "내 채용공고 수정", description = "보낸 값으로 공고 전체를 교체합니다.")
+    @Operation(operationId = "replaceMyJob",
+summary = "내 채용공고 수정", description = "보낸 값으로 공고 전체를 교체합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
@@ -118,6 +121,7 @@ interface CompanyJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "publishMyJob",
         summary = "내 채용공고 게시",
         description = "임시저장한 공고를 지원자에게 노출합니다. 이미 게시된 공고를 다시 게시해도 성공합니다.",
     )
@@ -138,6 +142,7 @@ interface CompanyJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "closeMyJob",
         summary = "내 채용공고 마감",
         description = "모집을 마감합니다. 이미 마감한 공고를 다시 마감해도 최초 마감 일시를 유지합니다.",
     )
@@ -157,7 +162,8 @@ interface CompanyJobApi {
         @PathVariable("jobId") @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(summary = "내 채용공고 삭제", description = "여러 번 삭제해도 최초 삭제 일시를 유지합니다.")
+    @Operation(operationId = "deleteMyJob",
+summary = "내 채용공고 삭제", description = "여러 번 삭제해도 최초 삭제 일시를 유지합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "삭제 성공", useReturnTypeSchema = true),

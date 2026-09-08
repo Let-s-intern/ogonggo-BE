@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam
 @RequestMapping("/api/v1/bootcamp-bookmarks")
 interface UserBootcampBookmarkApi {
 
-    @Operation(summary = "부트캠프 북마크 목록 조회")
+    @Operation(operationId = "listMyBootcampBookmarks", summary = "부트캠프 북마크 목록 조회")
     @GetMapping
     fun getBookmarks(
         @Parameter(hidden = true)
@@ -45,7 +45,7 @@ interface UserBootcampBookmarkApi {
         size: Int,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
-    @Operation(summary = "부트캠프 북마크 등록")
+    @Operation(operationId = "createBootcampBookmark", summary = "부트캠프 북마크 등록")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "등록 성공", useReturnTypeSchema = true),
@@ -71,7 +71,7 @@ interface UserBootcampBookmarkApi {
         bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(summary = "부트캠프 북마크 해제")
+    @Operation(operationId = "deleteBootcampBookmark", summary = "부트캠프 북마크 해제")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "해제 성공", useReturnTypeSchema = true),

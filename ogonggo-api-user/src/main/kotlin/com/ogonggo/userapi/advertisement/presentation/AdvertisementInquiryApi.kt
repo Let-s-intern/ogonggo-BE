@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface AdvertisementInquiryApi {
 
     @Operation(
+        operationId = "createAdvertisementInquiry",
         summary = "B2B 광고 문의 접수",
         description = "기업 담당자가 광고 소개 페이지에서 남긴 문의를 영업 슬랙 채널로 전달합니다. " +
             "문의를 저장하지 않아 생성되는 리소스가 없으므로 201이 아닌 200과 `data: null`로 응답합니다. " +

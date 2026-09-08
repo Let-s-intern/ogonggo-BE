@@ -36,6 +36,40 @@ class UserOpenApiContractTest @Autowired constructor(
     private val objectMapper: ObjectMapper,
 ) {
 
+    /**
+     * springdoc은 operationId를 메서드 이름에서 만들고, 겹치면 스캔 순서대로 `_1`을 붙인다.
+     * 이 저장소는 행위자로 API를 나누어 `UserJobApi.getJobs`와 `CompanyJobApi.getJobs`처럼
+     * 메서드 이름이 겹치는 것이 정상이므로 자동 생성에 맡기면 접미사가 붙는다.
+     *
+     * 접미사는 "두 번째로 스캔된 것"이라는 뜻일 뿐 어떤 경로도 식별하지 않는다.
+     * 컨트롤러를 추가하거나 옮기면 순서가 바뀌어 이름과 경로의 짝이 조용히 뒤집히고,
+     * 이 명세로 클라이언트 코드를 생성하는 쪽은 다른 API를 호출하게 된다.
+     */
+    @Test
+    fun `모든 operationId는 유일하며 자동 생성 접미사가 붙지 않는다`() {
+        val document = openApiDocument()
+
+        val operationIds = document.at("/paths").fields().asSequence()
+            .flatMap { (path, operations) ->
+                operations.fields().asSequence().map { (method, operation) ->
+                    "$method $path" to operation.at("/operationId").asText()
+                }
+            }
+            .toList()
+
+        val missing = operationIds.filter { (_, id) -> id.isEmpty() }
+        assertTrue(missing.isEmpty(), "operationId가 없는 작업: ${missing.map { it.first }}")
+
+        val generated = operationIds.filter { (_, id) -> id.matches(GENERATED_SUFFIX) }
+        assertTrue(
+            generated.isEmpty(),
+            "이름이 겹쳐 접미사가 붙었습니다. @Operation(operationId = ...)를 지정하세요: $generated",
+        )
+
+        val duplicated = operationIds.groupBy { it.second }.filterValues { it.size > 1 }
+        assertTrue(duplicated.isEmpty(), "operationId가 겹칩니다: ${duplicated.keys}")
+    }
+
     @Test
     fun `사용자 OpenAPI는 인터페이스의 경로와 인증과 오류 명세를 노출한다`() {
         val document = openApiDocument()
@@ -230,4 +264,8 @@ class UserOpenApiContractTest @Autowired constructor(
 
     private fun JsonNode.parameter(name: String): JsonNode =
         this["parameters"].first { it["name"].asText() == name }
+
+    companion object {
+        private val GENERATED_SUFFIX = Regex(""".*_\d+$""")
+    }
 }

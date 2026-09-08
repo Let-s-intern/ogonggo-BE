@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface UserAccountApi {
 
     @Operation(
+        operationId = "getMyAccount",
         summary = "내 정보 조회",
         description = """
             로그인한 사용자의 역할과 프로필을 반환합니다.

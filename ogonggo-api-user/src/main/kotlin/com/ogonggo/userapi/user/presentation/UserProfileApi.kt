@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface UserProfileApi {
 
     @Operation(
+        operationId = "replaceMyProfile",
         summary = "내 프로필 수정",
         description = """
             학력(대학교·전공·학년)과 희망 조건(직군·직무·산업·구직 조건·희망 기업)을 교체합니다.
