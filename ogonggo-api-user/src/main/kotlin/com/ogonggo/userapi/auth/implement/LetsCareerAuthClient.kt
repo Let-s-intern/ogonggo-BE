@@ -53,15 +53,7 @@ class LetsCareerAuthClient(
         val data = response?.data
             ?: throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
 
-        return LetsCareerUser(
-            userId = data.userId,
-            email = data.email,
-            name = data.name,
-            nickname = data.nickname,
-            profileImageUrl = data.profileImageUrl,
-            isAdmin = data.isAdmin ?: false,
-            updatedAt = data.updatedAt,
-        )
+        return data.toResult()
     }
 
     companion object {
@@ -87,4 +79,16 @@ internal data class VerifyResponse(
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
     val updatedAt: LocalDateTime?,
-)
+) {
+    /** 렛츠커리어가 주는 형태를 오공고가 쓰는 형태로 옮긴다. */
+    fun toResult(): LetsCareerUser = LetsCareerUser(
+        userId = userId,
+        email = email,
+        name = name,
+        nickname = nickname,
+        profileImageUrl = profileImageUrl,
+        // 렛츠커리어가 값을 주지 않으면 관리자가 아닌 것으로 본다.
+        isAdmin = isAdmin ?: false,
+        updatedAt = updatedAt,
+    )
+}
