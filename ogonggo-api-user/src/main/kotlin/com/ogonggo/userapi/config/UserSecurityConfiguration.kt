@@ -66,6 +66,9 @@ class UserSecurityConfiguration {
                 ).permitAll()
                 // 광고 문의는 오공고 계정이 없는 기업 담당자가 소개 페이지에서 남긴다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-inquiries").permitAll()
+                // 역할은 토큰에 없으므로 클라이언트는 이 경로로 자기 역할과 프로필을 읽는다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
+                it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
                 it.requestMatchers("/api/v1/users/me/jobs", "/api/v1/users/me/jobs/**").authenticated()
                 // 채용공고와 부트캠프 조회는 로그인 없이 연다.
@@ -76,6 +79,10 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/source-url-clicks").authenticated()
                 it.requestMatchers("/api/v1/job-bookmarks", "/api/v1/job-bookmarks/**").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/bootcamps", "/api/v1/bootcamps/**").permitAll()
+                // 지원 페이지 이동 기록은 부트캠프 하위의 유일한 쓰기 경로이므로 메서드와 경로를 좁혀 허용한다.
+                // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
+                it.requestMatchers(HttpMethod.POST, "/api/v1/bootcamps/*/application-url-clicks").authenticated()
+                it.requestMatchers("/api/v1/bootcamp-bookmarks", "/api/v1/bootcamp-bookmarks/**").authenticated()
                 it.anyRequest().denyAll()
             }
             .addFilterBefore(

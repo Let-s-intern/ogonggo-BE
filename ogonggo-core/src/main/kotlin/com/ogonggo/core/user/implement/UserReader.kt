@@ -3,35 +3,31 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.core.user.implement.dto.UserCredentialDto
 import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 
-interface UserReader {
-    fun readByLetsCareerUserId(letsCareerUserId: Long): UserAccount?
-    fun read(userId: Long): UserAccount
-
-    /** 기업 회원 로그인용 조회. 자격증명이 없는 일반 회원 계정은 반환하지 않는다. */
-    fun readCredentialByEmail(email: String): UserCredential?
-}
-
 @Component
-internal class UserReaderImpl(
+class UserReader internal constructor(
     private val userRepository: UserJpaRepository,
-) : UserReader {
+) {
 
-    override fun readByLetsCareerUserId(letsCareerUserId: Long): UserAccount? =
+    fun readByLetsCareerUserId(letsCareerUserId: Long): UserAccountDto? =
         userRepository.findByLetsCareerUserId(letsCareerUserId)?.toAccount()
 
-    override fun read(userId: Long): UserAccount =
+    fun read(userId: Long): UserAccountDto =
         userRepository.findByIdOrNull(userId)?.toAccount()
             ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
 
-    override fun readCredentialByEmail(email: String): UserCredential? {
+    /** 기업 회원 로그인용 조회. 자격증명이 없는 일반 회원 계정은 반환하지 않는다. */
+
+    fun readCredentialByEmail(email: String): UserCredentialDto? {
         val user = userRepository.findByEmail(email) ?: return null
         val encodedPassword = user.password ?: return null
 
-        return UserCredential(
+        return UserCredentialDto(
             userId = user.requiredId(),
             encodedPassword = encodedPassword,
             status = user.status,
@@ -40,12 +36,13 @@ internal class UserReaderImpl(
     }
 }
 
-internal fun User.toAccount(): UserAccount = UserAccount(
+internal fun User.toAccount(): UserAccountDto = UserAccountDto(
     userId = requiredId(),
     letsCareerUserId = letsCareerUserId,
     email = email,
     status = status,
     role = role,
+    joinedAt = joinedAt,
 )
 
 private fun User.requiredId(): Long = checkNotNull(id) { "사용자 식별자가 없습니다." }

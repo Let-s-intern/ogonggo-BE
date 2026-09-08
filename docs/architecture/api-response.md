@@ -71,6 +71,15 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 
 정렬은 서버가 정한 값 중에서만 고를 수 있습니다. 클라이언트가 임의의 정렬 필드를 전달하는 기능은 제공하지 않습니다.
 
+목록의 선택 필터도 서버가 정한 파라미터만 받습니다. 보내지 않으면 그 조건을 적용하지 않으며, 여러 필터와 검색어와 정렬은 함께 사용할 수 있습니다.
+
+| 목록 | 필터 | 검색어 |
+| --- | --- | --- |
+| `GET /api/v1/jobs` | `employmentType`, `experienceType` | `keyword` — 회사명 또는 공고 제목 |
+| `GET /api/v1/bootcamps` | `tuitionType`, `status` | `keyword` — 운영 회사명 또는 프로그램명 |
+
+검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
+
 | `sort` | 의미 | 순서 |
 | --- | --- | --- |
 | `LATEST` | 최신순 (기본값) | `id DESC` |
@@ -104,9 +113,9 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 지표
 
-채용공고와 부트캠프의 목록·상세 응답은 `viewCount`, `bookmarkCount`, `commentCount`를 포함합니다. 세 값은 `job_metrics`, `bootcamp_metrics`가 소유하며 지표 행이 아직 없으면 `0`으로 응답합니다. 댓글 기능은 아직 없어 `commentCount`는 항상 `0`이고, 부트캠프 북마크 API도 아직 없어 부트캠프의 `bookmarkCount`는 항상 `0`입니다. 달력 응답은 최소 필드 계약을 유지하므로 지표를 추가하지 않습니다.
+채용공고와 부트캠프의 목록·상세 응답은 `viewCount`, `bookmarkCount`, `commentCount`를 포함합니다. 세 값은 `job_metrics`, `bootcamp_metrics`가 소유하며 지표 행이 아직 없으면 `0`으로 응답합니다. 댓글 기능은 아직 없어 `commentCount`는 항상 `0`입니다. 달력 응답은 최소 필드 계약을 유지하므로 지표를 추가하지 않습니다.
 
-목록 조회는 공고 식별자 목록으로 지표를 한 번에 읽어 N+1을 만들지 않습니다.
+목록 조회는 공고·부트캠프 식별자 목록으로 지표를 한 번에 읽어 N+1을 만들지 않습니다.
 
 조회 수는 상세 조회에서 요청당 한 번 증가하며 사용자·세션 단위 중복 제거는 하지 않습니다. Business Service는 조회 수를 직접 올리지 않고 `JobViewedEvent`, `BootcampViewedEvent`로 조회 사실만 발행합니다. 실제 증가는 지표 전용 실행기에서 비동기로 처리하므로 **상세 응답의 `viewCount`에는 이번 조회가 반영되지 않습니다.**
 
@@ -124,9 +133,21 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 북마크와 달리 취소할 수 있는 상태가 아니라 일어난 사실이므로 소프트 삭제 컬럼을 두지 않습니다.
 
+### 부트캠프 지원 페이지 이동
+
+`POST /api/v1/bootcamps/{bootcampId}/application-url-clicks`도 같은 계약을 사용합니다. 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
+
+채용공고는 원문(`sourceUrl`) 이동을 기록하지만 부트캠프는 외부 지원 페이지(`applicationUrl`) 이동을 기록합니다. 부트캠프에서 세어야 하는 것이 지원 전환이기 때문입니다. `applicationMethod`가 `EMAIL`이라 `applicationUrl`이 없는 부트캠프는 클라이언트가 이동 버튼을 띄우지 않으므로, 서버는 링크 유무를 따로 검사하지 않습니다. 원문(`sourceUrl`) 이동을 함께 세야 하면 그때 링크 종류를 구분하는 컬럼을 추가할지 검토합니다.
+
 ### 채용공고 북마크
 
 일반 채용공고 목록과 상세 응답은 현재 사용자의 상태를 나타내는 `bookmarked`를 포함합니다. `GET /api/v1/job-bookmarks`는 게시 중인 미삭제 북마크 공고만 최근 북마크 순으로 반환하며 일반 목록과 같은 페이지 응답을 사용합니다. 달력 응답은 최소 필드 계약을 유지하므로 `bookmarked`를 추가하지 않습니다.
+
+### 부트캠프 북마크
+
+부트캠프도 같은 계약을 사용합니다. 목록과 상세 응답에 `bookmarked`를 포함하고, `GET /api/v1/bootcamp-bookmarks`는 지금 공개된 미삭제 북마크 부트캠프만 최근 북마크 순으로 반환합니다.
+
+공개 여부는 목록 조회와 같은 조건, 즉 `RECRUITING`·`CLOSED` 상태이면서 공개 기간 안에 있는지로 판단합니다. 북마크해 둔 부트캠프라도 공개가 끝나면 목록에서 빠지며, 이때도 해제는 계속 할 수 있도록 해제는 삭제 여부를 가리지 않고 조회합니다.
 
 ### B2B 광고 문의
 

@@ -113,10 +113,13 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | --- | --- | --- |
 | `GET /api/v1/jobs`, `/api/v1/jobs/{jobId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `GET /api/v1/jobs/calendar` | 불필요 | 응답에 사용자별 값이 없다 |
-| `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 불필요 | 응답에 사용자별 값이 없다 |
+| `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
-| `/api/v1/job-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
+| `POST /api/v1/bootcamps/{bootcampId}/application-url-clicks` | 필수 | `bootcamp_application_url_clicks.user_id`가 NOT NULL이다 |
+| `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
+| `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
+| `PUT /api/v1/users/me/profile` | 필수 | 자기 학력과 희망 조건을 고친다 |
 
 `anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다. 브라우저 preflight(`OPTIONS`)만 예외로, 인가 규칙 첫 줄의 `CorsUtils::isPreFlightRequest`가 먼저 허용합니다([브라우저 CORS 허용 오리진](#7-2-브라우저-cors-허용-오리진) 참고).
 
@@ -168,6 +171,42 @@ POST /api/v1/auth/company/signin
 
 비밀번호는 BCrypt로 `ogonggo-api-user`에서 인코딩하고 core에는 인코딩된 값만 넘깁니다. core는 인코딩 방식을 알지 않습니다. 이메일 중복은 사전 조회 대신 유니크 제약으로 판정합니다. 조회와 저장 사이에 같은 이메일이 들어오는 경쟁 상태를 조회로는 막을 수 없기 때문입니다.
 
+### 학력과 희망 조건
+
+> 렛츠커리어에서 한 번 가져오고, 그다음부터는 오공고가 소유한다.
+
+```text
+GET /api/v1/users/me            profile 안에 함께 담긴다
+PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한다
+```
+
+통합 로그인을 쓰는 이상 같은 정보를 두 번 입력하게 하지 않기 위해, 최초 가입 시점에 렛츠커리어의 값을 한 번 복제합니다. 그 뒤로는 오공고에서 수정할 수 있고 재로그인해도 덮어쓰지 않습니다.
+
+| 항목 | 값 | 소유 |
+| --- | --- | --- |
+| 이름·닉네임·프로필 이미지 | `name`, `nickname`, `profileImageUrl` | 렛츠커리어. 로그인마다 `sync`가 갱신한다 |
+| 학력 | `university`, `major`, `grade` | 오공고. 사용자가 고친다 |
+| 희망 조건 | `wishField`, `wishJob`, `wishIndustry`, `wishEmploymentType`, `wishCompany` | 오공고. 사용자가 고친다 |
+
+**같은 `user_profiles` 테이블에 두되 소유자는 나눕니다.** 소유자가 다른 값이 한 테이블에 있으므로 무엇이 무엇을 덮어쓰는지를 코드로 못 박아 둡니다. `UserProfile.sync`는 렛츠커리어에서 복제하는 네 값만 건드리고, `UserProfile.replaceJobInfo`는 사용자가 입력하는 여덟 값만 건드립니다. 두 메서드의 경계가 곧 소유권 경계이므로 한쪽에 다른 쪽 필드를 추가하지 않습니다.
+
+`grade`는 렛츠커리어의 `UserGrade`와 값과 `code`를 맞춰 두었습니다. 희망 조건 다섯 값은 렛츠커리어가 자유 문자열로 다루므로 오공고도 형식을 해석하지 않고 그대로 보관합니다.
+
+렛츠커리어에서 값을 가져오는 것은 **최초 계정 생성 시점 한 번뿐**입니다.
+
+```text
+POST /api/v1/internal/auth/verify                    매 로그인
+GET  /api/v1/internal/users/{userId}/job-profile     최초 가입 시 1회
+```
+
+매 로그인 호출인 `verify`에 이 값들을 싣지 않고 계정을 새로 만들 때만 별도 내부 API를 한 번 호출합니다. 재로그인마다 쓰지도 않을 개인정보를 실어 나르지 않기 위한 것이며, 나중에 "렛츠커리어에서 다시 불러오기"가 필요해지면 같은 API를 재사용합니다. 두 경로 모두 `X-Internal-Api-Key`로 인증합니다.
+
+렛츠커리어 호출은 로그인 트랜잭션 밖에서 합니다. 응답을 기다리는 동안 DB 커넥션을 잡고 있으면 렛츠커리어가 느려질 때 로그인과 무관한 API까지 커넥션이 없어 함께 실패합니다.
+
+그 호출이 실패해도 가입은 성공으로 둡니다. 학력과 희망 조건은 로그인의 성공 조건이 아니고, 비어 있으면 사용자가 오공고에서 직접 입력하면 됩니다. 오공고가 모르는 `grade` 값이 오면 그 값만 비우고 나머지는 저장합니다.
+
+PUT은 여덟 값을 함께 교체하며 보내지 않은 값은 비웁니다. 아직 입력한 적이 없어도 조회는 404가 아니라 값이 `null`인 200으로 응답합니다.
+
 ### 두 계정이 공유하는 것
 
 발급하는 `OG-access`·`OG-refresh`는 계정 종류와 무관하게 같습니다. 따라서 `POST /api/v1/auth/token`(재발급)과 `POST /api/v1/auth/signout`은 두 계정이 그대로 공유합니다. 로그인 가능 상태 검사(`ACTIVE`만 허용)도 `SignInValidator` 하나를 공유합니다.
@@ -175,6 +214,22 @@ POST /api/v1/auth/company/signin
 ### 역할을 토큰에 담지 않는 이유
 
 `OG-access`는 사용자 식별자만 담고 역할은 담지 않습니다. 역할을 클레임에 넣으면 최대 액세스 토큰 수명(30분)만큼 낡은 역할이 남습니다. 역할이 필요한 엔드포인트는 Business Service가 `UserReader`로 현재 역할을 조회합니다.
+
+그래서 클라이언트도 토큰을 열어 역할을 알 수 없고, `GET /api/v1/users/me`로 읽습니다. 기업 회원 화면을 열지 판단하는 기준은 이 응답의 `role`입니다.
+
+```text
+GET /api/v1/users/me
+→ 200 {
+    "userId": 17, "role": "USER", "status": "ACTIVE",
+    "email": "...", "joinedAt": "...",
+    "profile": { "name": "...", "nickname": "...", "profileImageUrl": "..." },
+    "companyProfile": null
+  }
+```
+
+`role`이 `COMPANY`이면 `companyProfile`이, 그 밖이면 `profile`이 채워지고 반대쪽은 `null`입니다. 계정 종류에 없는 프로필 테이블은 조회하지 않습니다.
+
+**정지·탈퇴한 계정도 403이 아니라 200으로 응답하고 `status`에 현재 상태를 담습니다.** 다른 기업 회원 엔드포인트는 `verifyCompany`에서 403 `USER_SUSPENDED`·`USER_WITHDRAWN`으로 막지만, 이 경로는 자기 자신을 보는 조회이고 상태가 바뀐 뒤에도 액세스 토큰이 만료까지 유효하므로 클라이언트가 왜 다른 요청이 막히는지 알 수 있어야 합니다.
 
 ## 6. 렛츠커리어 내부 API
 
@@ -253,6 +308,7 @@ POST /api/v1/auth/company/signin
 | 탈퇴 사용자의 재로그인 | 확인 필요 | 403으로 막는다. 현재 도메인은 탈퇴를 되돌릴 수 없다고 선언하고 있다 |
 | 렛츠커리어 로그아웃 시 오공고 동시 로그아웃 | 미정 | 오공고 세션은 유지된다 |
 | `ADMIN` 역할 부여 경로 | 미정 | enum 값만 있고 부여하는 코드가 없다. 렛츠커리어의 `isAdmin`은 반영하지 않는다 |
+| 프로필 수정 | 미정 | 구직 프로필은 수정할 수 있다. 렛츠커리어에서 복제한 이름·닉네임·프로필 이미지는 로그인 시 갱신될 뿐 바꾸는 경로가 없고, 기업 정보도 가입 이후 바꿀 수 없다 |
 
 앞의 세 가지는 서로 얽혀 있으므로 함께 결정합니다. 재발급 시점에 렛츠커리어를 재검증하는 방식(`last_synced_at`이 일정 기간을 넘겼을 때만 호출)이 전파 지연을 좁히는 후보이며, 탈퇴 정책이 정해진 뒤 함께 검토합니다.
 

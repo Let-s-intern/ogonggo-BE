@@ -3,20 +3,17 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.CompanyProfile
 import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.persistence.CompanyProfileJpaRepository
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 
-interface CompanyProfileAppender {
-    fun append(command: CompanyProfileAppendCommand)
-}
-
 @Component
-internal class CompanyProfileAppenderImpl(
+class CompanyProfileAppender internal constructor(
     private val companyProfileRepository: CompanyProfileJpaRepository,
-) : CompanyProfileAppender {
+) {
 
-    override fun append(command: CompanyProfileAppendCommand) {
+    fun append(command: CompanyProfileAppendDto) {
         try {
             companyProfileRepository.saveAndFlush(
                 CompanyProfile(

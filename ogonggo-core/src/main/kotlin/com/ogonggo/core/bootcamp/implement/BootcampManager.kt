@@ -3,29 +3,25 @@ package com.ogonggo.core.bootcamp.implement
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
-import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
-
-interface BootcampManager {
-    fun update(bootcamp: Bootcamp, command: BootcampUpdateCommand)
-    fun startRecruitment(bootcamp: Bootcamp)
-    fun close(bootcamp: Bootcamp, now: LocalDateTime)
-    fun delete(bootcamp: Bootcamp, now: LocalDateTime)
-}
+import org.springframework.stereotype.Component
 
 @Component
-internal class BootcampManagerImpl(
+class BootcampManager internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
     private val clock: Clock,
-) : BootcampManager {
+) {
 
-    override fun update(bootcamp: Bootcamp, command: BootcampUpdateCommand) {
+    fun update(bootcamp: Bootcamp, command: BootcampUpdateDto) {
         val bootcampId = checkNotNull(bootcamp.id) { "부트캠프 식별자가 없습니다." }
         require(command.partners.map { it.partnerName }.distinct().size == command.partners.size) {
             "중복된 파트너사명은 등록할 수 없습니다."
@@ -76,11 +72,11 @@ internal class BootcampManagerImpl(
         bootcampCurriculumRepository.saveAll(curriculums)
     }
 
-    override fun startRecruitment(bootcamp: Bootcamp) = change(bootcamp) { startRecruitment() }
+    fun startRecruitment(bootcamp: Bootcamp) = change(bootcamp) { startRecruitment() }
 
-    override fun close(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { close(now) }
+    fun close(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { close(now) }
 
-    override fun delete(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { delete(now) }
+    fun delete(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { delete(now) }
 
     private fun change(bootcamp: Bootcamp, change: Bootcamp.() -> Unit) {
         bootcamp.change()
@@ -88,13 +84,13 @@ internal class BootcampManagerImpl(
     }
 }
 
-private fun BootcampPartnerCommand.toPartner(bootcampId: Long): BootcampPartner = BootcampPartner(
+private fun BootcampPartnerDto.Request.toPartner(bootcampId: Long): BootcampPartner = BootcampPartner(
     bootcampId = bootcampId,
     partnerName = partnerName,
     displayOrder = displayOrder,
 )
 
-private fun BootcampCurriculumCommand.toCurriculum(bootcampId: Long): BootcampCurriculum = BootcampCurriculum(
+private fun BootcampCurriculumDto.Request.toCurriculum(bootcampId: Long): BootcampCurriculum = BootcampCurriculum(
     bootcampId = bootcampId,
     startWeek = startWeek,
     endWeek = endWeek,

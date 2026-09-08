@@ -6,10 +6,10 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.bootcamp.implement.BootcampCurriculumData
-import com.ogonggo.core.bootcamp.implement.BootcampMetricData
-import com.ogonggo.core.bootcamp.implement.BootcampPage
-import com.ogonggo.core.bootcamp.implement.BootcampPartnerData
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -23,13 +23,16 @@ data class UserBootcampPageResult(
 ) {
     companion object {
         internal fun from(
-            result: BootcampPage,
-            metrics: Map<Long, BootcampMetricData>,
+            result: BootcampPageDto,
+            bookmarkedBootcampIds: Set<Long>,
+            metrics: Map<Long, BootcampMetricDto>,
         ): UserBootcampPageResult = UserBootcampPageResult(
             items = result.bootcamps.map { bootcamp ->
+                val bootcampId = bootcamp.requiredId()
                 UserBootcampSummary.from(
                     bootcamp = bootcamp,
-                    metric = metrics[bootcamp.requiredId()] ?: BootcampMetricData.EMPTY,
+                    bookmarked = bootcampId in bookmarkedBootcampIds,
+                    metric = metrics[bootcampId] ?: BootcampMetricDto.EMPTY,
                 )
             },
             page = result.page,
@@ -59,12 +62,17 @@ data class UserBootcampSummary(
     val shortDescription: String,
     val status: BootcampStatus,
     val closedAt: LocalDateTime?,
+    val bookmarked: Boolean,
     val viewCount: Long,
     val bookmarkCount: Long,
     val commentCount: Long,
 ) {
     companion object {
-        internal fun from(bootcamp: Bootcamp, metric: BootcampMetricData): UserBootcampSummary = UserBootcampSummary(
+        internal fun from(
+            bootcamp: Bootcamp,
+            bookmarked: Boolean,
+            metric: BootcampMetricDto,
+        ): UserBootcampSummary = UserBootcampSummary(
             id = bootcamp.requiredId(),
             companyName = bootcamp.companyName,
             title = bootcamp.title,
@@ -82,6 +90,7 @@ data class UserBootcampSummary(
             shortDescription = bootcamp.shortDescription,
             status = bootcamp.status,
             closedAt = bootcamp.closedAt,
+            bookmarked = bookmarked,
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,
             commentCount = metric.commentCount,
@@ -116,6 +125,7 @@ data class UserBootcampResult(
     val sourceUrl: String?,
     val status: BootcampStatus,
     val closedAt: LocalDateTime?,
+    val bookmarked: Boolean,
     val viewCount: Long,
     val bookmarkCount: Long,
     val commentCount: Long,
@@ -125,9 +135,10 @@ data class UserBootcampResult(
     companion object {
         internal fun from(
             bootcamp: Bootcamp,
-            partners: List<BootcampPartnerData>,
-            curriculums: List<BootcampCurriculumData>,
-            metric: BootcampMetricData,
+            bookmarked: Boolean,
+            partners: List<BootcampPartnerDto.Response>,
+            curriculums: List<BootcampCurriculumDto.Response>,
+            metric: BootcampMetricDto,
         ): UserBootcampResult = UserBootcampResult(
             id = bootcamp.requiredId(),
             companyName = bootcamp.companyName,
@@ -155,6 +166,7 @@ data class UserBootcampResult(
             sourceUrl = bootcamp.sourceUrl,
             status = bootcamp.status,
             closedAt = bootcamp.closedAt,
+            bookmarked = bookmarked,
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,
             commentCount = metric.commentCount,

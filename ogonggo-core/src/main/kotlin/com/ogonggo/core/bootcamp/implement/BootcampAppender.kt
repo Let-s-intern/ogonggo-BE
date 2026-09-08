@@ -3,23 +3,22 @@ package com.ogonggo.core.bootcamp.implement
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
 import org.springframework.stereotype.Component
 
-interface BootcampAppender {
-    fun append(command: BootcampAppendCommand): Bootcamp
-}
-
 @Component
-internal class BootcampAppenderImpl(
+class BootcampAppender internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
-) : BootcampAppender {
+) {
 
-    override fun append(command: BootcampAppendCommand): Bootcamp {
+    fun append(command: BootcampAppendDto): Bootcamp {
         val bootcamp = bootcampRepository.save(
             Bootcamp(
                 ownerUserId = command.ownerUserId,
@@ -59,13 +58,13 @@ internal class BootcampAppenderImpl(
     }
 }
 
-private fun BootcampPartnerCommand.toEntity(bootcampId: Long): BootcampPartner = BootcampPartner(
+private fun BootcampPartnerDto.Request.toEntity(bootcampId: Long): BootcampPartner = BootcampPartner(
     bootcampId = bootcampId,
     partnerName = partnerName,
     displayOrder = displayOrder,
 )
 
-private fun BootcampCurriculumCommand.toEntity(bootcampId: Long): BootcampCurriculum = BootcampCurriculum(
+private fun BootcampCurriculumDto.Request.toEntity(bootcampId: Long): BootcampCurriculum = BootcampCurriculum(
     bootcampId = bootcampId,
     startWeek = startWeek,
     endWeek = endWeek,

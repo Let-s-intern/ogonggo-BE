@@ -1,6 +1,7 @@
 package com.ogonggo.core.bootcamp.persistence
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
@@ -38,25 +39,49 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
         @Param("now") now: LocalDateTime,
     ): Bootcamp?
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId and bootcamp.deletedAt is null")
+    fun findByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
+    /** 북마크 해제는 이미 삭제된 부트캠프에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
+    @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId")
+    fun findIncludingDeletedById(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
+    /**
+     * 북마크한 부트캠프 중 지금 공개된 것만 최근 북마크 순으로 조회한다.
+     * 부트캠프와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
+     */
     @Query(
-        """
+        value = """
         select bootcamp
         from Bootcamp bootcamp
-        where bootcamp.status in :statuses
+        join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
+        where bookmark.userId = :userId
+          and bookmark.deletedAt is null
+          and bootcamp.status in :statuses
+          and bootcamp.deletedAt is null
+          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
+          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
+        order by bookmark.updatedAt desc, bookmark.id desc
+        """,
+        countQuery = """
+        select count(bootcamp)
+        from Bootcamp bootcamp
+        join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
+        where bookmark.userId = :userId
+          and bookmark.deletedAt is null
+          and bootcamp.status in :statuses
           and bootcamp.deletedAt is null
           and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
           and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
         """,
     )
-    fun findAllPublic(
+    fun findBookmarkedBootcamps(
+        @Param("userId") userId: Long,
         @Param("statuses") statuses: Collection<BootcampStatus>,
         @Param("now") now: LocalDateTime,
         pageable: Pageable,
     ): Page<Bootcamp>
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId and bootcamp.deletedAt is null")
-    fun findByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
@@ -80,37 +105,6 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     ): Bootcamp?
 
     fun findAllByOwnerUserIdAndDeletedAtIsNull(ownerUserId: Long, pageable: Pageable): Page<Bootcamp>
-
-    /**
-     * 조회 수는 지표 테이블이 소유하고 부트캠프와 연관관계가 없으므로 명시적으로 조인한다.
-     * 지표 행은 첫 조회 시점에 생기므로 아직 없는 부트캠프는 0으로 본다.
-     * 조회 수가 같을 때 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
-     */
-    @Query(
-        value = """
-        select bootcamp
-        from Bootcamp bootcamp
-        left join BootcampMetric metric on metric.bootcampId = bootcamp.id
-        where bootcamp.status in :statuses
-          and bootcamp.deletedAt is null
-          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
-          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
-        order by coalesce(metric.viewCount, 0) desc, bootcamp.id desc
-        """,
-        countQuery = """
-        select count(bootcamp)
-        from Bootcamp bootcamp
-        where bootcamp.status in :statuses
-          and bootcamp.deletedAt is null
-          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
-          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
-        """,
-    )
-    fun findAllPublicOrderByViewCount(
-        @Param("statuses") statuses: Collection<BootcampStatus>,
-        @Param("now") now: LocalDateTime,
-        pageable: Pageable,
-    ): Page<Bootcamp>
 }
 
 internal interface BootcampMetricJpaRepository : JpaRepository<BootcampMetric, Long> {
@@ -159,6 +153,65 @@ internal interface BootcampMetricJpaRepository : JpaRepository<BootcampMetric, L
 
 internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmark, Long> {
     fun findByBootcampIdAndUserId(bootcampId: Long, userId: Long): BootcampBookmark?
+
+    /**
+     * 해제된 북마크를 다시 활성으로 되돌린다.
+     * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.
+     * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update BootcampBookmark bookmark
+        set bookmark.deletedAt = null,
+            bookmark.updatedAt = :now
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is not null
+        """,
+    )
+    fun restore(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update BootcampBookmark bookmark
+        set bookmark.deletedAt = :now,
+            bookmark.updatedAt = :now
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun softDelete(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Query(
+        """
+        select bookmark.bootcampId
+        from BootcampBookmark bookmark
+        where bookmark.userId = :userId
+          and bookmark.bootcampId in :bootcampIds
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun findActiveBootcampIds(
+        @Param("userId") userId: Long,
+        @Param("bootcampIds") bootcampIds: Collection<Long>,
+    ): Set<Long>
+}
+
+internal interface BootcampApplicationUrlClickJpaRepository :
+    JpaRepository<BootcampApplicationUrlClick, Long> {
+    fun existsByBootcampIdAndUserId(bootcampId: Long, userId: Long): Boolean
 }
 
 internal interface BootcampPartnerJpaRepository : JpaRepository<BootcampPartner, Long> {

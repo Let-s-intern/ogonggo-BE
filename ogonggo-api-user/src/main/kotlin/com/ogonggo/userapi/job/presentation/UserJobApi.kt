@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam
 interface UserJobApi {
 
     @Operation(
+        operationId = "listPublicJobs",
         summary = "채용공고 목록 조회",
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
@@ -77,6 +78,7 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(
+        operationId = "createJobSourceUrlClick",
         summary = "채용공고 원문 이동 기록",
         description = """
             사용자가 채용공고 원문으로 이동하는 버튼을 눌렀다는 사실을 기록합니다.
@@ -113,8 +115,22 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "listPublicJobCalendar",
         summary = "채용공고 달력 조회",
-        description = "모집 기간이 조회 범위와 겹치는 게시 공고를 반환합니다. 조회 기간은 최대 92일입니다.",
+        description = """
+            모집 기간이 조회 범위와 **겹치는** 게시 공고를 반환합니다.
+            그 기간에 시작하는 공고도, 끝나는 공고도 아니라 그 기간에 모집이 진행 중인 공고입니다.
+
+            조회 범위는 from 당일 00:00부터 to 당일 끝까지이며, 하루라도 겹치면 포함됩니다.
+            예를 들어 from=2026-09-05, to=2026-09-07로 조회하면
+            모집 기간이 2026-09-06~2026-09-08인 공고도, 2026-08-25~2026-09-06인 공고도 함께 나옵니다.
+            반대로 2026-09-08에 시작하거나 2026-09-04에 끝난 공고는 나오지 않습니다.
+
+            모집 기간이 없는 ALWAYS_OPEN 공고는 제외합니다.
+            시작·종료 일시가 모두 있는 공고만 대상이며 종료 일시, 식별자 오름차순으로 정렬합니다.
+
+            응답에 페이지네이션이 없어 조회 기간이 곧 응답 크기가 되므로 from부터 to까지 최대 92일만 허용합니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -141,6 +157,7 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>>
 
     @Operation(
+        operationId = "getPublicJob",
         summary = "채용공고 상세 조회",
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,

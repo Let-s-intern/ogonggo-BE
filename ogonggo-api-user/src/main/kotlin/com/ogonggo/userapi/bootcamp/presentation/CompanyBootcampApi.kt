@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam
 @RequestMapping("/api/v1/users/me/bootcamps")
 interface CompanyBootcampApi {
 
-    @Operation(summary = "부트캠프 등록")
+    @Operation(operationId = "createMyBootcamp", summary = "부트캠프 등록")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "등록 성공", useReturnTypeSchema = true),
@@ -54,7 +54,7 @@ interface CompanyBootcampApi {
         @RequestBody @Valid request: CreateCompanyBootcampRequest,
     ): ResponseEntity<SuccessResponse<CreateCompanyBootcampResponse>>
 
-    @Operation(summary = "내 부트캠프 목록 조회")
+    @Operation(operationId = "listMyBootcamps", summary = "내 부트캠프 목록 조회")
     @GetMapping
     fun getBootcamps(
         @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
@@ -62,7 +62,7 @@ interface CompanyBootcampApi {
         @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) size: Int,
     ): ResponseEntity<SuccessResponse<PageResponse<CompanyBootcampSummaryResponse>>>
 
-    @Operation(summary = "내 부트캠프 상세 조회")
+    @Operation(operationId = "getMyBootcamp", summary = "내 부트캠프 상세 조회")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -79,7 +79,7 @@ interface CompanyBootcampApi {
         @PathVariable("bootcampId") @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<CompanyBootcampDetailResponse>>
 
-    @Operation(summary = "내 부트캠프 수정")
+    @Operation(operationId = "replaceMyBootcamp", summary = "내 부트캠프 수정")
     @PutMapping("/{bootcampId}")
     fun updateBootcamp(
         @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
@@ -87,14 +87,14 @@ interface CompanyBootcampApi {
         @RequestBody @Valid request: UpdateCompanyBootcampRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(summary = "부트캠프 모집 시작")
+    @Operation(operationId = "startMyBootcampRecruitment", summary = "부트캠프 모집 시작")
     @PostMapping("/{bootcampId}/start-recruitment")
     fun startRecruitment(
         @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
         @PathVariable("bootcampId") @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(summary = "부트캠프 모집 마감")
+    @Operation(operationId = "closeMyBootcamp", summary = "부트캠프 모집 마감")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "마감 성공", useReturnTypeSchema = true),
@@ -111,7 +111,7 @@ interface CompanyBootcampApi {
         @PathVariable("bootcampId") @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(summary = "내 부트캠프 삭제")
+    @Operation(operationId = "deleteMyBootcamp", summary = "내 부트캠프 삭제")
     @DeleteMapping("/{bootcampId}")
     fun deleteBootcamp(
         @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,

@@ -141,7 +141,60 @@ class AdminJobService(
 - 계층마다 기계적으로 DTO를 만들지 않으며 Persistence projection은 core 내부 구현으로 유지합니다.
 - 공통 불변식과 상태 전이는 core 도메인 모델에 둡니다.
 - API에 필요한 core 계약과 도메인 타입만 공개하고 구현체와 Repository는 `internal`을 우선합니다.
-- 인터페이스는 외부에 안정적인 계약을 노출할 가치가 있을 때 만듭니다. 모든 클래스에 만들지는 않습니다.
+- 인터페이스는 **구현을 실제로 갈아끼울 수 있을 때만** 만듭니다. 모든 클래스에 만들지 않습니다.
+
+### 인터페이스를 만들 기준
+
+> 구현이 하나뿐이면 인터페이스를 만들지 않는다. Implement 컴포넌트는 클래스 하나로 둔다.
+
+`Reader`, `Appender`, `Manager`는 클래스 하나로 선언하고 `*Impl`을 따로 두지 않습니다. Repository 은닉은 인터페이스가 아니라 생성자 가시성으로 지킵니다.
+
+```kotlin
+@Component
+class BootcampReader internal constructor(
+    private val bootcampRepository: BootcampJpaRepository,   // internal 타입
+) { ... }
+```
+
+`internal constructor`를 쓰면 클래스는 API 모듈에 공개하면서 core의 Repository는 계속 숨길 수 있습니다. 생성자 인자가 모두 공개 타입이면 `internal`도 필요 없습니다.
+
+인터페이스를 만드는 기준은 **구현을 실제로 갈아끼울 수 있는가**입니다. 메시지 브로커를 Kafka에서 RabbitMQ로 바꿀 수 있는 것처럼 두 번째 구현이 실제로 생길 수 있으면 만듭니다. 렛츠커리어 연동처럼 그 시스템을 반드시 써야 하는 경우는 대상이 아닙니다.
+
+"테스트에서 갈아끼우려고"는 근거가 되지 않습니다. Mockito가 final 클래스를 그대로 mock 하므로 인터페이스 없이도 대역을 만들 수 있습니다. 호출 인자를 기록해야 하면 `Answer`로 받습니다. 코틀린에서는 `any()`와 `capture()`가 null을 돌려줘 non-null 파라미터에 넘길 수 없으므로 인자 매처보다 `Answer`가 안전합니다.
+
+현재 인터페이스를 유지하는 것은 구현이 여럿인 `EnumField`와 `ErrorCode`뿐입니다.
+
+### Implement가 주고받는 타입
+
+> Implement 컴포넌트가 Service와 주고받는 타입은 `implement/dto` 패키지에 두고 이름을 `Dto`로 끝낸다.
+
+```text
+core/bootcamp/implement/
+  dto/BootcampDto.kt     Service와 주고받는 타입
+  BootcampReader.kt      동작
+```
+
+패키지 경로가 곧 "Implement가 Service에 넘기기 위한 것"이라는 설명이므로, 타입이 어느 계층 소속인지가 위치로 드러납니다. 도메인당 타입이 열 개 안팎이라 파일 하나로 묶습니다.
+
+이름은 무엇을 하는 타입인지를 앞에 두고 `Dto`로 끝냅니다.
+
+| 타입 | 쓰임 |
+| --- | --- |
+| `BootcampAppendDto` | 등록할 때 Appender에 넣는 값 |
+| `BootcampUpdateDto` | 수정할 때 Manager에 넣는 값 |
+| `BootcampPageDto` | 목록 조회로 Reader에서 받는 값 |
+| `BootcampMetricDto` | 지표 조회로 Reader에서 받는 값 |
+
+넣는 값과 받는 값의 모양이 달라 이름이 겹치면 하나로 감싸고 안에서 나눕니다.
+
+```kotlin
+object BootcampPartnerDto {
+    data class Request(val partnerName: String, val displayOrder: Int = 0)
+    data class Response(val name: String, val displayOrder: Int)
+}
+```
+
+API 모듈의 HTTP 계약은 이 규칙을 따르지 않습니다. `presentation/request`의 `Request`와 `presentation/response`의 `Response`, `business`의 `Result`는 각자 소속 계층이 다르므로 그 계층에 두고 `Dto`를 붙이지 않습니다.
 
 ## 7. 트랜잭션과 영속성 컨텍스트 규칙
 

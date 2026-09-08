@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam
 @RequestMapping("/api/v1/job-bookmarks")
 interface UserJobBookmarkApi {
 
-    @Operation(summary = "채용공고 북마크 목록 조회")
+    @Operation(operationId = "listMyJobBookmarks", summary = "채용공고 북마크 목록 조회")
     @GetMapping
     fun getBookmarks(
         @Parameter(hidden = true)
@@ -45,7 +45,7 @@ interface UserJobBookmarkApi {
         size: Int,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
-    @Operation(summary = "채용공고 북마크 등록")
+    @Operation(operationId = "createJobBookmark", summary = "채용공고 북마크 등록")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "등록 성공", useReturnTypeSchema = true),
@@ -71,7 +71,7 @@ interface UserJobBookmarkApi {
         jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(summary = "채용공고 북마크 해제")
+    @Operation(operationId = "deleteJobBookmark", summary = "채용공고 북마크 해제")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "해제 성공", useReturnTypeSchema = true),

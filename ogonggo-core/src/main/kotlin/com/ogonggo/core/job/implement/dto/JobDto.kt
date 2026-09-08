@@ -1,14 +1,16 @@
-package com.ogonggo.core.job.implement
+package com.ogonggo.core.job.implement.dto
 
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import java.time.LocalDateTime
 
-data class JobAppendCommand(
+data class JobAppendDto(
     val ownerUserId: Long? = null,
     val companyName: String,
     val parentCompanyName: String? = null,
@@ -41,7 +43,7 @@ data class JobAppendCommand(
     val publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
 )
 
-data class JobUpdateCommand(
+data class JobUpdateDto(
     val companyName: String,
     val parentCompanyName: String? = null,
     val companyLogoUrl: String? = null,
@@ -71,3 +73,28 @@ data class JobUpdateCommand(
     val applicationMethod: JobApplicationMethod? = null,
     val sourceUrl: String? = null,
 )
+
+data class JobPageDto(
+    val jobs: List<Job>,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
+    val hasNext: Boolean,
+)
+
+data class JobMetricDto(
+    val viewCount: Long,
+    val bookmarkCount: Long,
+    val commentCount: Long,
+) {
+    companion object {
+        val EMPTY = JobMetricDto(viewCount = 0, bookmarkCount = 0, commentCount = 0)
+
+        internal fun from(metric: JobMetric): JobMetricDto = JobMetricDto(
+            viewCount = metric.viewCount,
+            bookmarkCount = metric.bookmarkCount,
+            commentCount = metric.commentCount,
+        )
+    }
+}

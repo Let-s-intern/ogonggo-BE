@@ -2,10 +2,10 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.JobAppender
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.job.implement.JobUpdateCommand
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito

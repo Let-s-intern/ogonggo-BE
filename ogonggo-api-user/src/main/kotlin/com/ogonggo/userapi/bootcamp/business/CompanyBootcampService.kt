@@ -2,12 +2,12 @@ package com.ogonggo.userapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.implement.BootcampAppendCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
-import com.ogonggo.core.bootcamp.implement.BootcampUpdateCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -29,7 +29,7 @@ class CompanyBootcampService(
 ) {
 
     @Transactional
-    fun create(userId: Long, command: BootcampAppendCommand): Long {
+    fun create(userId: Long, command: BootcampAppendDto): Long {
         verifyCompany(userId)
         val closedAt = if (command.status == BootcampStatus.CLOSED) LocalDateTime.now(clock) else null
         val bootcamp = bootcampAppender.append(
@@ -50,7 +50,7 @@ class CompanyBootcampService(
     }
 
     @Transactional
-    fun update(userId: Long, bootcampId: Long, command: BootcampUpdateCommand) {
+    fun update(userId: Long, bootcampId: Long, command: BootcampUpdateDto) {
         verifyCompany(userId)
         bootcampManager.update(bootcampReader.readOwnedForUpdate(userId, bootcampId), command)
     }

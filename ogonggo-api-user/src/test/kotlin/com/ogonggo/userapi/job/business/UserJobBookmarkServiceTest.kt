@@ -8,7 +8,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
-import com.ogonggo.core.job.implement.JobPage
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.implement.JobReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -72,7 +72,7 @@ class UserJobBookmarkServiceTest {
         Mockito.`when`(job.region).thenReturn("서울")
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, 0, 10)).thenReturn(
-            JobPage(listOf(job), 0, 10, 1, 1, false),
+            JobPageDto(listOf(job), 0, 10, 1, 1, false),
         )
 
         val result = service.getBookmarks(USER_ID, 0, 10)

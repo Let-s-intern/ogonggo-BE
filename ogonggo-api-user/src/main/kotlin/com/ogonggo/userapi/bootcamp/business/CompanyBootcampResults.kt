@@ -6,9 +6,9 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.bootcamp.implement.BootcampCurriculumData
-import com.ogonggo.core.bootcamp.implement.BootcampPage
-import com.ogonggo.core.bootcamp.implement.BootcampPartnerData
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -20,7 +20,7 @@ data class CompanyBootcampPageResult(
     val totalPages: Int,
 ) {
     companion object {
-        internal fun from(result: BootcampPage): CompanyBootcampPageResult = CompanyBootcampPageResult(
+        internal fun from(result: BootcampPageDto): CompanyBootcampPageResult = CompanyBootcampPageResult(
             items = result.bootcamps.map(CompanyBootcampSummary::from),
             page = result.page,
             size = result.size,
@@ -105,8 +105,8 @@ data class CompanyBootcampResult(
     companion object {
         internal fun from(
             bootcamp: Bootcamp,
-            partners: List<BootcampPartnerData>,
-            curriculums: List<BootcampCurriculumData>,
+            partners: List<BootcampPartnerDto.Response>,
+            curriculums: List<BootcampCurriculumDto.Response>,
         ): CompanyBootcampResult = CompanyBootcampResult(
             id = bootcamp.requiredId(),
             companyName = bootcamp.companyName,

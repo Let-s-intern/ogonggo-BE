@@ -1,10 +1,10 @@
 package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.core.job.implement.JobAppender
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.job.implement.JobUpdateCommand
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -19,13 +19,13 @@ class AdminJobService(
 ) {
 
     @Transactional
-    fun create(command: JobAppendCommand): Long {
+    fun create(command: JobAppendDto): Long {
         val job = jobAppender.append(command)
         return checkNotNull(job.id) { "저장된 채용공고 식별자가 없습니다." }
     }
 
     @Transactional
-    fun update(jobId: Long, command: JobUpdateCommand) {
+    fun update(jobId: Long, command: JobUpdateDto) {
         val job = jobReader.readForUpdate(jobId)
         jobManager.update(job, command)
     }

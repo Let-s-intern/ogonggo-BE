@@ -1,19 +1,16 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import org.springframework.stereotype.Component
 
-interface JobAppender {
-    fun append(command: JobAppendCommand): Job
-}
-
 @Component
-internal class JobAppenderImpl(
+class JobAppender internal constructor(
     private val jobRepository: JobJpaRepository,
-) : JobAppender {
+) {
 
-    override fun append(command: JobAppendCommand): Job =
+    fun append(command: JobAppendDto): Job =
         jobRepository.save(
             Job(
                 ownerUserId = command.ownerUserId,

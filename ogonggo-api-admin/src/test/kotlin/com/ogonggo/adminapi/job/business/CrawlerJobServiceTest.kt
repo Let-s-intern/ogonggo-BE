@@ -8,7 +8,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.error.JobErrorCode
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobTagAppender
@@ -17,12 +17,29 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
+import org.mockito.stubbing.Answer
 
 class CrawlerJobServiceTest {
 
     private val jobReader = Mockito.mock(JobReader::class.java)
-    private val jobAppender = RecordingJobAppender()
-    private val jobTagAppender = RecordingJobTagAppender()
+    private val savedJob = Mockito.mock(Job::class.java).also { Mockito.`when`(it.id).thenReturn(JOB_ID) }
+
+    /**
+     * 코틀린에서는 `any()`와 `capture()`가 null을 돌려줘 non-null 파라미터에 넘길 수 없다.
+     * 인자 매처 대신 호출을 그대로 받아 기록한다.
+     */
+    private var appendedCommand: JobAppendDto? = null
+    private val jobAppender = Mockito.mock(JobAppender::class.java, Answer { invocation ->
+        appendedCommand = invocation.arguments[0] as JobAppendDto
+        savedJob
+    })
+
+    private val appendedTags = mutableListOf<Pair<Long, List<String>>>()
+    private val jobTagAppender = Mockito.mock(JobTagAppender::class.java, Answer { invocation ->
+        @Suppress("UNCHECKED_CAST")
+        appendedTags += invocation.arguments[0] as Long to (invocation.arguments[1] as Collection<String>).toList()
+        null
+    })
     private val service = CrawlerJobService(jobReader, jobAppender, jobTagAppender)
 
     @Test
@@ -32,12 +49,12 @@ class CrawlerJobServiceTest {
         val jobId = service.register(command())
 
         assertEquals(JOB_ID, jobId)
-        val appended = checkNotNull(jobAppender.lastCommand)
+        val appended = checkNotNull(appendedCommand)
         assertEquals(JobPublicationStatus.PUBLISHED, appended.publicationStatus)
         assertEquals("오공고", appended.companyName)
         assertEquals("렛츠커리어", appended.parentCompanyName)
         assertEquals(JobRecruitmentType.ALWAYS_OPEN, appended.recruitmentType)
-        assertEquals(listOf(JOB_ID to listOf("백엔드", "스프링")), jobTagAppender.calls)
+        assertEquals(listOf(JOB_ID to listOf("백엔드", "스프링")), appendedTags)
     }
 
     @Test
@@ -47,8 +64,8 @@ class CrawlerJobServiceTest {
         val exception = assertThrows<ConflictException> { service.register(command()) }
 
         assertEquals(JobErrorCode.JOB_ALREADY_EXISTS, exception.errorCode)
-        assertNull(jobAppender.lastCommand)
-        assertEquals(emptyList<Pair<Long, List<String>>>(), jobTagAppender.calls)
+        assertNull(appendedCommand)
+        assertEquals(emptyList<Pair<Long, List<String>>>(), appendedTags)
     }
 
     private fun command(): CrawlerJobRegistrationCommand = CrawlerJobRegistrationCommand(
@@ -76,22 +93,6 @@ class CrawlerJobServiceTest {
         publicationStatus = JobPublicationStatus.PUBLISHED,
     )
 
-    private class RecordingJobAppender : JobAppender {
-        var lastCommand: JobAppendCommand? = null
-
-        override fun append(command: JobAppendCommand): Job {
-            lastCommand = command
-            return Mockito.mock(Job::class.java).also { Mockito.`when`(it.id).thenReturn(JOB_ID) }
-        }
-    }
-
-    private class RecordingJobTagAppender : JobTagAppender {
-        val calls = mutableListOf<Pair<Long, List<String>>>()
-
-        override fun append(jobId: Long, tagNames: Collection<String>) {
-            calls += jobId to tagNames.toList()
-        }
-    }
 
     companion object {
         private const val JOB_ID = 7L

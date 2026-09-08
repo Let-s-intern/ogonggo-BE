@@ -5,14 +5,14 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
-import com.ogonggo.core.user.implement.UserAccount
+import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.UserReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -97,17 +97,18 @@ class CompanyJobServiceTest {
 
     private fun givenAccount(role: UserRole, status: UserStatus = UserStatus.ACTIVE) {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(
-            UserAccount(
+            UserAccountDto(
                 userId = USER_ID,
                 letsCareerUserId = null,
                 email = "company@example.com",
                 status = status,
                 role = role,
+                joinedAt = JOINED_AT,
             ),
         )
     }
 
-    private fun command(): JobAppendCommand = JobAppendCommand(
+    private fun command(): JobAppendDto = JobAppendDto(
         companyName = "오공고",
         title = "백엔드 개발자",
         employmentType = EmploymentType.FULL_TIME,
@@ -118,6 +119,7 @@ class CompanyJobServiceTest {
     companion object {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private const val USER_ID = 17L
         private const val JOB_ID = 3L
     }

@@ -6,12 +6,12 @@ import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
-import com.ogonggo.core.user.implement.CompanyAccountAppendCommand
-import com.ogonggo.core.user.implement.CompanyProfileAppendCommand
+import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.implement.CompanyProfileAppender
-import com.ogonggo.core.user.implement.UserAccount
+import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.UserAppender
-import com.ogonggo.core.user.implement.UserCredential
+import com.ogonggo.core.user.implement.dto.UserCredentialDto
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import com.ogonggo.userapi.auth.implement.JwtProperties
@@ -56,7 +56,7 @@ class CompanyAuthServiceTest {
         Mockito.`when`(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD)
         Mockito.`when`(
             userAppender.appendCompany(
-                CompanyAccountAppendCommand(
+                CompanyAccountAppendDto(
                     email = EMAIL,
                     encodedPassword = ENCODED_PASSWORD,
                     joinedAt = NOW,
@@ -70,7 +70,7 @@ class CompanyAuthServiceTest {
         assertEquals("og-access", tokens.accessToken)
         assertEquals("og-refresh", tokens.refreshToken)
         Mockito.verify(companyProfileAppender).append(
-            CompanyProfileAppendCommand(
+            CompanyProfileAppendDto(
                 userId = USER_ID,
                 organizationName = "렛츠커리어",
                 managerName = "김담당",
@@ -82,7 +82,7 @@ class CompanyAuthServiceTest {
     @Test
     fun `이미 쓰는 이메일이면 기업 정보를 저장하지 않는다`() {
         Mockito.`when`(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(ENCODED_PASSWORD)
-        Mockito.`when`(userAppender.appendCompany(Mockito.any(CompanyAccountAppendCommand::class.java) ?: NEVER))
+        Mockito.`when`(userAppender.appendCompany(Mockito.any(CompanyAccountAppendDto::class.java) ?: NEVER))
             .thenThrow(ConflictException(UserErrorCode.EMAIL_ALREADY_EXISTS))
 
         val exception = assertThrows(ConflictException::class.java) { service.signUp(SIGN_UP_COMMAND) }
@@ -141,15 +141,16 @@ class CompanyAuthServiceTest {
         Mockito.`when`(tokenProvider.createRefreshToken(USER_ID)).thenReturn("og-refresh")
     }
 
-    private fun companyAccount(): UserAccount = UserAccount(
+    private fun companyAccount(): UserAccountDto = UserAccountDto(
         userId = USER_ID,
         letsCareerUserId = null,
         email = EMAIL,
         status = UserStatus.ACTIVE,
         role = UserRole.COMPANY,
+        joinedAt = JOINED_AT,
     )
 
-    private fun credential(status: UserStatus = UserStatus.ACTIVE): UserCredential = UserCredential(
+    private fun credential(status: UserStatus = UserStatus.ACTIVE): UserCredentialDto = UserCredentialDto(
         userId = USER_ID,
         encodedPassword = ENCODED_PASSWORD,
         status = status,
@@ -159,11 +160,12 @@ class CompanyAuthServiceTest {
     companion object {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private const val USER_ID = 17L
         private const val EMAIL = "company@example.com"
         private const val RAW_PASSWORD = "password1234"
         private const val ENCODED_PASSWORD = "encoded-password"
-        private val NEVER = CompanyAccountAppendCommand("", "", NOW)
+        private val NEVER = CompanyAccountAppendDto("", "", NOW)
         private val SIGN_UP_COMMAND = CompanySignUpCommand(
             email = EMAIL,
             password = RAW_PASSWORD,

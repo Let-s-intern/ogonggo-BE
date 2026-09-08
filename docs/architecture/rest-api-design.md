@@ -78,6 +78,40 @@ DELETE /api/v1/job-bookmarks/{jobId}
 
 등록은 게시 중인 공고만 허용하고 성공 시 201을 반환합니다. 같은 사용자가 활성 북마크를 다시 등록하면 409 `JOB_BOOKMARK_ALREADY_EXISTS`로 응답합니다. 해제는 소프트 삭제하며 같은 요청을 반복해도 200으로 응답합니다. 해제한 공고를 다시 등록하면 기존 행을 복구합니다.
 
+### 이동 기록
+
+```text
+POST /api/v1/jobs/{jobId}/source-url-clicks
+POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
+```
+
+외부 링크를 눌렀다는 사실을 남기는 기록이며 경로 이름은 기록하는 필드(`sourceUrl`, `applicationUrl`)를 따릅니다. 새 행이 생기지 않는 호출이 있어 201이 아니라 200과 `data: null`로 응답합니다.
+
+### 내 정보
+
+```text
+GET /api/v1/users/me
+```
+
+```text
+GET /api/v1/users/me
+PUT /api/v1/users/me/profile
+```
+
+`/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`, `/users/me/profile`이 그 하위에 있습니다. 프로필은 사용자마다 하나뿐인 단일 리소스여서 목록이 아니므로 단수 명사를 사용합니다. 복수 명사 규칙은 여러 항목을 담는 컬렉션에 적용합니다.
+
+조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
+
+### 부트캠프 북마크
+
+```text
+GET    /api/v1/bootcamp-bookmarks
+POST   /api/v1/bootcamp-bookmarks/{bootcampId}
+DELETE /api/v1/bootcamp-bookmarks/{bootcampId}
+```
+
+채용공고 북마크와 같은 규칙을 따릅니다. 등록은 지금 공개된 부트캠프만 허용하고, 중복 등록은 409 `BOOTCAMP_BOOKMARK_ALREADY_EXISTS`로 응답합니다.
+
 ## 6. 현재 보류하는 항목
 
 다음은 실제 기능과 클라이언트 요구가 생길 때 결정합니다.

@@ -9,14 +9,6 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 
-interface JobTagAppender {
-    /**
-     * 태그 이름을 정규화해 중복을 제거한 뒤 공고에 연결한다.
-     * 없는 태그는 새로 만들고 이미 있는 태그는 재사용한다.
-     */
-    fun append(jobId: Long, tagNames: Collection<String>)
-}
-
 /**
  * 태그 생성만 호출자와 분리된 트랜잭션에서 처리한다.
  *
@@ -35,13 +27,17 @@ internal class TagRegistrar(
 }
 
 @Component
-internal class JobTagAppenderImpl(
+class JobTagAppender internal constructor(
     private val tagRepository: TagJpaRepository,
     private val jobTagRepository: JobTagJpaRepository,
     private val tagRegistrar: TagRegistrar,
-) : JobTagAppender {
+) {
 
-    override fun append(jobId: Long, tagNames: Collection<String>) {
+    /**
+     * 태그 이름을 정규화해 중복을 제거한 뒤 공고에 연결한다.
+     * 없는 태그는 새로 만들고 이미 있는 태그는 재사용한다.
+     */
+    fun append(jobId: Long, tagNames: Collection<String>) {
         require(jobId > 0) { "채용공고 식별자는 양수여야 합니다." }
 
         val names = tagNames.map(::normalize).filter(String::isNotBlank).distinct()

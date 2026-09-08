@@ -21,18 +21,15 @@ data class LetsCareerUser(
     val updatedAt: LocalDateTime?,
 )
 
-interface LetsCareerAuthClient {
-    /** 렛츠커리어 액세스 토큰을 검증하고 연동에 필요한 사용자 정보를 가져온다. */
-    fun verify(letsCareerAccessToken: String): LetsCareerUser
-}
-
 @Component
-internal class LetsCareerAuthRestClient(
+class LetsCareerAuthClient(
     private val letsCareerRestClient: RestClient,
     private val properties: LetsCareerProperties,
-) : LetsCareerAuthClient {
+) {
 
-    override fun verify(letsCareerAccessToken: String): LetsCareerUser {
+    /** 렛츠커리어 액세스 토큰을 검증하고 연동에 필요한 사용자 정보를 가져온다. */
+
+    fun verify(letsCareerAccessToken: String): LetsCareerUser {
         val response = try {
             letsCareerRestClient.post()
                 .uri(VERIFY_PATH)
@@ -56,21 +53,13 @@ internal class LetsCareerAuthRestClient(
         val data = response?.data
             ?: throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
 
-        return LetsCareerUser(
-            userId = data.userId,
-            email = data.email,
-            name = data.name,
-            nickname = data.nickname,
-            profileImageUrl = data.profileImageUrl,
-            isAdmin = data.isAdmin ?: false,
-            updatedAt = data.updatedAt,
-        )
+        return data.toResult()
     }
 
     companion object {
         private const val VERIFY_PATH = "/api/v1/internal/auth/verify"
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
-        private val log = LoggerFactory.getLogger(LetsCareerAuthRestClient::class.java)
+        private val log = LoggerFactory.getLogger(LetsCareerAuthClient::class.java)
     }
 }
 
@@ -90,4 +79,16 @@ internal data class VerifyResponse(
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
     val updatedAt: LocalDateTime?,
-)
+) {
+    /** 렛츠커리어가 주는 형태를 오공고가 쓰는 형태로 옮긴다. */
+    fun toResult(): LetsCareerUser = LetsCareerUser(
+        userId = userId,
+        email = email,
+        name = name,
+        nickname = nickname,
+        profileImageUrl = profileImageUrl,
+        // 렛츠커리어가 값을 주지 않으면 관리자가 아닌 것으로 본다.
+        isAdmin = isAdmin ?: false,
+        updatedAt = updatedAt,
+    )
+}
