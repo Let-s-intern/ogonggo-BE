@@ -1,5 +1,6 @@
 package com.ogonggo.core.user.implement
 
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import java.time.LocalDateTime
@@ -51,4 +52,19 @@ data class CompanyProfileAppendCommand(
     val userId: Long,
     val organizationName: String,
     val managerName: String,
+)
+
+/**
+ * 사용자가 오공고에서 직접 입력하는 학력과 희망 조건이다.
+ * 렛츠커리어에서 복제하는 `UserProfileSyncCommand`와 소유자가 달라 명령을 나눈다.
+ */
+data class UserProfileJobInfoCommand(
+    val university: String?,
+    val major: String?,
+    val grade: UserGrade?,
+    val wishField: String?,
+    val wishJob: String?,
+    val wishIndustry: String?,
+    val wishEmploymentType: String?,
+    val wishCompany: String?,
 )

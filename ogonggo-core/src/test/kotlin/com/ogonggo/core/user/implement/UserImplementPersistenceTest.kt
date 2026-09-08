@@ -3,6 +3,7 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -132,6 +133,79 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         assertEquals("김담당", companyProfileReader.read(companyAccount.userId)?.managerName)
         // 기업 회원에게는 렛츠커리어 프로필이 없다.
         assertNull(userProfileReader.read(companyAccount.userId))
+    }
+
+    @Test
+    fun `구직 정보는 프로필 행에 함께 저장하고 여덟 값을 한 번에 교체한다`() {
+        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+
+        userProfileManager.replaceJobInfo(
+            account.userId,
+            UserProfileJobInfoCommand(
+                "오공고대학교", "컴퓨터공학과", UserGrade.GRADUATE,
+                "개발", "백엔드 개발", "IT", "정규직", "오공고",
+            ),
+            NOW,
+        )
+
+        val saved = userProfileReader.read(account.userId)
+        assertEquals("오공고대학교", saved?.university)
+        assertEquals(UserGrade.GRADUATE, saved?.grade)
+        assertEquals("개발", saved?.wishField)
+        // 렛츠커리어에서 복제한 값은 그대로다.
+        assertEquals("김렛츠", saved?.name)
+
+        // 보내지 않은 값은 비우는 것으로 본다.
+        userProfileManager.replaceJobInfo(
+            account.userId,
+            UserProfileJobInfoCommand(null, null, null, "데이터", null, null, null, null),
+            NOW.plusMinutes(1),
+        )
+
+        val replaced = userProfileReader.read(account.userId)
+        assertEquals("데이터", replaced?.wishField)
+        assertNull(replaced?.university)
+        assertNull(replaced?.grade)
+        assertNull(replaced?.wishJob)
+        assertEquals(1L, userProfileRepository.count())
+    }
+
+    @Test
+    fun `로그인 동기화는 사용자가 입력한 구직 정보를 덮어쓰지 않는다`() {
+        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+        userProfileManager.replaceJobInfo(
+            account.userId,
+            UserProfileJobInfoCommand(null, null, null, "개발", null, null, null, null),
+            NOW,
+        )
+
+        // 렛츠커리어 값이 바뀌어 다시 동기화해도 구직 정보는 남는다.
+        userProfileManager.sync(
+            syncCommand(account.userId, name = "김커리어", letsCareerUpdatedAt = NOW.plusDays(1)),
+        )
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("김커리어", profile?.name)
+        assertEquals("개발", profile?.wishField)
+    }
+
+    @Test
+    fun `프로필 행이 없어도 구직 정보를 저장하면 행이 생긴다`() {
+        val account = userAppender.appendCompany(
+            CompanyAccountAppendCommand("mock@example.com", "encoded-password", NOW),
+        )
+
+        assertNull(userProfileReader.read(account.userId))
+
+        userProfileManager.replaceJobInfo(
+            account.userId,
+            UserProfileJobInfoCommand(null, null, null, "개발", null, null, null, null),
+            NOW,
+        )
+
+        assertEquals("개발", userProfileReader.read(account.userId)?.wishField)
     }
 
     @Test
