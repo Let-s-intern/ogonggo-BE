@@ -3,6 +3,7 @@ package com.ogonggo.userapi.auth.business
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserAccount
@@ -10,7 +11,10 @@ import com.ogonggo.core.user.implement.UserAppendCommand
 import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.UserProfileSyncCommand
+import com.ogonggo.core.user.implement.UserProfileJobInfoCommand
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.userapi.user.implement.LetsCareerJobProfile
+import com.ogonggo.userapi.user.implement.LetsCareerUserClient
 import com.ogonggo.userapi.auth.implement.JwtProperties
 import com.ogonggo.userapi.auth.implement.LetsCareerAuthClient
 import com.ogonggo.userapi.auth.implement.LetsCareerUser
@@ -39,6 +43,7 @@ class UserAuthServiceTest {
 
     private val letsCareerAuthClient = Mockito.mock(LetsCareerAuthClient::class.java)
     private val userReader = Mockito.mock(UserReader::class.java)
+    private val letsCareerUserClient = Mockito.mock(LetsCareerUserClient::class.java)
     private val userAppender = Mockito.mock(UserAppender::class.java)
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val tokenProvider = Mockito.mock(OgonggoTokenProvider::class.java)
@@ -49,6 +54,7 @@ class UserAuthServiceTest {
     private val service = UserAuthService(
         letsCareerAuthClient = letsCareerAuthClient,
         userReader = userReader,
+        letsCareerUserClient = letsCareerUserClient,
         userAppender = userAppender,
         userProfileManager = userProfileManager,
         tokenProvider = tokenProvider,
@@ -187,10 +193,78 @@ class UserAuthServiceTest {
             joinedAt = JOINED_AT,
         )
 
+    @Test
+    fun `첫 로그인에만 렛츠커리어의 학력과 희망 조건을 복제한다`() {
+        stubLetsCareerUser()
+        stubIssuedTokens()
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
+        Mockito.`when`(userAppender.append(UserAppendCommand(LETSCAREER_USER_ID, NOW)))
+            .thenReturn(activeAccount())
+        Mockito.`when`(letsCareerUserClient.readJobProfile(LETSCAREER_USER_ID)).thenReturn(
+            LetsCareerJobProfile(
+                university = "오공고대학교",
+                major = "컴퓨터공학과",
+                grade = UserGrade.GRADUATE,
+                wishField = "개발",
+                wishJob = null,
+                wishIndustry = null,
+                wishEmploymentType = null,
+                wishCompany = null,
+            ),
+        )
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verify(userProfileManager).replaceJobInfo(
+            USER_ID,
+            UserProfileJobInfoCommand(
+                university = "오공고대학교",
+                major = "컴퓨터공학과",
+                grade = UserGrade.GRADUATE,
+                wishField = "개발",
+                wishJob = null,
+                wishIndustry = null,
+                wishEmploymentType = null,
+                wishCompany = null,
+            ),
+            NOW,
+        )
+    }
+
+    @Test
+    fun `재로그인에서는 학력과 희망 조건을 가져오지 않는다`() {
+        stubLetsCareerUser()
+        stubIssuedTokens()
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(activeAccount())
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verifyNoInteractions(letsCareerUserClient)
+        Mockito.verify(userProfileManager, Mockito.never())
+            .replaceJobInfo(USER_ID, EMPTY_JOB_INFO, NOW)
+    }
+
+    @Test
+    fun `렛츠커리어 조회가 실패해도 가입은 성공한다`() {
+        stubLetsCareerUser()
+        stubIssuedTokens()
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
+        Mockito.`when`(userAppender.append(UserAppendCommand(LETSCAREER_USER_ID, NOW)))
+            .thenReturn(activeAccount())
+        Mockito.`when`(letsCareerUserClient.readJobProfile(LETSCAREER_USER_ID)).thenReturn(null)
+
+        val result = service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        assertEquals(true, result.isNewUser)
+        Mockito.verify(userProfileManager, Mockito.never())
+            .replaceJobInfo(USER_ID, EMPTY_JOB_INFO, NOW)
+    }
+
     companion object {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 27, 10, 0)
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
+        private val EMPTY_JOB_INFO = UserProfileJobInfoCommand(null, null, null, null, null, null, null, null)
         private val LETSCAREER_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 20, 9, 0)
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L

@@ -6,6 +6,7 @@ import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.UserProfileSyncCommand
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.userapi.user.implement.LetsCareerUserClient
 import com.ogonggo.userapi.auth.implement.LetsCareerAuthClient
 import com.ogonggo.userapi.auth.implement.LetsCareerUser
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -13,6 +14,7 @@ import com.ogonggo.userapi.auth.implement.JwtProperties
 import com.ogonggo.userapi.auth.implement.RefreshTokenStore
 import com.ogonggo.userapi.auth.implement.SignInValidator
 import com.ogonggo.userapi.auth.error.AuthErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
@@ -22,6 +24,7 @@ import java.time.LocalDateTime
 class UserAuthService(
     private val letsCareerAuthClient: LetsCareerAuthClient,
     private val userReader: UserReader,
+    private val letsCareerUserClient: LetsCareerUserClient,
     private val userAppender: UserAppender,
     private val userProfileManager: UserProfileManager,
     private val tokenProvider: OgonggoTokenProvider,
@@ -47,6 +50,10 @@ class UserAuthService(
 
         val account = checkNotNull(transactionTemplate.execute { synchronizeAccount(letsCareerUser, now) })
 
+        if (account.isNewUser) {
+            seedJobProfile(account.userId, letsCareerUser.userId, now)
+        }
+
         return SignInResult(
             tokens = issueTokens(account.userId),
             isNewUser = account.isNewUser,
@@ -63,6 +70,26 @@ class UserAuthService(
         userProfileManager.sync(letsCareerUser.toSyncCommand(account.userId, now))
 
         return SynchronizedAccount(userId = account.userId, isNewUser = existingAccount == null)
+    }
+
+    /**
+     * 최초 가입 때 한 번만 렛츠커리어의 학력과 희망 조건을 복제한다.
+     * 그 뒤로는 오공고가 소유하므로 재로그인에서는 가져오지 않는다. 사용자가 오공고에서 고친 값을 지우지 않기 위한 것이다.
+     *
+     * 렛츠커리어 호출은 트랜잭션 밖에서 한다. 응답을 기다리는 동안 DB 커넥션을 잡고 있으면
+     * 렛츠커리어가 느려질 때 로그인과 무관한 API까지 커넥션이 없어 함께 실패한다.
+     *
+     * 실패해도 가입을 되돌리지 않는다. 학력과 희망 조건은 로그인의 성공 조건이 아니고,
+     * 비어 있으면 사용자가 오공고에서 직접 입력하면 된다.
+     */
+    private fun seedJobProfile(userId: Long, letsCareerUserId: Long, now: LocalDateTime) {
+        val jobProfile = letsCareerUserClient.readJobProfile(letsCareerUserId) ?: return
+
+        try {
+            transactionTemplate.execute { userProfileManager.replaceJobInfo(userId, jobProfile.toCommand(), now) }
+        } catch (exception: Exception) {
+            log.warn("학력·희망 조건 복제에 실패했습니다. userId={}", userId, exception)
+        }
     }
 
     /**
@@ -93,6 +120,10 @@ class UserAuthService(
         val refreshToken = tokenProvider.createRefreshToken(userId)
         refreshTokenStore.save(userId, refreshToken, jwtProperties.refreshTokenValidity)
         return AuthTokens(accessToken = accessToken, refreshToken = refreshToken)
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(UserAuthService::class.java)
     }
 }
 
