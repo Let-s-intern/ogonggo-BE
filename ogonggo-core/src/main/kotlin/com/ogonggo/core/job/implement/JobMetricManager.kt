@@ -41,13 +41,9 @@ class JobMetricManager internal constructor(
     }
 
     /**
-
-    * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
-
-    * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
-
-    */
-
+     * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
+     * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
+     */
     fun syncBookmarkCount(jobId: Long, now: LocalDateTime) {
         if (jobMetricRepository.syncBookmarkCount(jobId, now) > 0) {
             return

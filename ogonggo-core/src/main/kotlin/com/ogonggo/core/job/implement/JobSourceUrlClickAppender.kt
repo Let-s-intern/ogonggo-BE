@@ -11,17 +11,11 @@ class JobSourceUrlClickAppender internal constructor(
 ) {
 
     /**
-
-    * 같은 사용자가 같은 공고를 여러 번 눌러도 최초 기록만 남기고 조용히 넘어간다.
-
-    *
-
-    * 유니크 제약 위반을 삼키므로 호출자가 트랜잭션을 열어 둔 채로 부르면 안 된다.
-
-    * 제약 위반은 그 트랜잭션을 롤백 대상으로 만들고, 예외를 잡아도 커밋 시점에 다시 터진다.
-
-    */
-
+     * 같은 사용자가 같은 공고를 여러 번 눌러도 최초 기록만 남기고 조용히 넘어간다.
+     *
+     * 유니크 제약 위반을 삼키므로 호출자가 트랜잭션을 열어 둔 채로 부르면 안 된다.
+     * 제약 위반은 그 트랜잭션을 롤백 대상으로 만들고, 예외를 잡아도 커밋 시점에 다시 터진다.
+     */
     fun append(userId: Long, jobId: Long) {
         if (jobSourceUrlClickRepository.existsByJobIdAndUserId(jobId, userId)) {
             return

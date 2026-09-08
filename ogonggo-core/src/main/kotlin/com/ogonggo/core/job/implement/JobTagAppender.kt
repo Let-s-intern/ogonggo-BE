@@ -34,13 +34,9 @@ class JobTagAppender internal constructor(
 ) {
 
     /**
-
-    * 태그 이름을 정규화해 중복을 제거한 뒤 공고에 연결한다.
-
-    * 없는 태그는 새로 만들고 이미 있는 태그는 재사용한다.
-
-    */
-
+     * 태그 이름을 정규화해 중복을 제거한 뒤 공고에 연결한다.
+     * 없는 태그는 새로 만들고 이미 있는 태그는 재사용한다.
+     */
     fun append(jobId: Long, tagNames: Collection<String>) {
         require(jobId > 0) { "채용공고 식별자는 양수여야 합니다." }
 
