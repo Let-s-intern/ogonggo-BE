@@ -11,26 +11,35 @@ import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 @Validated
 @RestController
+@RequestMapping("/api/v1/jobs")
 class UserJobController(
     private val userJobService: UserJobService,
 ) : UserJobApi {
 
+    @GetMapping
     override fun getJobs(
-        userId: Long?,
-        page: Int,
-        size: Int,
-        sortType: JobSortType,
-        employmentType: EmploymentType?,
-        experienceType: ExperienceType?,
-        keyword: String?,
+        @AuthenticationPrincipal userId: Long?,
+        @RequestParam(name = "page", defaultValue = "1") page: Int,
+        @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "sort", defaultValue = "LATEST") sortType: JobSortType,
+        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
             userId = userId,
@@ -54,23 +63,26 @@ class UserJobController(
         )
     }
 
+    @GetMapping("/{jobId}")
     override fun getJob(
-        userId: Long?,
-        jobId: Long,
+        @AuthenticationPrincipal userId: Long?,
+        @PathVariable("jobId") jobId: Long,
     ): ResponseEntity<SuccessResponse<UserJobDetailResponse>> =
         SuccessResponse.ok(UserJobDetailResponse.from(userJobService.getJob(userId, jobId)))
 
+    @PostMapping("/{jobId}/source-url-clicks")
     override fun recordSourceUrlClick(
-        userId: Long,
-        jobId: Long,
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("jobId") jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         userJobService.recordSourceUrlClick(userId, jobId)
         return SuccessResponse.ok()
     }
 
+    @GetMapping("/calendar")
     override fun getJobCalendar(
-        from: LocalDate,
-        to: LocalDate,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>> {
         validateCalendarRange(from, to)
         return SuccessResponse.ok(

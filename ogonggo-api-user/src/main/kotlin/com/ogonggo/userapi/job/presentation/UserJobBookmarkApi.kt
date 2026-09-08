@@ -17,29 +17,17 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 
 @Tag(name = "채용공고 북마크")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-@RequestMapping("/api/v1/job-bookmarks")
 interface UserJobBookmarkApi {
 
     @Operation(operationId = "listMyJobBookmarks", summary = "채용공고 북마크 목록 조회")
-    @GetMapping
     fun getBookmarks(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
-        @RequestParam(name = "page", defaultValue = "1")
         @Min(1)
         page: Int,
-        @RequestParam(name = "size", defaultValue = "10")
         @Min(1)
         @Max(100)
         size: Int,
@@ -61,12 +49,9 @@ interface UserJobBookmarkApi {
             ),
         ],
     )
-    @PostMapping("/{jobId}")
     fun addBookmark(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
-        @PathVariable("jobId")
         @Positive
         jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
@@ -82,12 +67,9 @@ interface UserJobBookmarkApi {
             ),
         ],
     )
-    @DeleteMapping("/{jobId}")
     fun deleteBookmark(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
-        @PathVariable("jobId")
         @Positive
         jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>

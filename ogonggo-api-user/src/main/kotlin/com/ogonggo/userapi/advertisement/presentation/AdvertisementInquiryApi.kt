@@ -11,12 +11,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
 
 @Tag(name = "광고 문의")
-@RequestMapping("/api/v1/advertisement-inquiries")
 interface AdvertisementInquiryApi {
 
     @Operation(
@@ -36,9 +32,7 @@ interface AdvertisementInquiryApi {
             ),
         ],
     )
-    @PostMapping
     fun createInquiry(
-        @RequestBody
         @Valid
         request: CreateAdvertisementInquiryRequest,
     ): ResponseEntity<SuccessResponse<Unit>>

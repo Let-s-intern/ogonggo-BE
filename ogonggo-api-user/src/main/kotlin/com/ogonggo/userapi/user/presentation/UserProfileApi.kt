@@ -14,14 +14,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
 
 @Tag(name = "내 정보")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-@RequestMapping("/api/v1/users/me/profile")
 interface UserProfileApi {
 
     @Operation(
@@ -53,12 +48,9 @@ interface UserProfileApi {
             ),
         ],
     )
-    @PutMapping
     fun replaceMyProfile(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
-        @RequestBody
         @Valid
         request: ReplaceMyProfileRequest,
     ): ResponseEntity<SuccessResponse<Unit>>

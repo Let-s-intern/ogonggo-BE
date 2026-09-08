@@ -17,13 +17,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
 
 @Tag(name = "인증")
-@RequestMapping("/api/v1/auth")
 interface UserAuthApi {
 
     @Operation(
@@ -45,9 +40,7 @@ interface UserAuthApi {
             ),
         ],
     )
-    @PostMapping("/letscareer")
     fun signInWithLetsCareer(
-        @RequestBody
         @Valid
         request: LetsCareerSignInRequest,
     ): ResponseEntity<SuccessResponse<SignInResponse>>
@@ -72,9 +65,7 @@ interface UserAuthApi {
             ),
         ],
     )
-    @PostMapping("/token")
     fun reissueAccessToken(
-        @RequestBody
         @Valid
         request: TokenReissueRequest,
     ): ResponseEntity<SuccessResponse<AccessTokenResponse>>
@@ -86,10 +77,8 @@ interface UserAuthApi {
         description = "UNAUTHORIZED: 인증이 필요합니다.",
         content = [Content(schema = Schema(implementation = ErrorResponse::class))],
     )
-    @PostMapping("/signout")
     fun signOut(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 }

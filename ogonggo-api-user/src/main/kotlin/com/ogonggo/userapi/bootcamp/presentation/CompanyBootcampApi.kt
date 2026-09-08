@@ -22,19 +22,9 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 
 @Tag(name = "기업회원 부트캠프")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-@RequestMapping("/api/v1/users/me/bootcamps")
 interface CompanyBootcampApi {
 
     @Operation(operationId = "createMyBootcamp", summary = "부트캠프 등록")
@@ -48,18 +38,16 @@ interface CompanyBootcampApi {
             ),
         ],
     )
-    @PostMapping
     fun createBootcamp(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @RequestBody @Valid request: CreateCompanyBootcampRequest,
+        @Parameter(hidden = true) userId: Long,
+        @Valid request: CreateCompanyBootcampRequest,
     ): ResponseEntity<SuccessResponse<CreateCompanyBootcampResponse>>
 
     @Operation(operationId = "listMyBootcamps", summary = "내 부트캠프 목록 조회")
-    @GetMapping
     fun getBootcamps(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @RequestParam(name = "page", defaultValue = "1") @Min(1) page: Int,
-        @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) size: Int,
+        @Parameter(hidden = true) userId: Long,
+        @Min(1) page: Int,
+        @Min(1) @Max(100) size: Int,
     ): ResponseEntity<SuccessResponse<PageResponse<CompanyBootcampSummaryResponse>>>
 
     @Operation(operationId = "getMyBootcamp", summary = "내 부트캠프 상세 조회")
@@ -73,25 +61,22 @@ interface CompanyBootcampApi {
             ),
         ],
     )
-    @GetMapping("/{bootcampId}")
     fun getBootcamp(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("bootcampId") @Positive bootcampId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<CompanyBootcampDetailResponse>>
 
     @Operation(operationId = "replaceMyBootcamp", summary = "내 부트캠프 수정")
-    @PutMapping("/{bootcampId}")
     fun updateBootcamp(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("bootcampId") @Positive bootcampId: Long,
-        @RequestBody @Valid request: UpdateCompanyBootcampRequest,
+        @Parameter(hidden = true) userId: Long,
+        @Positive bootcampId: Long,
+        @Valid request: UpdateCompanyBootcampRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(operationId = "startMyBootcampRecruitment", summary = "부트캠프 모집 시작")
-    @PostMapping("/{bootcampId}/start-recruitment")
     fun startRecruitment(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("bootcampId") @Positive bootcampId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(operationId = "closeMyBootcamp", summary = "부트캠프 모집 마감")
@@ -105,16 +90,14 @@ interface CompanyBootcampApi {
             ),
         ],
     )
-    @PostMapping("/{bootcampId}/close")
     fun closeBootcamp(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("bootcampId") @Positive bootcampId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(operationId = "deleteMyBootcamp", summary = "내 부트캠프 삭제")
-    @DeleteMapping("/{bootcampId}")
     fun deleteBootcamp(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("bootcampId") @Positive bootcampId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 }

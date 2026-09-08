@@ -13,12 +13,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
 
 @Tag(name = "기업 인증")
-@RequestMapping("/api/v1/auth/company")
 interface CompanyAuthApi {
 
     @Operation(
@@ -36,9 +32,7 @@ interface CompanyAuthApi {
             ),
         ],
     )
-    @PostMapping("/signup")
     fun signUp(
-        @RequestBody
         @Valid
         request: CompanySignUpRequest,
     ): ResponseEntity<SuccessResponse<AuthTokenResponse>>
@@ -59,9 +53,7 @@ interface CompanyAuthApi {
             ),
         ],
     )
-    @PostMapping("/signin")
     fun signIn(
-        @RequestBody
         @Valid
         request: CompanySignInRequest,
     ): ResponseEntity<SuccessResponse<AuthTokenResponse>>
