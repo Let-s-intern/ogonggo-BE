@@ -1,11 +1,11 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.job.implement.JobUpdateCommand
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -32,7 +32,7 @@ class CompanyJobService(
 ) {
 
     @Transactional
-    fun create(userId: Long, command: JobAppendCommand): Long {
+    fun create(userId: Long, command: JobAppendDto): Long {
         verifyCompany(userId)
         return jobAppender.append(command.copy(ownerUserId = userId)).requiredId()
     }
@@ -48,7 +48,7 @@ class CompanyJobService(
     }
 
     @Transactional
-    fun update(userId: Long, jobId: Long, command: JobUpdateCommand) {
+    fun update(userId: Long, jobId: Long, command: JobUpdateDto) {
         verifyCompany(userId)
         jobManager.update(jobReader.readOwnedForUpdate(userId, jobId), command)
     }

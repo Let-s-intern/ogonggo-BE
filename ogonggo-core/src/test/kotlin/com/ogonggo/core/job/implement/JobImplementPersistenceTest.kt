@@ -8,15 +8,19 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
-import com.ogonggo.core.job.domain.JobSearchCondition
+import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
-import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -25,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
-import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -238,7 +241,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
         assertEquals(1L, metrics[viewedId]?.viewCount)
         assertEquals(0L, metrics[untouchedId]?.viewCount)
-        assertEquals(emptyMap<Long, JobMetricData>(), jobMetricReader.readAll(emptyList()))
+        assertEquals(emptyMap<Long, JobMetricDto>(), jobMetricReader.readAll(emptyList()))
     }
 
     @Test
@@ -522,7 +525,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         size: Int,
         sortType: JobSortType = JobSortType.LATEST,
         condition: JobSearchCondition = JobSearchCondition.NONE,
-    ): JobPage = jobReader.readPublishedPage(condition, sortType, page, size)
+    ): JobPageDto = jobReader.readPublishedPage(condition, sortType, page, size)
 
     private fun createCommand(
         recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,
@@ -534,7 +537,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         companyName: String = "오공고",
         title: String = "백엔드 개발자",
         ownerUserId: Long? = null,
-    ): JobAppendCommand = JobAppendCommand(
+    ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
         companyName = companyName,
         title = title,

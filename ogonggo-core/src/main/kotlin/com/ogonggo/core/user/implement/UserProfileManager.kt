@@ -3,10 +3,12 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
+import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
 import com.ogonggo.core.user.persistence.UserProfileJpaRepository
+import java.time.LocalDateTime
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
-import java.time.LocalDateTime
 
 @Component
 class UserProfileManager internal constructor(
@@ -17,7 +19,7 @@ class UserProfileManager internal constructor(
      * 프로필이 없으면 만들고, 있으면 렛츠커리어의 최종 수정 일시가 달라졌을 때만 갱신한다.
      * 로그인마다 무조건 UPDATE 하지 않기 위해 letscareer_updated_at 을 비교 기준으로 사용한다.
      */
-    fun sync(command: UserProfileSyncCommand) {
+    fun sync(command: UserProfileSyncDto) {
         val profile = userProfileRepository.findByUserId(command.userId)
 
         if (profile == null) {
@@ -59,7 +61,7 @@ class UserProfileManager internal constructor(
      * 제약 위반은 트랜잭션을 롤백 대상으로 만들어 같은 트랜잭션에서 이어갈 수 없으므로
      * 조용히 삼키지 않고 재시도할 수 있는 충돌로 알린다.
      */
-    fun replaceJobInfo(userId: Long, command: UserProfileJobInfoCommand, now: LocalDateTime) {
+    fun replaceJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) {
         val profile = userProfileRepository.findByUserId(userId)
             ?: return createWithJobInfo(userId, command, now)
 
@@ -76,7 +78,7 @@ class UserProfileManager internal constructor(
         userProfileRepository.save(profile)
     }
 
-    private fun createWithJobInfo(userId: Long, command: UserProfileJobInfoCommand, now: LocalDateTime) {
+    private fun createWithJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) {
         val created = UserProfile(userId = userId, lastSyncedAt = now).apply {
             replaceJobInfo(
                 university = command.university,

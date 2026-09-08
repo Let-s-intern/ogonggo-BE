@@ -3,9 +3,9 @@ package com.ogonggo.userapi.user.business
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.user.implement.CompanyProfileData
-import com.ogonggo.core.user.implement.UserAccount
-import com.ogonggo.core.user.implement.UserProfileData
+import com.ogonggo.core.user.implement.dto.CompanyProfileDto
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDateTime
 
 /**
@@ -23,9 +23,9 @@ data class MyAccountResult(
 ) {
     companion object {
         internal fun from(
-            account: UserAccount,
-            profile: UserProfileData?,
-            companyProfile: CompanyProfileData?,
+            account: UserAccountDto,
+            profile: UserProfileDto?,
+            companyProfile: CompanyProfileDto?,
         ): MyAccountResult = MyAccountResult(
             userId = account.userId,
             role = account.role,
@@ -62,7 +62,7 @@ data class MyProfileResult(
     val wishCompany: String?,
 ) {
     companion object {
-        internal fun from(profile: UserProfileData): MyProfileResult = MyProfileResult(
+        internal fun from(profile: UserProfileDto): MyProfileResult = MyProfileResult(
             name = profile.name,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,

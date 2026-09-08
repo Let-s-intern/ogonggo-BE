@@ -7,7 +7,7 @@ import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
-import com.ogonggo.core.job.implement.JobPage
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import java.time.LocalDateTime
 
 data class CompanyJobPageResult(
@@ -18,7 +18,7 @@ data class CompanyJobPageResult(
     val totalPages: Int,
 ) {
     companion object {
-        internal fun from(result: JobPage): CompanyJobPageResult = CompanyJobPageResult(
+        internal fun from(result: JobPageDto): CompanyJobPageResult = CompanyJobPageResult(
             items = result.jobs.map(CompanyJobSummary::from),
             page = result.page,
             size = result.size,

@@ -1,10 +1,10 @@
 package com.ogonggo.userapi.auth.business
 
 import com.ogonggo.core.error.UnauthorizedException
-import com.ogonggo.core.user.implement.UserAppendCommand
+import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.UserProfileManager
-import com.ogonggo.core.user.implement.UserProfileSyncCommand
+import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.user.implement.LetsCareerUserClient
 import com.ogonggo.userapi.auth.implement.LetsCareerAuthClient
@@ -63,7 +63,7 @@ class UserAuthService(
     private fun synchronizeAccount(letsCareerUser: LetsCareerUser, now: LocalDateTime): SynchronizedAccount {
         val existingAccount = userReader.readByLetsCareerUserId(letsCareerUser.userId)
         val account = existingAccount ?: userAppender.append(
-            UserAppendCommand(letsCareerUserId = letsCareerUser.userId, joinedAt = now),
+            UserAppendDto(letsCareerUserId = letsCareerUser.userId, joinedAt = now),
         )
         signInValidator.validate(account.status)
 
@@ -127,8 +127,8 @@ class UserAuthService(
     }
 }
 
-private fun LetsCareerUser.toSyncCommand(userId: Long, now: LocalDateTime): UserProfileSyncCommand =
-    UserProfileSyncCommand(
+private fun LetsCareerUser.toSyncCommand(userId: Long, now: LocalDateTime): UserProfileSyncDto =
+    UserProfileSyncDto(
         userId = userId,
         name = name,
         email = email,

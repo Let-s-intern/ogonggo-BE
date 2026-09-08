@@ -5,8 +5,8 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
-import com.ogonggo.core.job.implement.JobAppendCommand
-import com.ogonggo.core.job.implement.JobUpdateCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
@@ -85,7 +85,7 @@ data class CreateCompanyJobRequest(
     @field:Size(max = 2048) @field:URL override val sourceUrl: String?,
 ) : CompanyJobWriteRequest {
 
-    fun toCommand(): JobAppendCommand = JobAppendCommand(
+    fun toCommand(): JobAppendDto = JobAppendDto(
         companyName = companyName,
         parentCompanyName = parentCompanyName,
         companyLogoUrl = companyLogoUrl,
@@ -148,7 +148,7 @@ data class UpdateCompanyJobRequest(
     @field:Size(max = 2048) @field:URL override val sourceUrl: String?,
 ) : CompanyJobWriteRequest {
 
-    fun toCommand(): JobUpdateCommand = JobUpdateCommand(
+    fun toCommand(): JobUpdateDto = JobUpdateDto(
         companyName = companyName,
         parentCompanyName = parentCompanyName,
         companyLogoUrl = companyLogoUrl,

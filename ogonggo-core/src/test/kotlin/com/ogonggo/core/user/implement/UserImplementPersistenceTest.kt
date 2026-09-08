@@ -7,8 +7,14 @@ import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
+import com.ogonggo.core.user.implement.dto.UserAppendDto
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
+import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
 import com.ogonggo.core.user.persistence.CompanyProfileJpaRepository
 import com.ogonggo.core.user.persistence.UserProfileJpaRepository
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -18,7 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
-import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -43,7 +48,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `렛츠커리어 식별자로 가입하고 조회한다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
 
         assertEquals(4821L, account.letsCareerUserId)
         assertEquals(UserStatus.ACTIVE, account.status)
@@ -64,10 +69,10 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `같은 렛츠커리어 사용자를 두 번 가입시키면 재시도 가능한 충돌로 처리한다`() {
-        userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
 
         val exception = assertThrows(ConflictException::class.java) {
-            userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+            userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
         }
 
         assertEquals(UserErrorCode.USER_ALREADY_EXISTS, exception.errorCode)
@@ -75,7 +80,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `프로필이 없으면 생성하고 렛츠커리어 수정 일시가 바뀌면 갱신한다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
 
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
         val created = userProfileRepository.findByUserId(account.userId)
@@ -91,7 +96,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `렛츠커리어 수정 일시가 같으면 프로필을 갱신하지 않는다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
 
         userProfileManager.sync(syncCommand(account.userId, name = "바뀐이름", letsCareerUpdatedAt = NOW))
@@ -103,7 +108,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `Reader는 계정 종류에 없는 프로필을 null로 반환한다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
 
         val profile = userProfileReader.read(account.userId)
@@ -115,14 +120,14 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         assertNull(companyProfileReader.read(account.userId))
 
         val companyAccount = userAppender.appendCompany(
-            CompanyAccountAppendCommand(
+            CompanyAccountAppendDto(
                 email = "company@example.com",
                 encodedPassword = "encoded-password",
                 joinedAt = NOW,
             ),
         )
         companyProfileAppender.append(
-            CompanyProfileAppendCommand(
+            CompanyProfileAppendDto(
                 userId = companyAccount.userId,
                 organizationName = "렛츠커리어",
                 managerName = "김담당",
@@ -137,12 +142,12 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `구직 정보는 프로필 행에 함께 저장하고 여덟 값을 한 번에 교체한다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
 
         userProfileManager.replaceJobInfo(
             account.userId,
-            UserProfileJobInfoCommand(
+            UserProfileJobInfoDto(
                 "오공고대학교", "컴퓨터공학과", UserGrade.GRADUATE,
                 "개발", "백엔드 개발", "IT", "정규직", "오공고",
             ),
@@ -159,7 +164,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         // 보내지 않은 값은 비우는 것으로 본다.
         userProfileManager.replaceJobInfo(
             account.userId,
-            UserProfileJobInfoCommand(null, null, null, "데이터", null, null, null, null),
+            UserProfileJobInfoDto(null, null, null, "데이터", null, null, null, null),
             NOW.plusMinutes(1),
         )
 
@@ -173,11 +178,11 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `로그인 동기화는 사용자가 입력한 구직 정보를 덮어쓰지 않는다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
         userProfileManager.replaceJobInfo(
             account.userId,
-            UserProfileJobInfoCommand(null, null, null, "개발", null, null, null, null),
+            UserProfileJobInfoDto(null, null, null, "개발", null, null, null, null),
             NOW,
         )
 
@@ -194,14 +199,14 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     @Test
     fun `프로필 행이 없어도 구직 정보를 저장하면 행이 생긴다`() {
         val account = userAppender.appendCompany(
-            CompanyAccountAppendCommand("mock@example.com", "encoded-password", NOW),
+            CompanyAccountAppendDto("mock@example.com", "encoded-password", NOW),
         )
 
         assertNull(userProfileReader.read(account.userId))
 
         userProfileManager.replaceJobInfo(
             account.userId,
-            UserProfileJobInfoCommand(null, null, null, "개발", null, null, null, null),
+            UserProfileJobInfoDto(null, null, null, "개발", null, null, null, null),
             NOW,
         )
 
@@ -210,7 +215,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `계정 조회는 가입 일시를 함께 담는다`() {
-        val account = userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
 
         assertEquals(NOW, userReader.read(account.userId).joinedAt)
     }
@@ -218,14 +223,14 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     @Test
     fun `기업 계정을 만들고 기업 프로필을 함께 저장한다`() {
         val account = userAppender.appendCompany(
-            CompanyAccountAppendCommand(
+            CompanyAccountAppendDto(
                 email = "company@example.com",
                 encodedPassword = "encoded-password",
                 joinedAt = NOW,
             ),
         )
         companyProfileAppender.append(
-            CompanyProfileAppendCommand(
+            CompanyProfileAppendDto(
                 userId = account.userId,
                 organizationName = "렛츠커리어",
                 managerName = "김담당",
@@ -240,7 +245,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `같은 이메일로 두 번 가입하면 충돌로 처리한다`() {
-        val command = CompanyAccountAppendCommand(
+        val command = CompanyAccountAppendDto(
             email = "company@example.com",
             encodedPassword = "encoded-password",
             joinedAt = NOW,
@@ -255,7 +260,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     @Test
     fun `이메일로 기업 계정의 자격증명을 조회한다`() {
         val account = userAppender.appendCompany(
-            CompanyAccountAppendCommand(
+            CompanyAccountAppendDto(
                 email = "company@example.com",
                 encodedPassword = "encoded-password",
                 joinedAt = NOW,
@@ -271,7 +276,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `자격증명이 없는 렛츠커리어 계정은 이메일로 조회되지 않는다`() {
-        userAppender.append(UserAppendCommand(letsCareerUserId = 4821L, joinedAt = NOW))
+        userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
 
         assertNull(userReader.readCredentialByEmail("company@example.com"))
     }
@@ -279,13 +284,13 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     @Test
     fun `같은 사용자의 기업 프로필을 두 번 만들면 충돌로 처리한다`() {
         val account = userAppender.appendCompany(
-            CompanyAccountAppendCommand(
+            CompanyAccountAppendDto(
                 email = "company@example.com",
                 encodedPassword = "encoded-password",
                 joinedAt = NOW,
             ),
         )
-        val command = CompanyProfileAppendCommand(
+        val command = CompanyProfileAppendDto(
             userId = account.userId,
             organizationName = "렛츠커리어",
             managerName = "김담당",
@@ -301,7 +306,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         userId: Long,
         name: String,
         letsCareerUpdatedAt: LocalDateTime,
-    ): UserProfileSyncCommand = UserProfileSyncCommand(
+    ): UserProfileSyncDto = UserProfileSyncDto(
         userId = userId,
         name = name,
         email = "lets@career.co.kr",

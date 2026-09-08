@@ -164,6 +164,38 @@ class BootcampReader internal constructor(
 
 현재 인터페이스를 유지하는 것은 구현이 여럿인 `EnumField`와 `ErrorCode`뿐입니다.
 
+### Implement가 주고받는 타입
+
+> Implement 컴포넌트가 Service와 주고받는 타입은 `implement/dto` 패키지에 두고 이름을 `Dto`로 끝낸다.
+
+```text
+core/bootcamp/implement/
+  dto/BootcampDto.kt     Service와 주고받는 타입
+  BootcampReader.kt      동작
+```
+
+패키지 경로가 곧 "Implement가 Service에 넘기기 위한 것"이라는 설명이므로, 타입이 어느 계층 소속인지가 위치로 드러납니다. 도메인당 타입이 열 개 안팎이라 파일 하나로 묶습니다.
+
+이름은 무엇을 하는 타입인지를 앞에 두고 `Dto`로 끝냅니다.
+
+| 타입 | 쓰임 |
+| --- | --- |
+| `BootcampAppendDto` | 등록할 때 Appender에 넣는 값 |
+| `BootcampUpdateDto` | 수정할 때 Manager에 넣는 값 |
+| `BootcampPageDto` | 목록 조회로 Reader에서 받는 값 |
+| `BootcampMetricDto` | 지표 조회로 Reader에서 받는 값 |
+
+넣는 값과 받는 값의 모양이 달라 이름이 겹치면 하나로 감싸고 안에서 나눕니다.
+
+```kotlin
+object BootcampPartnerDto {
+    data class Request(val partnerName: String, val displayOrder: Int = 0)
+    data class Response(val name: String, val displayOrder: Int)
+}
+```
+
+API 모듈의 HTTP 계약은 이 규칙을 따르지 않습니다. `presentation/request`의 `Request`와 `presentation/response`의 `Response`, `business`의 `Result`는 각자 소속 계층이 다르므로 그 계층에 두고 `Dto`를 붙이지 않습니다.
+
 ## 7. 트랜잭션과 영속성 컨텍스트 규칙
 
 - 유스케이스 전체의 원자성을 아는 API Business Service에 `@Transactional`을 둡니다.

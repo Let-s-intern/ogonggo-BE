@@ -7,9 +7,9 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
-import com.ogonggo.core.job.implement.JobPage
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.implement.JobBookmarkReader
-import com.ogonggo.core.job.implement.JobMetricData
+import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
@@ -55,7 +55,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.hiringProcess).thenReturn("채용 절차")
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L))).thenReturn(setOf(1L))
-        Mockito.`when`(jobMetricReader.read(1L)).thenReturn(JobMetricData(viewCount = 8, bookmarkCount = 3, commentCount = 1))
+        Mockito.`when`(jobMetricReader.read(1L)).thenReturn(JobMetricDto(viewCount = 8, bookmarkCount = 3, commentCount = 1))
 
         val result = service.getJob(USER_ID, 1L)
 
@@ -75,7 +75,7 @@ class UserJobServiceTest {
     fun `상세 조회는 지표를 읽은 뒤 조회 이벤트를 발행한다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
-        Mockito.`when`(jobMetricReader.read(1L)).thenReturn(JobMetricData(viewCount = 1, bookmarkCount = 0, commentCount = 0))
+        Mockito.`when`(jobMetricReader.read(1L)).thenReturn(JobMetricDto(viewCount = 1, bookmarkCount = 0, commentCount = 0))
 
         val result = service.getJob(USER_ID, 1L)
 
@@ -89,7 +89,7 @@ class UserJobServiceTest {
     fun `게시된 공고 목록을 페이지 결과로 변환한다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)).thenReturn(
-            JobPage(
+            JobPageDto(
                 jobs = listOf(job),
                 page = 0,
                 size = 20,
@@ -100,7 +100,7 @@ class UserJobServiceTest {
         )
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L))).thenReturn(emptySet())
         Mockito.`when`(jobMetricReader.readAll(listOf(1L))).thenReturn(
-            mapOf(1L to JobMetricData(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
+            mapOf(1L to JobMetricDto(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
         )
 
         val result = service.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)
@@ -119,7 +119,7 @@ class UserJobServiceTest {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
         Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)).thenReturn(
-            JobPage(
+            JobPageDto(
                 jobs = listOf(job),
                 page = 0,
                 size = 20,
@@ -129,9 +129,9 @@ class UserJobServiceTest {
             ),
         )
         Mockito.`when`(jobMetricReader.read(1L))
-            .thenReturn(JobMetricData(viewCount = 5, bookmarkCount = 2, commentCount = 0))
+            .thenReturn(JobMetricDto(viewCount = 5, bookmarkCount = 2, commentCount = 0))
         Mockito.`when`(jobMetricReader.readAll(listOf(1L))).thenReturn(
-            mapOf(1L to JobMetricData(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
+            mapOf(1L to JobMetricDto(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
         )
 
         assertEquals(false, service.getJob(null, 1L).bookmarked)

@@ -6,10 +6,10 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
-import com.ogonggo.core.bootcamp.implement.BootcampAppendCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
-import com.ogonggo.core.bootcamp.implement.BootcampUpdateCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -61,7 +61,7 @@ class AdminBootcampServiceTest {
         Mockito.verify(bootcampManager).startRecruitment(bootcamp)
     }
 
-    private fun appendCommand(): BootcampAppendCommand = BootcampAppendCommand(
+    private fun appendCommand(): BootcampAppendDto = BootcampAppendDto(
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = "개발",
@@ -79,7 +79,7 @@ class AdminBootcampServiceTest {
         applicationUrl = "https://example.com/apply",
     )
 
-    private fun updateCommand(): BootcampUpdateCommand = BootcampUpdateCommand(
+    private fun updateCommand(): BootcampUpdateDto = BootcampUpdateDto(
         companyName = "변경 교육사",
         title = "변경 부트캠프",
         programType = "데이터",

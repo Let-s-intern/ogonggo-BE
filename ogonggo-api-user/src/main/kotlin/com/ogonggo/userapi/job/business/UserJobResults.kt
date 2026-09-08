@@ -5,8 +5,8 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
-import com.ogonggo.core.job.implement.JobMetricData
-import com.ogonggo.core.job.implement.JobPage
+import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import java.time.LocalDateTime
 
 data class UserJobCalendarItem(
@@ -35,16 +35,16 @@ data class UserJobPageResult(
 ) {
     companion object {
         internal fun from(
-            result: JobPage,
+            result: JobPageDto,
             bookmarkedJobIds: Set<Long>,
-            metrics: Map<Long, JobMetricData>,
+            metrics: Map<Long, JobMetricDto>,
         ): UserJobPageResult = UserJobPageResult(
             items = result.jobs.map { job ->
                 val jobId = job.requiredId()
                 UserJobSummary.from(
                     job = job,
                     bookmarked = jobId in bookmarkedJobIds,
-                    metric = metrics[jobId] ?: JobMetricData.EMPTY,
+                    metric = metrics[jobId] ?: JobMetricDto.EMPTY,
                 )
             },
             page = result.page,
@@ -76,7 +76,7 @@ data class UserJobSummary(
     val commentCount: Long,
 ) {
     companion object {
-        internal fun from(job: Job, bookmarked: Boolean, metric: JobMetricData): UserJobSummary = UserJobSummary(
+        internal fun from(job: Job, bookmarked: Boolean, metric: JobMetricDto): UserJobSummary = UserJobSummary(
             id = job.requiredId(),
             companyName = job.companyName,
             title = job.title,
@@ -126,7 +126,7 @@ data class UserJobResult(
     val commentCount: Long,
 ) {
     companion object {
-        internal fun from(job: Job, bookmarked: Boolean, metric: JobMetricData): UserJobResult = UserJobResult(
+        internal fun from(job: Job, bookmarked: Boolean, metric: JobMetricDto): UserJobResult = UserJobResult(
             id = job.requiredId(),
             companyName = job.companyName,
             title = job.title,
