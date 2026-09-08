@@ -93,7 +93,14 @@ POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
 GET /api/v1/users/me
 ```
 
-`/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`가 그 하위에 있습니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
+```text
+GET /api/v1/users/me
+PUT /api/v1/users/me/profile
+```
+
+`/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`, `/users/me/profile`이 그 하위에 있습니다. 프로필은 사용자마다 하나뿐인 단일 리소스여서 목록이 아니므로 단수 명사를 사용합니다. 복수 명사 규칙은 여러 항목을 담는 컬렉션에 적용합니다.
+
+조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
 
 ### 부트캠프 북마크
 

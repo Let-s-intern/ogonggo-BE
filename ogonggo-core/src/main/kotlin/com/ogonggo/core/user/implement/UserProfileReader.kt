@@ -1,5 +1,6 @@
 package com.ogonggo.core.user.implement
 
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.persistence.UserProfileJpaRepository
 import org.springframework.stereotype.Component
@@ -23,6 +24,14 @@ data class UserProfileData(
     val email: String?,
     val nickname: String?,
     val profileImageUrl: String?,
+    val university: String?,
+    val major: String?,
+    val grade: UserGrade?,
+    val wishField: String?,
+    val wishJob: String?,
+    val wishIndustry: String?,
+    val wishEmploymentType: String?,
+    val wishCompany: String?,
 ) {
     companion object {
         internal fun from(profile: UserProfile): UserProfileData = UserProfileData(
@@ -30,6 +39,14 @@ data class UserProfileData(
             email = profile.email,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,
+            university = profile.university,
+            major = profile.major,
+            grade = profile.grade,
+            wishField = profile.wishField,
+            wishJob = profile.wishJob,
+            wishIndustry = profile.wishIndustry,
+            wishEmploymentType = profile.wishEmploymentType,
+            wishCompany = profile.wishCompany,
         )
     }
 }

@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -46,7 +47,19 @@ class UserAccountControllerTest @Autowired constructor(
                 status = UserStatus.ACTIVE,
                 email = "lets@career.co.kr",
                 joinedAt = JOINED_AT,
-                profile = MyProfileResult("김렛츠", "렛츠", "https://example.com/me.png"),
+                profile = MyProfileResult(
+                    name = "김렛츠",
+                    nickname = "렛츠",
+                    profileImageUrl = "https://example.com/me.png",
+                    university = "오공고대학교",
+                    major = "컴퓨터공학과",
+                    grade = UserGrade.GRADUATE,
+                    wishField = "개발",
+                    wishJob = null,
+                    wishIndustry = null,
+                    wishEmploymentType = null,
+                    wishCompany = null,
+                ),
                 companyProfile = null,
             ),
         )
@@ -59,6 +72,9 @@ class UserAccountControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.status").value("ACTIVE"))
             .andExpect(jsonPath("$.data.email").value("lets@career.co.kr"))
             .andExpect(jsonPath("$.data.profile.nickname").value("렛츠"))
+            .andExpect(jsonPath("$.data.profile.university").value("오공고대학교"))
+            .andExpect(jsonPath("$.data.profile.grade").value("GRADUATE"))
+            .andExpect(jsonPath("$.data.profile.wishField").value("개발"))
             .andExpect(jsonPath("$.data.companyProfile").isEmpty)
     }
 

@@ -54,6 +54,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/post").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/delete").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me/get").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1users~1me~1profile/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1auth~1letscareer/post").isObject)
         assertFalse(document.at("/paths/~1health").isObject)
 
@@ -115,6 +116,19 @@ class UserOpenApiContractTest @Autowired constructor(
         val myAccountProperties = document.at("/components/schemas/MyAccountResponse/properties")
         listOf("userId", "role", "status", "email", "joinedAt", "profile", "companyProfile")
             .forEach { field -> assertTrue(myAccountProperties.has(field)) }
+
+        // 학력과 희망 조건은 오공고가 소유하므로 조회는 내 정보에 함께 담고 수정만 따로 연다.
+        val replaceProfile = document.at("/paths/~1api~1v1~1users~1me~1profile/put")
+        assertTrue(replaceProfile.at("/security/0/BearerAuth").isArray)
+        assertTrue(
+            replaceProfile.at("/responses/409/description").asText().startsWith("USER_PROFILE_CONFLICT"),
+        )
+        val profileProperties = document.at("/components/schemas/MyProfileResponse/properties")
+        listOf(
+            "name", "nickname", "profileImageUrl",
+            "university", "major", "grade",
+            "wishField", "wishJob", "wishIndustry", "wishEmploymentType", "wishCompany",
+        ).forEach { field -> assertTrue(profileProperties.has(field)) }
 
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
         assertFalse(jobCalendar.has("security"))

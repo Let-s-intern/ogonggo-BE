@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.user.presentation.response
 
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.userapi.user.business.MyAccountResult
@@ -33,16 +34,36 @@ data class MyAccountResponse(
     }
 }
 
+@Schema(
+    description = "이름·닉네임·프로필 이미지는 렛츠커리어가 소유해 로그인마다 갱신되고, " +
+        "학력과 희망 조건은 오공고가 소유해 PUT /api/v1/users/me/profile로 고친다.",
+)
 data class MyProfileResponse(
     val name: String?,
     val nickname: String?,
     val profileImageUrl: String?,
+    val university: String?,
+    val major: String?,
+    val grade: UserGrade?,
+    val wishField: String?,
+    val wishJob: String?,
+    val wishIndustry: String?,
+    val wishEmploymentType: String?,
+    val wishCompany: String?,
 ) {
     companion object {
         internal fun from(result: MyProfileResult): MyProfileResponse = MyProfileResponse(
             name = result.name,
             nickname = result.nickname,
             profileImageUrl = result.profileImageUrl,
+            university = result.university,
+            major = result.major,
+            grade = result.grade,
+            wishField = result.wishField,
+            wishJob = result.wishJob,
+            wishIndustry = result.wishIndustry,
+            wishEmploymentType = result.wishEmploymentType,
+            wishCompany = result.wishCompany,
         )
     }
 }
