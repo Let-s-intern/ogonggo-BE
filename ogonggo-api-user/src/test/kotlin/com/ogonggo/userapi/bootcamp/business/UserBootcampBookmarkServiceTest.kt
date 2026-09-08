@@ -9,7 +9,7 @@ import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkManager
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
-import com.ogonggo.core.bootcamp.implement.BootcampPage
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -66,7 +66,7 @@ class UserBootcampBookmarkServiceTest {
     fun `내 북마크 목록은 모든 항목을 북마크 상태로 변환한다`() {
         val bootcamp = createBootcampMock()
         Mockito.`when`(bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10)).thenReturn(
-            BootcampPage(listOf(bootcamp), 0, 10, 1, 1, false),
+            BootcampPageDto(listOf(bootcamp), 0, 10, 1, 1, false),
         )
 
         val result = service.getBookmarks(USER_ID, 0, 10)

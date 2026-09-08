@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.user.presentation.request
 
 import com.ogonggo.core.user.domain.UserGrade
-import com.ogonggo.core.user.implement.UserProfileJobInfoCommand
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
 
@@ -44,7 +44,7 @@ data class ReplaceMyProfileRequest(
     @Schema(description = "희망 기업", example = "오공고, 렛츠커리어")
     val wishCompany: String? = null,
 ) {
-    fun toCommand(): UserProfileJobInfoCommand = UserProfileJobInfoCommand(
+    fun toCommand(): UserProfileJobInfoDto = UserProfileJobInfoDto(
         university = university,
         major = major,
         grade = grade,

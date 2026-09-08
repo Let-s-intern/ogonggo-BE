@@ -1,11 +1,12 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
-import org.springframework.data.domain.PageRequest
-import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.data.domain.PageRequest
+import org.springframework.stereotype.Component
 
 @Component
 class BootcampBookmarkReader internal constructor(
@@ -14,7 +15,7 @@ class BootcampBookmarkReader internal constructor(
     private val clock: Clock,
 ) {
 
-    fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int): BootcampPage =
+    fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int): BootcampPageDto =
         readBookmarkedPublicPage(userId, page, size, LocalDateTime.now(clock))
 
     fun readBookmarkedPublicPage(
@@ -22,7 +23,7 @@ class BootcampBookmarkReader internal constructor(
         page: Int,
         size: Int,
         now: LocalDateTime,
-    ): BootcampPage {
+    ): BootcampPageDto {
         validateBookmarkPageRequest(page, size)
         // 정렬을 JPQL이 이미 정하므로 Pageable에 정렬을 넘기지 않는다.
         val result = bootcampRepository.findBookmarkedBootcamps(
@@ -31,7 +32,7 @@ class BootcampBookmarkReader internal constructor(
             now = now,
             pageable = PageRequest.of(page, size),
         )
-        return BootcampPage(
+        return BootcampPageDto(
             bootcamps = result.content,
             page = result.number,
             size = result.size,

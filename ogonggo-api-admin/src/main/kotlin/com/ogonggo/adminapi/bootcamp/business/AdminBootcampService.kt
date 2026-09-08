@@ -1,10 +1,10 @@
 package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
-import com.ogonggo.core.bootcamp.implement.BootcampAppendCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
-import com.ogonggo.core.bootcamp.implement.BootcampUpdateCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -19,13 +19,13 @@ class AdminBootcampService(
 ) {
 
     @Transactional
-    fun create(command: BootcampAppendCommand): Long {
+    fun create(command: BootcampAppendDto): Long {
         val bootcamp = bootcampAppender.append(command)
         return checkNotNull(bootcamp.id) { "저장된 부트캠프 식별자가 없습니다." }
     }
 
     @Transactional
-    fun update(bootcampId: Long, command: BootcampUpdateCommand) {
+    fun update(bootcampId: Long, command: BootcampUpdateDto) {
         val bootcamp = bootcampReader.readForUpdate(bootcampId)
         bootcampManager.update(bootcamp, command)
     }

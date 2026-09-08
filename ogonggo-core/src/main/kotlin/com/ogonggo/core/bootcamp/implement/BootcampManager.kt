@@ -3,12 +3,15 @@ package com.ogonggo.core.bootcamp.implement
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
-import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.stereotype.Component
 
 @Component
 class BootcampManager internal constructor(
@@ -18,7 +21,7 @@ class BootcampManager internal constructor(
     private val clock: Clock,
 ) {
 
-    fun update(bootcamp: Bootcamp, command: BootcampUpdateCommand) {
+    fun update(bootcamp: Bootcamp, command: BootcampUpdateDto) {
         val bootcampId = checkNotNull(bootcamp.id) { "부트캠프 식별자가 없습니다." }
         require(command.partners.map { it.partnerName }.distinct().size == command.partners.size) {
             "중복된 파트너사명은 등록할 수 없습니다."
@@ -81,13 +84,13 @@ class BootcampManager internal constructor(
     }
 }
 
-private fun BootcampPartnerCommand.toPartner(bootcampId: Long): BootcampPartner = BootcampPartner(
+private fun BootcampPartnerDto.Request.toPartner(bootcampId: Long): BootcampPartner = BootcampPartner(
     bootcampId = bootcampId,
     partnerName = partnerName,
     displayOrder = displayOrder,
 )
 
-private fun BootcampCurriculumCommand.toCurriculum(bootcampId: Long): BootcampCurriculum = BootcampCurriculum(
+private fun BootcampCurriculumDto.Request.toCurriculum(bootcampId: Long): BootcampCurriculum = BootcampCurriculum(
     bootcampId = bootcampId,
     startWeek = startWeek,
     endWeek = endWeek,

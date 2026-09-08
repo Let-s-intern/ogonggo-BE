@@ -5,10 +5,10 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.bootcamp.implement.BootcampAppendCommand
-import com.ogonggo.core.bootcamp.implement.BootcampCurriculumCommand
-import com.ogonggo.core.bootcamp.implement.BootcampPartnerCommand
-import com.ogonggo.core.bootcamp.implement.BootcampUpdateCommand
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -48,9 +48,9 @@ data class CreateCompanyBootcampRequest(
     @field:Valid @field:Size(max = 100) override val curriculums: List<CompanyBootcampCurriculumRequest>,
     val status: BootcampStatus,
 ) : CompanyBootcampWriteRequest {
-    fun toCommand(): BootcampAppendCommand {
+    fun toCommand(): BootcampAppendDto {
         validateRelations()
-        return BootcampAppendCommand(
+        return BootcampAppendDto(
             companyName = companyName,
             title = title,
             programType = programType,
@@ -108,9 +108,9 @@ data class UpdateCompanyBootcampRequest(
     @field:Valid @field:Size(max = 100) override val partners: List<CompanyBootcampPartnerRequest>,
     @field:Valid @field:Size(max = 100) override val curriculums: List<CompanyBootcampCurriculumRequest>,
 ) : CompanyBootcampWriteRequest {
-    fun toCommand(): BootcampUpdateCommand {
+    fun toCommand(): BootcampUpdateDto {
         validateRelations()
-        return BootcampUpdateCommand(
+        return BootcampUpdateDto(
             companyName = companyName,
             title = title,
             programType = programType,
@@ -147,7 +147,7 @@ data class CompanyBootcampPartnerRequest(
     @field:PositiveOrZero
     val displayOrder: Int,
 ) {
-    fun toCommand(): BootcampPartnerCommand = BootcampPartnerCommand(partnerName, displayOrder)
+    fun toCommand(): BootcampPartnerDto.Request = BootcampPartnerDto.Request(partnerName, displayOrder)
 }
 
 data class CompanyBootcampCurriculumRequest(
@@ -161,8 +161,8 @@ data class CompanyBootcampCurriculumRequest(
     @field:PositiveOrZero
     val displayOrder: Int,
 ) {
-    fun toCommand(): BootcampCurriculumCommand =
-        BootcampCurriculumCommand(startWeek, endWeek, subtitle, displayOrder)
+    fun toCommand(): BootcampCurriculumDto.Request =
+        BootcampCurriculumDto.Request(startWeek, endWeek, subtitle, displayOrder)
 }
 
 private interface CompanyBootcampWriteRequest {

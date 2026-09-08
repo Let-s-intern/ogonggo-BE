@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.user.business
 
 import com.ogonggo.core.user.implement.CompanyProfileReader
-import com.ogonggo.core.user.implement.UserProfileJobInfoCommand
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
@@ -38,7 +38,7 @@ class UserAccountService(
      * 이름·닉네임·프로필 이미지는 렛츠커리어가 소유해 로그인마다 갱신되므로 여기서 바꾸지 않는다.
      */
     @Transactional
-    fun replaceMyProfile(userId: Long, command: UserProfileJobInfoCommand) {
+    fun replaceMyProfile(userId: Long, command: UserProfileJobInfoDto) {
         userProfileManager.replaceJobInfo(userId, command, LocalDateTime.now(clock))
     }
 }

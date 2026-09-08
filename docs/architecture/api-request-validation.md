@@ -55,7 +55,7 @@ data class CreateItemRequest(
 - 선택 입력은 nullable로 표현합니다.
 - 생성·수정 요청에 누락 값을 임의의 기본값으로 보완하지 않습니다. Query Parameter의 공개된 기본값은 허용합니다.
 
-요청 클래스 이름은 `CreateJobRequest`, `UpdateJobRequest`처럼 행위와 대상을 드러내고 `Dto` 접미사는 사용하지 않습니다. Request는 도메인별 `presentation/request`에 둡니다. 관련된 작은 타입은 `UserAuthRequests.kt`처럼 한 파일로 묶을 수 있지만 Controller 파일에는 선언하지 않습니다.
+요청 클래스 이름은 `CreateJobRequest`, `UpdateJobRequest`처럼 행위와 대상을 드러냅니다. HTTP 계약이므로 `Request`·`Response`를 접미사로 쓰고 `Dto`는 붙이지 않습니다. core가 Implement 계층에서 주고받는 타입은 [레이어와 모듈](layers-and-modules.md)의 `Dto` 규칙을 따릅니다. Request는 도메인별 `presentation/request`에 둡니다. 관련된 작은 타입은 `UserAuthRequests.kt`처럼 한 파일로 묶을 수 있지만 Controller 파일에는 선언하지 않습니다.
 
 ## 4. Request와 Command 경계
 

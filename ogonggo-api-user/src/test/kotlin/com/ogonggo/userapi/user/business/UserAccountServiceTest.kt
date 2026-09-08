@@ -3,11 +3,11 @@ package com.ogonggo.userapi.user.business
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.user.implement.CompanyProfileData
+import com.ogonggo.core.user.implement.dto.CompanyProfileDto
 import com.ogonggo.core.user.implement.CompanyProfileReader
-import com.ogonggo.core.user.implement.UserAccount
-import com.ogonggo.core.user.implement.UserProfileData
-import com.ogonggo.core.user.implement.UserProfileJobInfoCommand
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.core.user.implement.dto.UserProfileDto
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
@@ -39,7 +39,7 @@ class UserAccountServiceTest {
     fun `일반 회원은 렛츠커리어 프로필만 담고 기업 정보는 읽지 않는다`() {
         givenAccount(UserRole.USER, email = null)
         Mockito.`when`(userProfileReader.read(USER_ID)).thenReturn(
-            UserProfileData(
+            UserProfileDto(
                 name = "김렛츠",
                 email = "lets@career.co.kr",
                 nickname = "렛츠",
@@ -72,7 +72,7 @@ class UserAccountServiceTest {
     fun `기업 회원은 기업 정보만 담고 렛츠커리어 프로필은 읽지 않는다`() {
         givenAccount(UserRole.COMPANY, email = "company@example.com")
         Mockito.`when`(companyProfileReader.read(USER_ID)).thenReturn(
-            CompanyProfileData(organizationName = "렛츠커리어", managerName = "김담당"),
+            CompanyProfileDto(organizationName = "렛츠커리어", managerName = "김담당"),
         )
 
         val result = service.getMyAccount(USER_ID)
@@ -100,7 +100,7 @@ class UserAccountServiceTest {
         status: UserStatus = UserStatus.ACTIVE,
     ) {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(
-            UserAccount(
+            UserAccountDto(
                 userId = USER_ID,
                 letsCareerUserId = if (role == UserRole.COMPANY) null else LETSCAREER_USER_ID,
                 email = email,
@@ -113,7 +113,7 @@ class UserAccountServiceTest {
 
     @Test
     fun `프로필 수정은 사용자가 입력하는 값만 교체한다`() {
-        val command = UserProfileJobInfoCommand(
+        val command = UserProfileJobInfoDto(
             university = "오공고대학교",
             major = "컴퓨터공학과",
             grade = UserGrade.THIRD,

@@ -2,7 +2,7 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.error.JobErrorCode
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobTagAppender
@@ -35,7 +35,7 @@ class CrawlerJobService(
     }
 }
 
-private fun CrawlerJobRegistrationCommand.toAppendCommand(): JobAppendCommand = JobAppendCommand(
+private fun CrawlerJobRegistrationCommand.toAppendCommand(): JobAppendDto = JobAppendDto(
     companyName = companyName,
     parentCompanyName = parentCompanyName,
     title = title,

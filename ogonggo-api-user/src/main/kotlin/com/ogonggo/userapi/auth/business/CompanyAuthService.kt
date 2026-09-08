@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.auth.business
 
 import com.ogonggo.core.error.UnauthorizedException
-import com.ogonggo.core.user.implement.CompanyAccountAppendCommand
-import com.ogonggo.core.user.implement.CompanyProfileAppendCommand
+import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.implement.CompanyProfileAppender
 import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.UserReader
@@ -42,7 +42,7 @@ class CompanyAuthService(
         val now = LocalDateTime.now(clock)
 
         val account = userAppender.appendCompany(
-            CompanyAccountAppendCommand(
+            CompanyAccountAppendDto(
                 email = command.email,
                 encodedPassword = passwordEncoder.encode(command.password),
                 joinedAt = now,
@@ -50,7 +50,7 @@ class CompanyAuthService(
         )
 
         companyProfileAppender.append(
-            CompanyProfileAppendCommand(
+            CompanyProfileAppendDto(
                 userId = account.userId,
                 organizationName = command.organizationName,
                 managerName = command.managerName,

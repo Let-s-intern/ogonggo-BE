@@ -1,16 +1,17 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
-import org.springframework.stereotype.Component
 import java.time.LocalDateTime
+import org.springframework.stereotype.Component
 
 @Component
 class JobManager internal constructor(
     private val jobRepository: JobJpaRepository,
 ) {
 
-    fun update(job: Job, command: JobUpdateCommand) {
+    fun update(job: Job, command: JobUpdateDto) {
         job.update(
             companyName = command.companyName,
             parentCompanyName = command.parentCompanyName,

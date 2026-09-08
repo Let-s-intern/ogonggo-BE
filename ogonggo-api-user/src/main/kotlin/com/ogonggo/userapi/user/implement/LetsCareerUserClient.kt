@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.user.implement
 
 import com.ogonggo.core.user.domain.UserGrade
-import com.ogonggo.core.user.implement.UserProfileJobInfoCommand
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.userapi.auth.implement.LetsCareerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
@@ -20,7 +20,7 @@ data class LetsCareerJobProfile(
     val wishEmploymentType: String?,
     val wishCompany: String?,
 ) {
-    fun toCommand(): UserProfileJobInfoCommand = UserProfileJobInfoCommand(
+    fun toCommand(): UserProfileJobInfoDto = UserProfileJobInfoDto(
         university = university,
         major = major,
         grade = grade,

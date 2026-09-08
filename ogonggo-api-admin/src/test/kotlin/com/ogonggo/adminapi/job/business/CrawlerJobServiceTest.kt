@@ -8,7 +8,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.error.JobErrorCode
-import com.ogonggo.core.job.implement.JobAppendCommand
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobTagAppender
@@ -28,9 +28,9 @@ class CrawlerJobServiceTest {
      * 코틀린에서는 `any()`와 `capture()`가 null을 돌려줘 non-null 파라미터에 넘길 수 없다.
      * 인자 매처 대신 호출을 그대로 받아 기록한다.
      */
-    private var appendedCommand: JobAppendCommand? = null
+    private var appendedCommand: JobAppendDto? = null
     private val jobAppender = Mockito.mock(JobAppender::class.java, Answer { invocation ->
-        appendedCommand = invocation.arguments[0] as JobAppendCommand
+        appendedCommand = invocation.arguments[0] as JobAppendDto
         savedJob
     })
 

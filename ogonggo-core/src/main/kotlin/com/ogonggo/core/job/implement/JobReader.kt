@@ -6,12 +6,13 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
+import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
-import java.time.LocalDateTime
 
 @Component
 class JobReader internal constructor(
@@ -40,14 +41,14 @@ class JobReader internal constructor(
         sortType: JobSortType,
         page: Int,
         size: Int,
-    ): JobPage {
+    ): JobPageDto {
         validatePageRequest(page, size)
         val result = jobQueryRepository.findPublishedPage(
             condition = condition,
             sortType = sortType,
             pageable = PageRequest.of(page, size),
         )
-        return JobPage(
+        return JobPageDto(
             jobs = result.content,
             page = result.number,
             size = result.size,
@@ -83,13 +84,13 @@ class JobReader internal constructor(
         jobRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(jobId, ownerUserId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage {
+    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPageDto {
         validatePageRequest(page, size)
         val result = jobRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
             ownerUserId,
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")),
         )
-        return JobPage(
+        return JobPageDto(
             jobs = result.content,
             page = result.number,
             size = result.size,
@@ -107,15 +108,6 @@ class JobReader internal constructor(
         jobRepository.findOwnedByIdForDelete(ownerUserId, jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 }
-
-data class JobPage(
-    val jobs: List<Job>,
-    val page: Int,
-    val size: Int,
-    val totalElements: Long,
-    val totalPages: Int,
-    val hasNext: Boolean,
-)
 
 private fun validatePageRequest(page: Int, size: Int) {
     require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }

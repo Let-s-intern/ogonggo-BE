@@ -6,12 +6,12 @@ import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
-import com.ogonggo.core.user.implement.UserAccount
-import com.ogonggo.core.user.implement.UserAppendCommand
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.UserProfileManager
-import com.ogonggo.core.user.implement.UserProfileSyncCommand
-import com.ogonggo.core.user.implement.UserProfileJobInfoCommand
+import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
+import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.user.implement.LetsCareerJobProfile
 import com.ogonggo.userapi.user.implement.LetsCareerUserClient
@@ -69,7 +69,7 @@ class UserAuthServiceTest {
     fun `첫 로그인이면 계정을 만들고 신규 사용자로 응답한다`() {
         stubLetsCareerUser()
         Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
-        Mockito.`when`(userAppender.append(UserAppendCommand(LETSCAREER_USER_ID, NOW)))
+        Mockito.`when`(userAppender.append(UserAppendDto(LETSCAREER_USER_ID, NOW)))
             .thenReturn(activeAccount())
         stubIssuedTokens()
 
@@ -78,7 +78,7 @@ class UserAuthServiceTest {
         assertTrue(result.isNewUser)
         assertEquals("og-access", result.tokens.accessToken)
         assertEquals("og-refresh", result.tokens.refreshToken)
-        Mockito.verify(userAppender).append(UserAppendCommand(LETSCAREER_USER_ID, NOW))
+        Mockito.verify(userAppender).append(UserAppendDto(LETSCAREER_USER_ID, NOW))
         Mockito.verify(refreshTokenStore).save(USER_ID, "og-refresh", JWT_PROPERTIES.refreshTokenValidity)
     }
 
@@ -93,7 +93,7 @@ class UserAuthServiceTest {
         assertFalse(result.isNewUser)
         Mockito.verifyNoInteractions(userAppender)
         Mockito.verify(userProfileManager).sync(
-            UserProfileSyncCommand(
+            UserProfileSyncDto(
                 userId = USER_ID,
                 name = "김렛츠",
                 email = "lets@career.co.kr",
@@ -183,8 +183,8 @@ class UserAuthServiceTest {
         Mockito.`when`(tokenProvider.createRefreshToken(USER_ID)).thenReturn("og-refresh")
     }
 
-    private fun activeAccount(status: UserStatus = UserStatus.ACTIVE): UserAccount =
-        UserAccount(
+    private fun activeAccount(status: UserStatus = UserStatus.ACTIVE): UserAccountDto =
+        UserAccountDto(
             userId = USER_ID,
             letsCareerUserId = LETSCAREER_USER_ID,
             email = null,
@@ -198,7 +198,7 @@ class UserAuthServiceTest {
         stubLetsCareerUser()
         stubIssuedTokens()
         Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
-        Mockito.`when`(userAppender.append(UserAppendCommand(LETSCAREER_USER_ID, NOW)))
+        Mockito.`when`(userAppender.append(UserAppendDto(LETSCAREER_USER_ID, NOW)))
             .thenReturn(activeAccount())
         Mockito.`when`(letsCareerUserClient.readJobProfile(LETSCAREER_USER_ID)).thenReturn(
             LetsCareerJobProfile(
@@ -217,7 +217,7 @@ class UserAuthServiceTest {
 
         Mockito.verify(userProfileManager).replaceJobInfo(
             USER_ID,
-            UserProfileJobInfoCommand(
+            UserProfileJobInfoDto(
                 university = "오공고대학교",
                 major = "컴퓨터공학과",
                 grade = UserGrade.GRADUATE,
@@ -249,7 +249,7 @@ class UserAuthServiceTest {
         stubLetsCareerUser()
         stubIssuedTokens()
         Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
-        Mockito.`when`(userAppender.append(UserAppendCommand(LETSCAREER_USER_ID, NOW)))
+        Mockito.`when`(userAppender.append(UserAppendDto(LETSCAREER_USER_ID, NOW)))
             .thenReturn(activeAccount())
         Mockito.`when`(letsCareerUserClient.readJobProfile(LETSCAREER_USER_ID)).thenReturn(null)
 
@@ -264,7 +264,7 @@ class UserAuthServiceTest {
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 27, 10, 0)
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
-        private val EMPTY_JOB_INFO = UserProfileJobInfoCommand(null, null, null, null, null, null, null, null)
+        private val EMPTY_JOB_INFO = UserProfileJobInfoDto(null, null, null, null, null, null, null, null)
         private val LETSCAREER_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 20, 9, 0)
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L

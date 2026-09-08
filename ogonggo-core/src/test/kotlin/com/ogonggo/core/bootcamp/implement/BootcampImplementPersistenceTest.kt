@@ -1,22 +1,30 @@
 package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.bootcamp.persistence.BootcampApplicationUrlClickJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampMetricJpaRepository
-import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
+import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -25,8 +33,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -72,8 +78,8 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     fun `Appender는 파트너사와 커리큘럼을 함께 저장한다`() {
         val savedBootcamp = bootcampAppender.append(
             createCommand(
-                partners = listOf(BootcampPartnerCommand("오공고 파트너", 0)),
-                curriculums = listOf(BootcampCurriculumCommand(1, 4, "Spring 기초", 0)),
+                partners = listOf(BootcampPartnerDto.Request("오공고 파트너", 0)),
+                curriculums = listOf(BootcampCurriculumDto.Request(1, 4, "Spring 기초", 0)),
             ),
         )
         val bootcampId = checkNotNull(savedBootcamp.id)
@@ -92,8 +98,8 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     fun `Manager는 파트너사와 커리큘럼을 전체 교체한다`() {
         val savedBootcamp = bootcampAppender.append(
             createCommand(
-                partners = listOf(BootcampPartnerCommand("기존 파트너", 0)),
-                curriculums = listOf(BootcampCurriculumCommand(1, 2, "기존 과정", 0)),
+                partners = listOf(BootcampPartnerDto.Request("기존 파트너", 0)),
+                curriculums = listOf(BootcampCurriculumDto.Request(1, 2, "기존 과정", 0)),
             ),
         )
         val bootcampId = checkNotNull(savedBootcamp.id)
@@ -101,8 +107,8 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampManager.update(
             savedBootcamp,
             updateCommand(
-                partners = listOf(BootcampPartnerCommand("신규 파트너", 0)),
-                curriculums = listOf(BootcampCurriculumCommand(3, 6, "심화 과정", 0)),
+                partners = listOf(BootcampPartnerDto.Request("신규 파트너", 0)),
+                curriculums = listOf(BootcampCurriculumDto.Request(3, 6, "심화 과정", 0)),
             ),
         )
 
@@ -133,7 +139,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     @Test
     fun `동일 파트너사를 재등록하면 삭제된 연결을 복구한다`() {
         val savedBootcamp = bootcampAppender.append(
-            createCommand(partners = listOf(BootcampPartnerCommand("동일 파트너", 0))),
+            createCommand(partners = listOf(BootcampPartnerDto.Request("동일 파트너", 0))),
         )
         val bootcampId = checkNotNull(savedBootcamp.id)
         val partnerId = bootcampPartnerRepository.findAllByBootcampId(bootcampId).single().id
@@ -142,7 +148,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampManager.update(
             savedBootcamp,
             updateCommand(
-                partners = listOf(BootcampPartnerCommand("동일 파트너", 3)),
+                partners = listOf(BootcampPartnerDto.Request("동일 파트너", 3)),
                 curriculums = emptyList(),
             ),
         )
@@ -159,12 +165,12 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         val savedBootcamp = bootcampAppender.append(
             createCommand(
                 partners = listOf(
-                    BootcampPartnerCommand("두 번째", 2),
-                    BootcampPartnerCommand("첫 번째", 1),
+                    BootcampPartnerDto.Request("두 번째", 2),
+                    BootcampPartnerDto.Request("첫 번째", 1),
                 ),
                 curriculums = listOf(
-                    BootcampCurriculumCommand(5, 8, "심화", 2),
-                    BootcampCurriculumCommand(1, 4, "기초", 1),
+                    BootcampCurriculumDto.Request(5, 8, "심화", 2),
+                    BootcampCurriculumDto.Request(1, 4, "기초", 1),
                 ),
             ),
         )
@@ -173,8 +179,8 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampManager.update(
             savedBootcamp,
             updateCommand(
-                partners = listOf(BootcampPartnerCommand("첫 번째", 0)),
-                curriculums = listOf(BootcampCurriculumCommand(9, 12, "프로젝트", 0)),
+                partners = listOf(BootcampPartnerDto.Request("첫 번째", 0)),
+                curriculums = listOf(BootcampCurriculumDto.Request(9, 12, "프로젝트", 0)),
             ),
         )
 
@@ -331,7 +337,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         page: Int = 0,
         size: Int = 10,
         now: LocalDateTime,
-    ): BootcampPage = bootcampReader.readPublicPage(
+    ): BootcampPageDto = bootcampReader.readPublicPage(
         condition = condition,
         sortType = sortType,
         page = page,
@@ -385,12 +391,12 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     private fun createCommand(
         publicationStartAt: LocalDateTime? = null,
         publicationEndAt: LocalDateTime? = null,
-        partners: List<BootcampPartnerCommand> = emptyList(),
-        curriculums: List<BootcampCurriculumCommand> = emptyList(),
+        partners: List<BootcampPartnerDto.Request> = emptyList(),
+        curriculums: List<BootcampCurriculumDto.Request> = emptyList(),
         companyName: String = "오공고 교육사",
         title: String = "백엔드 부트캠프",
         tuitionType: TuitionType = TuitionType.FREE,
-    ): BootcampAppendCommand = BootcampAppendCommand(
+    ): BootcampAppendDto = BootcampAppendDto(
         companyName = companyName,
         title = title,
         programType = "개발",
@@ -460,7 +466,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         assertEquals(1L, metrics[viewedId]?.viewCount)
         assertEquals(0L, metrics[untouchedId]?.viewCount)
-        assertEquals(emptyMap<Long, BootcampMetricData>(), bootcampMetricReader.readAll(emptyList()))
+        assertEquals(emptyMap<Long, BootcampMetricDto>(), bootcampMetricReader.readAll(emptyList()))
     }
 
     @Test
@@ -549,9 +555,9 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     }
 
     private fun updateCommand(
-        partners: List<BootcampPartnerCommand>,
-        curriculums: List<BootcampCurriculumCommand>,
-    ): BootcampUpdateCommand = BootcampUpdateCommand(
+        partners: List<BootcampPartnerDto.Request>,
+        curriculums: List<BootcampCurriculumDto.Request>,
+    ): BootcampUpdateDto = BootcampUpdateDto(
         companyName = "변경 교육사",
         title = "변경 부트캠프",
         programType = "데이터",

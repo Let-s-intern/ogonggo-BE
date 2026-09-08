@@ -1,6 +1,7 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import org.springframework.data.domain.PageRequest
@@ -12,14 +13,14 @@ class JobBookmarkReader internal constructor(
     private val jobBookmarkRepository: JobBookmarkJpaRepository,
 ) {
 
-    fun readBookmarkedPublishedPage(userId: Long, page: Int, size: Int): JobPage {
+    fun readBookmarkedPublishedPage(userId: Long, page: Int, size: Int): JobPageDto {
         validateBookmarkPageRequest(page, size)
         val result = jobRepository.findBookmarkedJobs(
             userId = userId,
             publicationStatus = JobPublicationStatus.PUBLISHED,
             pageable = PageRequest.of(page, size),
         )
-        return JobPage(
+        return JobPageDto(
             jobs = result.content,
             page = result.number,
             size = result.size,
