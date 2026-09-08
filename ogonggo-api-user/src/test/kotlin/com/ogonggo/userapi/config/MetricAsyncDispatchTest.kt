@@ -16,7 +16,8 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.transaction.support.TransactionTemplate
-import java.time.LocalDateTime
+import org.mockito.Mockito
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +42,7 @@ import java.util.concurrent.TimeUnit
 )
 class MetricAsyncDispatchTest @Autowired constructor(
     private val eventPublisher: ApplicationEventPublisher,
-    private val jobMetricManager: RecordingJobMetricManager,
+    private val metricCalls: MetricCallRecorder,
     private val metricTaskExecutor: ThreadPoolTaskExecutor,
     private val transactionTemplate: TransactionTemplate,
 ) {
@@ -49,20 +50,34 @@ class MetricAsyncDispatchTest @Autowired constructor(
     @TestConfiguration
     class RecordingConfiguration {
         @Bean
+        fun metricCallRecorder() = MetricCallRecorder()
+
+        /**
+         * 지표 갱신이 어느 스레드에서 실행됐는지만 확인하면 되므로 실제 구현 대신 기록기를 끼운다.
+         * 메서드마다 인자 매처를 쓰지 않도록 모든 호출을 한 Answer로 받는다.
+         */
+        @Bean
         @Primary
-        fun recordingJobMetricManager() = RecordingJobMetricManager()
+        fun recordingJobMetricManager(recorder: MetricCallRecorder): JobMetricManager =
+            Mockito.mock(
+                JobMetricManager::class.java,
+                Mockito.withSettings().defaultAnswer { invocation ->
+                    recorder.record(invocation.method.name, Thread.currentThread().name)
+                    null
+                },
+            )
     }
 
     @BeforeEach
     fun resetRecordedCalls() {
-        jobMetricManager.reset()
+        metricCalls.reset()
     }
 
     @Test
     fun `조회 이벤트는 발행 스레드가 아니라 지표 실행기에서 처리된다`() {
         eventPublisher.publishEvent(JobViewedEvent(1L))
 
-        val thread = jobMetricManager.awaitViewCount()
+        val thread = metricCalls.await("increaseViewCount")
 
         assertTrue(
             thread?.startsWith("metric-") == true,
@@ -76,7 +91,7 @@ class MetricAsyncDispatchTest @Autowired constructor(
             eventPublisher.publishEvent(JobBookmarkChangedEvent(1L))
         }
 
-        val thread = jobMetricManager.awaitBookmarkCount()
+        val thread = metricCalls.await("syncBookmarkCount")
 
         assertTrue(
             thread?.startsWith("metric-") == true,
@@ -91,7 +106,7 @@ class MetricAsyncDispatchTest @Autowired constructor(
             status.setRollbackOnly()
         }
 
-        assertNull(jobMetricManager.awaitBookmarkCount(), "롤백된 북마크 변경이 지표에 반영됐습니다.")
+        assertNull(metricCalls.await("syncBookmarkCount"), "롤백된 북마크 변경이 지표에 반영됐습니다.")
     }
 
     @Test
@@ -101,27 +116,21 @@ class MetricAsyncDispatchTest @Autowired constructor(
     }
 }
 
-/** 스프링 컨텍스트를 공유하는 싱글턴이므로 기록을 테스트마다 비운다. */
-class RecordingJobMetricManager : JobMetricManager {
+/**
+ * 지표 갱신을 수행한 스레드 이름을 메서드별로 모은다.
+ * 스프링 컨텍스트를 공유하는 싱글턴이므로 기록을 테스트마다 비운다.
+ */
+class MetricCallRecorder {
 
-    private val viewCountThreads = LinkedBlockingQueue<String>()
-    private val bookmarkCountThreads = LinkedBlockingQueue<String>()
+    private val threadsByMethod = ConcurrentHashMap<String, LinkedBlockingQueue<String>>()
 
-    override fun increaseViewCount(jobId: Long, now: LocalDateTime) {
-        viewCountThreads.put(Thread.currentThread().name)
+    fun record(method: String, thread: String) {
+        threadsByMethod.computeIfAbsent(method) { LinkedBlockingQueue() }.put(thread)
     }
 
-    override fun syncBookmarkCount(jobId: Long, now: LocalDateTime) {
-        bookmarkCountThreads.put(Thread.currentThread().name)
-    }
+    fun reset() = threadsByMethod.clear()
 
-    fun reset() {
-        viewCountThreads.clear()
-        bookmarkCountThreads.clear()
-    }
-
-    /** 지표 기록을 수행한 스레드 이름이며, 제한 시간 안에 실행되지 않으면 null이다. */
-    fun awaitViewCount(): String? = viewCountThreads.poll(3, TimeUnit.SECONDS)
-
-    fun awaitBookmarkCount(): String? = bookmarkCountThreads.poll(3, TimeUnit.SECONDS)
+    /** 해당 지표 갱신을 수행한 스레드 이름이며, 제한 시간 안에 실행되지 않으면 null이다. */
+    fun await(method: String): String? =
+        threadsByMethod.computeIfAbsent(method) { LinkedBlockingQueue() }.poll(3, TimeUnit.SECONDS)
 }

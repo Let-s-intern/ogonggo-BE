@@ -8,16 +8,6 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
-interface JobMetricManager {
-    fun increaseViewCount(jobId: Long, now: LocalDateTime)
-
-    /**
-     * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
-     * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
-     */
-    fun syncBookmarkCount(jobId: Long, now: LocalDateTime)
-}
-
 /**
  * 지표 행 생성만 호출자와 분리된 트랜잭션에서 처리한다.
  *
@@ -37,12 +27,12 @@ internal class JobMetricRegistrar(
 }
 
 @Component
-internal class JobMetricManagerImpl(
+class JobMetricManager internal constructor(
     private val jobMetricRepository: JobMetricJpaRepository,
     private val jobMetricRegistrar: JobMetricRegistrar,
-) : JobMetricManager {
+) {
 
-    override fun increaseViewCount(jobId: Long, now: LocalDateTime) {
+    fun increaseViewCount(jobId: Long, now: LocalDateTime) {
         if (jobMetricRepository.increaseViewCount(jobId, now) > 0) {
             return
         }
@@ -50,7 +40,15 @@ internal class JobMetricManagerImpl(
         jobMetricRepository.increaseViewCount(jobId, now)
     }
 
-    override fun syncBookmarkCount(jobId: Long, now: LocalDateTime) {
+    /**
+
+    * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
+
+    * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
+
+    */
+
+    fun syncBookmarkCount(jobId: Long, now: LocalDateTime) {
         if (jobMetricRepository.syncBookmarkCount(jobId, now) > 0) {
             return
         }

@@ -13,46 +13,29 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
-interface JobReader {
-    fun read(jobId: Long): Job
-
-    /** 같은 원문에서 이미 수집한 공고가 있는지 확인한다. 삭제된 공고는 다시 등록할 수 있게 제외한다. */
-    fun existsBySourceUrl(sourceUrl: String): Boolean
-    fun readPublished(jobId: Long): Job
-    fun readPublishedPage(condition: JobSearchCondition, sortType: JobSortType, page: Int, size: Int): JobPage
-    fun readPublishedCalendar(rangeStart: LocalDateTime, rangeEndExclusive: LocalDateTime): List<Job>
-    fun readForUpdate(jobId: Long): Job
-
-    /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
-    fun readIncludingDeleted(jobId: Long): Job
-
-    fun readOwned(ownerUserId: Long, jobId: Long): Job
-    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage
-    fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job
-    fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job
-}
-
 @Component
-internal class JobReaderImpl(
+class JobReader internal constructor(
     private val jobRepository: JobJpaRepository,
     private val jobQueryRepository: JobQueryRepository,
-) : JobReader {
+) {
 
-    override fun read(jobId: Long): Job =
+    fun read(jobId: Long): Job =
         jobRepository.findByIdAndDeletedAtIsNull(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun existsBySourceUrl(sourceUrl: String): Boolean =
+    /** 같은 원문에서 이미 수집한 공고가 있는지 확인한다. 삭제된 공고는 다시 등록할 수 있게 제외한다. */
+
+    fun existsBySourceUrl(sourceUrl: String): Boolean =
         jobRepository.existsBySourceUrlAndDeletedAtIsNull(sourceUrl)
 
-    override fun readPublished(jobId: Long): Job =
+    fun readPublished(jobId: Long): Job =
         jobRepository.findByIdAndPublicationStatusAndDeletedAtIsNull(
             id = jobId,
             publicationStatus = JobPublicationStatus.PUBLISHED,
         ) ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
     /** 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. */
-    override fun readPublishedPage(
+    fun readPublishedPage(
         condition: JobSearchCondition,
         sortType: JobSortType,
         page: Int,
@@ -74,7 +57,7 @@ internal class JobReaderImpl(
         )
     }
 
-    override fun readPublishedCalendar(
+    fun readPublishedCalendar(
         rangeStart: LocalDateTime,
         rangeEndExclusive: LocalDateTime,
     ): List<Job> {
@@ -86,19 +69,21 @@ internal class JobReaderImpl(
         )
     }
 
-    override fun readForUpdate(jobId: Long): Job =
+    fun readForUpdate(jobId: Long): Job =
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readIncludingDeleted(jobId: Long): Job =
+    /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
+
+    fun readIncludingDeleted(jobId: Long): Job =
         jobRepository.findIncludingDeletedById(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readOwned(ownerUserId: Long, jobId: Long): Job =
+    fun readOwned(ownerUserId: Long, jobId: Long): Job =
         jobRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(jobId, ownerUserId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage {
+    fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): JobPage {
         validatePageRequest(page, size)
         val result = jobRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
             ownerUserId,
@@ -114,11 +99,11 @@ internal class JobReaderImpl(
         )
     }
 
-    override fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job =
+    fun readOwnedForUpdate(ownerUserId: Long, jobId: Long): Job =
         jobRepository.findOwnedByIdForUpdate(ownerUserId, jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    override fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job =
+    fun readOwnedForDelete(ownerUserId: Long, jobId: Long): Job =
         jobRepository.findOwnedByIdForDelete(ownerUserId, jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 }

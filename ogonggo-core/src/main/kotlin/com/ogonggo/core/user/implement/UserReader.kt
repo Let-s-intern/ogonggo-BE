@@ -7,27 +7,21 @@ import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 
-interface UserReader {
-    fun readByLetsCareerUserId(letsCareerUserId: Long): UserAccount?
-    fun read(userId: Long): UserAccount
-
-    /** 기업 회원 로그인용 조회. 자격증명이 없는 일반 회원 계정은 반환하지 않는다. */
-    fun readCredentialByEmail(email: String): UserCredential?
-}
-
 @Component
-internal class UserReaderImpl(
+class UserReader internal constructor(
     private val userRepository: UserJpaRepository,
-) : UserReader {
+) {
 
-    override fun readByLetsCareerUserId(letsCareerUserId: Long): UserAccount? =
+    fun readByLetsCareerUserId(letsCareerUserId: Long): UserAccount? =
         userRepository.findByLetsCareerUserId(letsCareerUserId)?.toAccount()
 
-    override fun read(userId: Long): UserAccount =
+    fun read(userId: Long): UserAccount =
         userRepository.findByIdOrNull(userId)?.toAccount()
             ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
 
-    override fun readCredentialByEmail(email: String): UserCredential? {
+    /** 기업 회원 로그인용 조회. 자격증명이 없는 일반 회원 계정은 반환하지 않는다. */
+
+    fun readCredentialByEmail(email: String): UserCredential? {
         val user = userRepository.findByEmail(email) ?: return null
         val encodedPassword = user.password ?: return null
 

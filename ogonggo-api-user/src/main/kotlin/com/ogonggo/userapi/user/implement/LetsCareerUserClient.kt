@@ -32,21 +32,21 @@ data class LetsCareerJobProfile(
     )
 }
 
-interface LetsCareerUserClient {
-    /**
-     * 가져오지 못하면 예외 대신 null을 반환한다.
-     * 학력과 희망 조건은 로그인의 성공 조건이 아니므로 이 호출이 가입을 실패로 만들면 안 된다.
-     */
-    fun readJobProfile(letsCareerUserId: Long): LetsCareerJobProfile?
-}
-
 @Component
-internal class LetsCareerUserRestClient(
+class LetsCareerUserClient(
     private val letsCareerRestClient: RestClient,
     private val properties: LetsCareerProperties,
-) : LetsCareerUserClient {
+) {
 
-    override fun readJobProfile(letsCareerUserId: Long): LetsCareerJobProfile? {
+    /**
+
+    * 가져오지 못하면 예외 대신 null을 반환한다.
+
+    * 학력과 희망 조건은 로그인의 성공 조건이 아니므로 이 호출이 가입을 실패로 만들면 안 된다.
+
+    */
+
+    fun readJobProfile(letsCareerUserId: Long): LetsCareerJobProfile? {
         val response = try {
             letsCareerRestClient.get()
                 .uri(JOB_PROFILE_PATH, letsCareerUserId)
@@ -77,7 +77,7 @@ internal class LetsCareerUserRestClient(
     companion object {
         private const val JOB_PROFILE_PATH = "/api/v1/internal/users/{userId}/job-profile"
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
-        private val log = LoggerFactory.getLogger(LetsCareerUserRestClient::class.java)
+        private val log = LoggerFactory.getLogger(LetsCareerUserClient::class.java)
     }
 }
 

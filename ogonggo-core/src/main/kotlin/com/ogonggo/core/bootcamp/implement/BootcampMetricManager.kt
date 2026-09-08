@@ -8,16 +8,6 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
-interface BootcampMetricManager {
-    fun increaseViewCount(bootcampId: Long, now: LocalDateTime)
-
-    /**
-     * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
-     * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
-     */
-    fun syncBookmarkCount(bootcampId: Long, now: LocalDateTime)
-}
-
 /**
  * 지표 행 생성만 호출자와 분리된 트랜잭션에서 처리한다.
  *
@@ -37,12 +27,12 @@ internal class BootcampMetricRegistrar(
 }
 
 @Component
-internal class BootcampMetricManagerImpl(
+class BootcampMetricManager internal constructor(
     private val bootcampMetricRepository: BootcampMetricJpaRepository,
     private val bootcampMetricRegistrar: BootcampMetricRegistrar,
-) : BootcampMetricManager {
+) {
 
-    override fun increaseViewCount(bootcampId: Long, now: LocalDateTime) {
+    fun increaseViewCount(bootcampId: Long, now: LocalDateTime) {
         if (bootcampMetricRepository.increaseViewCount(bootcampId, now) > 0) {
             return
         }
@@ -50,7 +40,15 @@ internal class BootcampMetricManagerImpl(
         bootcampMetricRepository.increaseViewCount(bootcampId, now)
     }
 
-    override fun syncBookmarkCount(bootcampId: Long, now: LocalDateTime) {
+    /**
+
+    * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
+
+    * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
+
+    */
+
+    fun syncBookmarkCount(bootcampId: Long, now: LocalDateTime) {
         if (bootcampMetricRepository.syncBookmarkCount(bootcampId, now) > 0) {
             return
         }

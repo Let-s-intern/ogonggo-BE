@@ -8,18 +8,14 @@ import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
 import org.springframework.stereotype.Component
 
-interface BootcampAppender {
-    fun append(command: BootcampAppendCommand): Bootcamp
-}
-
 @Component
-internal class BootcampAppenderImpl(
+class BootcampAppender internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
-) : BootcampAppender {
+) {
 
-    override fun append(command: BootcampAppendCommand): Bootcamp {
+    fun append(command: BootcampAppendCommand): Bootcamp {
         val bootcamp = bootcampRepository.save(
             Bootcamp(
                 ownerUserId = command.ownerUserId,

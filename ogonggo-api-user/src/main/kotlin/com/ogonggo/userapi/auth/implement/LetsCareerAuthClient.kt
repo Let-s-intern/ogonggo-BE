@@ -21,18 +21,15 @@ data class LetsCareerUser(
     val updatedAt: LocalDateTime?,
 )
 
-interface LetsCareerAuthClient {
-    /** 렛츠커리어 액세스 토큰을 검증하고 연동에 필요한 사용자 정보를 가져온다. */
-    fun verify(letsCareerAccessToken: String): LetsCareerUser
-}
-
 @Component
-internal class LetsCareerAuthRestClient(
+class LetsCareerAuthClient(
     private val letsCareerRestClient: RestClient,
     private val properties: LetsCareerProperties,
-) : LetsCareerAuthClient {
+) {
 
-    override fun verify(letsCareerAccessToken: String): LetsCareerUser {
+    /** 렛츠커리어 액세스 토큰을 검증하고 연동에 필요한 사용자 정보를 가져온다. */
+
+    fun verify(letsCareerAccessToken: String): LetsCareerUser {
         val response = try {
             letsCareerRestClient.post()
                 .uri(VERIFY_PATH)
@@ -70,7 +67,7 @@ internal class LetsCareerAuthRestClient(
     companion object {
         private const val VERIFY_PATH = "/api/v1/internal/auth/verify"
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
-        private val log = LoggerFactory.getLogger(LetsCareerAuthRestClient::class.java)
+        private val log = LoggerFactory.getLogger(LetsCareerAuthClient::class.java)
     }
 }
 

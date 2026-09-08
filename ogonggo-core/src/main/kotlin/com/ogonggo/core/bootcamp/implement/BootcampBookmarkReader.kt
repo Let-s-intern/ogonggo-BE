@@ -7,23 +7,17 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
 
-interface BootcampBookmarkReader {
-    fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int): BootcampPage
-    fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int, now: LocalDateTime): BootcampPage
-    fun readBookmarkedBootcampIds(userId: Long, bootcampIds: Collection<Long>): Set<Long>
-}
-
 @Component
-internal class BootcampBookmarkReaderImpl(
+class BootcampBookmarkReader internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampBookmarkRepository: BootcampBookmarkJpaRepository,
     private val clock: Clock,
-) : BootcampBookmarkReader {
+) {
 
-    override fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int): BootcampPage =
+    fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int): BootcampPage =
         readBookmarkedPublicPage(userId, page, size, LocalDateTime.now(clock))
 
-    override fun readBookmarkedPublicPage(
+    fun readBookmarkedPublicPage(
         userId: Long,
         page: Int,
         size: Int,
@@ -47,7 +41,7 @@ internal class BootcampBookmarkReaderImpl(
         )
     }
 
-    override fun readBookmarkedBootcampIds(userId: Long, bootcampIds: Collection<Long>): Set<Long> =
+    fun readBookmarkedBootcampIds(userId: Long, bootcampIds: Collection<Long>): Set<Long> =
         if (bootcampIds.isEmpty()) {
             emptySet()
         } else {

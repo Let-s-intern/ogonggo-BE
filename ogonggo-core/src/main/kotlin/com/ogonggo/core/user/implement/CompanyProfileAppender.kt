@@ -7,16 +7,12 @@ import com.ogonggo.core.user.persistence.CompanyProfileJpaRepository
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 
-interface CompanyProfileAppender {
-    fun append(command: CompanyProfileAppendCommand)
-}
-
 @Component
-internal class CompanyProfileAppenderImpl(
+class CompanyProfileAppender internal constructor(
     private val companyProfileRepository: CompanyProfileJpaRepository,
-) : CompanyProfileAppender {
+) {
 
-    override fun append(command: CompanyProfileAppendCommand) {
+    fun append(command: CompanyProfileAppendCommand) {
         try {
             companyProfileRepository.saveAndFlush(
                 CompanyProfile(

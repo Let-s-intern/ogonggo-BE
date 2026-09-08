@@ -6,18 +6,13 @@ import com.ogonggo.core.job.persistence.JobJpaRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 
-interface JobBookmarkReader {
-    fun readBookmarkedPublishedPage(userId: Long, page: Int, size: Int): JobPage
-    fun readBookmarkedJobIds(userId: Long, jobIds: Collection<Long>): Set<Long>
-}
-
 @Component
-internal class JobBookmarkReaderImpl(
+class JobBookmarkReader internal constructor(
     private val jobRepository: JobJpaRepository,
     private val jobBookmarkRepository: JobBookmarkJpaRepository,
-) : JobBookmarkReader {
+) {
 
-    override fun readBookmarkedPublishedPage(userId: Long, page: Int, size: Int): JobPage {
+    fun readBookmarkedPublishedPage(userId: Long, page: Int, size: Int): JobPage {
         validateBookmarkPageRequest(page, size)
         val result = jobRepository.findBookmarkedJobs(
             userId = userId,
@@ -34,7 +29,7 @@ internal class JobBookmarkReaderImpl(
         )
     }
 
-    override fun readBookmarkedJobIds(userId: Long, jobIds: Collection<Long>): Set<Long> =
+    fun readBookmarkedJobIds(userId: Long, jobIds: Collection<Long>): Set<Long> =
         if (jobIds.isEmpty()) emptySet() else jobBookmarkRepository.findActiveJobIds(userId, jobIds)
 }
 
