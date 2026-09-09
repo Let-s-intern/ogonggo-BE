@@ -74,6 +74,7 @@ class UserSecurityConfiguration {
                 // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 채용공고 조회 중 유일하게 로그인을 요구한다.
                 // 아래의 조회 전체 허용보다 먼저 선언해야 적용된다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
+                it.requestMatchers("/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").authenticated()
                 // 채용공고와 부트캠프 조회는 로그인 없이 연다.
                 // 액세스 토큰을 보내면 북마크 여부가 채워지고, 없으면 비로그인 응답을 준다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/**").permitAll()
