@@ -63,4 +63,11 @@ class RecruitmentPostController(
         return SuccessResponse.ok()
     }
 
+    override fun deleteRecruitmentPost(
+        userId: Long,
+        postId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        recruitmentPostService.delete(userId, postId)
+        return SuccessResponse.ok()
+    }
 }

@@ -12,6 +12,8 @@ import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserReader
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
+import java.time.LocalDateTime
 
 @Service
 class RecruitmentPostService(
@@ -20,6 +22,7 @@ class RecruitmentPostService(
     private val postManager: PostManager,
     private val postReader: PostReader,
     private val contentValidator: LexicalEditorStateValidator,
+    private val clock: Clock,
 ) {
 
     @Transactional(readOnly = true)
@@ -49,6 +52,15 @@ class RecruitmentPostService(
             content = contentValidator.validateAndSerialize(command.content),
         )
         postManager.update(post, sanitizedCommand)
+    }
+
+    @Transactional
+    fun delete(userId: Long, postId: Long) {
+        verifyActiveUser(userId)
+        postManager.delete(
+            postReader.readOwnedForDelete(userId, postId),
+            LocalDateTime.now(clock),
+        )
     }
 
     private fun verifyActiveUser(userId: Long) {

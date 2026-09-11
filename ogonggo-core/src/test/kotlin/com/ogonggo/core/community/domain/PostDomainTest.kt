@@ -78,6 +78,21 @@ class PostDomainTest {
     }
 
     @Test
+    @DisplayName("모집글을 삭제하면 최초 삭제 시각을 유지한다")
+    fun deletePost() {
+        // given
+        val post = createPostFixture()
+        val firstDeletedAt = LocalDateTime.of(2026, 9, 11, 9, 0)
+
+        // when
+        post.delete(firstDeletedAt)
+        post.delete(firstDeletedAt.plusDays(1))
+
+        // then
+        assertEquals(firstDeletedAt, post.deletedAt)
+    }
+
+    @Test
     @DisplayName("모집글을 수정하면 입력한 내용만 바뀌고 모집 상태는 유지된다")
     fun updatePost() {
         // given

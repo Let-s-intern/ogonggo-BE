@@ -19,12 +19,14 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(PostAppenderImpl::class, PostReaderImpl::class)
+@Import(PostAppenderImpl::class, PostManagerImpl::class, PostReaderImpl::class)
 internal class PostReaderPersistenceTest @Autowired constructor(
     private val postAppender: PostAppender,
+    private val postManager: PostManager,
     private val postReader: PostReader,
     private val postRepository: PostJpaRepository,
 ) {
@@ -115,6 +117,40 @@ internal class PostReaderPersistenceTest @Autowired constructor(
 
         assertEquals(setOf("스터디 모집", "사이드 프로젝트 모집"), result.posts.map(Post::title).toSet())
         assertEquals(2, result.totalElements)
+    }
+
+    @Test
+    fun `삭제된 모집글은 공개 단건과 목록에서 조회하지 않는다`() {
+        val deletedPost = postAppender.append(createCommand("삭제될 모집글", RecruitmentType.STUDY))
+        postManager.delete(deletedPost, LocalDateTime.of(2026, 9, 11, 9, 0))
+        postRepository.flush()
+
+        assertThrows(EntityNotFoundException::class.java) {
+            postReader.readPublished(checkNotNull(deletedPost.id))
+        }
+
+        val result = postReader.readPublishedPage(
+            page = 0,
+            size = 10,
+            filter = RecruitmentPostListFilter(),
+            sortType = RecruitmentPostSortType.LATEST,
+        )
+
+        assertEquals(emptyList<Post>(), result.posts)
+        assertEquals(0, result.totalElements)
+    }
+
+    @Test
+    fun `삭제용 조회는 삭제된 본인 모집글을 찾고 다른 사용자의 글은 찾지 않는다`() {
+        val deletedPost = postAppender.append(createCommand("삭제 대상", RecruitmentType.STUDY))
+        val postId = checkNotNull(deletedPost.id)
+        postManager.delete(deletedPost, LocalDateTime.of(2026, 9, 11, 9, 0))
+        postRepository.flush()
+
+        assertEquals(postId, postReader.readOwnedForDelete(1L, postId).id)
+        assertThrows(EntityNotFoundException::class.java) {
+            postReader.readOwnedForDelete(2L, postId)
+        }
     }
 
     @Test

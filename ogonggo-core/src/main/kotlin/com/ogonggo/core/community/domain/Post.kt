@@ -149,10 +149,21 @@ class Post internal constructor(
     var closedAt: LocalDateTime? = closedAt
         protected set
 
+    @Column(name = "deleted_at")
+    var deletedAt: LocalDateTime? = null
+        protected set
+
     fun close(closedAt: LocalDateTime) {
+        checkNotDeleted()
         if (recruitmentStatus == RecruitmentStatus.RECRUITING) {
             recruitmentStatus = RecruitmentStatus.CLOSED
             this.closedAt = closedAt
+        }
+    }
+
+    fun delete(deletedAt: LocalDateTime) {
+        if (this.deletedAt == null) {
+            this.deletedAt = deletedAt
         }
     }
 
@@ -172,6 +183,7 @@ class Post internal constructor(
         contactMethod: ContactMethod,
         contactValue: String,
     ) {
+        checkNotDeleted()
         validateEditableValues(
             title = title,
             capacity = capacity,
@@ -202,6 +214,9 @@ class Post internal constructor(
         this.contactValue = contactValue
     }
 
+    private fun checkNotDeleted() {
+        check(deletedAt == null) { "삭제된 모집글은 변경할 수 없습니다." }
+    }
 }
 
 private fun validateEditableValues(

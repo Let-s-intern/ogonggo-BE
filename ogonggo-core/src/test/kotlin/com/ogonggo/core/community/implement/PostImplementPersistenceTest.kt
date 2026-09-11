@@ -14,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -68,6 +69,22 @@ internal class PostImplementPersistenceTest @Autowired constructor(
         assertEquals(listOf("Java"), reloadedPost.technologyStacks)
         assertEquals(listOf(RecruitmentPosition.FRONTEND), reloadedPost.positions)
         assertEquals("https://open.kakao.com/o/updated", reloadedPost.contactValue)
+    }
+
+    @Test
+    fun `모집글 삭제 시 행을 보존하고 삭제 시각을 기록한다`() {
+        val savedPost = postAppender.append(createCommand())
+        val postId = checkNotNull(savedPost.id)
+        val firstDeletedAt = LocalDateTime.of(2026, 9, 11, 9, 0)
+
+        postManager.delete(savedPost, firstDeletedAt)
+        postManager.delete(savedPost, firstDeletedAt.plusDays(1))
+        postRepository.flush()
+
+        val reloadedPost = postRepository.findById(postId).orElseThrow()
+
+        assertEquals(firstDeletedAt, reloadedPost.deletedAt)
+        assertEquals(1, postRepository.count())
     }
 
     private fun createCommand() = PostAppendCommand(
