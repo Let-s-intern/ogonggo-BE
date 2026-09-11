@@ -2,8 +2,8 @@ package com.ogonggo.userapi.error
 
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.editor.lexical.LexicalEditorStateException
+import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.userapi.response.ErrorResponse
-import com.ogonggo.userapi.image.error.ImageUploadErrorCode
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity

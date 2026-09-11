@@ -1,20 +1,20 @@
-package com.ogonggo.userapi.image.implement
+package com.ogonggo.core.image.implement
 
 import com.ogonggo.core.error.InvalidValueException
-import com.ogonggo.userapi.image.business.UploadImageCommand
-import com.ogonggo.userapi.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.implement.dto.ImageUploadCommand
 import org.springframework.stereotype.Component
 
 /**
- * 업로드 파일의 기본 안전성만 검증한다.
+ * 공통 이미지 업로드 정책을 검증한다.
  *
  * 이미지 디코딩과 해상도 제한은 초기 업로드 범위에서 제외한다.
  * 파일명·확장자·클라이언트 MIME 타입은 저장 포맷을 결정하는 데 사용하지 않는다.
  */
 @Component
-class ImageFileValidator {
+internal class ImageFileValidator {
 
-    fun validate(command: UploadImageCommand): ValidatedImage {
+    fun validate(command: ImageUploadCommand): ValidatedImage {
         if (command.content.isEmpty()) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_REQUIRED)
         }

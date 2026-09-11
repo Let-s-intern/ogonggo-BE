@@ -1,53 +1,62 @@
 package com.ogonggo.userapi.image.business
 
-import com.ogonggo.core.storage.s3.S3ImageStorage
-import com.ogonggo.userapi.image.implement.ImageFileValidator
-import com.ogonggo.userapi.image.implement.ValidatedImage
+import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.error.InternalServerException
+import com.ogonggo.core.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.implement.ImageUploader
+import com.ogonggo.core.image.implement.dto.ImageUploadCommand
+import com.ogonggo.core.image.implement.dto.ImageUploadResult
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import org.mockito.stubbing.Answer
 
 class ImageUploadServiceTest {
 
-    private val imageFileValidator = Mockito.mock(ImageFileValidator::class.java)
-    private lateinit var uploadedKey: String
-    private lateinit var uploadedContent: ByteArray
-    private lateinit var uploadedContentType: String
-    private val s3ImageStorage = Mockito.mock(
-        S3ImageStorage::class.java,
-        Answer { invocation ->
-            if (invocation.method.name == "put") {
-                uploadedKey = invocation.arguments[0] as String
-                uploadedContent = invocation.arguments[1] as ByteArray
-                uploadedContentType = invocation.arguments[2] as String
-                "https://cdn.example.com/images/17/image.png"
-            } else {
-                Mockito.RETURNS_DEFAULTS.answer(invocation)
-            }
-        },
-    )
-    private val service = ImageUploadService(imageFileValidator, s3ImageStorage)
+    private val imageUploader = Mockito.mock(ImageUploader::class.java)
+    private val service = ImageUploadService(imageUploader)
 
     @Test
-    fun `사용자별 UUID key로 이미지를 S3에 저장하고 업로드 결과를 반환한다`() {
+    fun `공통 이미지 업로더를 호출하고 업로드 결과를 반환한다`() {
         val content = byteArrayOf(1, 2, 3)
-        val command = UploadImageCommand(content)
-        Mockito.`when`(imageFileValidator.validate(command)).thenReturn(
-            ValidatedImage(
-                content = content,
-                mimeType = "image/png",
-                extension = "png",
-            ),
+        val command = ImageUploadCommand(content)
+        val result = ImageUploadResult(
+            id = "image-id",
+            url = "https://cdn.example.com/images/image.png",
+            mimeType = "image/png",
+            size = 3L,
         )
-        val result = service.upload(17L, command)
+        Mockito.`when`(imageUploader.upload(command)).thenReturn(result)
 
-        assertEquals("https://cdn.example.com/images/17/image.png", result.url)
-        assertEquals("image/png", result.mimeType)
-        assertEquals(3L, result.size)
+        val uploaded = service.upload(17L, command)
 
-        assertEquals(true, uploadedKey.matches(Regex("images/[0-9a-f-]{36}\\.png")))
-        assertEquals(true, uploadedContent.contentEquals(content))
-        assertEquals("image/png", uploadedContentType)
+        assertEquals(result, uploaded)
+        Mockito.verify(imageUploader).upload(command)
+    }
+
+    @Test
+    fun `공통 업로더의 이미지 검증 오류는 그대로 전달한다`() {
+        val command = ImageUploadCommand(byteArrayOf())
+        val exception = InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_REQUIRED)
+        Mockito.`when`(imageUploader.upload(command)).thenThrow(exception)
+
+        val thrown = assertThrows(InvalidValueException::class.java) {
+            service.upload(17L, command)
+        }
+
+        assertSame(exception, thrown)
+    }
+
+    @Test
+    fun `공통 업로더의 저장 오류는 사용자 API 오류로 변환한다`() {
+        val command = ImageUploadCommand(byteArrayOf(1, 2, 3))
+        Mockito.`when`(imageUploader.upload(command)).thenThrow(IllegalStateException("S3 unavailable"))
+
+        val thrown = assertThrows(InternalServerException::class.java) {
+            service.upload(17L, command)
+        }
+
+        assertEquals(ImageUploadErrorCode.IMAGE_UPLOAD_FAILED, thrown.errorCode)
     }
 }

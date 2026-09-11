@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.image.presentation
 
+import com.ogonggo.core.image.implement.dto.ImageUploadCommand
 import com.ogonggo.userapi.image.business.ImageUploadService
-import com.ogonggo.userapi.image.business.UploadImageCommand
 import com.ogonggo.userapi.image.presentation.response.ImageUploadResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import org.springframework.http.MediaType
@@ -26,7 +26,7 @@ class ImageUploadController(
     ): ResponseEntity<SuccessResponse<ImageUploadResponse>> {
         val result = imageUploadService.upload(
             userId = userId,
-            command = UploadImageCommand(
+            command = ImageUploadCommand(
                 content = file.bytes,
             ),
         )

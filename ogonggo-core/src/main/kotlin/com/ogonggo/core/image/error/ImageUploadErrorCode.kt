@@ -1,4 +1,4 @@
-package com.ogonggo.userapi.image.error
+package com.ogonggo.core.image.error
 
 import com.ogonggo.core.error.ErrorCode
 import org.springframework.http.HttpStatus

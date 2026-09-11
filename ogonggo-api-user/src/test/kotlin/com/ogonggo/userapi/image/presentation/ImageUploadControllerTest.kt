@@ -1,11 +1,11 @@
 package com.ogonggo.userapi.image.presentation
 
+import com.ogonggo.core.image.implement.dto.ImageUploadCommand
+import com.ogonggo.core.image.implement.dto.ImageUploadResult
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
-import com.ogonggo.userapi.image.business.ImageUploadResult
 import com.ogonggo.userapi.image.business.ImageUploadService
-import com.ogonggo.userapi.image.business.UploadImageCommand
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -37,7 +37,7 @@ class ImageUploadControllerTest @Autowired constructor(
     fun `인증된 사용자가 이미지를 업로드하면 201과 이미지 정보를 반환한다`() {
         val content = byteArrayOf(1, 2, 3)
         val file = MockMultipartFile("file", "image.png", "image/png", content)
-        val command = UploadImageCommand(content)
+        val command = ImageUploadCommand(content)
         Mockito.`when`(imageUploadService.upload(USER_ID, command))
             .thenReturn(
                 ImageUploadResult(
