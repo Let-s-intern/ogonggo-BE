@@ -2,7 +2,11 @@ package com.ogonggo.userapi.config
 
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.health.UserHealthController
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
+import org.springframework.boot.actuate.health.Health
+import org.springframework.boot.actuate.health.HealthEndpoint
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
@@ -27,6 +31,16 @@ class UserCorsConfigurationTest @Autowired constructor(
 
     @MockBean
     private lateinit var tokenProvider: OgonggoTokenProvider
+
+    /** 이 테스트는 CORS 배선을 본다. 헬스 체크가 200을 주도록 의존성 확인은 대역으로 둔다. */
+    @MockBean
+    private lateinit var healthEndpoint: HealthEndpoint
+
+    @BeforeEach
+    fun setUp() {
+        Mockito.`when`(healthEndpoint.healthForPath("db")).thenReturn(Health.up().build())
+        Mockito.`when`(healthEndpoint.healthForPath("redis")).thenReturn(Health.up().build())
+    }
 
     @Test
     fun `허용한 오리진의 preflight는 CORS 헤더와 함께 통과한다`() {
