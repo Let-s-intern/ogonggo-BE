@@ -2,6 +2,7 @@ package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.PostAppender
+import com.ogonggo.core.community.implement.PostReader
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -13,7 +14,12 @@ import org.springframework.transaction.annotation.Transactional
 class RecruitmentPostService(
     private val userReader: UserReader,
     private val postAppender: PostAppender,
+    private val postReader: PostReader,
 ) {
+
+    @Transactional(readOnly = true)
+    fun getRecruitmentPosts(query: RecruitmentPostListQuery): RecruitmentPostPageResult =
+        postReader.readPublishedPage(query.page, query.size, query.filter, query.sortType).toResult()
 
     @Transactional
     fun create(userId: Long, command: PostAppendCommand): Long {

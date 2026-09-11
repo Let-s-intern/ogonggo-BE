@@ -3,10 +3,16 @@ package com.ogonggo.userapi.community.presentation
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
+import com.ogonggo.core.community.domain.RecruitmentPostSortType
+import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
+import com.ogonggo.userapi.community.business.RecruitmentPostListQuery
 import com.ogonggo.userapi.community.business.RecruitmentPostService
+import com.ogonggo.userapi.community.business.RecruitmentPostPageResult
+import com.ogonggo.userapi.community.business.RecruitmentPostSummary
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
 import org.junit.jupiter.api.Test
@@ -17,6 +23,7 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
@@ -35,6 +42,116 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
+
+    @Test
+    fun `모집글 목록을 페이지와 enum 필터로 조회한다`() {
+        val filter = RecruitmentPostListFilter(
+            recruitmentTypes = setOf(RecruitmentType.STUDY, RecruitmentType.SIDE_PROJECT),
+            progressMethods = setOf(ProgressMethod.ONLINE),
+            recruitmentStatuses = setOf(RecruitmentStatus.RECRUITING),
+            positions = setOf(RecruitmentPosition.BACKEND),
+        )
+        Mockito.`when`(
+            recruitmentPostService.getRecruitmentPosts(
+                RecruitmentPostListQuery(
+                    page = 1,
+                    size = 2,
+                    sortType = RecruitmentPostSortType.DEADLINE,
+                    filter = filter,
+                ),
+            ),
+        ).thenReturn(
+            RecruitmentPostPageResult(
+                items = listOf(
+                    RecruitmentPostSummary(
+                        id = 12L,
+                        title = "스터디 모집",
+                        recruitmentType = RecruitmentType.STUDY,
+                        progressMethod = ProgressMethod.ONLINE,
+                        recruitmentStatus = RecruitmentStatus.RECRUITING,
+                        capacity = 6,
+                        activityDurationMonths = 3,
+                        technologyStacks = listOf("Kotlin"),
+                        recruitmentStartDate = LocalDate.of(2026, 9, 1),
+                        recruitmentEndDate = LocalDate.of(2026, 9, 30),
+                    ),
+                ),
+                page = 1,
+                size = 2,
+                totalElements = 3,
+                totalPages = 2,
+            ),
+        )
+
+        mockMvc.perform(
+            get("/api/v1/recruitment-posts")
+                .param("page", "2")
+                .param("size", "2")
+                .param("sort", "DEADLINE")
+                .param("recruitmentTypes", "STUDY", "SIDE_PROJECT")
+                .param("progressMethods", "ONLINE")
+                .param("recruitmentStatuses", "RECRUITING")
+                .param("positions", "BACKEND"),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data.items[0].id").value(12))
+            .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
+            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
+            .andExpect(jsonPath("$.data.pageInfo.totalElements").value(3))
+
+        Mockito.verify(recruitmentPostService).getRecruitmentPosts(
+            RecruitmentPostListQuery(1, 2, RecruitmentPostSortType.DEADLINE, filter),
+        )
+    }
+
+    @Test
+    fun `인증되지 않은 사용자도 공개 모집글 목록을 조회할 수 있다`() {
+        Mockito.`when`(
+            recruitmentPostService.getRecruitmentPosts(
+                RecruitmentPostListQuery(
+                    page = 0,
+                    size = 10,
+                    sortType = RecruitmentPostSortType.LATEST,
+                    filter = RecruitmentPostListFilter(),
+                ),
+            ),
+        ).thenReturn(RecruitmentPostPageResult(emptyList(), 0, 10, 0, 0))
+
+        mockMvc.perform(get("/api/v1/recruitment-posts"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items").isEmpty)
+    }
+
+    @Test
+    fun `페이지 크기가 범위를 벗어나면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/recruitment-posts").param("size", "101"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
+    fun `페이지 번호가 1보다 작으면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/recruitment-posts").param("page", "0"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
+    fun `지원하지 않는 enum 필터는 400을 반환한다`() {
+        mockMvc.perform(
+            get("/api/v1/recruitment-posts")
+                .param("recruitmentTypes", "UNKNOWN"),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
 
     @Test
     fun `인증된 사용자가 모집글을 생성하면 201과 식별자를 반환한다`() {

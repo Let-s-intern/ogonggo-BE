@@ -7,6 +7,7 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.PostAppender
+import com.ogonggo.core.community.implement.PostReader
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserAccount
@@ -20,7 +21,8 @@ class RecruitmentPostServiceTest {
 
     private val userReader = Mockito.mock(UserReader::class.java)
     private val postAppender = Mockito.mock(PostAppender::class.java)
-    private val service = RecruitmentPostService(userReader, postAppender)
+    private val postReader = Mockito.mock(PostReader::class.java)
+    private val service = RecruitmentPostService(userReader, postAppender, postReader)
 
     @Test
     fun `활성 사용자가 생성한 모집글의 식별자를 반환한다`() {
