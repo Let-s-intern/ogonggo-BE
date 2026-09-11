@@ -57,6 +57,24 @@ data class CrawlerJobRegistrationRequest(
     @field:Size(max = 100, message = "근무 지역은 100자 이하여야 합니다.")
     val region: String? = null,
 
+    @field:Schema(description = "직군. 생략 가능", example = "마케팅")
+    @field:Size(max = 100, message = "직군은 100자 이하여야 합니다.")
+    val jobField: String? = null,
+
+    @field:Schema(
+        description = "직무. 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다. 생략 가능",
+        example = "마케터",
+    )
+    @field:Size(max = 100, message = "직무는 100자 이하여야 합니다.")
+    val jobRole: String? = null,
+
+    @field:Schema(
+        description = "산업. 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다. 생략 가능",
+        example = "뷰티",
+    )
+    @field:Size(max = 100, message = "산업은 100자 이하여야 합니다.")
+    val industry: String? = null,
+
     @field:Schema(description = "AI가 생성한 태그 목록")
     val tags: List<@NotBlank(message = "태그명은 비어 있을 수 없습니다.") String> = emptyList(),
 
@@ -96,6 +114,9 @@ data class CrawlerJobRegistrationRequest(
         experienceMaxYears = experienceMaxYears,
         educationLevel = educationLevel ?: EducationLevel.ANY,
         region = region,
+        jobField = jobField,
+        jobRole = jobRole,
+        industry = industry,
         recruitmentType = resolveRecruitmentType(),
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,

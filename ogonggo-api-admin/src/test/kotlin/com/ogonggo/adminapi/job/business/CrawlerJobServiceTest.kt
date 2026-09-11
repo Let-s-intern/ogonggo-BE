@@ -54,6 +54,9 @@ class CrawlerJobServiceTest {
         assertEquals("오공고", appended.companyName)
         assertEquals("렛츠커리어", appended.parentCompanyName)
         assertEquals(JobRecruitmentType.ALWAYS_OPEN, appended.recruitmentType)
+        assertEquals("개발", appended.jobField)
+        assertEquals("백엔드 개발자", appended.jobRole)
+        assertEquals("IT", appended.industry)
         assertEquals(listOf(JOB_ID to listOf("백엔드", "스프링")), appendedTags)
     }
 
@@ -78,6 +81,9 @@ class CrawlerJobServiceTest {
         experienceMaxYears = null,
         educationLevel = EducationLevel.ANY,
         region = null,
+        jobField = "개발",
+        jobRole = "백엔드 개발자",
+        industry = "IT",
         recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
         recruitmentStartAt = null,
         recruitmentEndAt = null,

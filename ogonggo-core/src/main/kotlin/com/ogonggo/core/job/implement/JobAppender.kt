@@ -19,6 +19,8 @@ class JobAppender internal constructor(
                 companyLogoUrl = command.companyLogoUrl,
                 title = command.title,
                 jobField = command.jobField,
+                jobRole = command.jobRole,
+                industry = command.industry,
                 coverImageUrl = command.coverImageUrl,
                 employmentType = command.employmentType,
                 experienceType = command.experienceType,

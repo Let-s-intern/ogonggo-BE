@@ -23,7 +23,12 @@ interface CompanyJobWriteRequest {
     val parentCompanyName: String?
     val companyLogoUrl: String?
     val title: String
+    /** 직군. 직무·산업과 함께 사용자 프로필의 희망 직군·직무·산업과 짝을 이룬다. */
     val jobField: String?
+    /** 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다. */
+    val jobRole: String?
+    /** 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다. */
+    val industry: String?
     val coverImageUrl: String?
     val employmentType: EmploymentType
     val experienceType: ExperienceType
@@ -60,6 +65,8 @@ data class CreateCompanyJobRequest(
     @field:Size(max = 2048) @field:URL override val companyLogoUrl: String?,
     @field:NotBlank @field:Size(max = 255) override val title: String,
     @field:Size(max = 100) override val jobField: String?,
+    @field:Size(max = 100) override val jobRole: String?,
+    @field:Size(max = 100) override val industry: String?,
     @field:Size(max = 2048) @field:URL override val coverImageUrl: String?,
     override val employmentType: EmploymentType,
     override val experienceType: ExperienceType,
@@ -91,6 +98,8 @@ data class CreateCompanyJobRequest(
         companyLogoUrl = companyLogoUrl,
         title = title,
         jobField = jobField,
+        jobRole = jobRole,
+        industry = industry,
         coverImageUrl = coverImageUrl,
         employmentType = employmentType,
         experienceType = experienceType,
@@ -123,6 +132,8 @@ data class UpdateCompanyJobRequest(
     @field:Size(max = 2048) @field:URL override val companyLogoUrl: String?,
     @field:NotBlank @field:Size(max = 255) override val title: String,
     @field:Size(max = 100) override val jobField: String?,
+    @field:Size(max = 100) override val jobRole: String?,
+    @field:Size(max = 100) override val industry: String?,
     @field:Size(max = 2048) @field:URL override val coverImageUrl: String?,
     override val employmentType: EmploymentType,
     override val experienceType: ExperienceType,
@@ -154,6 +165,8 @@ data class UpdateCompanyJobRequest(
         companyLogoUrl = companyLogoUrl,
         title = title,
         jobField = jobField,
+        jobRole = jobRole,
+        industry = industry,
         coverImageUrl = coverImageUrl,
         employmentType = employmentType,
         experienceType = experienceType,

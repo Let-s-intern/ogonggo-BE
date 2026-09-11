@@ -19,7 +19,9 @@ class JobDomainTest {
             employmentType = EmploymentType.INTERN,
             parentCompanyName = "변경 모회사",
             companyLogoUrl = "https://example.com/logo2.png",
-            jobField = "서버 개발",
+            jobField = "개발",
+            jobRole = "서버 개발자",
+            industry = "IT",
             coverImageUrl = "https://example.com/cover2.png",
             recruitmentHeadcount = 5,
             experienceType = ExperienceType.NEWCOMER,
@@ -48,7 +50,9 @@ class JobDomainTest {
         assertEquals("변경 모회사", job.parentCompanyName)
         assertEquals("https://example.com/logo2.png", job.companyLogoUrl)
         assertEquals("백엔드 인턴", job.title)
-        assertEquals("서버 개발", job.jobField)
+        assertEquals("개발", job.jobField)
+        assertEquals("서버 개발자", job.jobRole)
+        assertEquals("IT", job.industry)
         assertEquals("https://example.com/cover2.png", job.coverImageUrl)
         assertEquals(5, job.recruitmentHeadcount)
         assertEquals(EmploymentType.INTERN, job.employmentType)
@@ -74,6 +78,8 @@ class JobDomainTest {
         assertThrows(IllegalArgumentException::class.java) { createJob(region = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(companyLogoUrl = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(jobField = " ") }
+        assertThrows(IllegalArgumentException::class.java) { createJob(jobRole = " ") }
+        assertThrows(IllegalArgumentException::class.java) { createJob(industry = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(coverImageUrl = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(recruitmentHeadcount = 0) }
         assertThrows(IllegalArgumentException::class.java) { createJob(experienceMinYears = -1) }
@@ -127,6 +133,8 @@ class JobDomainTest {
         parentCompanyName: String? = null,
         companyLogoUrl: String? = null,
         jobField: String? = null,
+        jobRole: String? = null,
+        industry: String? = null,
         coverImageUrl: String? = null,
         recruitmentHeadcount: Int? = null,
         region: String? = "서울",
@@ -140,6 +148,8 @@ class JobDomainTest {
         companyLogoUrl = companyLogoUrl,
         title = "백엔드 개발자",
         jobField = jobField,
+        jobRole = jobRole,
+        industry = industry,
         coverImageUrl = coverImageUrl,
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
