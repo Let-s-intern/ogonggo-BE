@@ -1,8 +1,8 @@
-package com.ogonggo.userapi.image.implement
+package com.ogonggo.core.image.implement
 
 import com.ogonggo.core.error.InvalidValueException
-import com.ogonggo.userapi.image.business.UploadImageCommand
-import com.ogonggo.userapi.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.implement.dto.ImageUploadCommand
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -16,7 +16,7 @@ class ImageFileValidatorTest {
     @ParameterizedTest
     @ValueSource(strings = ["png", "jpg", "webp"])
     fun `허용된 이미지 포맷은 실제 파일 시그니처를 기준으로 저장 정보를 만든다`(format: String) {
-        val result = validator.validate(UploadImageCommand(signature(format)))
+        val result = validator.validate(ImageUploadCommand(signature(format)))
 
         assertEquals(
             when (format) {
@@ -33,7 +33,7 @@ class ImageFileValidatorTest {
     @ValueSource(strings = ["<svg><script>alert(1)</script></svg>", "not-an-image"])
     fun `허용되지 않은 파일은 거부한다`(content: String) {
         val exception = assertThrows(InvalidValueException::class.java) {
-            validator.validate(UploadImageCommand(content.toByteArray()))
+            validator.validate(ImageUploadCommand(content.toByteArray()))
         }
 
         assertEquals(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED, exception.errorCode)
@@ -42,7 +42,7 @@ class ImageFileValidatorTest {
     @Test
     fun `빈 파일은 필수 파일 오류로 거부한다`() {
         val exception = assertThrows(InvalidValueException::class.java) {
-            validator.validate(UploadImageCommand(byteArrayOf()))
+            validator.validate(ImageUploadCommand(byteArrayOf()))
         }
 
         assertEquals(ImageUploadErrorCode.IMAGE_FILE_REQUIRED, exception.errorCode)
@@ -51,7 +51,7 @@ class ImageFileValidatorTest {
     @Test
     fun `파일 크기가 10 MiB를 초과하면 거부한다`() {
         val exception = assertThrows(InvalidValueException::class.java) {
-            validator.validate(UploadImageCommand(ByteArray(10 * 1024 * 1024 + 1)))
+            validator.validate(ImageUploadCommand(ByteArray(10 * 1024 * 1024 + 1)))
         }
 
         assertEquals(ImageUploadErrorCode.IMAGE_FILE_TOO_LARGE, exception.errorCode)

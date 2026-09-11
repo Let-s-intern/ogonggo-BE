@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.image.presentation.response
 
-import com.ogonggo.userapi.image.business.ImageUploadResult
+import com.ogonggo.core.image.implement.dto.ImageUploadResult
 
 data class ImageUploadResponse(
     val id: String,
