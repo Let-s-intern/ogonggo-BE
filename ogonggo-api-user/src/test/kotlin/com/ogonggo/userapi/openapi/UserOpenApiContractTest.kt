@@ -84,7 +84,6 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/post").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/delete").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1bootcamps/get").isObject)
-<<<<<<< HEAD
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/post").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/delete").isObject)
