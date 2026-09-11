@@ -13,13 +13,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
 
 @Tag(name = "내 정보")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-@RequestMapping("/api/v1/users/me")
 interface UserAccountApi {
 
     @Operation(
@@ -50,10 +46,8 @@ interface UserAccountApi {
             ),
         ],
     )
-    @GetMapping
     fun getMyAccount(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
     ): ResponseEntity<SuccessResponse<MyAccountResponse>>
 }

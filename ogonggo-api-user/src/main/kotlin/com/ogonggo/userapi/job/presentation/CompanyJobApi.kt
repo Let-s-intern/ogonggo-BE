@@ -22,15 +22,6 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 
 private const val COMPANY_FORBIDDEN_DESCRIPTION =
     "COMPANY_ROLE_REQUIRED, USER_SUSPENDED 또는 USER_WITHDRAWN"
@@ -39,7 +30,6 @@ private const val JOB_NOT_FOUND_DESCRIPTION =
 
 @Tag(name = "기업회원 채용공고")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-@RequestMapping("/api/v1/users/me/jobs")
 interface CompanyJobApi {
 
     @Operation(
@@ -59,10 +49,9 @@ interface CompanyJobApi {
             ),
         ],
     )
-    @PostMapping
     fun createJob(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @RequestBody @Valid request: CreateCompanyJobRequest,
+        @Parameter(hidden = true) userId: Long,
+        @Valid request: CreateCompanyJobRequest,
     ): ResponseEntity<SuccessResponse<CreateCompanyJobResponse>>
 
     @Operation(operationId = "listMyJobs",
@@ -77,11 +66,10 @@ summary = "내 채용공고 목록 조회", description = "최근에 등록한 �
             ),
         ],
     )
-    @GetMapping
     fun getJobs(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @RequestParam(name = "page", defaultValue = "1") @Min(1) page: Int,
-        @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) size: Int,
+        @Parameter(hidden = true) userId: Long,
+        @Min(1) page: Int,
+        @Min(1) @Max(100) size: Int,
     ): ResponseEntity<SuccessResponse<PageResponse<CompanyJobSummaryResponse>>>
 
     @Operation(operationId = "getMyJob", summary = "내 채용공고 상세 조회")
@@ -95,10 +83,9 @@ summary = "내 채용공고 목록 조회", description = "최근에 등록한 �
             ),
         ],
     )
-    @GetMapping("/{jobId}")
     fun getJob(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("jobId") @Positive jobId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<CompanyJobDetailResponse>>
 
     @Operation(operationId = "replaceMyJob",
@@ -113,11 +100,10 @@ summary = "내 채용공고 수정", description = "보낸 값으로 공고 전�
             ),
         ],
     )
-    @PutMapping("/{jobId}")
     fun updateJob(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("jobId") @Positive jobId: Long,
-        @RequestBody @Valid request: UpdateCompanyJobRequest,
+        @Parameter(hidden = true) userId: Long,
+        @Positive jobId: Long,
+        @Valid request: UpdateCompanyJobRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
@@ -135,10 +121,9 @@ summary = "내 채용공고 수정", description = "보낸 값으로 공고 전�
             ),
         ],
     )
-    @PostMapping("/{jobId}/publish")
     fun publishJob(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("jobId") @Positive jobId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
@@ -156,10 +141,9 @@ summary = "내 채용공고 수정", description = "보낸 값으로 공고 전�
             ),
         ],
     )
-    @PostMapping("/{jobId}/close")
     fun closeJob(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("jobId") @Positive jobId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(operationId = "deleteMyJob",
@@ -174,9 +158,8 @@ summary = "내 채용공고 삭제", description = "여러 번 삭제해도 최�
             ),
         ],
     )
-    @DeleteMapping("/{jobId}")
     fun deleteJob(
-        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
-        @PathVariable("jobId") @Positive jobId: Long,
+        @Parameter(hidden = true) userId: Long,
+        @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 }

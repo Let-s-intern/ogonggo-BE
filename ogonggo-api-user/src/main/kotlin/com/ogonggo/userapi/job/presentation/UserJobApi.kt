@@ -23,17 +23,9 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import java.time.LocalDate
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 
 @Tag(name = "채용공고")
-@RequestMapping("/api/v1/jobs")
 interface UserJobApi {
 
     @Operation(
@@ -54,25 +46,17 @@ interface UserJobApi {
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-    @GetMapping
     fun getJobs(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long?,
-        @RequestParam(name = "page", defaultValue = "1")
         @Min(1)
         page: Int,
-        @RequestParam(name = "size", defaultValue = "10")
         @Min(1)
         @Max(100)
         size: Int,
-        @RequestParam(name = "sort", defaultValue = "LATEST")
         sortType: JobSortType,
-        @RequestParam(name = "employmentType", required = false)
         employmentType: EmploymentType?,
-        @RequestParam(name = "experienceType", required = false)
         experienceType: ExperienceType?,
-        @RequestParam(name = "keyword", required = false)
         @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
@@ -104,12 +88,9 @@ interface UserJobApi {
             ),
         ],
     )
-    @PostMapping("/{jobId}/source-url-clicks")
     fun recordSourceUrlClick(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
-        @PathVariable("jobId")
         @Positive
         jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
@@ -146,13 +127,8 @@ interface UserJobApi {
             ),
         ],
     )
-    @GetMapping("/calendar")
     fun getJobCalendar(
-        @RequestParam("from")
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         from: LocalDate,
-        @RequestParam("to")
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         to: LocalDate,
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>>
 
@@ -179,12 +155,9 @@ interface UserJobApi {
         ],
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-    @GetMapping("/{jobId}")
     fun getJob(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long?,
-        @PathVariable("jobId")
         @Positive
         jobId: Long,
     ): ResponseEntity<SuccessResponse<UserJobDetailResponse>>

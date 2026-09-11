@@ -11,23 +11,31 @@ import com.ogonggo.userapi.error.InvalidRequestParameterException
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Validated
 @RestController
+@RequestMapping("/api/v1/bootcamps")
 class UserBootcampController(
     private val userBootcampService: UserBootcampService,
 ) : UserBootcampApi {
 
+    @GetMapping
     override fun getBootcamps(
-        userId: Long?,
-        page: Int,
-        size: Int,
-        sortType: BootcampSortType,
-        tuitionType: TuitionType?,
-        status: BootcampStatus?,
-        keyword: String?,
+        @AuthenticationPrincipal userId: Long?,
+        @RequestParam(name = "page", defaultValue = "1") page: Int,
+        @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "sort", defaultValue = "LATEST") sortType: BootcampSortType,
+        @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
+        @RequestParam(name = "status", required = false) status: BootcampStatus?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
         validateStatus(status)
         val result = userBootcampService.getBootcamps(
@@ -52,17 +60,19 @@ class UserBootcampController(
         )
     }
 
+    @PostMapping("/{bootcampId}/application-url-clicks")
     override fun recordApplicationUrlClick(
-        userId: Long,
-        bootcampId: Long,
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("bootcampId") bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         userBootcampService.recordApplicationUrlClick(userId, bootcampId)
         return SuccessResponse.ok()
     }
 
+    @GetMapping("/{bootcampId}")
     override fun getBootcamp(
-        userId: Long?,
-        bootcampId: Long,
+        @AuthenticationPrincipal userId: Long?,
+        @PathVariable("bootcampId") bootcampId: Long,
     ): ResponseEntity<SuccessResponse<UserBootcampDetailResponse>> =
         SuccessResponse.ok(UserBootcampDetailResponse.from(userBootcampService.getBootcamp(userId, bootcampId)))
 

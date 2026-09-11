@@ -22,15 +22,8 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 
 @Tag(name = "부트캠프")
-@RequestMapping("/api/v1/bootcamps")
 interface UserBootcampApi {
 
     @Operation(
@@ -62,25 +55,17 @@ interface UserBootcampApi {
             ),
         ],
     )
-    @GetMapping
     fun getBootcamps(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long?,
-        @RequestParam(name = "page", defaultValue = "1")
         @Min(1)
         page: Int,
-        @RequestParam(name = "size", defaultValue = "10")
         @Min(1)
         @Max(100)
         size: Int,
-        @RequestParam(name = "sort", defaultValue = "LATEST")
         sortType: BootcampSortType,
-        @RequestParam(name = "tuitionType", required = false)
         tuitionType: TuitionType?,
-        @RequestParam(name = "status", required = false)
         status: BootcampStatus?,
-        @RequestParam(name = "keyword", required = false)
         @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
@@ -112,12 +97,9 @@ interface UserBootcampApi {
             ),
         ],
     )
-    @PostMapping("/{bootcampId}/application-url-clicks")
     fun recordApplicationUrlClick(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long,
-        @PathVariable("bootcampId")
         @Positive
         bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
@@ -145,12 +127,9 @@ interface UserBootcampApi {
             ),
         ],
     )
-    @GetMapping("/{bootcampId}")
     fun getBootcamp(
         @Parameter(hidden = true)
-        @AuthenticationPrincipal
         userId: Long?,
-        @PathVariable("bootcampId")
         @Positive
         bootcampId: Long,
     ): ResponseEntity<SuccessResponse<UserBootcampDetailResponse>>

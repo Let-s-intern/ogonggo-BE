@@ -2,20 +2,22 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-08-27
+- 최종 변경일: 2026-09-08
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: API를 개발·연동·검증하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
 
 ## 1. 먼저 알아야 할 결정
 
-> 각 API 모듈은 자신의 OpenAPI 명세를 소유하고, HTTP 계약 인터페이스에 Spring MVC·검증·Swagger annotation을 함께 둡니다.
+> 각 API 모듈은 자신의 OpenAPI 명세를 소유하고, 명세 인터페이스에는 Swagger annotation과 Bean Validation만 둡니다. Spring MVC Mapping은 Controller가 가집니다.
 
 ```text
-UserJobApi        ← HTTP 경로, 입력, 반환형, OpenAPI 명세
+UserJobApi        ← 메서드 시그니처, 반환형, 입력 제약, OpenAPI 명세
       ↑
-UserJobController ← @RestController, 의존성, 실제 처리
+UserJobController ← @RestController, HTTP 경로와 입력 바인딩, 의존성, 실제 처리
 ```
+
+경로를 바꾸려면 Controller만 보면 되고, 명세를 바꾸려면 인터페이스만 보면 됩니다. Bean Validation이 인터페이스에 남는 이유는 3절에 있습니다.
 
 사용자·관리자 API는 독립 애플리케이션이므로 각각 `Ogonggo User API`, `Ogonggo Admin API` 명세와 Swagger UI를 제공합니다. core에는 OpenAPI 의존성을 넣지 않습니다.
 
@@ -33,15 +35,24 @@ Swagger 경로는 문서가 활성화된 환경에서 세션 없이 접근할 �
 
 ## 3. API 인터페이스 규칙
 
-- 도메인 Controller마다 `UserJobApi`, `AdminJobApi`처럼 HTTP 계약 인터페이스를 둡니다.
-- 인터페이스에 `@RequestMapping`, HTTP Method Mapping, 입력 annotation, Bean Validation, `@Tag`, `@Operation`, `@ApiResponse`를 둡니다.
-- 구현체에는 같은 annotation을 반복하지 않고 `@RestController`, `@Validated`, 의존성과 처리 로직만 둡니다.
+- 도메인 Controller마다 `UserJobApi`, `AdminJobApi`처럼 명세 인터페이스를 둡니다.
+- 인터페이스에는 `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`, `@SecurityRequirement` 같은 Swagger annotation과 Bean Validation 제약(`@Valid`, `@Min`, `@Max`, `@Size`, `@Positive`)을 둡니다.
+- 구현체에는 `@RestController`, `@Validated`, `@RequestMapping`과 HTTP Method Mapping, `@PathVariable`·`@RequestParam`·`@RequestBody`·`@AuthenticationPrincipal`·`@DateTimeFormat` 같은 입력 바인딩 annotation, 의존성과 처리 로직을 둡니다.
 - 인터페이스에는 `@RestController`나 기본 구현을 두지 않습니다.
+- 같은 annotation을 인터페이스와 구현체에 중복해서 선언하지 않습니다. 각 annotation은 한쪽에만 둡니다.
 - `@RequestParam`, `@PathVariable` 이름은 명시적으로 선언합니다.
 - 반환형은 `ResponseEntity<*>`가 아니라 실제 `SuccessResponse<T>` 타입까지 명시합니다.
 - 인증 Principal처럼 명세 입력이 아닌 파라미터는 `@Parameter(hidden = true)`로 숨깁니다.
 
-Mapping과 검증 annotation을 인터페이스와 구현체에 나누거나 중복하면 Spring의 annotation 병합과 메서드 검증이 달라질 수 있으므로 한쪽에만 둡니다.
+Spring은 구현체의 HandlerMethod 파라미터 annotation에 인터페이스 같은 자리의 annotation을 합쳐 주고, springdoc은 `@Operation`·`@Tag`를 타입 계층에서 찾습니다. 그래서 Mapping이 구현체에 있어도 인터페이스의 명세와 제약이 그대로 문서와 검증에 반영됩니다.
+
+### Bean Validation이 인터페이스에 남는 이유
+
+> 파라미터 제약은 상위 타입에만 선언할 수 있다.
+
+Bean Validation 명세는 리스코프 치환을 지키기 위해 **하위 타입이 상위 타입 메서드의 파라미터 제약을 다시 선언하는 것을 금지**합니다. `@Valid`, `@Min` 같은 제약을 Controller 쪽으로 옮기면 Hibernate Validator가 메서드 검증을 시작하는 순간 `ConstraintDeclarationException(HV000151)`을 던지고, 해당 요청은 500이 됩니다. 컴파일과 애플리케이션 기동은 통과하므로 호출해 봐야 드러납니다.
+
+그래서 Mapping·바인딩 annotation과 달리 Bean Validation 제약만 인터페이스에 남습니다. `@Min`, `@Max`, `@Size`는 OpenAPI 스키마의 `minimum`, `maximum`, `maxLength`로도 나가므로 명세의 일부이기도 합니다.
 
 ## 4. 명세 작성 범위
 
@@ -119,8 +130,9 @@ Controller MVC 테스트는 실제 Mapping과 검증 동작을 별도로 보장�
 
 ## 7. 검토했지만 선택하지 않은 대안
 
-- **Swagger annotation만 인터페이스에 배치:** Mapping과 명세가 서로 다른 파일에서 달라질 수 있어 HTTP 계약 전체를 인터페이스에 둡니다.
+- **HTTP 계약 전체를 인터페이스에 배치(2026-08-27 ~ 2026-09-08):** Mapping과 명세가 다른 파일에서 어긋나는 것을 막으려고 `@RequestMapping`과 Method Mapping까지 인터페이스에 두었습니다. 그러나 Controller만 보고는 어떤 경로를 다루는지 알 수 없어 읽기 어렵다는 지적을 받아, 인터페이스의 역할을 OpenAPI 명세로 좁혔습니다. Mapping은 계약 테스트와 Controller MVC 테스트가 경로를 검증하므로 조용히 어긋나지 않습니다. 영향 범위는 두 API 모듈의 Controller와 명세 인터페이스이며, 생성되는 `/v3/api-docs` 문서는 이 변경 전후가 같습니다. **팀 리뷰 필요.**
 - **구현체에도 Mapping·검증 annotation 반복:** 중복 Mapping과 메서드 제약 재정의 위험이 있어 제외했습니다.
+- **Bean Validation까지 구현체로 이동:** Hibernate Validator가 `HV000151`로 막아 런타임에 500이 되므로 불가능합니다. 3절을 참고하세요.
 - **렛츠커리어의 `SwaggerEnum` 복제:** 도메인 ErrorCode와 관리 지점이 중복되어 제외했습니다.
 - **사용자·관리자 통합 명세:** 실제 배포·Security 경계와 다르므로 API별로 분리합니다.
 - **전체 명세 snapshot 테스트:** 변경 비용과 노이즈가 커 핵심 계약만 검증합니다.
