@@ -29,6 +29,7 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -243,6 +244,41 @@ class RecruitmentPostControllerTest @Autowired constructor(
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+    }
+
+    @Test
+    fun `작성자가 모집글을 삭제하면 200과 빈 데이터를 반환한다`() {
+        mockMvc.perform(
+            delete("/api/v1/recruitment-posts/12")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
+            .andExpect(jsonPath("$.data").doesNotExist())
+
+        Mockito.verify(recruitmentPostService).delete(USER_ID, 12L)
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 모집글을 삭제할 수 없다`() {
+        mockMvc.perform(delete("/api/v1/recruitment-posts/12"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
+    fun `삭제할 모집글 식별자가 1보다 작으면 400을 반환한다`() {
+        mockMvc.perform(
+            delete("/api/v1/recruitment-posts/0")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
     }
 
     @Test

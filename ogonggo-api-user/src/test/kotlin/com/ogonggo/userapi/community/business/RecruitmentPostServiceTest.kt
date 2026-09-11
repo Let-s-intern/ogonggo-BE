@@ -20,8 +20,11 @@ import com.ogonggo.core.user.implement.dto.UserAccountDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 class RecruitmentPostServiceTest {
 
@@ -30,12 +33,14 @@ class RecruitmentPostServiceTest {
     private val postManager = Mockito.mock(PostManager::class.java)
     private val postReader = Mockito.mock(PostReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
+    private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
     private val service = RecruitmentPostService(
         userReader,
         postAppender,
         postManager,
         postReader,
         contentValidator,
+        clock,
     )
 
     @Test
@@ -122,6 +127,21 @@ class RecruitmentPostServiceTest {
         Mockito.verify(postReader).readOwned(USER_ID, 12L)
     }
 
+    @Test
+    fun `작성자가 모집글을 삭제하면 삭제용 소유 조회와 삭제를 수행한다`() {
+        // given
+        val post = Mockito.mock(Post::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForDelete(USER_ID, 12L)).thenReturn(post)
+
+        // when
+        service.delete(USER_ID, 12L)
+
+        // then
+        Mockito.verify(postReader).readOwnedForDelete(USER_ID, 12L)
+        Mockito.verify(postManager).delete(post, NOW)
+    }
+
     private fun activeUser(): UserAccountDto = UserAccountDto(
         userId = USER_ID,
         letsCareerUserId = 100L,
@@ -168,6 +188,8 @@ class RecruitmentPostServiceTest {
 
     companion object {
         private const val USER_ID = 17L
+        private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
+        private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 11, 9, 0)
         private val EDITOR_STATE_JSON = """
             {"root":{"children":[{"children":[{"detail":0,"format":0,"mode":"normal","style":"","text":"모집 상세 내용입니다.","type":"text","version":1}],"direction":null,"format":"","indent":0,"textFormat":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}
         """.trimIndent()

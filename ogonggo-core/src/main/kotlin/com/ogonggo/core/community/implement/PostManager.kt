@@ -3,9 +3,12 @@ package com.ogonggo.core.community.implement
 import com.ogonggo.core.community.domain.Post
 import com.ogonggo.core.community.persistence.PostJpaRepository
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 interface PostManager {
     fun update(post: Post, command: PostUpdateCommand)
+
+    fun delete(post: Post, deletedAt: LocalDateTime)
 }
 
 @Component
@@ -33,4 +36,8 @@ internal class PostManagerImpl(
         postRepository.save(post)
     }
 
+    override fun delete(post: Post, deletedAt: LocalDateTime) {
+        post.delete(deletedAt)
+        postRepository.save(post)
+    }
 }

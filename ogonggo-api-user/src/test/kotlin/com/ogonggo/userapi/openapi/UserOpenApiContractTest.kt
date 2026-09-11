@@ -90,6 +90,13 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1users~1me/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1profile/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1recruitment-posts/post").isObject)
+        val recruitmentPostDelete = document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}/delete")
+        assertTrue(recruitmentPostDelete.isObject)
+        assertTrue(recruitmentPostDelete.at("/security/0/BearerAuth").isArray)
+        assertTrue(
+            recruitmentPostDelete.at("/responses/404/description").asText()
+                .startsWith("RECRUITMENT_POST_NOT_FOUND"),
+        )
         assertTrue(document.at("/paths/~1api~1v1~1auth~1letscareer/post").isObject)
         assertFalse(document.at("/paths/~1health").isObject)
 
