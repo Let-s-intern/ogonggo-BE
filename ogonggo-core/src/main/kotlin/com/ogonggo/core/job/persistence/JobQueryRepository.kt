@@ -59,15 +59,42 @@ internal class JobQueryRepository(
         queryFactory.select(job)
             .from(jobMetric)
             .join(job).on(job.id.eq(jobMetric.jobId))
-            .where(
-                job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
-                job.deletedAt.isNull,
-                job.closedAt.isNull,
-                job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)),
-            )
+            .where(*recruitingPredicates(now))
             .orderBy(jobMetric.viewCount.desc(), jobMetric.jobId.desc())
             .limit(limit.toLong())
             .fetch()
+
+    /**
+     * 직무·산업이 주어진 값 중 하나와 정확히 같은 모집 중 공고를 조회수순으로 읽는다.
+     * 값 목록이 비면 그 조건을 걸지 않으므로, 둘 다 비었는지는 호출하는 쪽이 막는다.
+     * 조건으로 먼저 좁힌 뒤 정렬하므로 인기 공고와 달리 한 번도 조회되지 않은 공고도 0으로 포함한다.
+     */
+    fun findRecruitingMatched(
+        jobRoles: Collection<String>,
+        industries: Collection<String>,
+        excludedJobIds: Collection<Long>,
+        limit: Int,
+        now: LocalDateTime,
+    ): List<Job> =
+        queryFactory.selectFrom(job)
+            .leftJoin(jobMetric).on(jobMetric.jobId.eq(job.id))
+            .where(
+                *recruitingPredicates(now),
+                jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
+                industries.takeIf { it.isNotEmpty() }?.let { job.industry.`in`(it) },
+                excludedJobIds.takeIf { it.isNotEmpty() }?.let { job.id.notIn(it) },
+            )
+            .orderBy(VIEW_COUNT_OR_ZERO.desc(), job.id.desc())
+            .limit(limit.toLong())
+            .fetch()
+
+    /** 마감 처리됐거나 모집 종료 일시가 지난 공고는 지원할 수 없으므로 추천 목록에서 뺀다. */
+    private fun recruitingPredicates(now: LocalDateTime): Array<Predicate> = arrayOf(
+        job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
+        job.deletedAt.isNull,
+        job.closedAt.isNull,
+        job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)),
+    )
 
     /** 게시 상태와 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */
     private fun publishedPredicates(condition: JobSearchCondition): Array<Predicate?> = arrayOf(

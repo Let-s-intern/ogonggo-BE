@@ -351,6 +351,66 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `직무와 산업이 맞는 모집 중 공고를 조회수순으로 읽는다`() {
+        val matchedQuiet = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val matchedPopular = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val otherIndustry = jobAppender.append(createCommand(jobRole = "마케터", industry = "금융"))
+        val otherRole = jobAppender.append(createCommand(jobRole = "개발자", industry = "뷰티"))
+        val closed = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val expired = jobAppender.append(
+            createCommand(jobRole = "마케터", industry = "뷰티", recruitmentEndAt = NOW.minusSeconds(1)),
+        )
+        // 게시하지 않은 초안
+        jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        listOf(matchedQuiet, matchedPopular, otherIndustry, otherRole, closed, expired).forEach(jobManager::publish)
+        jobManager.close(closed, NOW)
+        view(matchedPopular, times = 2)
+
+        val jobs = jobReader.readRecruitingMatched(
+            jobRoles = listOf("마케터"),
+            industries = listOf("뷰티", "패션"),
+            excludedJobIds = emptyList(),
+            limit = 4,
+            now = NOW,
+        )
+
+        // 조회된 적 없는 공고도 조회 수 0으로 포함한다.
+        assertEquals(listOf(matchedPopular.id, matchedQuiet.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `직무만 지정하면 산업과 무관하게 읽고 제외한 공고와 개수를 지킨다`() {
+        val excluded = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val older = jobAppender.append(createCommand(jobRole = "마케터", industry = "금융"))
+        val newer = jobAppender.append(createCommand(jobRole = "마케터"))
+        val newest = jobAppender.append(createCommand(jobRole = "마케터", industry = "IT"))
+        listOf(excluded, older, newer, newest).forEach(jobManager::publish)
+
+        val jobs = jobReader.readRecruitingMatched(
+            jobRoles = listOf("마케터"),
+            industries = emptyList(),
+            excludedJobIds = listOf(checkNotNull(excluded.id)),
+            limit = 2,
+            now = NOW,
+        )
+
+        assertEquals(listOf(newest.id, newer.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `직무와 산업이 모두 비면 조회하지 않는다`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            jobReader.readRecruitingMatched(
+                jobRoles = emptyList(),
+                industries = emptyList(),
+                excludedJobIds = emptyList(),
+                limit = 4,
+                now = NOW,
+            )
+        }
+    }
+
+    @Test
     fun `원문 이동 기록은 사용자와 공고마다 한 행만 남는다`() {
         val jobId = checkNotNull(jobAppender.append(createCommand()).id)
         val otherJobId = checkNotNull(jobAppender.append(createCommand()).id)
@@ -599,6 +659,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         companyName: String = "오공고",
         title: String = "백엔드 개발자",
         ownerUserId: Long? = null,
+        jobRole: String? = null,
+        industry: String? = null,
     ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
         companyName = companyName,
@@ -613,6 +675,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         recruitmentType = recruitmentType,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
+        jobRole = jobRole,
+        industry = industry,
         responsibilities = "주요 업무",
     )
 

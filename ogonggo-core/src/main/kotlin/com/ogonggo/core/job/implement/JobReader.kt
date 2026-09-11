@@ -69,6 +69,26 @@ class JobReader internal constructor(
         return jobQueryRepository.findPopularRecruiting(limit, now)
     }
 
+    fun readRecruitingMatched(
+        jobRoles: Collection<String>,
+        industries: Collection<String>,
+        excludedJobIds: Collection<Long>,
+        limit: Int,
+    ): List<Job> = readRecruitingMatched(jobRoles, industries, excludedJobIds, limit, LocalDateTime.now(clock))
+
+    /** 직무와 산업이 모두 비면 조건 없이 모든 공고를 읽게 되므로 둘 중 하나는 있어야 한다. */
+    fun readRecruitingMatched(
+        jobRoles: Collection<String>,
+        industries: Collection<String>,
+        excludedJobIds: Collection<Long>,
+        limit: Int,
+        now: LocalDateTime,
+    ): List<Job> {
+        require(limit in 1..100) { "조회 개수는 1 이상 100 이하여야 합니다." }
+        require(jobRoles.isNotEmpty() || industries.isNotEmpty()) { "직무나 산업 중 하나는 있어야 합니다." }
+        return jobQueryRepository.findRecruitingMatched(jobRoles, industries, excludedJobIds, limit, now)
+    }
+
     fun readPublishedCalendar(
         rangeStart: LocalDateTime,
         rangeEndExclusive: LocalDateTime,

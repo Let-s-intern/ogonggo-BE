@@ -120,6 +120,29 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `로그인 사용자는 비슷한 공고를 목록으로 받는다`() {
+        Mockito.`when`(userJobService.getSimilarJobs(USER_ID)).thenReturn(listOf(jobSummary()))
+
+        mockMvc.perform(get("/api/v1/jobs/similar").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data[0].id").value(1))
+            .andExpect(jsonPath("$.data[0].bookmarked").value(true))
+
+        Mockito.verify(userJobService).getSimilarJobs(USER_ID)
+    }
+
+    @Test
+    fun `비슷한 공고는 로그인 없이 조회할 수 없다`() {
+        mockMvc.perform(get("/api/v1/jobs/similar"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(userJobService)
+    }
+
+    @Test
     fun `인증 사용자는 부트캠프 목록과 상세를 조회한다`() {
         Mockito.`when`(userBootcampService.getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))
             .thenReturn(bootcampPageResult())
