@@ -95,9 +95,9 @@ CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_F
 
 `main` 브랜치에 푸시하면 `ogonggo-api-user` → `ogonggo-api-admin` 순서로 ECS에 배포합니다.
 
-운영 설정은 저장소에 없고 GitHub 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)의 내용을 그대로 `application.yml`로 씁니다. 잘못된 시크릿이 운영 서비스를 죽이지 못하도록, 배포 워크플로는 이미지를 ECR에 올리기 전에 시크릿·설정 계약·AWS 리소스를 검사하고 운영 설정 그대로 컨테이너를 띄워 `/health` 200을 확인합니다. 그래도 배포가 실패하면 직전 태스크 정의로 되돌립니다.
+운영 설정은 저장소에 없고 GitHub 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)의 내용을 그대로 `application.yml`로 씁니다. 잘못된 시크릿이 운영 서비스를 죽이지 못하도록, 배포 워크플로는 이미지를 ECR에 올리기 전에 시크릿·AWS 리소스를 확인하고 운영 설정으로 컨테이너를 띄워 `/health` 200을 확인합니다. 그래도 배포가 실패하면 직전 태스크 정의로 되돌립니다.
 
-설정 키를 추가하거나 이름을 바꾸면 `.github/config-schema/<모듈>.yml`의 계약도 같은 작업에서 고칩니다. 계약에 없는 키가 설정 파일에 있으면 배포가 멈춥니다.
+설정 파일 내용은 배포 전에 따로 검사하지 않습니다. 설정 키를 추가하거나 바꿔도 배포 쪽을 함께 고칠 필요는 없습니다.
 
 자세한 내용은 [오공고 배포 검증](docs/infra/ci-cd-validation.md)을 읽습니다.
 
