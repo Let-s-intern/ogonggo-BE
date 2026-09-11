@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import com.ogonggo.core.community.implement.PostUpdateCommand
 
 @DisplayName("모집글 도메인")
 class PostDomainTest {
@@ -74,6 +75,86 @@ class PostDomainTest {
         // then
         assertEquals(RecruitmentStatus.CLOSED, post.recruitmentStatus)
         assertEquals(closedAt, post.closedAt)
+    }
+
+    @Test
+    @DisplayName("모집글을 수정하면 입력한 내용만 바뀌고 모집 상태는 유지된다")
+    fun updatePost() {
+        // given
+        val post = createPostFixture()
+        val updateCommand = PostUpdateCommand(
+            title = "수정된 스터디 모집",
+            recruitmentType = RecruitmentType.STUDY,
+            capacity = 6,
+            progressMethod = ProgressMethod.HYBRID,
+            activityDurationMonths = 4,
+            technologyStacks = listOf("Kotlin", "Spring Boot"),
+            summary = "수정된 한 줄 소개입니다.",
+            content = "<p>수정된 모집 내용입니다.</p>",
+            eligibilityAndSelectionProcess = "수정된 지원 자격",
+            recruitmentStartDate = LocalDate.of(2026, 9, 2),
+            recruitmentEndDate = LocalDate.of(2026, 10, 1),
+            positions = listOf(RecruitmentPosition.FRONTEND),
+            contactMethod = ContactMethod.OPEN_KAKAO,
+            contactValue = "https://open.kakao.com/o/updated",
+        )
+
+        // when
+        post.update(
+            title = updateCommand.title,
+            recruitmentType = updateCommand.recruitmentType,
+            capacity = updateCommand.capacity,
+            progressMethod = updateCommand.progressMethod,
+            activityDurationMonths = updateCommand.activityDurationMonths,
+            technologyStacks = updateCommand.technologyStacks,
+            summary = updateCommand.summary,
+            content = updateCommand.content,
+            eligibilityAndSelectionProcess = updateCommand.eligibilityAndSelectionProcess,
+            recruitmentStartDate = updateCommand.recruitmentStartDate,
+            recruitmentEndDate = updateCommand.recruitmentEndDate,
+            positions = updateCommand.positions,
+            contactMethod = updateCommand.contactMethod,
+            contactValue = updateCommand.contactValue,
+        )
+
+        // then
+        assertEquals("수정된 스터디 모집", post.title)
+        assertEquals(RecruitmentType.STUDY, post.recruitmentType)
+        assertEquals(6, post.capacity)
+        assertEquals(listOf("Kotlin", "Spring Boot"), post.technologyStacks)
+        assertEquals(listOf(RecruitmentPosition.FRONTEND), post.positions)
+        assertEquals(RecruitmentStatus.RECRUITING, post.recruitmentStatus)
+        assertEquals(null, post.closedAt)
+    }
+
+    @Test
+    @DisplayName("수정할 모집 기간이 뒤집히면 수정할 수 없다")
+    fun rejectReversedRecruitmentPeriodOnUpdate() {
+        // given
+        val post = createPostFixture()
+
+        // when
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            post.update(
+                title = post.title,
+                recruitmentType = post.recruitmentType,
+                capacity = post.capacity,
+                progressMethod = post.progressMethod,
+                activityDurationMonths = post.activityDurationMonths,
+                technologyStacks = post.technologyStacks,
+                summary = post.summary,
+                content = post.content,
+                eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
+                recruitmentStartDate = LocalDate.of(2026, 9, 10),
+                recruitmentEndDate = LocalDate.of(2026, 9, 9),
+                positions = post.positions,
+                contactMethod = post.contactMethod,
+                contactValue = post.contactValue,
+            )
+        }
+
+        // then
+        assertEquals("모집 시작일은 마감일보다 늦을 수 없습니다.", exception.message)
     }
 
     private fun createPostFixture(

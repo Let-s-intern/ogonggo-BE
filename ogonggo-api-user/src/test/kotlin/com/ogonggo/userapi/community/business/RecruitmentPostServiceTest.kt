@@ -9,7 +9,9 @@ import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.PostAppender
+import com.ogonggo.core.community.implement.PostManager
 import com.ogonggo.core.community.implement.PostReader
+import com.ogonggo.core.community.implement.PostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -25,9 +27,16 @@ class RecruitmentPostServiceTest {
 
     private val userReader = Mockito.mock(UserReader::class.java)
     private val postAppender = Mockito.mock(PostAppender::class.java)
+    private val postManager = Mockito.mock(PostManager::class.java)
     private val postReader = Mockito.mock(PostReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
-    private val service = RecruitmentPostService(userReader, postAppender, postReader, contentValidator)
+    private val service = RecruitmentPostService(
+        userReader,
+        postAppender,
+        postManager,
+        postReader,
+        contentValidator,
+    )
 
     @Test
     fun `공개 모집글 상세 조회 결과를 변환한다`() {
@@ -94,6 +103,25 @@ class RecruitmentPostServiceTest {
         )
     }
 
+    @Test
+    fun `작성자가 모집글을 수정하면 본문을 검증하고 기존 모집글을 갱신한다`() {
+        // given
+        val post = Mockito.mock(Post::class.java)
+        val command = updateCommand()
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+
+        // when
+        service.update(USER_ID, 12L, command)
+
+        // then
+        Mockito.verify(postManager).update(
+            post,
+            command.copy(content = EDITOR_STATE_JSON),
+        )
+        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+    }
+
     private fun activeUser(): UserAccountDto = UserAccountDto(
         userId = USER_ID,
         letsCareerUserId = 100L,
@@ -119,6 +147,23 @@ class RecruitmentPostServiceTest {
         positions = listOf(RecruitmentPosition.BACKEND),
         contactMethod = ContactMethod.EMAIL,
         contactValue = "team@example.com",
+    )
+
+    private fun updateCommand() = PostUpdateCommand(
+        title = "수정된 모집글",
+        recruitmentType = RecruitmentType.STUDY,
+        capacity = 6,
+        progressMethod = ProgressMethod.HYBRID,
+        activityDurationMonths = 4,
+        technologyStacks = listOf("Kotlin"),
+        summary = "수정된 소개",
+        content = EDITOR_STATE_JSON,
+        eligibilityAndSelectionProcess = null,
+        recruitmentStartDate = LocalDate.of(2026, 9, 2),
+        recruitmentEndDate = LocalDate.of(2026, 10, 1),
+        positions = listOf(RecruitmentPosition.FRONTEND),
+        contactMethod = ContactMethod.EMAIL,
+        contactValue = "updated@example.com",
     )
 
     companion object {

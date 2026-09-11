@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.userapi.community.business.RecruitmentPostService
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostRequest
 import com.ogonggo.userapi.community.presentation.request.RecruitmentPostListRequest
+import com.ogonggo.userapi.community.presentation.request.UpdateRecruitmentPostRequest
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostDetailResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
@@ -52,4 +53,14 @@ class RecruitmentPostController(
         SuccessResponse.created(
             CreateRecruitmentPostResponse(recruitmentPostService.create(userId, request.toCommand(userId))),
         )
+
+    override fun updateRecruitmentPost(
+        userId: Long,
+        postId: Long,
+        request: UpdateRecruitmentPostRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        recruitmentPostService.update(userId, postId, request.toCommand())
+        return SuccessResponse.ok()
+    }
+
 }

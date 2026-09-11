@@ -6,6 +6,7 @@ import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
+import com.ogonggo.core.community.implement.PostUpdateCommand
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
@@ -36,6 +37,76 @@ data class CreateRecruitmentPostRequest(
         validateRelations()
         return PostAppendCommand(
             authorUserId = authorUserId,
+            title = title,
+            recruitmentType = recruitmentType,
+            capacity = capacity,
+            progressMethod = progressMethod,
+            activityDurationMonths = activityDurationMonths,
+            technologyStacks = technologyStacks,
+            summary = summary,
+            content = content.toString(),
+            eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
+            recruitmentStartDate = recruitmentStartDate,
+            recruitmentEndDate = recruitmentEndDate,
+            positions = positions,
+            contactMethod = contactMethod,
+            contactValue = contactValue,
+        )
+    }
+
+    private fun validateRelations() {
+        if (recruitmentStartDate.isAfter(recruitmentEndDate)) {
+            invalid("recruitmentStartDate", "모집 마감일보다 늦을 수 없습니다.")
+        }
+        if (technologyStacks.any(String::isBlank)) {
+            invalid("technologyStacks", "기술 스택은 공백일 수 없습니다.")
+        }
+        if (technologyStacks.distinct().size != technologyStacks.size) {
+            invalid("technologyStacks", "중복된 기술 스택은 등록할 수 없습니다.")
+        }
+        if (positions.distinct().size != positions.size) {
+            invalid("positions", "중복된 모집 포지션은 등록할 수 없습니다.")
+        }
+        if (eligibilityAndSelectionProcess != null && eligibilityAndSelectionProcess.isBlank()) {
+            invalid("eligibilityAndSelectionProcess", "공백일 수 없습니다.")
+        }
+        when (contactMethod) {
+            ContactMethod.EMAIL -> if (!EMAIL_PATTERN.matches(contactValue)) {
+                invalid("contactValue", "이메일 형식으로 입력해 주세요.")
+            }
+            ContactMethod.OPEN_KAKAO -> if (!isHttpUrl(contactValue)) {
+                invalid("contactValue", "카카오톡 오픈채팅 링크를 입력해 주세요.")
+            }
+        }
+    }
+
+    private fun isHttpUrl(value: String): Boolean =
+        value.startsWith("https://") || value.startsWith("http://")
+
+    private companion object {
+        val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+    }
+}
+
+data class UpdateRecruitmentPostRequest(
+    @field:NotBlank @field:Size(max = 255) val title: String,
+    val recruitmentType: RecruitmentType,
+    @field:Positive val capacity: Int,
+    val progressMethod: ProgressMethod,
+    @field:Positive val activityDurationMonths: Int,
+    @field:Size(max = 20) val technologyStacks: List<String> = emptyList(),
+    @field:NotBlank @field:Size(max = 500) val summary: String,
+    @field:NotNull val content: JsonNode,
+    val eligibilityAndSelectionProcess: String?,
+    val recruitmentStartDate: LocalDate,
+    val recruitmentEndDate: LocalDate,
+    @field:Size(min = 1, max = 20) val positions: List<RecruitmentPosition>,
+    val contactMethod: ContactMethod,
+    @field:NotBlank @field:Size(max = 2048) val contactValue: String,
+) {
+    fun toCommand(): PostUpdateCommand {
+        validateRelations()
+        return PostUpdateCommand(
             title = title,
             recruitmentType = recruitmentType,
             capacity = capacity,
