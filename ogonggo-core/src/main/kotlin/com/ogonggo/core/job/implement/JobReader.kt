@@ -9,6 +9,7 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
+import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component
 class JobReader internal constructor(
     private val jobRepository: JobJpaRepository,
     private val jobQueryRepository: JobQueryRepository,
+    private val clock: Clock,
 ) {
 
     fun read(jobId: Long): Job =
@@ -56,6 +58,35 @@ class JobReader internal constructor(
             totalPages = result.totalPages,
             hasNext = result.hasNext(),
         )
+    }
+
+    fun readPopularRecruiting(limit: Int): List<Job> =
+        readPopularRecruiting(limit, LocalDateTime.now(clock))
+
+    /** 마감됐거나 모집 종료 일시가 지난 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다. */
+    fun readPopularRecruiting(limit: Int, now: LocalDateTime): List<Job> {
+        require(limit in 1..100) { "인기 공고 개수는 1 이상 100 이하여야 합니다." }
+        return jobQueryRepository.findPopularRecruiting(limit, now)
+    }
+
+    fun readRecruitingMatched(
+        jobRoles: Collection<String>,
+        industries: Collection<String>,
+        excludedJobIds: Collection<Long>,
+        limit: Int,
+    ): List<Job> = readRecruitingMatched(jobRoles, industries, excludedJobIds, limit, LocalDateTime.now(clock))
+
+    /** 직무와 산업이 모두 비면 조건 없이 모든 공고를 읽게 되므로 둘 중 하나는 있어야 한다. */
+    fun readRecruitingMatched(
+        jobRoles: Collection<String>,
+        industries: Collection<String>,
+        excludedJobIds: Collection<Long>,
+        limit: Int,
+        now: LocalDateTime,
+    ): List<Job> {
+        require(limit in 1..100) { "조회 개수는 1 이상 100 이하여야 합니다." }
+        require(jobRoles.isNotEmpty() || industries.isNotEmpty()) { "직무나 산업 중 하나는 있어야 합니다." }
+        return jobQueryRepository.findRecruitingMatched(jobRoles, industries, excludedJobIds, limit, now)
     }
 
     fun readPublishedCalendar(

@@ -44,10 +44,23 @@ class CrawlerJobRegistrationRequestTest {
         assertEquals(JobPublicationStatus.PUBLISHED, request().toCommand().publicationStatus)
     }
 
+    @Test
+    fun `직군과 직무와 산업은 그대로 옮기고 보내지 않으면 비워 둔다`() {
+        val command = request(jobField = "마케팅", jobRole = "마케터", industry = "뷰티").toCommand()
+
+        assertEquals("마케팅", command.jobField)
+        assertEquals("마케터", command.jobRole)
+        assertEquals("뷰티", command.industry)
+        assertEquals(null, request().toCommand().jobRole)
+    }
+
     private fun request(
         experienceMinYears: Int? = null,
         recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
+        jobField: String? = null,
+        jobRole: String? = null,
+        industry: String? = null,
     ) = CrawlerJobRegistrationRequest(
         companyName = "오공고",
         title = "백엔드 개발자",
@@ -56,6 +69,9 @@ class CrawlerJobRegistrationRequestTest {
         experienceMinYears = experienceMinYears,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
+        jobField = jobField,
+        jobRole = jobRole,
+        industry = industry,
         tags = listOf("백엔드"),
     )
 }

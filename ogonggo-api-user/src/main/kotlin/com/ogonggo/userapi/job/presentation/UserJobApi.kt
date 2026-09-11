@@ -62,6 +62,60 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(
+        operationId = "listPublicPopularJobs",
+        summary = "인기 채용공고 조회",
+        description = """
+            조회 수가 가장 높은 채용공고를 최대 4건 반환합니다. 페이지 정보는 없습니다.
+
+            로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
+            보내지 않으면 항상 false입니다.
+
+            게시 중인 공고 중 마감 처리되지 않았고 모집 종료 일시가 지나지 않은 공고만 대상입니다.
+            모집 종료 일시가 없는 ALWAYS_OPEN 공고는 포함하며, 한 번도 조회되지 않은 공고는 포함하지 않습니다.
+            조회 수 내림차순이며 조회 수가 같으면 최신순입니다.
+
+            조회 수 기록은 비동기이므로 가장 최근 조회가 즉시 반영되지 않을 수 있습니다.
+        """,
+    )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    fun getPopularJobs(
+        @Parameter(hidden = true)
+        userId: Long?,
+    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
+
+    @Operation(
+        operationId = "listMySimilarJobs",
+        summary = "비슷한 채용공고 조회",
+        description = """
+            내 정보의 희망 직무(wishJob)와 희망 산업(wishIndustry)에 맞는 채용공고를 최대 4건 반환합니다.
+            사용자마다 결과가 다르므로 로그인이 필요합니다.
+
+            희망 값은 쉼표로 나눠 앞뒤 공백을 지운 뒤, 공고의 직무(jobRole)·산업(industry)과 정확히 같은지 비교합니다.
+            직무와 산업이 모두 맞는 공고, 직무만 맞는 공고, 산업만 맞는 공고 순으로 채우며
+            각 순서 안에서는 조회 수 내림차순이고 조회 수가 같으면 최신순입니다.
+
+            게시 중인 공고 중 마감 처리되지 않았고 모집 종료 일시가 지나지 않은 공고만 대상입니다.
+            맞는 공고가 4건보다 적으면 있는 만큼만 반환하고 다른 공고로 채우지 않습니다.
+            희망 직무와 산업이 모두 비어 있거나 기업 회원이면 빈 목록입니다.
+        """,
+    )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "401",
+                description = "UNAUTHORIZED: 인증이 필요합니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun getSimilarJobs(
+        @Parameter(hidden = true)
+        userId: Long,
+    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
+
+    @Operation(
         operationId = "createJobSourceUrlClick",
         summary = "채용공고 원문 이동 기록",
         description = """

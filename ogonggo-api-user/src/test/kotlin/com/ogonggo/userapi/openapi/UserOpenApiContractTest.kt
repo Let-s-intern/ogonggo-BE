@@ -98,6 +98,18 @@ class UserOpenApiContractTest @Autowired constructor(
         assertPageParameter(jobList, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(jobList, "size", defaultValue = "10", minimum = 1, maximum = 100)
 
+        // 인기 공고도 토큰을 보내면 북마크 여부가 채워지므로 목록과 같은 선택적 인증을 노출한다.
+        val popularJobs = document.at("/paths/~1api~1v1~1jobs~1popular/get")
+        assertTrue(popularJobs.isObject)
+        assertTrue(popularJobs.at("/security/0/BearerAuth").isArray)
+        assertFalse(popularJobs.has("parameters"))
+
+        // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 인증이 필수다.
+        val similarJobs = document.at("/paths/~1api~1v1~1jobs~1similar/get")
+        assertTrue(similarJobs.at("/security/0/BearerAuth").isArray)
+        assertTrue(similarJobs.at("/responses/401/description").asText().startsWith("UNAUTHORIZED"))
+        assertTrue(similarJobs.at("/responses/200/content/application~1json/schema").isObject)
+
         // 부트캠프 목록·상세도 토큰을 보내면 북마크 여부가 채워지므로 공고와 같은 선택적 인증을 노출한다.
         val bootcampList = document.at("/paths/~1api~1v1~1bootcamps/get")
         assertTrue(bootcampList.at("/security/0/BearerAuth").isArray)

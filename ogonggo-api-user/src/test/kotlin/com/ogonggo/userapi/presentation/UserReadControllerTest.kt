@@ -103,6 +103,46 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `인기 공고는 페이지 정보 없이 목록으로 응답한다`() {
+        Mockito.`when`(userJobService.getPopularJobs(USER_ID)).thenReturn(listOf(jobSummary()))
+
+        mockMvc.perform(get("/api/v1/jobs/popular").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].id").value(1))
+            .andExpect(jsonPath("$.data[0].bookmarked").value(true))
+            .andExpect(jsonPath("$.data[0].viewCount").value(12))
+            .andExpect(jsonPath("$.data[0].bookmarkCount").value(3))
+
+        Mockito.verify(userJobService).getPopularJobs(USER_ID)
+    }
+
+    @Test
+    fun `로그인 사용자는 비슷한 공고를 목록으로 받는다`() {
+        Mockito.`when`(userJobService.getSimilarJobs(USER_ID)).thenReturn(listOf(jobSummary()))
+
+        mockMvc.perform(get("/api/v1/jobs/similar").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data[0].id").value(1))
+            .andExpect(jsonPath("$.data[0].bookmarked").value(true))
+
+        Mockito.verify(userJobService).getSimilarJobs(USER_ID)
+    }
+
+    @Test
+    fun `비슷한 공고는 로그인 없이 조회할 수 없다`() {
+        mockMvc.perform(get("/api/v1/jobs/similar"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(userJobService)
+    }
+
+    @Test
     fun `인증 사용자는 부트캠프 목록과 상세를 조회한다`() {
         Mockito.`when`(userBootcampService.getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))
             .thenReturn(bootcampPageResult())
@@ -418,6 +458,7 @@ class UserReadControllerTest @Autowired constructor(
     fun `익명 사용자도 공고와 부트캠프 조회 API를 호출할 수 있다`() {
         Mockito.`when`(userJobService.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult())
+        Mockito.`when`(userJobService.getPopularJobs(null)).thenReturn(listOf(jobSummary(bookmarked = false)))
         Mockito.`when`(userJobService.getJobCalendar(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
             .thenReturn(emptyList())
         Mockito.`when`(userBootcampService.getBootcamps(null, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))
@@ -426,6 +467,7 @@ class UserReadControllerTest @Autowired constructor(
 
         listOf(
             "/api/v1/jobs",
+            "/api/v1/jobs/popular",
             "/api/v1/jobs/calendar?from=2026-08-01&to=2026-08-31",
             "/api/v1/jobs/1",
             "/api/v1/bootcamps",

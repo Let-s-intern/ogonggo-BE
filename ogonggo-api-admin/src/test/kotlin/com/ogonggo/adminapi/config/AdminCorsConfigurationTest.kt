@@ -1,11 +1,16 @@
 package com.ogonggo.adminapi.config
 
 import com.ogonggo.adminapi.health.AdminHealthController
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.actuate.health.Health
+import org.springframework.boot.actuate.health.HealthEndpoint
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
@@ -24,6 +29,15 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 class AdminCorsConfigurationTest @Autowired constructor(
     private val mockMvc: MockMvc,
 ) {
+
+    /** 이 테스트는 CORS 배선을 본다. 헬스 체크가 200을 주도록 의존성 확인은 대역으로 둔다. */
+    @MockBean
+    private lateinit var healthEndpoint: HealthEndpoint
+
+    @BeforeEach
+    fun setUp() {
+        Mockito.`when`(healthEndpoint.healthForPath("db")).thenReturn(Health.up().build())
+    }
 
     @Test
     fun `허용한 오리진의 preflight는 CORS 헤더와 함께 통과한다`() {

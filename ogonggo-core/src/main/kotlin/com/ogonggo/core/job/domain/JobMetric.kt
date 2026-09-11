@@ -6,10 +6,23 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 
+/**
+ * 인기 공고 조회는 조회 수 인덱스를 높은 순으로 읽다가 모집 중인 공고가 모이면 멈춘다.
+ * 조회 수가 같으면 최신 공고를 앞에 두므로 공고 식별자를 뒤에 붙여 정렬까지 인덱스로 해결한다.
+ */
 @Entity
-@Table(name = "job_metrics")
+@Table(
+    name = "job_metrics",
+    indexes = [
+        Index(
+            name = "idx_job_metrics_view_count",
+            columnList = "view_count, job_id",
+        ),
+    ],
+)
 internal class JobMetric(
     @Column(name = "job_id", nullable = false, unique = true)
     val jobId: Long, /* 지표 대상 채용공고 식별자 */

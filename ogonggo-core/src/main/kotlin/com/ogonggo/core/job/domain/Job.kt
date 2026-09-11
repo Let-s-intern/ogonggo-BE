@@ -38,6 +38,14 @@ import java.time.LocalDateTime
             columnList = "publication_status, deleted_at, experience_type",
         ),
         Index(
+            name = "idx_jobs_published_job_role",
+            columnList = "publication_status, deleted_at, job_role",
+        ),
+        Index(
+            name = "idx_jobs_published_industry",
+            columnList = "publication_status, deleted_at, industry",
+        ),
+        Index(
             name = "idx_jobs_owner",
             columnList = "owner_user_id, deleted_at",
         ),
@@ -50,6 +58,8 @@ class Job internal constructor(
     companyLogoUrl: String? = null,
     title: String,
     jobField: String? = null,
+    jobRole: String? = null,
+    industry: String? = null,
     coverImageUrl: String? = null,
     employmentType: EmploymentType,
     experienceType: ExperienceType,
@@ -84,6 +94,8 @@ class Job internal constructor(
             companyLogoUrl = companyLogoUrl,
             title = title,
             jobField = jobField,
+            jobRole = jobRole,
+            industry = industry,
             coverImageUrl = coverImageUrl,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
@@ -120,9 +132,22 @@ class Job internal constructor(
     var title: String = title /* 채용공고 제목 */
         protected set
 
-    /** 기획이 확정되기 전까지 자유 문자열로 둔다. 확정되면 고정된 값 집합으로 바꾼다. */
+    /**
+     * 직군·직무·산업은 기획이 확정되기 전까지 자유 문자열로 둔다. 확정되면 고정된 값 집합으로 바꾼다.
+     * 세 값은 사용자 프로필의 희망 직군·직무·산업과 짝을 이룬다.
+     */
     @Column(name = "job_field", length = 100)
-    var jobField: String? = jobField /* 직무 분야 */
+    var jobField: String? = jobField /* 직군 */
+        protected set
+
+    /** 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다. */
+    @Column(name = "job_role", length = 100)
+    var jobRole: String? = jobRole /* 직무 */
+        protected set
+
+    /** 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다. */
+    @Column(length = 100)
+    var industry: String? = industry /* 산업 */
         protected set
 
     @Column(name = "cover_image_url", length = 2048)
@@ -243,6 +268,8 @@ class Job internal constructor(
         companyLogoUrl: String?,
         title: String,
         jobField: String?,
+        jobRole: String?,
+        industry: String?,
         coverImageUrl: String?,
         employmentType: EmploymentType,
         experienceType: ExperienceType,
@@ -274,6 +301,8 @@ class Job internal constructor(
             companyLogoUrl = companyLogoUrl,
             title = title,
             jobField = jobField,
+            jobRole = jobRole,
+            industry = industry,
             coverImageUrl = coverImageUrl,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
@@ -288,6 +317,8 @@ class Job internal constructor(
         this.companyLogoUrl = companyLogoUrl
         this.title = title
         this.jobField = jobField
+        this.jobRole = jobRole
+        this.industry = industry
         this.coverImageUrl = coverImageUrl
         this.employmentType = employmentType
         this.experienceType = experienceType
@@ -358,6 +389,8 @@ private fun validateJobValues(
     companyLogoUrl: String?,
     title: String,
     jobField: String?,
+    jobRole: String?,
+    industry: String?,
     coverImageUrl: String?,
     recruitmentHeadcount: Int?,
     experienceMinYears: Int?,
@@ -371,7 +404,9 @@ private fun validateJobValues(
     require(title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
     require(region == null || region.isNotBlank()) { "근무 지역은 비어 있을 수 없습니다." }
     require(companyLogoUrl == null || companyLogoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }
-    require(jobField == null || jobField.isNotBlank()) { "직무 분야는 비어 있을 수 없습니다." }
+    require(jobField == null || jobField.isNotBlank()) { "직군은 비어 있을 수 없습니다." }
+    require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
+    require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }
     require(coverImageUrl == null || coverImageUrl.isNotBlank()) { "공고 대표 이미지 주소는 비어 있을 수 없습니다." }
     require(recruitmentHeadcount == null || recruitmentHeadcount > 0) { "모집 인원은 1명 이상이어야 합니다." }
     require(experienceMinYears == null || experienceMinYears >= 0) { "최소 경력 연수는 음수일 수 없습니다." }

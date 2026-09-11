@@ -6,6 +6,7 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
@@ -293,6 +294,123 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `인기 공고는 모집 중인 게시 공고만 조회수순으로 반환한다`() {
+        val draft = jobAppender.append(createCommand())
+        val deleted = jobAppender.append(createCommand())
+        val closed = jobAppender.append(createCommand())
+        val expired = jobAppender.append(createCommand(recruitmentEndAt = NOW.minusSeconds(1)))
+        val endsNow = jobAppender.append(createCommand(recruitmentEndAt = NOW))
+        val alwaysOpen = jobAppender.append(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        listOf(deleted, closed, expired, endsNow, alwaysOpen).forEach(jobManager::publish)
+        jobManager.delete(deleted, NOW)
+        jobManager.close(closed, NOW)
+        // 조회 수 갱신이 영속성 컨텍스트를 비우므로 공고 상태를 모두 바꾼 뒤에 올린다.
+        // 제외할 공고의 조회 수를 가장 높게 두어, 건너뛰고 다음 공고로 채우는지 확인한다.
+        listOf(draft, deleted, closed, expired).forEach { job -> view(job, times = 5) }
+        view(endsNow, times = 2)
+        view(alwaysOpen, times = 1)
+
+        val jobs = jobReader.readPopularRecruiting(limit = 4, now = NOW)
+
+        assertEquals(listOf(endsNow.id, alwaysOpen.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `인기 공고는 조회 수가 같으면 최신순이며 요청한 개수까지만 반환한다`() {
+        val least = jobAppender.append(createCommand())
+        val tiedOlder = jobAppender.append(createCommand())
+        val tiedNewer = jobAppender.append(createCommand())
+        val popular = jobAppender.append(createCommand())
+        listOf(least, tiedOlder, tiedNewer, popular).forEach(jobManager::publish)
+        view(popular, times = 3)
+        view(tiedOlder, times = 2)
+        view(tiedNewer, times = 2)
+        view(least, times = 1)
+
+        val jobs = jobReader.readPopularRecruiting(limit = 3, now = NOW)
+
+        assertEquals(listOf(popular.id, tiedNewer.id, tiedOlder.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `조회된 적 없는 공고는 인기 공고에 포함되지 않는다`() {
+        val viewed = jobAppender.append(createCommand())
+        val unviewed = jobAppender.append(createCommand())
+        listOf(viewed, unviewed).forEach(jobManager::publish)
+        view(viewed, times = 1)
+
+        val jobs = jobReader.readPopularRecruiting(limit = 4, now = NOW)
+
+        assertEquals(listOf(viewed.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `인기 공고 개수 범위를 검증한다`() {
+        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(limit = 0, now = NOW) }
+        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(limit = 101, now = NOW) }
+    }
+
+    @Test
+    fun `직무와 산업이 맞는 모집 중 공고를 조회수순으로 읽는다`() {
+        val matchedQuiet = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val matchedPopular = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val otherIndustry = jobAppender.append(createCommand(jobRole = "마케터", industry = "금융"))
+        val otherRole = jobAppender.append(createCommand(jobRole = "개발자", industry = "뷰티"))
+        val closed = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val expired = jobAppender.append(
+            createCommand(jobRole = "마케터", industry = "뷰티", recruitmentEndAt = NOW.minusSeconds(1)),
+        )
+        // 게시하지 않은 초안
+        jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        listOf(matchedQuiet, matchedPopular, otherIndustry, otherRole, closed, expired).forEach(jobManager::publish)
+        jobManager.close(closed, NOW)
+        view(matchedPopular, times = 2)
+
+        val jobs = jobReader.readRecruitingMatched(
+            jobRoles = listOf("마케터"),
+            industries = listOf("뷰티", "패션"),
+            excludedJobIds = emptyList(),
+            limit = 4,
+            now = NOW,
+        )
+
+        // 조회된 적 없는 공고도 조회 수 0으로 포함한다.
+        assertEquals(listOf(matchedPopular.id, matchedQuiet.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `직무만 지정하면 산업과 무관하게 읽고 제외한 공고와 개수를 지킨다`() {
+        val excluded = jobAppender.append(createCommand(jobRole = "마케터", industry = "뷰티"))
+        val older = jobAppender.append(createCommand(jobRole = "마케터", industry = "금융"))
+        val newer = jobAppender.append(createCommand(jobRole = "마케터"))
+        val newest = jobAppender.append(createCommand(jobRole = "마케터", industry = "IT"))
+        listOf(excluded, older, newer, newest).forEach(jobManager::publish)
+
+        val jobs = jobReader.readRecruitingMatched(
+            jobRoles = listOf("마케터"),
+            industries = emptyList(),
+            excludedJobIds = listOf(checkNotNull(excluded.id)),
+            limit = 2,
+            now = NOW,
+        )
+
+        assertEquals(listOf(newest.id, newer.id), jobs.map { it.id })
+    }
+
+    @Test
+    fun `직무와 산업이 모두 비면 조회하지 않는다`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            jobReader.readRecruitingMatched(
+                jobRoles = emptyList(),
+                industries = emptyList(),
+                excludedJobIds = emptyList(),
+                limit = 4,
+                now = NOW,
+            )
+        }
+    }
+
+    @Test
     fun `원문 이동 기록은 사용자와 공고마다 한 행만 남는다`() {
         val jobId = checkNotNull(jobAppender.append(createCommand()).id)
         val otherJobId = checkNotNull(jobAppender.append(createCommand()).id)
@@ -509,6 +627,10 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(NOW, jobReader.readIncludingDeleted(jobId).deletedAt)
     }
 
+    private fun view(job: Job, times: Int) {
+        repeat(times) { jobMetricManager.increaseViewCount(checkNotNull(job.id), NOW) }
+    }
+
     private fun publish(employmentType: EmploymentType, experienceType: ExperienceType): Long {
         val job = jobAppender.append(
             createCommand(employmentType = employmentType, experienceType = experienceType),
@@ -537,6 +659,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         companyName: String = "오공고",
         title: String = "백엔드 개발자",
         ownerUserId: Long? = null,
+        jobRole: String? = null,
+        industry: String? = null,
     ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
         companyName = companyName,
@@ -551,6 +675,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         recruitmentType = recruitmentType,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
+        jobRole = jobRole,
+        industry = industry,
         responsibilities = "주요 업무",
     )
 
