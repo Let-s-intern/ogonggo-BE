@@ -8,7 +8,12 @@ import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
+import com.ogonggo.userapi.community.business.RecruitmentPostAuthorResult
+import com.ogonggo.userapi.community.business.RecruitmentPostContactResult
+import com.ogonggo.userapi.community.business.RecruitmentPostDetailResult
 import com.ogonggo.userapi.community.business.RecruitmentPostListQuery
 import com.ogonggo.userapi.community.business.RecruitmentPostService
 import com.ogonggo.userapi.community.business.RecruitmentPostPageResult
@@ -42,6 +47,39 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
+
+    @Test
+    fun `인증되지 않은 사용자도 공개 모집글 상세를 조회한다`() {
+        Mockito.`when`(recruitmentPostService.getRecruitmentPost(12L)).thenReturn(detailResult())
+
+        mockMvc.perform(get("/api/v1/recruitment-posts/12"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data.id").value(12))
+            .andExpect(jsonPath("$.data.author.userId").value(17))
+            .andExpect(jsonPath("$.data.contact.method").value("EMAIL"))
+            .andExpect(jsonPath("$.data.content").value("<p>상세 내용</p>"))
+            .andExpect(jsonPath("$.data.eligibilityAndSelectionProcess").doesNotExist())
+    }
+
+    @Test
+    fun `모집글 식별자가 1보다 작으면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/recruitment-posts/0"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
+    fun `존재하지 않는 모집글은 404를 반환한다`() {
+        Mockito.`when`(recruitmentPostService.getRecruitmentPost(12L))
+            .thenThrow(EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND))
+
+        mockMvc.perform(get("/api/v1/recruitment-posts/12"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("RECRUITMENT_POST_NOT_FOUND"))
+    }
 
     @Test
     fun `모집글 목록을 페이지와 enum 필터로 조회한다`() {
@@ -227,6 +265,25 @@ class RecruitmentPostControllerTest @Autowired constructor(
         positions = listOf(RecruitmentPosition.BACKEND),
         contactMethod = ContactMethod.EMAIL,
         contactValue = "team@example.com",
+    )
+
+    private fun detailResult() = RecruitmentPostDetailResult(
+        id = 12L,
+        author = RecruitmentPostAuthorResult(userId = 17L),
+        title = "스터디 모집",
+        recruitmentType = RecruitmentType.STUDY,
+        recruitmentStatus = RecruitmentStatus.RECRUITING,
+        recruitmentStartDate = LocalDate.of(2026, 9, 1),
+        recruitmentEndDate = LocalDate.of(2026, 9, 30),
+        progressMethod = ProgressMethod.ONLINE,
+        capacity = 6,
+        activityDurationMonths = 3,
+        technologyStacks = listOf("Kotlin"),
+        positions = listOf(RecruitmentPosition.BACKEND),
+        contact = RecruitmentPostContactResult(ContactMethod.EMAIL, "team@example.com"),
+        summary = "함께 공부할 분을 모집합니다.",
+        content = "<p>상세 내용</p>",
+        eligibilityAndSelectionProcess = null,
     )
 
     companion object {

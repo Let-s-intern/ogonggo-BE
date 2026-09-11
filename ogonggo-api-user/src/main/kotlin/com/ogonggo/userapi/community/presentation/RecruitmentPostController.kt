@@ -4,6 +4,7 @@ import com.ogonggo.userapi.community.business.RecruitmentPostService
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostRequest
 import com.ogonggo.userapi.community.presentation.request.RecruitmentPostListRequest
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostResponse
+import com.ogonggo.userapi.community.presentation.response.RecruitmentPostDetailResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -16,6 +17,13 @@ import org.springframework.web.bind.annotation.RestController
 class RecruitmentPostController(
     private val recruitmentPostService: RecruitmentPostService,
 ) : RecruitmentPostApi {
+
+    override fun getRecruitmentPost(
+        postId: Long,
+    ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> =
+        SuccessResponse.ok(
+            RecruitmentPostDetailResponse.from(recruitmentPostService.getRecruitmentPost(postId)),
+        )
 
     override fun getRecruitmentPosts(
         request: RecruitmentPostListRequest,

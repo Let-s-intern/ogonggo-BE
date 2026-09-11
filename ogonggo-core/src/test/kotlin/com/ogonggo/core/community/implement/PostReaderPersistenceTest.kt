@@ -9,6 +9,9 @@ import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.community.persistence.PostJpaRepository
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
+import com.ogonggo.core.error.EntityNotFoundException
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,6 +28,31 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     private val postReader: PostReader,
     private val postRepository: PostJpaRepository,
 ) {
+
+    @Test
+    fun `공개 모집글을 식별자로 조회한다`() {
+        val savedPost = postAppender.append(createCommand(title = "상세 모집글", recruitmentType = RecruitmentType.STUDY))
+
+        val result = postReader.readPublished(checkNotNull(savedPost.id))
+
+        assertEquals("상세 모집글", result.title)
+        assertEquals(PublicationStatus.PUBLISHED, result.publicationStatus)
+    }
+
+    @Test
+    fun `존재하지 않거나 비공개인 모집글은 찾을 수 없음 예외를 던진다`() {
+        val hiddenPost = postRepository.save(createPost(title = "비공개 모집", publicationStatus = PublicationStatus.HIDDEN))
+
+        val missingException = assertThrows(EntityNotFoundException::class.java) {
+            postReader.readPublished(999L)
+        }
+        val hiddenException = assertThrows(EntityNotFoundException::class.java) {
+            postReader.readPublished(checkNotNull(hiddenPost.id))
+        }
+
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND, missingException.errorCode)
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND, hiddenException.errorCode)
+    }
 
     @Test
     fun `공개 모집글을 모집 구분으로 필터링하고 페이지로 조회한다`() {
