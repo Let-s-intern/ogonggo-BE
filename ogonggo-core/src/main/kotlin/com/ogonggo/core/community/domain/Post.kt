@@ -105,7 +105,7 @@ class Post internal constructor(
         protected set
 
     @Column(columnDefinition = "LONGTEXT", nullable = false)
-    var content: String = content
+    var content: String = content /* Lexical EditorState JSON */
         protected set
 
     @Column(name = "eligibility_and_selection_process", columnDefinition = "LONGTEXT")

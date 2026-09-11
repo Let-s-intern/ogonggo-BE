@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.error
 
 import com.ogonggo.core.error.BusinessException
+import com.ogonggo.core.editor.lexical.LexicalEditorStateException
 import com.ogonggo.userapi.response.ErrorResponse
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
@@ -54,6 +55,14 @@ class UserApiExceptionHandler {
     fun handleInvalidRequestField(exception: InvalidRequestFieldException): ResponseEntity<ErrorResponse> {
         log.error("handle: InvalidRequestFieldException", exception)
         return badRequest(validationMessage(listOf(exception.fieldName to exception.reason)))
+    }
+
+    @ExceptionHandler(LexicalEditorStateException::class)
+    fun handleInvalidLexicalEditorState(
+        exception: LexicalEditorStateException,
+    ): ResponseEntity<ErrorResponse> {
+        log.error("handle: LexicalEditorStateException", exception)
+        return badRequest(validationMessage(listOf("content" to exception.reason)))
     }
 
     @ExceptionHandler(ConstraintViolationException::class)

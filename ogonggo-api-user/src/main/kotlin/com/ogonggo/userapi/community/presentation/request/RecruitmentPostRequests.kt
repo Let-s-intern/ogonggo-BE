@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.community.presentation.request
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
@@ -8,6 +9,7 @@ import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import java.time.LocalDate
@@ -20,7 +22,7 @@ data class CreateRecruitmentPostRequest(
     @field:Positive val activityDurationMonths: Int,
     @field:Size(max = 20) val technologyStacks: List<String> = emptyList(),
     @field:NotBlank @field:Size(max = 500) val summary: String,
-    @field:NotBlank val content: String,
+    @field:NotNull val content: JsonNode,
     val eligibilityAndSelectionProcess: String?,
     val recruitmentStartDate: LocalDate,
     val recruitmentEndDate: LocalDate,
@@ -41,7 +43,7 @@ data class CreateRecruitmentPostRequest(
             activityDurationMonths = activityDurationMonths,
             technologyStacks = technologyStacks,
             summary = summary,
-            content = content,
+            content = content.toString(),
             eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
             recruitmentStartDate = recruitmentStartDate,
             recruitmentEndDate = recruitmentEndDate,

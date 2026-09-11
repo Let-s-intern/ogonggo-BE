@@ -58,7 +58,8 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.id").value(12))
             .andExpect(jsonPath("$.data.author.userId").value(17))
             .andExpect(jsonPath("$.data.contact.method").value("EMAIL"))
-            .andExpect(jsonPath("$.data.content").value("<p>상세 내용</p>"))
+            .andExpect(jsonPath("$.data.content.root.type").value("root"))
+            .andExpect(jsonPath("$.data.content.root.children[0].type").value("paragraph"))
             .andExpect(jsonPath("$.data.eligibilityAndSelectionProcess").doesNotExist())
     }
 
@@ -258,7 +259,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin", "Spring"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = EDITOR_STATE_JSON,
         eligibilityAndSelectionProcess = "주 1회 회의에 참여할 수 있는 분",
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),
@@ -282,13 +283,17 @@ class RecruitmentPostControllerTest @Autowired constructor(
         positions = listOf(RecruitmentPosition.BACKEND),
         contact = RecruitmentPostContactResult(ContactMethod.EMAIL, "team@example.com"),
         summary = "함께 공부할 분을 모집합니다.",
-        content = "<p>상세 내용</p>",
+        content = EDITOR_STATE_JSON,
         eligibilityAndSelectionProcess = null,
     )
 
     companion object {
         private const val USER_ID = 17L
-        private const val VALID_BODY = """
+        private val EDITOR_STATE_JSON = """
+            {"root":{"children":[{"children":[{"detail":0,"format":0,"mode":"normal","style":"","text":"모집 상세 내용입니다.","type":"text","version":1}],"direction":null,"format":"","indent":0,"textFormat":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}
+        """.trimIndent()
+
+        private val VALID_BODY = """
             {
               "title": "사이드 프로젝트 팀원 모집",
               "recruitmentType": "SIDE_PROJECT",
@@ -297,7 +302,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
               "activityDurationMonths": 3,
               "technologyStacks": ["Kotlin", "Spring"],
               "summary": "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-              "content": "<p>모집 상세 내용입니다.</p>",
+              "content": $EDITOR_STATE_JSON,
               "eligibilityAndSelectionProcess": "주 1회 회의에 참여할 수 있는 분",
               "recruitmentStartDate": "2026-09-01",
               "recruitmentEndDate": "2026-09-30",

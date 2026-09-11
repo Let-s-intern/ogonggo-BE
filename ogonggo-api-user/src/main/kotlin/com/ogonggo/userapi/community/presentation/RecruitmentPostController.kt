@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.community.presentation
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.userapi.community.business.RecruitmentPostService
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostRequest
 import com.ogonggo.userapi.community.presentation.request.RecruitmentPostListRequest
@@ -16,13 +17,17 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class RecruitmentPostController(
     private val recruitmentPostService: RecruitmentPostService,
+    private val objectMapper: ObjectMapper,
 ) : RecruitmentPostApi {
 
     override fun getRecruitmentPost(
         postId: Long,
     ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> =
         SuccessResponse.ok(
-            RecruitmentPostDetailResponse.from(recruitmentPostService.getRecruitmentPost(postId)),
+            RecruitmentPostDetailResponse.from(
+                recruitmentPostService.getRecruitmentPost(postId),
+                objectMapper,
+            ),
         )
 
     override fun getRecruitmentPosts(
