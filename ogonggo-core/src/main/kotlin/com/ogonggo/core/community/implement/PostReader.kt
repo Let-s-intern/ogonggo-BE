@@ -7,6 +7,8 @@ import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.community.persistence.PostJpaRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -14,6 +16,8 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
 
 interface PostReader {
+    fun readPublished(postId: Long): Post
+
     fun readPublishedPage(
         page: Int,
         size: Int,
@@ -26,6 +30,10 @@ interface PostReader {
 internal class PostReaderImpl(
     private val postRepository: PostJpaRepository,
 ) : PostReader {
+
+    override fun readPublished(postId: Long): Post =
+        postRepository.findByIdAndPublicationStatus(postId, PublicationStatus.PUBLISHED)
+            ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
     override fun readPublishedPage(
         page: Int,

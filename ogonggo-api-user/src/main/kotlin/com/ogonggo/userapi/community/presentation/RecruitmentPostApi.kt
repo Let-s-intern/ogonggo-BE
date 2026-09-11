@@ -3,6 +3,7 @@ package com.ogonggo.userapi.community.presentation
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostRequest
 import com.ogonggo.userapi.community.presentation.request.RecruitmentPostListRequest
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostResponse
+import com.ogonggo.userapi.community.presentation.response.RecruitmentPostDetailResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
@@ -17,10 +18,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -28,6 +31,31 @@ import org.springframework.web.bind.annotation.RequestMapping
 @Tag(name = "사이드·스터디 모집")
 @RequestMapping("/api/v1/recruitment-posts")
 interface RecruitmentPostApi {
+
+    @Operation(
+        operationId = "getPublicRecruitmentPost",
+        summary = "사이드 프로젝트·스터디 모집글 상세 조회",
+        description = "공개된 모집글의 기본 정보와 본문을 조회합니다. 로그인 없이 호출할 수 있습니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "postId가 1 미만",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "RECRUITMENT_POST_NOT_FOUND: 모집글을 찾을 수 없음",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @GetMapping("/{postId}")
+    fun getRecruitmentPost(
+        @PathVariable("postId") @Positive postId: Long,
+    ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>>
 
     @Operation(
         summary = "사이드 프로젝트·스터디 모집글 목록 조회",

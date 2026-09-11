@@ -18,6 +18,10 @@ class RecruitmentPostService(
 ) {
 
     @Transactional(readOnly = true)
+    fun getRecruitmentPost(postId: Long): RecruitmentPostDetailResult =
+        RecruitmentPostDetailResult.from(postReader.readPublished(postId))
+
+    @Transactional(readOnly = true)
     fun getRecruitmentPosts(query: RecruitmentPostListQuery): RecruitmentPostPageResult =
         postReader.readPublishedPage(query.page, query.size, query.filter, query.sortType).toResult()
 
