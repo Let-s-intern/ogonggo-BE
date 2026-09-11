@@ -62,6 +62,28 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(
+        operationId = "listPublicPopularJobs",
+        summary = "인기 채용공고 조회",
+        description = """
+            조회 수가 가장 높은 채용공고를 최대 4건 반환합니다. 페이지 정보는 없습니다.
+
+            로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
+            보내지 않으면 항상 false입니다.
+
+            게시 중인 공고 중 마감 처리되지 않았고 모집 종료 일시가 지나지 않은 공고만 대상입니다.
+            모집 종료 일시가 없는 ALWAYS_OPEN 공고는 포함하며, 한 번도 조회되지 않은 공고는 포함하지 않습니다.
+            조회 수 내림차순이며 조회 수가 같으면 최신순입니다.
+
+            조회 수 기록은 비동기이므로 가장 최근 조회가 즉시 반영되지 않을 수 있습니다.
+        """,
+    )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    fun getPopularJobs(
+        @Parameter(hidden = true)
+        userId: Long?,
+    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
+
+    @Operation(
         operationId = "createJobSourceUrlClick",
         summary = "채용공고 원문 이동 기록",
         description = """

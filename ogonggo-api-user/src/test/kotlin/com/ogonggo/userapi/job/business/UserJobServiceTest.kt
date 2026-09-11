@@ -134,10 +134,36 @@ class UserJobServiceTest {
             mapOf(1L to JobMetricDto(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
         )
 
+        Mockito.`when`(jobReader.readPopularRecruiting(UserJobService.POPULAR_JOB_LIMIT)).thenReturn(listOf(job))
+
         assertEquals(false, service.getJob(null, 1L).bookmarked)
         assertEquals(false, service.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 20).items.single().bookmarked)
+        assertEquals(false, service.getPopularJobs(null).single().bookmarked)
 
         Mockito.verifyNoInteractions(jobBookmarkReader)
+    }
+
+    @Test
+    fun `인기 공고는 네 건을 요청해 북마크 여부와 지표를 채운다`() {
+        val popular = createJobMock()
+        val other = createJobMock()
+        Mockito.`when`(other.id).thenReturn(2L)
+        Mockito.`when`(jobReader.readPopularRecruiting(4)).thenReturn(listOf(popular, other))
+        Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L, 2L))).thenReturn(setOf(2L))
+        Mockito.`when`(jobMetricReader.readAll(listOf(1L, 2L))).thenReturn(
+            mapOf(
+                1L to JobMetricDto(viewCount = 9, bookmarkCount = 1, commentCount = 0),
+                2L to JobMetricDto(viewCount = 7, bookmarkCount = 2, commentCount = 0),
+            ),
+        )
+
+        val result = service.getPopularJobs(USER_ID)
+
+        assertEquals(listOf(1L, 2L), result.map { it.id })
+        assertEquals(listOf(false, true), result.map { it.bookmarked })
+        assertEquals(listOf(9L, 7L), result.map { it.viewCount })
+        assertEquals(listOf(1L, 2L), result.map { it.bookmarkCount })
+        Mockito.verify(jobReader).readPopularRecruiting(4)
     }
 
     @Test

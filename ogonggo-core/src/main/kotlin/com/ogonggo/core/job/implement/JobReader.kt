@@ -9,6 +9,7 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
+import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component
 class JobReader internal constructor(
     private val jobRepository: JobJpaRepository,
     private val jobQueryRepository: JobQueryRepository,
+    private val clock: Clock,
 ) {
 
     fun read(jobId: Long): Job =
@@ -56,6 +58,15 @@ class JobReader internal constructor(
             totalPages = result.totalPages,
             hasNext = result.hasNext(),
         )
+    }
+
+    fun readPopularRecruiting(limit: Int): List<Job> =
+        readPopularRecruiting(limit, LocalDateTime.now(clock))
+
+    /** 마감됐거나 모집 종료 일시가 지난 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다. */
+    fun readPopularRecruiting(limit: Int, now: LocalDateTime): List<Job> {
+        require(limit in 1..100) { "인기 공고 개수는 1 이상 100 이하여야 합니다." }
+        return jobQueryRepository.findPopularRecruiting(limit, now)
     }
 
     fun readPublishedCalendar(

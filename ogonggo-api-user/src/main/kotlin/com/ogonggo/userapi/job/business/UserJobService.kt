@@ -7,6 +7,7 @@ import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
+import com.ogonggo.core.job.implement.dto.JobMetricDto
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.LocalDate
@@ -35,6 +36,22 @@ class UserJobService(
             bookmarkedJobIds = readBookmarkedJobIds(userId, jobIds),
             metrics = jobMetricReader.readAll(jobIds),
         )
+    }
+
+    /** 인기 공고도 목록과 같은 항목으로 보여 주므로 북마크 여부와 지표를 목록과 같은 방식으로 채운다. */
+    fun getPopularJobs(userId: Long?): List<UserJobSummary> {
+        val jobs = jobReader.readPopularRecruiting(POPULAR_JOB_LIMIT)
+        val jobIds = jobs.map(Job::requiredId)
+        val bookmarkedJobIds = readBookmarkedJobIds(userId, jobIds)
+        val metrics = jobMetricReader.readAll(jobIds)
+        return jobs.map { job ->
+            val jobId = job.requiredId()
+            UserJobSummary.from(
+                job = job,
+                bookmarked = jobId in bookmarkedJobIds,
+                metric = metrics[jobId] ?: JobMetricDto.EMPTY,
+            )
+        }
     }
 
     /** 조회 기간의 유효성은 Presentation이 검증하고, 여기서는 날짜를 일시 경계로 옮기기만 한다. */
@@ -72,4 +89,9 @@ class UserJobService(
     /** 비로그인 조회에서는 북마크 저장소를 아예 건드리지 않는다. */
     private fun readBookmarkedJobIds(userId: Long?, jobIds: Collection<Long>): Set<Long> =
         if (userId == null) emptySet() else jobBookmarkReader.readBookmarkedJobIds(userId, jobIds)
+
+    companion object {
+        /** 메인 화면의 인기 공고 영역에 보여 주는 개수다. */
+        const val POPULAR_JOB_LIMIT = 4
+    }
 }
