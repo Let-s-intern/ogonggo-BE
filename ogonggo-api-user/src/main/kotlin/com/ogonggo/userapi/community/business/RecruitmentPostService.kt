@@ -2,7 +2,9 @@ package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.PostAppender
+import com.ogonggo.core.community.implement.PostManager
 import com.ogonggo.core.community.implement.PostReader
+import com.ogonggo.core.community.implement.PostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserStatus
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class RecruitmentPostService(
     private val userReader: UserReader,
     private val postAppender: PostAppender,
+    private val postManager: PostManager,
     private val postReader: PostReader,
     private val contentValidator: LexicalEditorStateValidator,
 ) {
@@ -36,6 +39,16 @@ class RecruitmentPostService(
         )
         val post = postAppender.append(sanitizedCommand)
         return checkNotNull(post.id) { "저장된 모집글 식별자가 없습니다." }
+    }
+
+    @Transactional
+    fun update(userId: Long, postId: Long, command: PostUpdateCommand) {
+        verifyActiveUser(userId)
+        val post = postReader.readOwned(userId, postId)
+        val sanitizedCommand = command.copy(
+            content = contentValidator.validateAndSerialize(command.content),
+        )
+        postManager.update(post, sanitizedCommand)
     }
 
     private fun verifyActiveUser(userId: Long) {

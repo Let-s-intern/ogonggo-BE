@@ -18,6 +18,8 @@ import org.springframework.stereotype.Component
 interface PostReader {
     fun readPublished(postId: Long): Post
 
+    fun readOwned(ownerUserId: Long, postId: Long): Post
+
     fun readPublishedPage(
         page: Int,
         size: Int,
@@ -33,6 +35,10 @@ internal class PostReaderImpl(
 
     override fun readPublished(postId: Long): Post =
         postRepository.findByIdAndPublicationStatus(postId, PublicationStatus.PUBLISHED)
+            ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
+
+    override fun readOwned(ownerUserId: Long, postId: Long): Post =
+        postRepository.findOwnedByIdForUpdate(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
     override fun readPublishedPage(
