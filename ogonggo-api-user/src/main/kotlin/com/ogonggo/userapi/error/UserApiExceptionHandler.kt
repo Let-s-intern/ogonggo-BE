@@ -3,6 +3,7 @@ package com.ogonggo.userapi.error
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.editor.lexical.LexicalEditorStateException
 import com.ogonggo.userapi.response.ErrorResponse
+import com.ogonggo.userapi.image.error.ImageUploadErrorCode
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.multipart.MaxUploadSizeExceededException
+import org.springframework.web.multipart.support.MissingServletRequestPartException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
@@ -63,6 +66,24 @@ class UserApiExceptionHandler {
     ): ResponseEntity<ErrorResponse> {
         log.error("handle: LexicalEditorStateException", exception)
         return badRequest(validationMessage(listOf("content" to exception.reason)))
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException::class)
+    fun handleMissingServletRequestPart(
+        exception: MissingServletRequestPartException,
+    ): ResponseEntity<ErrorResponse> {
+        log.error("handle: MissingServletRequestPartException", exception)
+        return if (exception.requestPartName == "file") {
+            ErrorResponse.from(ImageUploadErrorCode.IMAGE_FILE_REQUIRED).toResponseEntity()
+        } else {
+            ErrorResponse.from(UserApiErrorCode.BAD_REQUEST).toResponseEntity()
+        }
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleMaxUploadSizeExceeded(exception: MaxUploadSizeExceededException): ResponseEntity<ErrorResponse> {
+        log.error("handle: MaxUploadSizeExceededException", exception)
+        return ErrorResponse.from(ImageUploadErrorCode.IMAGE_FILE_TOO_LARGE).toResponseEntity()
     }
 
     @ExceptionHandler(ConstraintViolationException::class)

@@ -71,6 +71,7 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
                 it.requestMatchers("/api/v1/users/me/jobs", "/api/v1/users/me/jobs/**").authenticated()
+                it.requestMatchers(HttpMethod.POST, "/api/v1/images").authenticated()
                 // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 채용공고 조회 중 유일하게 로그인을 요구한다.
                 // 아래의 조회 전체 허용보다 먼저 선언해야 적용된다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
