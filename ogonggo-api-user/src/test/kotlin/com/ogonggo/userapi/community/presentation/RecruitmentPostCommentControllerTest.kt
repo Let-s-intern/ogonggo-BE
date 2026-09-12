@@ -2,6 +2,11 @@ package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.community.business.CreateRecruitmentPostCommentCommand
+import com.ogonggo.userapi.community.business.RecruitmentPostCommentAuthorResult
+import com.ogonggo.userapi.community.business.RecruitmentPostCommentPageResult
+import com.ogonggo.userapi.community.business.RecruitmentPostCommentReplyPageResult
+import com.ogonggo.userapi.community.business.RecruitmentPostCommentResult
+import com.ogonggo.userapi.community.business.RecruitmentPostCommentRootResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentService
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
@@ -15,15 +20,64 @@ import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [RecruitmentPostCommentController::class])
 @Import(UserSecurityConfiguration::class, UserApiExceptionHandler::class)
 class RecruitmentPostCommentControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
 ) {
+
+    @Test
+    fun `비로그인 사용자가 부모 댓글을 커서 조회하면 대댓글 미리보기와 다음 커서를 반환한다`() {
+        // given
+        val nextCursor = com.ogonggo.core.community.implement.RecruitmentPostCommentCursor(
+            createdAt = CREATED_AT,
+            id = COMMENT_ID,
+        )
+        val replyCursor = com.ogonggo.core.community.implement.RecruitmentPostCommentCursor(
+            createdAt = CREATED_AT.plusMinutes(1),
+            id = 102L,
+        )
+        Mockito.`when`(
+            recruitmentPostCommentService.readComments(null, POST_ID, null, 10),
+        ).thenReturn(
+            RecruitmentPostCommentPageResult(
+                items = listOf(
+                    RecruitmentPostCommentRootResult(
+                        comment = commentResult(),
+                        replies = RecruitmentPostCommentReplyPageResult(
+                            items = listOf(commentResult(parentId = COMMENT_ID)),
+                            nextCursor = replyCursor,
+                            hasNext = true,
+                        ),
+                    ),
+                ),
+                nextCursor = nextCursor,
+                hasNext = true,
+            ),
+        )
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/recruitment-posts/$POST_ID/comments")
+                .param("size", "10"),
+        )
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].id").value(COMMENT_ID))
+            .andExpect(jsonPath("$.data.items[0].replies.items[0].parentId").value(COMMENT_ID))
+            .andExpect(jsonPath("$.data.items[0].replies.hasNext").value(true))
+            .andExpect(jsonPath("$.data.nextCursor").isNotEmpty)
+            .andExpect(jsonPath("$.data.hasNext").value(true))
+
+        Mockito.verify(recruitmentPostCommentService).readComments(null, POST_ID, null, 10)
+    }
 
     @MockBean
     private lateinit var recruitmentPostCommentService: RecruitmentPostCommentService
@@ -74,6 +128,35 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `인증된 사용자가 댓글을 삭제하면 200을 반환한다`() {
+        // given
+        // when
+        mockMvc.perform(
+            delete("/api/v1/recruitment-posts/$POST_ID/comments/$COMMENT_ID")
+                .with(authenticatedUser()),
+        )
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(recruitmentPostCommentService).delete(USER_ID, POST_ID, COMMENT_ID)
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 댓글을 삭제할 수 없다`() {
+        // given
+        // when
+        mockMvc.perform(
+            delete("/api/v1/recruitment-posts/$POST_ID/comments/$COMMENT_ID"),
+        )
+            // then
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(recruitmentPostCommentService)
+    }
+
+    @Test
     fun `댓글 내용이 공백이면 400을 반환한다`() {
         // given
         // when
@@ -90,6 +173,20 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
         Mockito.verifyNoInteractions(recruitmentPostCommentService)
     }
 
+    private fun commentResult(parentId: Long? = null) = RecruitmentPostCommentResult(
+        id = if (parentId == null) COMMENT_ID else 102L,
+        parentId = parentId,
+        author = RecruitmentPostCommentAuthorResult(
+            userId = USER_ID,
+            nickname = "닉네임",
+            profileImageUrl = null,
+        ),
+        content = "댓글 내용",
+        createdAt = CREATED_AT,
+        updatedAt = CREATED_AT,
+        mine = false,
+    )
+
     private fun authenticatedUser() = authentication(
         UsernamePasswordAuthenticationToken(USER_ID, null, emptyList()),
     )
@@ -103,5 +200,6 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
         private const val USER_ID = 17L
         private const val POST_ID = 12L
         private const val COMMENT_ID = 101L
+        private val CREATED_AT: LocalDateTime = LocalDateTime.of(2026, 9, 12, 10, 0)
     }
 }

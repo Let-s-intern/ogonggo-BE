@@ -6,10 +6,12 @@ import com.ogonggo.core.community.implement.PostReader
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReader
+import com.ogonggo.core.community.implement.RecruitmentPostCommentRemover
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -23,11 +25,15 @@ class RecruitmentPostCommentServiceTest {
     private val postReader = Mockito.mock(PostReader::class.java)
     private val commentReader = Mockito.mock(RecruitmentPostCommentReader::class.java)
     private val commentAppender = Mockito.mock(RecruitmentPostCommentAppender::class.java)
+    private val commentRemover = Mockito.mock(RecruitmentPostCommentRemover::class.java)
+    private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val service = RecruitmentPostCommentService(
         userReader,
         postReader,
         commentReader,
         commentAppender,
+        commentRemover,
+        userProfileReader,
     )
 
     @Test
@@ -76,6 +82,39 @@ class RecruitmentPostCommentServiceTest {
         // then
         assertEquals("RECRUITMENT_POST_COMMENT_PARENT_TARGET_MISMATCH", exception.errorCode.code)
         Mockito.verifyNoInteractions(commentAppender)
+    }
+
+    @Test
+    fun `작성자가 자신의 댓글을 삭제하면 물리 삭제를 위임한다`() {
+        // given
+        val comment = Mockito.mock(RecruitmentPostComment::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(commentReader.readInPost(POST_ID, COMMENT_ID)).thenReturn(comment)
+        Mockito.`when`(comment.userId).thenReturn(USER_ID)
+
+        // when
+        service.delete(USER_ID, POST_ID, COMMENT_ID)
+
+        // then
+        Mockito.verify(commentRemover).remove(comment)
+    }
+
+    @Test
+    fun `다른 사용자는 댓글을 삭제할 수 없다`() {
+        // given
+        val comment = Mockito.mock(RecruitmentPostComment::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(commentReader.readInPost(POST_ID, COMMENT_ID)).thenReturn(comment)
+        Mockito.`when`(comment.userId).thenReturn(999L)
+
+        // when
+        val exception = assertThrows(BusinessException::class.java) {
+            service.delete(USER_ID, POST_ID, COMMENT_ID)
+        }
+
+        // then
+        assertEquals("RECRUITMENT_POST_COMMENT_PERMISSION_DENIED", exception.errorCode.code)
+        Mockito.verifyNoInteractions(commentRemover)
     }
 
     private fun activeUser(): UserAccountDto = UserAccountDto(

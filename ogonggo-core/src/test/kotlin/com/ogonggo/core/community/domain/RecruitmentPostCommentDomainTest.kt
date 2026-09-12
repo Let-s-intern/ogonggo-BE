@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
-import java.time.LocalDateTime
 
 @DisplayName("모집글 댓글 도메인")
 class RecruitmentPostCommentDomainTest {
@@ -31,7 +30,6 @@ class RecruitmentPostCommentDomainTest {
         assertEquals(17L, comment.userId)
         assertEquals("참여하고 싶습니다.", comment.content)
         assertFalse(comment.isReply())
-        assertFalse(comment.isDeleted())
     }
 
     @Test
@@ -52,27 +50,6 @@ class RecruitmentPostCommentDomainTest {
 
         // then
         assertEquals("댓글 내용은 공백일 수 없습니다.", exception.message)
-    }
-
-    @Test
-    @DisplayName("댓글을 삭제하면 최초 삭제 시각을 유지한다")
-    fun deleteComment() {
-        // given
-        val comment = RecruitmentPostComment.create(
-            post = postFixture(),
-            parent = null,
-            userId = 17L,
-            content = "참여하고 싶습니다.",
-        )
-        val firstDeletedAt = LocalDateTime.of(2026, 9, 12, 10, 0)
-
-        // when
-        comment.delete(firstDeletedAt)
-        comment.delete(firstDeletedAt.plusHours(1))
-
-        // then
-        assertTrue(comment.isDeleted())
-        assertEquals(firstDeletedAt, comment.deletedAt)
     }
 
     @Test

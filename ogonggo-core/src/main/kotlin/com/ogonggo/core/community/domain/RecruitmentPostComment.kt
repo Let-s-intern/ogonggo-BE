@@ -8,13 +8,21 @@ import jakarta.persistence.ForeignKey
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
-import java.time.LocalDateTime
 
 @Entity
-@Table(name = "recruitment_post_comments")
+@Table(
+    name = "recruitment_post_comments",
+    indexes = [
+        Index(
+            name = "idx_recruitment_post_comment_post_parent_created_id",
+            columnList = "post_id, parent_id, created_at, id",
+        ),
+    ],
+)
 class RecruitmentPostComment internal constructor(
     post: Post,
     parent: RecruitmentPostComment?,
@@ -57,27 +65,9 @@ class RecruitmentPostComment internal constructor(
     var content: String = content
         protected set
 
-    @Column(name = "deleted_at")
-    var deletedAt: LocalDateTime? = null
-        protected set
-
     fun belongsTo(postId: Long): Boolean = post.id == postId
 
     fun isReply(): Boolean = parent != null
-
-    fun isDeleted(): Boolean = deletedAt != null
-
-    fun updateContent(content: String) {
-        validateContent(content)
-        check(!isDeleted()) { "삭제된 댓글은 수정할 수 없습니다." }
-        this.content = content
-    }
-
-    fun delete(deletedAt: LocalDateTime) {
-        if (this.deletedAt == null) {
-            this.deletedAt = deletedAt
-        }
-    }
 
     companion object {
         const val CONTENT_MAX_LENGTH = 1000
