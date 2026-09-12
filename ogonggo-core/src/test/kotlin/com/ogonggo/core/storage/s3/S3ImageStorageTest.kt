@@ -7,6 +7,7 @@ import org.mockito.Mockito
 import org.mockito.stubbing.Answer
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse
 
 class S3ImageStorageTest {
 
@@ -55,5 +56,29 @@ class S3ImageStorageTest {
             storage.put("images/image-id.png", byteArrayOf(1), "image/png")
         }
         Mockito.verifyNoInteractions(s3Client)
+    }
+
+    @Test
+    fun `S3에서 이미지 객체를 삭제한다`() {
+        var deleteObjectCalled = false
+        val s3Client = Mockito.mock(
+            S3Client::class.java,
+            Answer { invocation ->
+                if (invocation.method.name == "deleteObject") {
+                    deleteObjectCalled = true
+                    DeleteObjectResponse.builder().build()
+                } else {
+                    Mockito.RETURNS_DEFAULTS.answer(invocation)
+                }
+            },
+        )
+        val storage = S3ImageStorage(
+            s3Client = s3Client,
+            properties = S3ImageStorageProperties(bucket = "ogonggo-images"),
+        )
+
+        storage.delete("images/image-id.png")
+
+        assertTrue(deleteObjectCalled)
     }
 }

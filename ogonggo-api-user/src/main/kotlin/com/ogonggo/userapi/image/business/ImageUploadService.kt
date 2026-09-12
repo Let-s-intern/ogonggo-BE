@@ -16,7 +16,7 @@ class ImageUploadService(
 
     fun upload(userId: Long, command: ImageUploadCommand): ImageUploadResult {
         return try {
-            imageUploader.upload(command)
+            imageUploader.upload(userId, command)
         } catch (exception: BusinessException) {
             throw exception
         } catch (exception: Exception) {

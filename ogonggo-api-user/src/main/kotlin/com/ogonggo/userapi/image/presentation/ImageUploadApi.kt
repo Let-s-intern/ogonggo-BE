@@ -22,7 +22,7 @@ interface ImageUploadApi {
     @Operation(
         operationId = "createImage",
         summary = "이미지 업로드",
-        description = "이미지 파일을 S3에 저장하고 Lexical image 노드에 사용할 표시용 URL을 반환합니다.",
+        description = "이미지 파일을 S3에 임시 저장하고, 게시글 저장 시 연결할 이미지 식별자와 표시용 URL을 반환합니다.",
     )
     @ApiResponses(
         value = [
