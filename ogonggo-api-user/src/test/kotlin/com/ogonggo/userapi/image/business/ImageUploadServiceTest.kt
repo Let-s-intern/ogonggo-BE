@@ -27,19 +27,19 @@ class ImageUploadServiceTest {
             mimeType = "image/png",
             size = 3L,
         )
-        Mockito.`when`(imageUploader.upload(command)).thenReturn(result)
+        Mockito.`when`(imageUploader.upload(17L, command)).thenReturn(result)
 
         val uploaded = service.upload(17L, command)
 
         assertEquals(result, uploaded)
-        Mockito.verify(imageUploader).upload(command)
+        Mockito.verify(imageUploader).upload(17L, command)
     }
 
     @Test
     fun `공통 업로더의 이미지 검증 오류는 그대로 전달한다`() {
         val command = ImageUploadCommand(byteArrayOf())
         val exception = InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_REQUIRED)
-        Mockito.`when`(imageUploader.upload(command)).thenThrow(exception)
+        Mockito.`when`(imageUploader.upload(17L, command)).thenThrow(exception)
 
         val thrown = assertThrows(InvalidValueException::class.java) {
             service.upload(17L, command)
@@ -51,7 +51,7 @@ class ImageUploadServiceTest {
     @Test
     fun `공통 업로더의 저장 오류는 사용자 API 오류로 변환한다`() {
         val command = ImageUploadCommand(byteArrayOf(1, 2, 3))
-        Mockito.`when`(imageUploader.upload(command)).thenThrow(IllegalStateException("S3 unavailable"))
+        Mockito.`when`(imageUploader.upload(17L, command)).thenThrow(IllegalStateException("S3 unavailable"))
 
         val thrown = assertThrows(InternalServerException::class.java) {
             service.upload(17L, command)

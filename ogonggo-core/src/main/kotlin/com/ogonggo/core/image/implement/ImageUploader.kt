@@ -13,18 +13,29 @@ import java.util.UUID
 @Component
 class ImageUploader internal constructor(
     private val imageFileValidator: ImageFileValidator,
+    private val imageAssetManager: ImageAssetManager,
     private val s3ImageStorage: S3ImageStorage,
 ) {
 
-    fun upload(command: ImageUploadCommand): ImageUploadResult {
+    fun upload(ownerUserId: Long, command: ImageUploadCommand): ImageUploadResult {
         val image = imageFileValidator.validate(command)
         val imageId = UUID.randomUUID().toString()
         val key = "images/$imageId.${image.extension}"
-        val url = s3ImageStorage.put(
+        val url = s3ImageStorage.publicUrl(key)
+        imageAssetManager.startUploading(
+            id = imageId,
+            ownerUserId = ownerUserId,
+            storageKey = key,
+            url = url,
+            mimeType = image.mimeType,
+            size = image.content.size.toLong(),
+        )
+        s3ImageStorage.put(
             key = key,
             content = image.content,
             contentType = image.mimeType,
         )
+        imageAssetManager.markUploaded(imageId)
 
         return ImageUploadResult(
             id = imageId,

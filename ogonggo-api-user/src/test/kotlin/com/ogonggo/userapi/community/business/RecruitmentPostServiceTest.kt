@@ -13,6 +13,7 @@ import com.ogonggo.core.community.implement.PostManager
 import com.ogonggo.core.community.implement.PostReader
 import com.ogonggo.core.community.implement.PostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
@@ -33,6 +34,7 @@ class RecruitmentPostServiceTest {
     private val postManager = Mockito.mock(PostManager::class.java)
     private val postReader = Mockito.mock(PostReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
+    private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
     private val service = RecruitmentPostService(
         userReader,
@@ -40,6 +42,7 @@ class RecruitmentPostServiceTest {
         postManager,
         postReader,
         contentValidator,
+        imageAssetManager,
         clock,
     )
 
