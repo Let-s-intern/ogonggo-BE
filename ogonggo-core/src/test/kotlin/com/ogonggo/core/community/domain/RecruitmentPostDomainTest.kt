@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
+import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import java.time.LocalDateTime
-import com.ogonggo.core.community.implement.PostUpdateCommand
 
 @DisplayName("모집글 도메인")
-class PostDomainTest {
+class RecruitmentPostDomainTest {
 
     @Test
     @DisplayName("모집글을 생성하면 공개 및 모집 중 상태로 시작한다")
@@ -63,6 +63,49 @@ class PostDomainTest {
     }
 
     @Test
+    @DisplayName("컬렉션 조회 결과를 변경해도 모집글 내부 상태는 바뀌지 않는다")
+    fun protectCollections() {
+        // given
+        val post = createPostFixture(positions = listOf(RecruitmentPosition.BACKEND))
+
+        // when
+        post.technologyStacks.add("JPA")
+        post.positions.clear()
+
+        // then
+        assertEquals(listOf("Kotlin", "Spring"), post.technologyStacks)
+        assertEquals(listOf(RecruitmentPosition.BACKEND), post.positions)
+    }
+
+    @Test
+    @DisplayName("연락 수단과 맞지 않는 연락처는 생성할 수 없다")
+    fun validateContactValue() {
+        // when
+        val emailException = assertThrows(IllegalArgumentException::class.java) {
+            createPostFixture(contactMethod = ContactMethod.EMAIL, contactValue = "not-an-email")
+        }
+        val kakaoException = assertThrows(IllegalArgumentException::class.java) {
+            createPostFixture(contactMethod = ContactMethod.OPEN_KAKAO, contactValue = "not-a-url")
+        }
+
+        // then
+        assertEquals("이메일 형식으로 입력해 주세요.", emailException.message)
+        assertEquals("카카오톡 오픈채팅 링크를 입력해 주세요.", kakaoException.message)
+    }
+
+    @Test
+    @DisplayName("에디터 JSON이 아닌 본문은 생성할 수 없다")
+    fun rejectNonJsonContent() {
+        // when
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            createPostFixture(content = "<p>HTML 본문</p>")
+        }
+
+        // then
+        assertEquals("모집글 본문은 올바른 에디터 JSON이어야 합니다.", exception.message)
+    }
+
+    @Test
     @DisplayName("모집글을 마감하면 마감 상태와 마감 시각을 기록한다")
     fun closePost() {
         // given
@@ -97,7 +140,7 @@ class PostDomainTest {
     fun updatePost() {
         // given
         val post = createPostFixture()
-        val updateCommand = PostUpdateCommand(
+        val updateCommand = RecruitmentPostUpdateCommand(
             title = "수정된 스터디 모집",
             recruitmentType = RecruitmentType.STUDY,
             capacity = 6,
@@ -105,7 +148,7 @@ class PostDomainTest {
             activityDurationMonths = 4,
             technologyStacks = listOf("Kotlin", "Spring Boot"),
             summary = "수정된 한 줄 소개입니다.",
-            content = "<p>수정된 모집 내용입니다.</p>",
+            content = "{\"root\":{\"children\":[]}}",
             eligibilityAndSelectionProcess = "수정된 지원 자격",
             recruitmentStartDate = LocalDate.of(2026, 9, 2),
             recruitmentEndDate = LocalDate.of(2026, 10, 1),
@@ -176,7 +219,10 @@ class PostDomainTest {
         recruitmentStartDate: LocalDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate: LocalDate = LocalDate.of(2026, 9, 30),
         positions: List<RecruitmentPosition> = listOf(RecruitmentPosition.BACKEND),
-    ): Post = Post(
+        contactMethod: ContactMethod = ContactMethod.EMAIL,
+        contactValue: String = "team@example.com",
+        content: String = "{\"root\":{\"children\":[]}}",
+    ): RecruitmentPost = RecruitmentPost(
         authorUserId = 1L,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -185,12 +231,12 @@ class PostDomainTest {
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin", "Spring"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = content,
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = recruitmentStartDate,
         recruitmentEndDate = recruitmentEndDate,
         positions = positions,
-        contactMethod = ContactMethod.EMAIL,
-        contactValue = "team@example.com",
+        contactMethod = contactMethod,
+        contactValue = contactValue,
     )
 }

@@ -9,54 +9,25 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
-interface RecruitmentPostCommentReader {
-    fun read(commentId: Long): RecruitmentPostComment
-
-    fun readRoot(postId: Long, commentId: Long): RecruitmentPostComment
-
-    fun readInPost(postId: Long, commentId: Long): RecruitmentPostComment
-
-    fun readRootPage(
-        postId: Long,
-        cursor: RecruitmentPostCommentCursor?,
-        size: Int,
-    ): RecruitmentPostCommentPage
-
-    fun readReplyPage(
-        postId: Long,
-        parentId: Long,
-        cursor: RecruitmentPostCommentCursor?,
-        size: Int,
-    ): RecruitmentPostCommentPage
-
-    fun readReplyPreviews(
-        postId: Long,
-        parentIds: Collection<Long>,
-        size: Int,
-    ): Map<Long, RecruitmentPostCommentPage>
-
-}
-
 @Component
-internal class RecruitmentPostCommentReaderImpl(
+class RecruitmentPostCommentReader internal constructor(
     private val commentRepository: RecruitmentPostCommentJpaRepository,
-) : RecruitmentPostCommentReader {
-
-    override fun read(commentId: Long): RecruitmentPostComment =
+) {
+    fun read(commentId: Long): RecruitmentPostComment =
         commentRepository.findByIdOrNull(commentId)
             ?: throw EntityNotFoundException(
                 RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PARENT_NOT_FOUND,
             )
 
-    override fun readRoot(postId: Long, commentId: Long): RecruitmentPostComment =
-        commentRepository.findByIdAndPost_IdAndParentIsNull(commentId, postId)
+    fun readRoot(postId: Long, commentId: Long): RecruitmentPostComment =
+        commentRepository.findByIdAndPostIdAndParentIdIsNull(commentId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
 
-    override fun readInPost(postId: Long, commentId: Long): RecruitmentPostComment =
-        commentRepository.findByIdAndPost_Id(commentId, postId)
+    fun readInPost(postId: Long, commentId: Long): RecruitmentPostComment =
+        commentRepository.findByIdAndPostId(commentId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
 
-    override fun readRootPage(
+    fun readRootPage(
         postId: Long,
         cursor: RecruitmentPostCommentCursor?,
         size: Int,
@@ -74,7 +45,7 @@ internal class RecruitmentPostCommentReaderImpl(
         },
     )
 
-    override fun readReplyPage(
+    fun readReplyPage(
         postId: Long,
         parentId: Long,
         cursor: RecruitmentPostCommentCursor?,
@@ -94,7 +65,7 @@ internal class RecruitmentPostCommentReaderImpl(
         },
     )
 
-    override fun readReplyPreviews(
+    fun readReplyPreviews(
         postId: Long,
         parentIds: Collection<Long>,
         size: Int,
@@ -103,7 +74,7 @@ internal class RecruitmentPostCommentReaderImpl(
 
         val replies = commentRepository.findRepliesByParentIds(postId, parentIds, size + 1)
         return replies
-            .groupBy { checkNotNull(it.parent?.id) { "대댓글 부모 식별자가 없습니다." } }
+            .groupBy { checkNotNull(it.parentId) { "대댓글 부모 식별자가 없습니다." } }
             .mapValues { (_, comments) ->
                 val hasNext = comments.size > size
                 val items = comments.take(size)

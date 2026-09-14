@@ -1,15 +1,15 @@
 package com.ogonggo.core.community.implement
 
 import com.ogonggo.core.community.domain.ContactMethod
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.common.CoreJpaConfiguration
-import com.ogonggo.core.community.persistence.PostJpaRepository
-import com.ogonggo.core.community.persistence.PostQueryRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostQueryRepository
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -24,12 +24,12 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(PostAppenderImpl::class, PostManagerImpl::class, PostReaderImpl::class, PostQueryRepository::class)
+@Import(RecruitmentPostAppender::class, RecruitmentPostManager::class, RecruitmentPostReader::class, RecruitmentPostQueryRepository::class)
 internal class PostReaderPersistenceTest @Autowired constructor(
-    private val postAppender: PostAppender,
-    private val postManager: PostManager,
-    private val postReader: PostReader,
-    private val postRepository: PostJpaRepository,
+    private val postAppender: RecruitmentPostAppender,
+    private val postManager: RecruitmentPostManager,
+    private val postReader: RecruitmentPostReader,
+    private val postRepository: RecruitmentPostJpaRepository,
 ) {
 
     @Test
@@ -100,7 +100,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(listOf("백엔드 모집"), result.posts.map(Post::title))
+        assertEquals(listOf("백엔드 모집"), result.posts.map(RecruitmentPost::title))
     }
 
     @Test
@@ -116,7 +116,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(setOf("스터디 모집", "사이드 프로젝트 모집"), result.posts.map(Post::title).toSet())
+        assertEquals(setOf("스터디 모집", "사이드 프로젝트 모집"), result.posts.map(RecruitmentPost::title).toSet())
         assertEquals(2, result.totalElements)
     }
 
@@ -137,7 +137,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(emptyList<Post>(), result.posts)
+        assertEquals(emptyList<RecruitmentPost>(), result.posts)
         assertEquals(0, result.totalElements)
     }
 
@@ -165,7 +165,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(emptyList<Post>(), result.posts)
+        assertEquals(emptyList<RecruitmentPost>(), result.posts)
         assertEquals(1, result.totalElements)
         assertEquals(1, result.totalPages)
     }
@@ -174,7 +174,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         title: String,
         recruitmentType: RecruitmentType,
         positions: List<RecruitmentPosition> = listOf(RecruitmentPosition.BACKEND),
-    ) = PostAppendCommand(
+    ) = RecruitmentPostAppendCommand(
         authorUserId = 1L,
         title = title,
         recruitmentType = recruitmentType,
@@ -183,7 +183,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = "{\"root\":{\"children\":[]}}",
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),
@@ -195,7 +195,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     private fun createPost(
         title: String,
         publicationStatus: PublicationStatus,
-    ) = Post(
+    ) = RecruitmentPost(
         authorUserId = 1L,
         title = title,
         recruitmentType = RecruitmentType.STUDY,
@@ -204,7 +204,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = "{\"root\":{\"children\":[]}}",
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),

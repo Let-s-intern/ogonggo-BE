@@ -64,10 +64,12 @@ class PostMetricManager internal constructor(
         updateOrCreate(postId) { postMetricRepository.increaseViewCount(postId, 1, now) }
     }
 
+    @Transactional
     fun increaseCommentCount(postId: Long, now: LocalDateTime) {
         updateOrCreate(postId) { postMetricRepository.increaseCommentCount(postId, now) }
     }
 
+    @Transactional
     fun decreaseCommentCount(postId: Long, amount: Int, now: LocalDateTime) {
         require(amount > 0) { "감소할 댓글 수는 양수여야 합니다." }
         val updated = postMetricRepository.decreaseCommentCount(postId, amount, now)

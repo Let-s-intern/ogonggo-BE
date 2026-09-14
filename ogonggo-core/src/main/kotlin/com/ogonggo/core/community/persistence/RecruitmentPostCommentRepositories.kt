@@ -14,8 +14,8 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         """
         SELECT comment
         FROM RecruitmentPostComment comment
-        WHERE comment.post.id = :postId
-          AND comment.parent IS NULL
+        WHERE comment.postId = :postId
+          AND comment.parentId IS NULL
         ORDER BY comment.createdAt DESC, comment.id DESC
         """,
     )
@@ -28,8 +28,8 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         """
         SELECT comment
         FROM RecruitmentPostComment comment
-        WHERE comment.post.id = :postId
-          AND comment.parent IS NULL
+        WHERE comment.postId = :postId
+          AND comment.parentId IS NULL
           AND (
               comment.createdAt < :createdAt
               OR (comment.createdAt = :createdAt AND comment.id < :commentId)
@@ -48,8 +48,8 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         """
         SELECT comment
         FROM RecruitmentPostComment comment
-        WHERE comment.post.id = :postId
-          AND comment.parent.id = :parentId
+        WHERE comment.postId = :postId
+          AND comment.parentId = :parentId
         ORDER BY comment.createdAt ASC, comment.id ASC
         """,
     )
@@ -63,8 +63,8 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         """
         SELECT comment
         FROM RecruitmentPostComment comment
-        WHERE comment.post.id = :postId
-          AND comment.parent.id = :parentId
+        WHERE comment.postId = :postId
+          AND comment.parentId = :parentId
           AND (
               comment.createdAt > :createdAt
               OR (comment.createdAt = :createdAt AND comment.id > :commentId)
@@ -104,10 +104,10 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
     ): List<RecruitmentPostComment>
 
     @Modifying(flushAutomatically = true)
-    @Query("delete from RecruitmentPostComment comment where comment.parent.id = :parentId")
+    @Query("delete from RecruitmentPostComment comment where comment.parentId = :parentId")
     fun deleteAllByParentId(@Param("parentId") parentId: Long): Int
 
-    fun findByIdAndPost_IdAndParentIsNull(commentId: Long, postId: Long): RecruitmentPostComment?
+    fun findByIdAndPostIdAndParentIdIsNull(commentId: Long, postId: Long): RecruitmentPostComment?
 
-    fun findByIdAndPost_Id(commentId: Long, postId: Long): RecruitmentPostComment?
+    fun findByIdAndPostId(commentId: Long, postId: Long): RecruitmentPostComment?
 }

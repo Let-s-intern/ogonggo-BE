@@ -1,6 +1,6 @@
 package com.ogonggo.core.community.persistence
 
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.PostMetric
 import com.ogonggo.core.community.domain.PublicationStatus
 import jakarta.persistence.LockModeType
@@ -12,14 +12,14 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
 
-internal interface PostJpaRepository : JpaRepository<Post, Long>, JpaSpecificationExecutor<Post> {
-    fun findByIdAndPublicationStatusAndDeletedAtIsNull(id: Long, publicationStatus: PublicationStatus): Post?
+internal interface RecruitmentPostJpaRepository : JpaRepository<RecruitmentPost, Long>, JpaSpecificationExecutor<RecruitmentPost> {
+    fun findByIdAndPublicationStatusAndDeletedAtIsNull(id: Long, publicationStatus: PublicationStatus): RecruitmentPost?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         """
         select post
-        from Post post
+        from RecruitmentPost post
         where post.id = :postId
           and post.authorUserId = :authorUserId
           and post.deletedAt is null
@@ -28,14 +28,14 @@ internal interface PostJpaRepository : JpaRepository<Post, Long>, JpaSpecificati
     fun findOwnedByIdForUpdate(
         @Param("authorUserId") authorUserId: Long,
         @Param("postId") postId: Long,
-    ): Post?
+    ): RecruitmentPost?
 
     /** 삭제는 멱등해야 하므로 이미 삭제된 본인 모집글도 조회한다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         """
         select post
-        from Post post
+        from RecruitmentPost post
         where post.id = :postId
           and post.authorUserId = :authorUserId
         """,
@@ -43,7 +43,7 @@ internal interface PostJpaRepository : JpaRepository<Post, Long>, JpaSpecificati
     fun findOwnedByIdForDelete(
         @Param("authorUserId") authorUserId: Long,
         @Param("postId") postId: Long,
-    ): Post?
+    ): RecruitmentPost?
 }
 
 internal interface PostMetricJpaRepository : JpaRepository<PostMetric, Long> {

@@ -3,14 +3,10 @@ package com.ogonggo.core.community.domain
 import com.ogonggo.core.common.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
-import jakarta.persistence.ForeignKey
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 
 @Entity
@@ -24,13 +20,14 @@ import jakarta.persistence.Table
     ],
 )
 class RecruitmentPostComment internal constructor(
-    post: Post,
-    parent: RecruitmentPostComment?,
+    postId: Long,
+    parentId: Long?,
     userId: Long,
     content: String,
 ) : BaseTimeEntity() {
 
     init {
+        require(postId > 0) { "모집글 식별자는 양수여야 합니다." }
         validateUser(userId)
         validateContent(content)
     }
@@ -40,22 +37,11 @@ class RecruitmentPostComment internal constructor(
     var id: Long? = null
         protected set
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "post_id",
-        nullable = false,
-        foreignKey = ForeignKey(name = "fk_recruitment_post_comment_post"),
-    )
-    var post: Post = post
-        protected set
+    @Column(name = "post_id", nullable = false)
+    val postId: Long = postId
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "parent_id",
-        foreignKey = ForeignKey(name = "fk_recruitment_post_comment_parent"),
-    )
-    var parent: RecruitmentPostComment? = parent
-        protected set
+    @Column(name = "parent_id")
+    val parentId: Long? = parentId
 
     @Column(name = "user_id", nullable = false)
     var userId: Long = userId
@@ -65,21 +51,21 @@ class RecruitmentPostComment internal constructor(
     var content: String = content
         protected set
 
-    fun belongsTo(postId: Long): Boolean = post.id == postId
+    fun belongsTo(postId: Long): Boolean = this.postId == postId
 
-    fun isReply(): Boolean = parent != null
+    fun isReply(): Boolean = parentId != null
 
     companion object {
         const val CONTENT_MAX_LENGTH = 1000
 
         fun create(
-            post: Post,
-            parent: RecruitmentPostComment?,
+            postId: Long,
+            parentId: Long?,
             userId: Long,
             content: String,
         ): RecruitmentPostComment = RecruitmentPostComment(
-            post = post,
-            parent = parent,
+            postId = postId,
+            parentId = parentId,
             userId = userId,
             content = content,
         )

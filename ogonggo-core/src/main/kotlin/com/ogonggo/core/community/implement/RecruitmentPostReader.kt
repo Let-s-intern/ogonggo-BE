@@ -1,6 +1,6 @@
 package com.ogonggo.core.community.implement
 
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
@@ -9,45 +9,28 @@ import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.community.persistence.PostJpaRepository
-import com.ogonggo.core.community.persistence.PostQueryRepository
-import org.springframework.data.jpa.domain.Specification
+import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostQueryRepository
 import org.springframework.stereotype.Component
 
-interface PostReader {
-    fun readPublished(postId: Long): Post
-
-    fun readOwned(ownerUserId: Long, postId: Long): Post
-
-    fun readOwnedForDelete(ownerUserId: Long, postId: Long): Post
-
-    fun readPublishedPage(
-        page: Int,
-        size: Int,
-        filter: RecruitmentPostListFilter,
-        sortType: RecruitmentPostSortType,
-    ): RecruitmentPostPage
-}
-
 @Component
-internal class PostReaderImpl(
-    private val postRepository: PostJpaRepository,
-    private val postQueryRepository: PostQueryRepository,
-) : PostReader {
-
-    override fun readPublished(postId: Long): Post =
+class RecruitmentPostReader internal constructor(
+    private val postRepository: RecruitmentPostJpaRepository,
+    private val postQueryRepository: RecruitmentPostQueryRepository,
+) {
+    fun readPublished(postId: Long): RecruitmentPost =
         postRepository.findByIdAndPublicationStatusAndDeletedAtIsNull(postId, PublicationStatus.PUBLISHED)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
-    override fun readOwned(ownerUserId: Long, postId: Long): Post =
+    fun readOwned(ownerUserId: Long, postId: Long): RecruitmentPost =
         postRepository.findOwnedByIdForUpdate(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
-    override fun readOwnedForDelete(ownerUserId: Long, postId: Long): Post =
+    fun readOwnedForDelete(ownerUserId: Long, postId: Long): RecruitmentPost =
         postRepository.findOwnedByIdForDelete(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
-    override fun readPublishedPage(
+    fun readPublishedPage(
         page: Int,
         size: Int,
         filter: RecruitmentPostListFilter,
@@ -64,7 +47,6 @@ internal class PostReaderImpl(
             totalPages = result.totalPages,
         )
     }
-
 }
 
 data class RecruitmentPostListFilter(
@@ -75,37 +57,12 @@ data class RecruitmentPostListFilter(
 )
 
 data class RecruitmentPostPage(
-    val posts: List<Post>,
+    val posts: List<RecruitmentPost>,
     val page: Int,
     val size: Int,
     val totalElements: Long,
     val totalPages: Int,
 )
-
-private fun publishedRecruitmentPosts(filter: RecruitmentPostListFilter): Specification<Post> =
-    Specification { root, query, criteriaBuilder ->
-        val predicates = mutableListOf(
-            criteriaBuilder.equal(root.get<PublicationStatus>("publicationStatus"), PublicationStatus.PUBLISHED),
-            criteriaBuilder.isNull(root.get<Any>("deletedAt")),
-        )
-
-        if (filter.recruitmentTypes.isNotEmpty()) {
-            predicates += root.get<RecruitmentType>("recruitmentType").`in`(filter.recruitmentTypes)
-        }
-        if (filter.progressMethods.isNotEmpty()) {
-            predicates += root.get<ProgressMethod>("progressMethod").`in`(filter.progressMethods)
-        }
-        if (filter.recruitmentStatuses.isNotEmpty()) {
-            predicates += root.get<RecruitmentStatus>("recruitmentStatus").`in`(filter.recruitmentStatuses)
-        }
-        if (filter.positions.isNotEmpty()) {
-            query.distinct(true)
-            val positionJoin = root.join<Post, RecruitmentPosition>("positions")
-            predicates += positionJoin.`in`(filter.positions)
-        }
-
-        criteriaBuilder.and(*predicates.toTypedArray())
-    }
 
 private fun validatePageRequest(page: Int, size: Int) {
     require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }

@@ -5,7 +5,7 @@ import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.persistence.PostJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostCommentJpaRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,18 +22,18 @@ import java.time.LocalDate
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
-    PostAppenderImpl::class,
-    RecruitmentPostCommentAppenderImpl::class,
-    RecruitmentPostCommentRemoverImpl::class,
-    RecruitmentPostCommentReaderImpl::class,
+    RecruitmentPostAppender::class,
+    RecruitmentPostCommentAppender::class,
+    RecruitmentPostCommentRemover::class,
+    RecruitmentPostCommentReader::class,
 )
 internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constructor(
-    private val postAppender: PostAppender,
+    private val postAppender: RecruitmentPostAppender,
     private val commentAppender: RecruitmentPostCommentAppender,
     private val commentRemover: RecruitmentPostCommentRemover,
     private val commentReader: RecruitmentPostCommentReader,
     private val commentRepository: RecruitmentPostCommentJpaRepository,
-    private val postRepository: PostJpaRepository,
+    private val postRepository: RecruitmentPostJpaRepository,
     private val entityManager: EntityManager,
 ) {
 
@@ -42,8 +42,8 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // given
         val post = postAppender.append(postCommand())
         val command = RecruitmentPostCommentAppendCommand(
-            post = post,
-            parent = null,
+            postId = checkNotNull(post.id),
+            parentId = null,
             userId = 17L,
             content = "참여하고 싶습니다.",
         )
@@ -56,7 +56,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
 
         // then
         assertNotNull(savedComment.createdAt)
-        assertEquals(checkNotNull(post.id), checkNotNull(reloadedComment.post.id))
+        assertEquals(checkNotNull(post.id), reloadedComment.postId)
         assertEquals(17L, reloadedComment.userId)
         assertEquals("참여하고 싶습니다.", reloadedComment.content)
         assertEquals(1, postRepository.count())
@@ -68,16 +68,16 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         val post = postAppender.append(postCommand())
         val root = commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = null,
+                postId = checkNotNull(post.id),
+                parentId = null,
                 userId = 17L,
                 content = "부모 댓글입니다.",
             ),
         )
         commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = null,
+                postId = checkNotNull(post.id),
+                parentId = null,
                 userId = 18L,
                 content = "두 번째 부모 댓글입니다.",
             ),
@@ -85,8 +85,8 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         repeat(6) { index ->
             commentAppender.append(
                 RecruitmentPostCommentAppendCommand(
-                    post = post,
-                    parent = root,
+                    postId = checkNotNull(post.id),
+                    parentId = checkNotNull(root.id),
                     userId = 19L,
                     content = "대댓글 $index",
                 ),
@@ -146,16 +146,16 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = null,
+                postId = checkNotNull(post.id),
+                parentId = null,
                 userId = 17L,
                 content = "부모 댓글입니다.",
             ),
         )
         val reply = commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = parent,
+                postId = checkNotNull(post.id),
+                parentId = checkNotNull(parent.id),
                 userId = 18L,
                 content = "대댓글입니다.",
             ),
@@ -185,16 +185,16 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = null,
+                postId = checkNotNull(post.id),
+                parentId = null,
                 userId = 17L,
                 content = "부모 댓글입니다.",
             ),
         )
         val reply = commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = parent,
+                postId = checkNotNull(post.id),
+                parentId = checkNotNull(parent.id),
                 userId = 18L,
                 content = "대댓글입니다.",
             ),
@@ -213,7 +213,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         assertEquals(false, commentRepository.findById(replyId).isPresent)
     }
 
-    private fun postCommand() = PostAppendCommand(
+    private fun postCommand() = RecruitmentPostAppendCommand(
         authorUserId = 1L,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -222,7 +222,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin", "Spring"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = "{\"root\":{\"children\":[]}}",
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),

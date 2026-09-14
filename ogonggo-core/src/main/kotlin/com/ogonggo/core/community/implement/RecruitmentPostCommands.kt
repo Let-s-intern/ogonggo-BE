@@ -1,13 +1,13 @@
 package com.ogonggo.core.community.implement
 
 import com.ogonggo.core.community.domain.ContactMethod
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import java.time.LocalDate
 
-data class PostAppendCommand(
+data class RecruitmentPostAppendCommand(
     val authorUserId: Long,
     val title: String,
     val recruitmentType: RecruitmentType,
@@ -24,7 +24,7 @@ data class PostAppendCommand(
     val contactMethod: ContactMethod,
     val contactValue: String,
 ) {
-    fun toEntity(): Post = Post(
+    fun toEntity(): RecruitmentPost = RecruitmentPost(
         authorUserId = authorUserId,
         title = title,
         recruitmentType = recruitmentType,
@@ -43,7 +43,7 @@ data class PostAppendCommand(
     )
 }
 
-data class PostUpdateCommand(
+data class RecruitmentPostUpdateCommand(
     val title: String,
     val recruitmentType: RecruitmentType,
     val capacity: Int,

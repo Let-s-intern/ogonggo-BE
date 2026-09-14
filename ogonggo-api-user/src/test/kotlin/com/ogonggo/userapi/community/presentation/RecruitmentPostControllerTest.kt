@@ -6,8 +6,8 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.PostAppendCommand
-import com.ogonggo.core.community.implement.PostUpdateCommand
+import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
@@ -313,7 +313,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         UsernamePasswordAuthenticationToken(USER_ID, null, emptyList()),
     )
 
-    private fun createCommand() = PostAppendCommand(
+    private fun createCommand() = RecruitmentPostAppendCommand(
         authorUserId = USER_ID,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -331,7 +331,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         contactValue = "team@example.com",
     )
 
-    private fun updateCommand() = PostUpdateCommand(
+    private fun updateCommand() = RecruitmentPostUpdateCommand(
         title = "수정된 모집글",
         recruitmentType = RecruitmentType.STUDY,
         capacity = 6,

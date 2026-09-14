@@ -1,11 +1,11 @@
 package com.ogonggo.userapi.community.business
 
-import com.ogonggo.core.community.implement.PostAppendCommand
-import com.ogonggo.core.community.implement.PostAppender
-import com.ogonggo.core.community.implement.PostManager
+import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostAppender
+import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
-import com.ogonggo.core.community.implement.PostReader
-import com.ogonggo.core.community.implement.PostUpdateCommand
+import com.ogonggo.core.community.implement.RecruitmentPostReader
+import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -21,9 +21,9 @@ import java.time.LocalDateTime
 @Service
 class RecruitmentPostService(
     private val userReader: UserReader,
-    private val postAppender: PostAppender,
-    private val postManager: PostManager,
-    private val postReader: PostReader,
+    private val postAppender: RecruitmentPostAppender,
+    private val postManager: RecruitmentPostManager,
+    private val postReader: RecruitmentPostReader,
     private val postMetricReader: PostMetricReader,
     private val contentValidator: LexicalEditorStateValidator,
     private val imageAssetManager: ImageAssetManager,
@@ -50,7 +50,7 @@ class RecruitmentPostService(
         }
 
     @Transactional
-    fun create(userId: Long, command: PostAppendCommand): Long {
+    fun create(userId: Long, command: RecruitmentPostAppendCommand): Long {
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
@@ -68,7 +68,7 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun update(userId: Long, postId: Long, command: PostUpdateCommand) {
+    fun update(userId: Long, postId: Long, command: RecruitmentPostUpdateCommand) {
         verifyActiveUser(userId)
         val post = postReader.readOwned(userId, postId)
         val previousContent = post.content

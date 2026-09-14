@@ -15,18 +15,16 @@ class RecruitmentPostCommentDomainTest {
     @DisplayName("댓글을 생성하면 모집글과 작성자 및 내용을 보존한다")
     fun createComment() {
         // given
-        val post = postFixture()
-
         // when
         val comment = RecruitmentPostComment.create(
-            post = post,
-            parent = null,
+            postId = 1L,
+            parentId = null,
             userId = 17L,
             content = "참여하고 싶습니다.",
         )
 
         // then
-        assertEquals(post, comment.post)
+        assertEquals(1L, comment.postId)
         assertEquals(17L, comment.userId)
         assertEquals("참여하고 싶습니다.", comment.content)
         assertFalse(comment.isReply())
@@ -36,13 +34,11 @@ class RecruitmentPostCommentDomainTest {
     @DisplayName("공백인 댓글은 생성할 수 없다")
     fun rejectBlankContent() {
         // given
-        val post = postFixture()
-
         // when
         val exception = assertThrows(IllegalArgumentException::class.java) {
             RecruitmentPostComment.create(
-                post = post,
-                parent = null,
+                postId = 1L,
+                parentId = null,
                 userId = 17L,
                 content = "   ",
             )
@@ -56,28 +52,20 @@ class RecruitmentPostCommentDomainTest {
     @DisplayName("부모 댓글을 지정하면 대댓글로 생성한다")
     fun createReply() {
         // given
-        val post = postFixture()
-        val parent = RecruitmentPostComment.create(
-            post = post,
-            parent = null,
-            userId = 1L,
-            content = "질문이 있습니다.",
-        )
-
         // when
         val reply = RecruitmentPostComment.create(
-            post = post,
-            parent = parent,
+            postId = 1L,
+            parentId = 2L,
             userId = 17L,
             content = "답변드립니다.",
         )
 
         // then
         assertTrue(reply.isReply())
-        assertEquals(parent, reply.parent)
+        assertEquals(2L, reply.parentId)
     }
 
-    private fun postFixture(): Post = Post(
+    private fun postFixture(): RecruitmentPost = RecruitmentPost(
         authorUserId = 1L,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -86,7 +74,7 @@ class RecruitmentPostCommentDomainTest {
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin", "Spring"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = "{\"root\":{\"children\":[]}}",
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),

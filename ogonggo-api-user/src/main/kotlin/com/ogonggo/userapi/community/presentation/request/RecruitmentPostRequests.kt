@@ -5,14 +5,15 @@ import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.PostAppendCommand
-import com.ogonggo.core.community.implement.PostUpdateCommand
+import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
+import java.net.URI
 import java.time.LocalDate
 
 data class CreateRecruitmentPostRequest(
@@ -33,9 +34,9 @@ data class CreateRecruitmentPostRequest(
     @field:AssertTrue(message = "모집글 등록에 필요한 정보 제공 및 운영 정책에 동의해야 합니다.")
     val agreedToPolicy: Boolean,
 ) {
-    fun toCommand(authorUserId: Long): PostAppendCommand {
+    fun toCommand(authorUserId: Long): RecruitmentPostAppendCommand {
         validateRelations()
-        return PostAppendCommand(
+        return RecruitmentPostAppendCommand(
             authorUserId = authorUserId,
             title = title,
             recruitmentType = recruitmentType,
@@ -80,8 +81,9 @@ data class CreateRecruitmentPostRequest(
         }
     }
 
-    private fun isHttpUrl(value: String): Boolean =
-        value.startsWith("https://") || value.startsWith("http://")
+    private fun isHttpUrl(value: String): Boolean = runCatching {
+        URI(value).let { it.scheme in setOf("http", "https") && !it.host.isNullOrBlank() }
+    }.getOrDefault(false)
 
     private companion object {
         val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
@@ -104,9 +106,9 @@ data class UpdateRecruitmentPostRequest(
     val contactMethod: ContactMethod,
     @field:NotBlank @field:Size(max = 2048) val contactValue: String,
 ) {
-    fun toCommand(): PostUpdateCommand {
+    fun toCommand(): RecruitmentPostUpdateCommand {
         validateRelations()
-        return PostUpdateCommand(
+        return RecruitmentPostUpdateCommand(
             title = title,
             recruitmentType = recruitmentType,
             capacity = capacity,

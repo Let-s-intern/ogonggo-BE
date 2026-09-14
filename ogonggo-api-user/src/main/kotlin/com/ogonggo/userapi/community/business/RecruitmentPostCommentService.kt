@@ -2,7 +2,7 @@ package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.error.RecruitmentPostCommentErrorCode
 import com.ogonggo.core.community.domain.RecruitmentPostComment
-import com.ogonggo.core.community.implement.PostReader
+import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
@@ -31,7 +31,7 @@ data class CreateRecruitmentPostCommentCommand(
 @Service
 class RecruitmentPostCommentService(
     private val userReader: UserReader,
-    private val postReader: PostReader,
+    private val postReader: RecruitmentPostReader,
     private val commentReader: RecruitmentPostCommentReader,
     private val commentAppender: RecruitmentPostCommentAppender,
     private val commentRemover: RecruitmentPostCommentRemover,
@@ -103,13 +103,13 @@ class RecruitmentPostCommentService(
     @Transactional
     fun create(userId: Long, postId: Long, command: CreateRecruitmentPostCommentCommand): Long {
         verifyActiveUser(userId)
-        val post = postReader.readPublished(postId)
-        val parent = command.parentId?.let { parentId -> readValidParent(parentId, postId) }
+        postReader.readPublished(postId)
+        command.parentId?.let { parentId -> readValidParent(parentId, postId) }
 
         val comment = commentAppender.append(
             RecruitmentPostCommentAppendCommand(
-                post = post,
-                parent = parent,
+                postId = postId,
+                parentId = command.parentId,
                 userId = userId,
                 content = command.content,
             ),
@@ -152,7 +152,7 @@ class RecruitmentPostCommentService(
         val profile = profiles[userId]
         return RecruitmentPostCommentResult(
             id = requiredId(),
-            parentId = parent?.id,
+            parentId = parentId,
             author = RecruitmentPostCommentAuthorResult(
                 userId = userId,
                 nickname = profile?.nickname,

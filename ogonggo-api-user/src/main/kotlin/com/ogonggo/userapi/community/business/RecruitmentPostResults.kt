@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.community.business
 
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
@@ -42,7 +42,7 @@ data class RecruitmentPostSummary(
     val commentCount: Long = 0,
 ) {
     companion object {
-        internal fun from(post: Post, metric: PostMetricDto): RecruitmentPostSummary = RecruitmentPostSummary(
+        internal fun from(post: RecruitmentPost, metric: PostMetricDto): RecruitmentPostSummary = RecruitmentPostSummary(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             title = post.title,
             recruitmentType = post.recruitmentType,
@@ -80,7 +80,7 @@ data class RecruitmentPostDetailResult(
     val commentCount: Long = 0,
 ) {
     companion object {
-        internal fun from(post: Post, metric: PostMetricDto): RecruitmentPostDetailResult = RecruitmentPostDetailResult(
+        internal fun from(post: RecruitmentPost, metric: PostMetricDto): RecruitmentPostDetailResult = RecruitmentPostDetailResult(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             author = RecruitmentPostAuthorResult(userId = post.authorUserId),
             title = post.title,
