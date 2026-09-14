@@ -10,8 +10,7 @@ import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.community.persistence.PostJpaRepository
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
+import com.ogonggo.core.community.persistence.PostQueryRepository
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
 
@@ -33,6 +32,7 @@ interface PostReader {
 @Component
 internal class PostReaderImpl(
     private val postRepository: PostJpaRepository,
+    private val postQueryRepository: PostQueryRepository,
 ) : PostReader {
 
     override fun readPublished(postId: Long): Post =
@@ -55,10 +55,7 @@ internal class PostReaderImpl(
     ): RecruitmentPostPage {
         validatePageRequest(page, size)
 
-        val result = postRepository.findAll(
-            publishedRecruitmentPosts(filter),
-            PageRequest.of(page, size, sortType.toSort()),
-        )
+        val result = postQueryRepository.findPublishedPage(page, size, filter, sortType)
         return RecruitmentPostPage(
             posts = result.content,
             page = result.number,
@@ -68,13 +65,6 @@ internal class PostReaderImpl(
         )
     }
 
-    private fun RecruitmentPostSortType.toSort(): Sort = when (this) {
-        RecruitmentPostSortType.LATEST -> Sort.by(Sort.Order.desc("id"))
-        RecruitmentPostSortType.DEADLINE -> Sort.by(
-            Sort.Order.asc("recruitmentEndDate"),
-            Sort.Order.desc("id"),
-        )
-    }
 }
 
 data class RecruitmentPostListFilter(

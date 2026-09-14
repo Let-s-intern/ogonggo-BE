@@ -23,13 +23,13 @@ class RecruitmentPostController(
 
     override fun getRecruitmentPost(
         postId: Long,
-    ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> =
-        SuccessResponse.ok(
-            RecruitmentPostDetailResponse.from(
-                recruitmentPostService.getRecruitmentPost(postId),
-                objectMapper,
-            ),
+    ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> {
+        val responseBody = RecruitmentPostDetailResponse.from(
+            recruitmentPostService.getRecruitmentPost(postId),
+            objectMapper,
         )
+        return SuccessResponse.ok(responseBody)
+    }
 
     override fun getRecruitmentPosts(
         request: RecruitmentPostListRequest,

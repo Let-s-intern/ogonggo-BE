@@ -9,6 +9,7 @@ import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.community.persistence.PostJpaRepository
+import com.ogonggo.core.community.persistence.PostQueryRepository
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -23,7 +24,7 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(PostAppenderImpl::class, PostManagerImpl::class, PostReaderImpl::class)
+@Import(PostAppenderImpl::class, PostManagerImpl::class, PostReaderImpl::class, PostQueryRepository::class)
 internal class PostReaderPersistenceTest @Autowired constructor(
     private val postAppender: PostAppender,
     private val postManager: PostManager,

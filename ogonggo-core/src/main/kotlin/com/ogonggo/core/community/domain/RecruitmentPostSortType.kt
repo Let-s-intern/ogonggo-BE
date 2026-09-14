@@ -8,4 +8,6 @@ enum class RecruitmentPostSortType(
 ) : EnumField {
     LATEST(1, "최신순"),
     DEADLINE(2, "마감 임박순"),
+    VIEW_COUNT(3, "조회수순"),
+    COMMENT_COUNT(4, "댓글수순"),
 }

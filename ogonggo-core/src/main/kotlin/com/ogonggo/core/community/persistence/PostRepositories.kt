@@ -1,13 +1,16 @@
 package com.ogonggo.core.community.persistence
 
 import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.PostMetric
 import com.ogonggo.core.community.domain.PublicationStatus
 import jakarta.persistence.LockModeType
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.LocalDateTime
 
 internal interface PostJpaRepository : JpaRepository<Post, Long>, JpaSpecificationExecutor<Post> {
     fun findByIdAndPublicationStatusAndDeletedAtIsNull(id: Long, publicationStatus: PublicationStatus): Post?
@@ -41,4 +44,52 @@ internal interface PostJpaRepository : JpaRepository<Post, Long>, JpaSpecificati
         @Param("authorUserId") authorUserId: Long,
         @Param("postId") postId: Long,
     ): Post?
+}
+
+internal interface PostMetricJpaRepository : JpaRepository<PostMetric, Long> {
+    fun findByPostId(postId: Long): PostMetric?
+
+    fun findAllByPostIdIn(postIds: Collection<Long>): List<PostMetric>
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update PostMetric metric
+        set metric.viewCount = metric.viewCount + :amount,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+        """,
+    )
+    fun increaseViewCount(
+        @Param("postId") postId: Long,
+        @Param("amount") amount: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update PostMetric metric
+        set metric.commentCount = metric.commentCount + 1,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+        """,
+    )
+    fun increaseCommentCount(@Param("postId") postId: Long, @Param("now") now: LocalDateTime): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update PostMetric metric
+        set metric.commentCount = metric.commentCount - :amount,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+          and metric.commentCount >= :amount
+        """,
+    )
+    fun decreaseCommentCount(
+        @Param("postId") postId: Long,
+        @Param("amount") amount: Int,
+        @Param("now") now: LocalDateTime,
+    ): Int
 }

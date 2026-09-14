@@ -3,6 +3,7 @@ package com.ogonggo.userapi.community.business
 import com.ogonggo.core.community.domain.Post
 import com.ogonggo.core.community.domain.RecruitmentPostComment
 import com.ogonggo.core.community.implement.PostReader
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReader
@@ -17,7 +18,10 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 class RecruitmentPostCommentServiceTest {
 
@@ -27,6 +31,8 @@ class RecruitmentPostCommentServiceTest {
     private val commentAppender = Mockito.mock(RecruitmentPostCommentAppender::class.java)
     private val commentRemover = Mockito.mock(RecruitmentPostCommentRemover::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
+    private val postMetricManager = Mockito.mock(PostMetricManager::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-09-12T00:00:00Z"), ZONE)
     private val service = RecruitmentPostCommentService(
         userReader,
         postReader,
@@ -34,6 +40,8 @@ class RecruitmentPostCommentServiceTest {
         commentAppender,
         commentRemover,
         userProfileReader,
+        postMetricManager,
+        clock,
     )
 
     @Test
@@ -54,6 +62,7 @@ class RecruitmentPostCommentServiceTest {
         assertEquals(COMMENT_ID, commentId)
         Mockito.verify(postReader).readPublished(POST_ID)
         Mockito.verify(commentAppender).append(normalizedCommand(post))
+        Mockito.verify(postMetricManager).increaseCommentCount(POST_ID, LocalDateTime.now(clock))
     }
 
     @Test
@@ -91,12 +100,14 @@ class RecruitmentPostCommentServiceTest {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(commentReader.readInPost(POST_ID, COMMENT_ID)).thenReturn(comment)
         Mockito.`when`(comment.userId).thenReturn(USER_ID)
+        Mockito.`when`(commentRemover.remove(comment)).thenReturn(1)
 
         // when
         service.delete(USER_ID, POST_ID, COMMENT_ID)
 
         // then
         Mockito.verify(commentRemover).remove(comment)
+        Mockito.verify(postMetricManager).decreaseCommentCount(POST_ID, 1, LocalDateTime.now(clock))
     }
 
     @Test
@@ -142,5 +153,6 @@ class RecruitmentPostCommentServiceTest {
         private const val USER_ID = 17L
         private const val POST_ID = 12L
         private const val COMMENT_ID = 101L
+        private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }

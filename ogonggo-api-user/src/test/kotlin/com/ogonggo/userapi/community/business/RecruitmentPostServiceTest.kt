@@ -10,6 +10,8 @@ import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.PostAppender
 import com.ogonggo.core.community.implement.PostManager
+import com.ogonggo.core.community.implement.PostMetricReader
+import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.PostReader
 import com.ogonggo.core.community.implement.PostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
@@ -21,6 +23,7 @@ import com.ogonggo.core.user.implement.dto.UserAccountDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -33,16 +36,20 @@ class RecruitmentPostServiceTest {
     private val postAppender = Mockito.mock(PostAppender::class.java)
     private val postManager = Mockito.mock(PostManager::class.java)
     private val postReader = Mockito.mock(PostReader::class.java)
+    private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
     private val service = RecruitmentPostService(
         userReader,
         postAppender,
         postManager,
         postReader,
+        postMetricReader,
         contentValidator,
         imageAssetManager,
+        eventPublisher,
         clock,
     )
 
@@ -67,6 +74,7 @@ class RecruitmentPostServiceTest {
         Mockito.`when`(post.summary).thenReturn("함께 공부할 분을 모집합니다.")
         Mockito.`when`(post.content).thenReturn(EDITOR_STATE_JSON)
         Mockito.`when`(post.eligibilityAndSelectionProcess).thenReturn(null)
+        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto.EMPTY)
 
         val result = service.getRecruitmentPost(12L)
 
@@ -76,6 +84,7 @@ class RecruitmentPostServiceTest {
         assertEquals(ContactMethod.EMAIL, result.contact.method)
         assertEquals(EDITOR_STATE_JSON, result.content)
         Mockito.verify(postReader).readPublished(12L)
+        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostViewedEvent(12L))
     }
 
     @Test

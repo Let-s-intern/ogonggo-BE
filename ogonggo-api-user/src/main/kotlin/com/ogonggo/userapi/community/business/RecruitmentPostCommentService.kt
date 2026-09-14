@@ -3,6 +3,7 @@ package com.ogonggo.userapi.community.business
 import com.ogonggo.core.community.error.RecruitmentPostCommentErrorCode
 import com.ogonggo.core.community.domain.RecruitmentPostComment
 import com.ogonggo.core.community.implement.PostReader
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostCommentCursor
@@ -19,6 +20,7 @@ import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
 import java.time.LocalDateTime
 
 data class CreateRecruitmentPostCommentCommand(
@@ -34,6 +36,8 @@ class RecruitmentPostCommentService(
     private val commentAppender: RecruitmentPostCommentAppender,
     private val commentRemover: RecruitmentPostCommentRemover,
     private val userProfileReader: UserProfileReader,
+    private val postMetricManager: PostMetricManager,
+    private val clock: Clock,
 ) {
 
     @Transactional(readOnly = true)
@@ -92,7 +96,8 @@ class RecruitmentPostCommentService(
             throw ForbiddenException(RECRUITMENT_POST_COMMENT_PERMISSION_DENIED)
         }
 
-        commentRemover.remove(comment)
+        val removedCount = commentRemover.remove(comment)
+        postMetricManager.decreaseCommentCount(postId, removedCount, LocalDateTime.now(clock))
     }
 
     @Transactional
@@ -109,6 +114,7 @@ class RecruitmentPostCommentService(
                 content = command.content,
             ),
         )
+        postMetricManager.increaseCommentCount(postId, LocalDateTime.now(clock))
         return checkNotNull(comment.id) { "저장된 댓글 식별자가 없습니다." }
     }
 
