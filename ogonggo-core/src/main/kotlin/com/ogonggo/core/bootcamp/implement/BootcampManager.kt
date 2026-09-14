@@ -3,12 +3,15 @@ package com.ogonggo.core.bootcamp.implement
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
+import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
+import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
@@ -18,6 +21,7 @@ class BootcampManager internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
+    private val contentRejectionManager: ContentRejectionManager,
     private val clock: Clock,
 ) {
 
@@ -72,17 +76,42 @@ class BootcampManager internal constructor(
         bootcampCurriculumRepository.saveAll(curriculums)
     }
 
+    fun editContent(bootcamp: Bootcamp, command: BootcampContentEditDto) =
+        change(bootcamp) { editContent(command.title, command.contents) }
+
     fun startRecruitment(bootcamp: Bootcamp) = change(bootcamp) { startRecruitment() }
 
     fun close(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { close(now) }
 
+    fun publish(bootcamp: Bootcamp) = change(bootcamp) { publish() }
+
+    fun hide(bootcamp: Bootcamp) = change(bootcamp) { hide() }
+
     fun delete(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { delete(now) }
+
+    /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
+    fun approveReview(bootcamp: Bootcamp, now: LocalDateTime) {
+        change(bootcamp) { approveReview() }
+        contentRejectionManager.clear(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), now)
+    }
+
+    fun rejectReview(bootcamp: Bootcamp, reason: String, now: LocalDateTime) {
+        change(bootcamp) { rejectReview() }
+        contentRejectionManager.reject(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), reason, now)
+    }
+
+    fun requestReview(bootcamp: Bootcamp, now: LocalDateTime) {
+        change(bootcamp) { requestReview() }
+        contentRejectionManager.clear(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), now)
+    }
 
     private fun change(bootcamp: Bootcamp, change: Bootcamp.() -> Unit) {
         bootcamp.change()
         bootcampRepository.save(bootcamp)
     }
 }
+
+private fun Bootcamp.requiredId(): Long = checkNotNull(id) { "부트캠프 식별자가 없습니다." }
 
 private fun BootcampPartnerDto.Request.toPartner(bootcampId: Long): BootcampPartner = BootcampPartner(
     bootcampId = bootcampId,

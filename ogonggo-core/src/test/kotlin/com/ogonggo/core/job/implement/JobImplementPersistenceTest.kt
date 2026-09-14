@@ -21,6 +21,7 @@ import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
+import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -46,6 +47,7 @@ import org.springframework.test.context.ContextConfiguration
     JobTagAppender::class,
     TagRegistrar::class,
     JobSourceUrlClickAppender::class,
+    ContentRejectionManager::class,
 )
 internal class JobImplementPersistenceTest @Autowired constructor(
     private val jobReader: JobReader,

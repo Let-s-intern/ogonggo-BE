@@ -1,14 +1,18 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
+import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
 
 @Component
 class JobManager internal constructor(
     private val jobRepository: JobJpaRepository,
+    private val contentRejectionManager: ContentRejectionManager,
 ) {
 
     fun update(job: Job, command: JobUpdateDto) {
@@ -47,6 +51,8 @@ class JobManager internal constructor(
         jobRepository.save(job)
     }
 
+    fun editContent(job: Job, command: JobContentEditDto) = change(job) { editContent(command.title, command.contents) }
+
     fun publish(job: Job) = change(job) { publish() }
 
     fun hide(job: Job) = change(job) { hide() }
@@ -57,8 +63,26 @@ class JobManager internal constructor(
 
     fun delete(job: Job, now: LocalDateTime) = change(job) { delete(now) }
 
+    /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
+    fun approveReview(job: Job, now: LocalDateTime) {
+        change(job) { approveReview() }
+        contentRejectionManager.clear(ReviewContentType.JOB, job.requiredId(), now)
+    }
+
+    fun rejectReview(job: Job, reason: String, now: LocalDateTime) {
+        change(job) { rejectReview() }
+        contentRejectionManager.reject(ReviewContentType.JOB, job.requiredId(), reason, now)
+    }
+
+    fun requestReview(job: Job, now: LocalDateTime) {
+        change(job) { requestReview() }
+        contentRejectionManager.clear(ReviewContentType.JOB, job.requiredId(), now)
+    }
+
     private fun change(job: Job, change: Job.() -> Unit) {
         job.change()
         jobRepository.save(job)
     }
 }
+
+private fun Job.requiredId(): Long = checkNotNull(id) { "채용공고 식별자가 없습니다." }

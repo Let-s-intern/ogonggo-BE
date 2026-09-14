@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -76,6 +77,12 @@ data class JobUpdateDto(
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
     val sourceUrl: String? = null,
+)
+
+/** 운영자가 고치는 제목과 본문 칸이다. 넘어온 칸만 바꾸며 본문 값이 null이면 그 칸을 비운다. */
+data class JobContentEditDto(
+    val title: String? = null,
+    val contents: Map<JobContentField, String?> = emptyMap(),
 )
 
 data class JobPageDto(

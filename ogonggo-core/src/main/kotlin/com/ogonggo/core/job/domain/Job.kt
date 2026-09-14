@@ -1,6 +1,10 @@
 package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.error.ReviewErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -49,6 +53,10 @@ import java.time.LocalDateTime
             name = "idx_jobs_owner",
             columnList = "owner_user_id, deleted_at",
         ),
+        Index(
+            name = "idx_jobs_review",
+            columnList = "review_status, deleted_at",
+        ),
     ],
 )
 class Job internal constructor(
@@ -88,6 +96,9 @@ class Job internal constructor(
 
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
+        require(ownerUserId == null || publicationStatus != JobPublicationStatus.PUBLISHED) {
+            "기업회원 공고는 검수 승인 전에 게시할 수 없습니다."
+        }
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
@@ -101,6 +112,7 @@ class Job internal constructor(
             experienceMinYears = experienceMinYears,
             experienceMaxYears = experienceMaxYears,
             region = region,
+            recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
         )
@@ -254,6 +266,15 @@ class Job internal constructor(
     var publicationStatus: JobPublicationStatus = publicationStatus /* 채용공고 게시 상태 */
         protected set
 
+    /**
+     * 기업회원이 올린 공고만 검수하므로 등록할 때 검수 대기로 시작한다.
+     * 수집한 공고는 우리가 고른 사이트에서 가져온 것이라 검수 대상이 아니어서 값이 없다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", length = 20)
+    var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
+        protected set
+
     @Column(name = "closed_at")
     var closedAt: LocalDateTime? = null /* 공고 마감 처리 일시 */
         protected set
@@ -308,6 +329,7 @@ class Job internal constructor(
             experienceMinYears = experienceMinYears,
             experienceMaxYears = experienceMaxYears,
             region = region,
+            recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
         )
@@ -344,9 +366,52 @@ class Job internal constructor(
         this.sourceUrl = sourceUrl
     }
 
+    /**
+     * 제목과 본문 칸 중 넘어온 것만 바꾼다. 본문 값이 null이면 그 칸을 비운다.
+     * 수집한 공고도 고칠 수 있다. 크롤러가 원문 구조를 잘못 읽어 왔을 때 통째로 내리지 않게 하기 위해서다.
+     */
+    fun editContent(title: String?, contents: Map<JobContentField, String?>) {
+        checkModifiable()
+        require(title == null || title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
+        require(contents.values.all { it == null || it.isNotBlank() }) { "본문 칸은 공백일 수 없습니다." }
+
+        title?.let { this.title = it }
+        contents.forEach { (field, value) ->
+            when (field) {
+                JobContentField.COMPANY_AND_TEAM_INTRODUCTION -> companyAndTeamIntroduction = value
+                JobContentField.RESPONSIBILITIES -> responsibilities = value
+                JobContentField.QUALIFICATIONS -> qualifications = value
+                JobContentField.PREFERRED_QUALIFICATIONS -> preferredQualifications = value
+                JobContentField.COMPENSATION -> compensation = value
+                JobContentField.BENEFITS -> benefits = value
+                JobContentField.HIRING_PROCESS -> hiringProcess = value
+            }
+        }
+    }
+
+    fun contentOf(field: JobContentField): String? = when (field) {
+        JobContentField.COMPANY_AND_TEAM_INTRODUCTION -> companyAndTeamIntroduction
+        JobContentField.RESPONSIBILITIES -> responsibilities
+        JobContentField.QUALIFICATIONS -> qualifications
+        JobContentField.PREFERRED_QUALIFICATIONS -> preferredQualifications
+        JobContentField.COMPENSATION -> compensation
+        JobContentField.BENEFITS -> benefits
+        JobContentField.HIRING_PROCESS -> hiringProcess
+    }
+
+    /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. 목록의 모집 중 조건과 경계를 맞춘다. */
+    fun recruitmentStatus(now: LocalDateTime): JobRecruitmentStatus {
+        val expired = recruitmentEndAt?.isBefore(now) == true
+        return if (closedAt != null || expired) JobRecruitmentStatus.CLOSED else JobRecruitmentStatus.RECRUITING
+    }
+
     // TODO: MVP 이후 DRAFT -> PUBLISHED 등 허용 상태 전이를 명시적인 상태 머신으로 강화한다.
+    /** 기업회원 공고는 검수 승인을 받아야만 노출한다. 게시하는 쪽이 누구든 같은 규칙을 따른다. */
     fun publish() {
         checkModifiable()
+        if (reviewStatus != null && reviewStatus != ReviewStatus.APPROVED) {
+            throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
+        }
         publicationStatus = JobPublicationStatus.PUBLISHED
     }
 
@@ -373,9 +438,44 @@ class Job internal constructor(
         }
     }
 
+    /** 승인하면 곧바로 노출한다. 승인 결과를 알릴 경로가 없어 다시 게시하게 하면 공고가 비노출로 남는다. */
+    fun approveReview() {
+        checkReviewable()
+        reviewStatus = ReviewStatus.APPROVED
+        publicationStatus = JobPublicationStatus.PUBLISHED
+    }
+
+    fun rejectReview() {
+        checkReviewable()
+        reviewStatus = ReviewStatus.REJECTED
+        unpublish()
+    }
+
+    /** 기업회원이 내용을 고치거나 운영자가 판정을 되돌리면 다시 검수를 기다리며, 그동안 노출하지 않는다. */
+    fun requestReview() {
+        checkReviewable()
+        reviewStatus = ReviewStatus.PENDING
+        unpublish()
+    }
+
+    private fun unpublish() {
+        if (publicationStatus == JobPublicationStatus.PUBLISHED) {
+            publicationStatus = JobPublicationStatus.HIDDEN
+        }
+    }
+
+    private fun checkReviewable() {
+        checkModifiable()
+        if (reviewStatus == null) {
+            throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
+        }
+    }
+
     private fun checkModifiable() {
         checkNotDeleted()
-        check(publicationStatus != JobPublicationStatus.ARCHIVED) { "보관된 채용공고는 변경할 수 없습니다." }
+        if (publicationStatus == JobPublicationStatus.ARCHIVED) {
+            throw ConflictException(JobErrorCode.JOB_ARCHIVED)
+        }
     }
 
     private fun checkNotDeleted() {
@@ -396,6 +496,7 @@ private fun validateJobValues(
     experienceMinYears: Int?,
     experienceMaxYears: Int?,
     region: String?,
+    recruitmentType: JobRecruitmentType,
     recruitmentStartAt: LocalDateTime?,
     recruitmentEndAt: LocalDateTime?,
 ) {
@@ -413,6 +514,9 @@ private fun validateJobValues(
     require(experienceMaxYears == null || experienceMaxYears >= 0) { "최대 경력 연수는 음수일 수 없습니다." }
     require(experienceMinYears == null || experienceMaxYears == null || experienceMinYears <= experienceMaxYears) {
         "최소 경력 연수는 최대 경력 연수보다 클 수 없습니다."
+    }
+    require(recruitmentType != JobRecruitmentType.ALWAYS_OPEN || recruitmentEndAt == null) {
+        "상시 채용에는 모집 종료 일시를 둘 수 없습니다."
     }
     require(recruitmentStartAt == null || recruitmentEndAt == null || !recruitmentStartAt.isAfter(recruitmentEndAt)) {
         "모집 시작 일시는 종료 일시보다 늦을 수 없습니다."

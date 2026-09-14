@@ -1,6 +1,7 @@
 package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
@@ -23,6 +24,7 @@ import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -48,6 +50,7 @@ import org.springframework.test.context.ContextConfiguration
     BootcampBookmarkManager::class,
     BootcampBookmarkReader::class,
     BootcampApplicationUrlClickAppender::class,
+    ContentRejectionManager::class,
 )
 internal class BootcampImplementPersistenceTest @Autowired constructor(
     private val bootcampReader: BootcampReader,
@@ -396,6 +399,8 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         companyName: String = "오공고 교육사",
         title: String = "백엔드 부트캠프",
         tuitionType: TuitionType = TuitionType.FREE,
+        publicationStatus: BootcampPublicationStatus =
+            BootcampPublicationStatus.PUBLISHED,
     ): BootcampAppendDto = BootcampAppendDto(
         companyName = companyName,
         title = title,
@@ -416,6 +421,8 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         applicationUrl = "https://example.com/apply",
         publicationStartAt = publicationStartAt,
         publicationEndAt = publicationEndAt,
+        // 소유자가 없는 부트캠프라 검수 없이 게시할 수 있다. 공개 여부는 모집 상태와 공개 기간으로 가른다.
+        publicationStatus = publicationStatus,
         partners = partners,
         curriculums = curriculums,
     )

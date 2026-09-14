@@ -6,7 +6,9 @@ import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -27,6 +29,7 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
         select bootcamp
         from Bootcamp bootcamp
         where bootcamp.id = :bootcampId
+          and bootcamp.publicationStatus = :publicationStatus
           and bootcamp.status in :statuses
           and bootcamp.deletedAt is null
           and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
@@ -36,6 +39,7 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     fun findPublicById(
         @Param("bootcampId") bootcampId: Long,
         @Param("statuses") statuses: Collection<BootcampStatus>,
+        @Param("publicationStatus") publicationStatus: BootcampPublicationStatus,
         @Param("now") now: LocalDateTime,
     ): Bootcamp?
 
@@ -46,6 +50,15 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     /** 북마크 해제는 이미 삭제된 부트캠프에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId")
     fun findIncludingDeletedById(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
+    /** 관리자 삭제는 멱등해야 하므로 이미 삭제된 부트캠프도 찾는다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId")
+    fun findIncludingDeletedByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
+    fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ReviewStatus): List<Bootcamp>
+
+    fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
 
     /**
      * 북마크한 부트캠프 중 지금 공개된 것만 최근 북마크 순으로 조회한다.
@@ -58,6 +71,7 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
         join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
         where bookmark.userId = :userId
           and bookmark.deletedAt is null
+          and bootcamp.publicationStatus = :publicationStatus
           and bootcamp.status in :statuses
           and bootcamp.deletedAt is null
           and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
@@ -70,6 +84,7 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
         join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
         where bookmark.userId = :userId
           and bookmark.deletedAt is null
+          and bootcamp.publicationStatus = :publicationStatus
           and bootcamp.status in :statuses
           and bootcamp.deletedAt is null
           and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
@@ -79,6 +94,7 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     fun findBookmarkedBootcamps(
         @Param("userId") userId: Long,
         @Param("statuses") statuses: Collection<BootcampStatus>,
+        @Param("publicationStatus") publicationStatus: BootcampPublicationStatus,
         @Param("now") now: LocalDateTime,
         pageable: Pageable,
     ): Page<Bootcamp>
@@ -223,4 +239,7 @@ internal interface BootcampPartnerJpaRepository : JpaRepository<BootcampPartner,
 internal interface BootcampCurriculumJpaRepository : JpaRepository<BootcampCurriculum, Long> {
     fun findAllByBootcampIdAndDeletedAtIsNullOrderByDisplayOrderAsc(bootcampId: Long): List<BootcampCurriculum>
     fun findAllByBootcampIdOrderByDisplayOrderAsc(bootcampId: Long): List<BootcampCurriculum>
+    fun findAllByBootcampIdInAndDeletedAtIsNullOrderByDisplayOrderAsc(
+        bootcampIds: Collection<Long>,
+    ): List<BootcampCurriculum>
 }

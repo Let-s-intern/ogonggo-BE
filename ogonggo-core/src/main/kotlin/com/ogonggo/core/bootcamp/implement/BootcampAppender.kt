@@ -47,6 +47,7 @@ class BootcampAppender internal constructor(
                 sourceUrl = command.sourceUrl,
                 status = command.status,
                 closedAt = command.closedAt,
+                publicationStatus = command.publicationStatus,
             ),
         )
         val bootcampId = checkNotNull(bootcamp.id) { "저장된 부트캠프 식별자가 없습니다." }

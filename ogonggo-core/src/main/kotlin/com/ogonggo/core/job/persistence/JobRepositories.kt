@@ -7,6 +7,7 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSourceUrlClick
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
+import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -80,6 +81,15 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     /** 북마크 해제는 이미 삭제된 공고에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select job from Job job where job.id = :jobId")
     fun findIncludingDeletedById(@Param("jobId") jobId: Long): Job?
+
+    /** 관리자 삭제는 멱등해야 하므로 이미 삭제된 공고도 찾는다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select job from Job job where job.id = :jobId")
+    fun findIncludingDeletedByIdForUpdate(@Param("jobId") jobId: Long): Job?
+
+    fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ReviewStatus): List<Job>
+
+    fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
 
     fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Job?
 
