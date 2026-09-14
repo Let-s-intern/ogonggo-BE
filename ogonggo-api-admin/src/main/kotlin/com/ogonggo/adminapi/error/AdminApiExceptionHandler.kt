@@ -42,6 +42,20 @@ class AdminApiExceptionHandler {
         return badRequest(validationMessage(errors))
     }
 
+    @ExceptionHandler(InvalidRequestParameterException::class)
+    fun handleInvalidRequestParameter(
+        exception: InvalidRequestParameterException,
+    ): ResponseEntity<ErrorResponse> {
+        log.error("handle: InvalidRequestParameterException", exception)
+        return badRequest(validationMessage(listOf(exception.parameterName to exception.reason)))
+    }
+
+    @ExceptionHandler(InvalidRequestFieldException::class)
+    fun handleInvalidRequestField(exception: InvalidRequestFieldException): ResponseEntity<ErrorResponse> {
+        log.error("handle: InvalidRequestFieldException", exception)
+        return badRequest(validationMessage(listOf(exception.fieldName to exception.reason)))
+    }
+
     @ExceptionHandler(ConstraintViolationException::class)
     fun handleConstraintViolation(exception: ConstraintViolationException): ResponseEntity<ErrorResponse> {
         log.error("handle: ConstraintViolationException", exception)
@@ -106,3 +120,15 @@ class AdminApiExceptionHandler {
         private val log = LoggerFactory.getLogger(AdminApiExceptionHandler::class.java)
     }
 }
+
+/** 두 파라미터의 관계처럼 단일 제약으로 선언할 수 없는 Query·Path 규칙을 Bean Validation과 같은 400으로 알린다. */
+class InvalidRequestParameterException(
+    val parameterName: String,
+    val reason: String,
+) : RuntimeException(reason)
+
+/** 요청 본문의 필드 사이 규칙을 Bean Validation과 같은 400으로 알린다. */
+class InvalidRequestFieldException(
+    val fieldName: String,
+    val reason: String,
+) : RuntimeException(reason)
