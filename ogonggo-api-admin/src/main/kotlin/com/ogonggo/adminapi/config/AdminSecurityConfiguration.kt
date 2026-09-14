@@ -1,6 +1,10 @@
 package com.ogonggo.adminapi.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.adminapi.auth.business.AdminAuthService
+import com.ogonggo.adminapi.auth.implement.AdminAccessTokenParser
+import com.ogonggo.adminapi.auth.implement.AdminJwtProperties
+import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter
 import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter
 import com.ogonggo.adminapi.internal.implement.InternalApiProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -18,7 +22,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(InternalApiProperties::class)
+@EnableConfigurationProperties(InternalApiProperties::class, AdminJwtProperties::class)
 class AdminSecurityConfiguration {
 
     @Bean
@@ -35,6 +39,8 @@ class AdminSecurityConfiguration {
         adminAuthenticationEntryPoint: AdminAuthenticationEntryPoint,
         adminAccessDeniedHandler: AdminAccessDeniedHandler,
         internalApiProperties: InternalApiProperties,
+        adminJwtProperties: AdminJwtProperties,
+        adminAuthService: AdminAuthService,
     ): SecurityFilterChain =
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
@@ -58,10 +64,17 @@ class AdminSecurityConfiguration {
                 ).permitAll()
                 it.requestMatchers("/api/v1/internal/**")
                     .hasAuthority(InternalApiKeyAuthenticationFilter.INTERNAL_CLIENT_AUTHORITY)
+                // 관리자 콘솔은 UserRole.ADMIN을 가진 활성 계정만 쓴다. 콘솔 안에서 권한을 더 나누지 않는다.
+                it.requestMatchers("/api/v1/admin/**")
+                    .hasAuthority(AdminAuthenticationFilter.ADMIN_AUTHORITY)
                 it.anyRequest().denyAll()
             }
             .addFilterBefore(
                 InternalApiKeyAuthenticationFilter(internalApiProperties),
+                UsernamePasswordAuthenticationFilter::class.java,
+            )
+            .addFilterBefore(
+                AdminAuthenticationFilter(AdminAccessTokenParser(adminJwtProperties), adminAuthService),
                 UsernamePasswordAuthenticationFilter::class.java,
             )
             .build()
@@ -98,6 +111,8 @@ class AdminSecurityConfiguration {
         private val ALLOWED_ORIGIN_PATTERNS = listOf(
             "https://www.ogonggo.co.kr",
             "https://ogonggo.co.kr",
+            // 관리자 콘솔 운영 도메인이다.
+            "https://admin.ogonggo.co.kr",
             // 로컬 개발 서버는 프레임워크와 사람마다 포트가 달라 전부 연다.
             "http://localhost:[*]",
         )
