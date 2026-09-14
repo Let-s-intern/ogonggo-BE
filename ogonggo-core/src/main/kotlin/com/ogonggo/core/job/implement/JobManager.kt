@@ -15,11 +15,15 @@ class JobManager internal constructor(
     private val contentRejectionManager: ContentRejectionManager,
 ) {
 
-    fun update(job: Job, command: JobUpdateDto) {
+    /**
+     * 값이 실제로 바뀌었는지 돌려준다.
+     * 크롤러는 같은 공고를 여러 번 보내므로, 같은 값이면 검수 상태를 되돌리지 않도록 호출자가 판단하게 한다.
+     */
+    fun update(job: Job, command: JobUpdateDto): Boolean {
+        val changed = job.toUpdateDto() != command
         job.update(
             companyName = command.companyName,
             parentCompanyName = command.parentCompanyName,
-            companyLogoUrl = command.companyLogoUrl,
             title = command.title,
             jobField = command.jobField,
             jobRole = command.jobRole,
@@ -28,7 +32,6 @@ class JobManager internal constructor(
             employmentType = command.employmentType,
             experienceType = command.experienceType,
             experienceMinYears = command.experienceMinYears,
-            experienceMaxYears = command.experienceMaxYears,
             educationLevel = command.educationLevel,
             region = command.region,
             recruitmentType = command.recruitmentType,
@@ -49,6 +52,7 @@ class JobManager internal constructor(
             sourceUrl = command.sourceUrl,
         )
         jobRepository.save(job)
+        return changed
     }
 
     fun editContent(job: Job, command: JobContentEditDto) = change(job) { editContent(command.title, command.contents) }
@@ -86,3 +90,34 @@ class JobManager internal constructor(
 }
 
 private fun Job.requiredId(): Long = checkNotNull(id) { "채용공고 식별자가 없습니다." }
+
+private fun Job.toUpdateDto(): JobUpdateDto = JobUpdateDto(
+    companyName = companyName,
+    parentCompanyName = parentCompanyName,
+    title = title,
+    jobField = jobField,
+    jobRole = jobRole,
+    industry = industry,
+    coverImageUrl = coverImageUrl,
+    employmentType = employmentType,
+    experienceType = experienceType,
+    experienceMinYears = experienceMinYears,
+    educationLevel = educationLevel,
+    region = region,
+    recruitmentType = recruitmentType,
+    recruitmentHeadcount = recruitmentHeadcount,
+    recruitmentStartAt = recruitmentStartAt,
+    recruitmentEndAt = recruitmentEndAt,
+    closesWhenFilled = closesWhenFilled,
+    autoCloseEnabled = autoCloseEnabled,
+    companyAndTeamIntroduction = companyAndTeamIntroduction,
+    responsibilities = responsibilities,
+    qualifications = qualifications,
+    preferredQualifications = preferredQualifications,
+    compensation = compensation,
+    benefits = benefits,
+    hiringProcess = hiringProcess,
+    recruitmentNotice = recruitmentNotice,
+    applicationMethod = applicationMethod,
+    sourceUrl = sourceUrl,
+)

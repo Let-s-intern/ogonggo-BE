@@ -33,6 +33,21 @@ class JobReader internal constructor(
     fun existsBySourceUrl(sourceUrl: String): Boolean =
         jobRepository.existsBySourceUrlAndDeletedAtIsNull(sourceUrl)
 
+    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 소유자가 없는 수집 공고만 다룬다. */
+    fun readCrawledBySourceUrl(sourceUrl: String): Job =
+        jobRepository.findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    /** 크롤러는 기업회원 공고를 고칠 수 없으므로 소유자가 없는 공고만 잠가 찾는다. */
+    fun readCrawledForUpdate(jobId: Long): Job =
+        jobRepository.findCrawledByIdForUpdate(jobId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    /** 삭제는 멱등해야 하므로 이미 삭제된 수집 공고도 잠가 찾는다. */
+    fun readCrawledForDelete(jobId: Long): Job =
+        jobRepository.findCrawledByIdForDelete(jobId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
     fun readPublished(jobId: Long): Job =
         jobRepository.findByIdAndPublicationStatusAndDeletedAtIsNull(
             id = jobId,
@@ -144,7 +159,7 @@ class JobReader internal constructor(
         )
     }
 
-    /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 검수 상태는 기업회원 공고에만 있다. */
+    /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 기업회원 공고와 크롤러가 보낸 수집 공고가 함께 나온다. */
     fun readPendingReviews(): List<Job> =
         jobRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ReviewStatus.PENDING)
 

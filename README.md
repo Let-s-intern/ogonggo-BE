@@ -79,6 +79,8 @@ Administrator console endpoints (`/api/v1/admin/**`) accept a user API access to
 
 Before deploying the admin console changes to an existing database, apply `docs/schema/2026-09-14-admin-review.sql`.
 
+After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
+
 ## Docker
 
 이미지는 미리 빌드된 jar를 복사만 합니다. 컨테이너 안에서 Gradle을 돌리지 않으므로 jar를 먼저 만들어야 합니다.

@@ -1,77 +1,101 @@
 package com.ogonggo.adminapi.job.presentation.request
 
+import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
-import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.time.LocalDateTime
 
 class CrawlerJobRegistrationRequestTest {
 
     @Test
-    fun `모집 일시와 경력과 학력이 없으면 상시 채용과 무관으로 변환한다`() {
-        val command = request().toCommand()
+    fun `크롤러가 고른 판단 값을 서버가 다른 값으로 바꾸지 않는다`() {
+        // 예전에는 모집 일시와 경력 연수가 없으면 상시 채용·경력 무관으로 바꿨다. 이제는 크롤러가 보낸 그대로다.
+        val command = request(
+            experienceType = ExperienceType.NEWCOMER,
+            educationLevel = EducationLevel.HIGH_SCHOOL,
+            recruitmentType = JobRecruitmentType.PERIOD,
+        ).toCommand().job
 
-        assertEquals(JobRecruitmentType.ALWAYS_OPEN, command.recruitmentType)
-        assertEquals(ExperienceType.IRRELEVANT, command.experienceType)
-        assertEquals(EducationLevel.ANY, command.educationLevel)
-        assertEquals(null, command.region)
-        assertEquals(null, command.parentCompanyName)
+        assertEquals(ExperienceType.NEWCOMER, command.experienceType)
+        assertEquals(null, command.experienceMinYears)
+        assertEquals(EducationLevel.HIGH_SCHOOL, command.educationLevel)
+        assertEquals(JobRecruitmentType.PERIOD, command.recruitmentType)
+        assertEquals(null, command.recruitmentStartAt)
+        assertEquals(null, command.recruitmentEndAt)
     }
 
     @Test
-    fun `모집 일시가 하나라도 있으면 기간 채용으로 변환한다`() {
-        val startOnly = request(recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0)).toCommand()
-        val endOnly = request(recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59)).toCommand()
+    fun `등록 API에 새로 받는 칸과 태그를 옮긴다`() {
+        val command = request(
+            recruitmentHeadcount = 2,
+            recruitmentNotice = "제출 서류는 반환하지 않습니다.",
+        ).toCommand()
 
-        assertEquals(JobRecruitmentType.PERIOD, startOnly.recruitmentType)
-        assertEquals(JobRecruitmentType.PERIOD, endOnly.recruitmentType)
+        assertEquals(2, command.job.recruitmentHeadcount)
+        assertEquals("https://example.com/logo.png", command.job.coverImageUrl)
+        assertEquals(true, command.job.closesWhenFilled)
+        assertEquals(false, command.job.autoCloseEnabled)
+        assertEquals("제출 서류는 반환하지 않습니다.", command.job.recruitmentNotice)
+        assertEquals(JobApplicationMethod.EMAIL, command.job.applicationMethod)
+        assertEquals(listOf("백엔드"), command.tags)
     }
 
     @Test
-    fun `경력 연수가 있으면 경력으로 변환한다`() {
-        val command = request(experienceMinYears = 3).toCommand()
+    fun `상시 채용에 모집 종료 일시가 있으면 어느 필드가 틀렸는지 알린다`() {
+        val exception = assertThrows<InvalidRequestFieldException> {
+            request(recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59)).toCommand()
+        }
 
-        assertEquals(ExperienceType.EXPERIENCED, command.experienceType)
-        assertEquals(3, command.experienceMinYears)
+        assertEquals("recruitmentEndAt", exception.fieldName)
     }
 
     @Test
-    fun `크롤러가 등록한 공고는 게시 상태로 변환한다`() {
-        assertEquals(JobPublicationStatus.PUBLISHED, request().toCommand().publicationStatus)
-    }
+    fun `교체 요청은 등록 요청과 같은 칸을 옮긴다`() {
+        val replace = CrawlerJobReplaceRequest(
+            companyName = "오공고",
+            title = "백엔드 개발자",
+            employmentType = EmploymentType.CONTRACT,
+            experienceType = ExperienceType.BOTH,
+            educationLevel = EducationLevel.ANY,
+            recruitmentType = JobRecruitmentType.PERIOD,
+            recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
+            sourceUrl = "https://example.com/jobs/1#2",
+        ).toCommand()
 
-    @Test
-    fun `직군과 직무와 산업은 그대로 옮기고 보내지 않으면 비워 둔다`() {
-        val command = request(jobField = "마케팅", jobRole = "마케터", industry = "뷰티").toCommand()
-
-        assertEquals("마케팅", command.jobField)
-        assertEquals("마케터", command.jobRole)
-        assertEquals("뷰티", command.industry)
-        assertEquals(null, request().toCommand().jobRole)
+        assertEquals(EmploymentType.CONTRACT, replace.employmentType)
+        assertEquals(ExperienceType.BOTH, replace.experienceType)
+        assertEquals(LocalDateTime.of(2026, 9, 30, 23, 59, 59), replace.recruitmentEndAt)
+        assertEquals("https://example.com/jobs/1#2", replace.sourceUrl)
     }
 
     private fun request(
-        experienceMinYears: Int? = null,
-        recruitmentStartAt: LocalDateTime? = null,
+        experienceType: ExperienceType = ExperienceType.IRRELEVANT,
+        educationLevel: EducationLevel = EducationLevel.ANY,
+        recruitmentType: JobRecruitmentType = JobRecruitmentType.ALWAYS_OPEN,
         recruitmentEndAt: LocalDateTime? = null,
-        jobField: String? = null,
-        jobRole: String? = null,
-        industry: String? = null,
+        recruitmentHeadcount: Int? = null,
+        recruitmentNotice: String? = null,
     ) = CrawlerJobRegistrationRequest(
         companyName = "오공고",
         title = "백엔드 개발자",
+        coverImageUrl = "https://example.com/logo.png",
         employmentType = EmploymentType.FULL_TIME,
-        sourceUrl = "https://example.com/jobs/1",
-        experienceMinYears = experienceMinYears,
-        recruitmentStartAt = recruitmentStartAt,
+        experienceType = experienceType,
+        educationLevel = educationLevel,
+        recruitmentType = recruitmentType,
         recruitmentEndAt = recruitmentEndAt,
-        jobField = jobField,
-        jobRole = jobRole,
-        industry = industry,
+        recruitmentHeadcount = recruitmentHeadcount,
+        closesWhenFilled = true,
+        autoCloseEnabled = false,
+        recruitmentNotice = recruitmentNotice,
+        applicationMethod = JobApplicationMethod.EMAIL,
+        sourceUrl = "https://example.com/jobs/1",
         tags = listOf("백엔드"),
     )
 }

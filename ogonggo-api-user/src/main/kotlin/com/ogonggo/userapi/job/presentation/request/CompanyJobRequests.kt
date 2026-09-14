@@ -22,7 +22,6 @@ import java.time.LocalDateTime
 interface CompanyJobWriteRequest {
     val companyName: String
     val parentCompanyName: String?
-    val companyLogoUrl: String?
     val title: String
     /** 직군. 직무·산업과 함께 사용자 프로필의 희망 직군·직무·산업과 짝을 이룬다. */
     val jobField: String?
@@ -34,7 +33,6 @@ interface CompanyJobWriteRequest {
     val employmentType: EmploymentType
     val experienceType: ExperienceType
     val experienceMinYears: Int?
-    val experienceMaxYears: Int?
     val educationLevel: EducationLevel?
     val region: String?
     val recruitmentType: JobRecruitmentType
@@ -71,7 +69,6 @@ private fun CompanyJobWriteRequest.validRecruitmentEndAt(): LocalDateTime? {
 data class CreateCompanyJobRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:Size(max = 150) override val parentCompanyName: String?,
-    @field:Size(max = 2048) @field:URL override val companyLogoUrl: String?,
     @field:NotBlank @field:Size(max = 255) override val title: String,
     @field:Size(max = 100) override val jobField: String?,
     @field:Size(max = 100) override val jobRole: String?,
@@ -80,7 +77,6 @@ data class CreateCompanyJobRequest(
     override val employmentType: EmploymentType,
     override val experienceType: ExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
-    @field:PositiveOrZero override val experienceMaxYears: Int?,
     override val educationLevel: EducationLevel?,
     @field:Size(max = 100) override val region: String?,
     override val recruitmentType: JobRecruitmentType,
@@ -104,7 +100,6 @@ data class CreateCompanyJobRequest(
     fun toCommand(): JobAppendDto = JobAppendDto(
         companyName = companyName,
         parentCompanyName = parentCompanyName,
-        companyLogoUrl = companyLogoUrl,
         title = title,
         jobField = jobField,
         jobRole = jobRole,
@@ -113,7 +108,6 @@ data class CreateCompanyJobRequest(
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = experienceMinYears,
-        experienceMaxYears = experienceMaxYears,
         educationLevel = educationLevelOrAny(),
         region = region,
         recruitmentType = recruitmentType,
@@ -138,7 +132,6 @@ data class CreateCompanyJobRequest(
 data class UpdateCompanyJobRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:Size(max = 150) override val parentCompanyName: String?,
-    @field:Size(max = 2048) @field:URL override val companyLogoUrl: String?,
     @field:NotBlank @field:Size(max = 255) override val title: String,
     @field:Size(max = 100) override val jobField: String?,
     @field:Size(max = 100) override val jobRole: String?,
@@ -147,7 +140,6 @@ data class UpdateCompanyJobRequest(
     override val employmentType: EmploymentType,
     override val experienceType: ExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
-    @field:PositiveOrZero override val experienceMaxYears: Int?,
     override val educationLevel: EducationLevel?,
     @field:Size(max = 100) override val region: String?,
     override val recruitmentType: JobRecruitmentType,
@@ -171,7 +163,6 @@ data class UpdateCompanyJobRequest(
     fun toCommand(): JobUpdateDto = JobUpdateDto(
         companyName = companyName,
         parentCompanyName = parentCompanyName,
-        companyLogoUrl = companyLogoUrl,
         title = title,
         jobField = jobField,
         jobRole = jobRole,
@@ -180,7 +171,6 @@ data class UpdateCompanyJobRequest(
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = experienceMinYears,
-        experienceMaxYears = experienceMaxYears,
         educationLevel = educationLevelOrAny(),
         region = region,
         recruitmentType = recruitmentType,
