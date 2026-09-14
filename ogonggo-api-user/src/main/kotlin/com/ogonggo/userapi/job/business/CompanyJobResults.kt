@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.LocalDateTime
 
 data class CompanyJobPageResult(
@@ -43,6 +44,7 @@ data class CompanyJobSummary(
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val publicationStatus: JobPublicationStatus,
+    val reviewStatus: ReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -60,6 +62,7 @@ data class CompanyJobSummary(
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,
             publicationStatus = job.publicationStatus,
+            reviewStatus = job.reviewStatus,
             closedAt = job.closedAt,
         )
     }
@@ -98,6 +101,7 @@ data class CompanyJobResult(
     val applicationMethod: JobApplicationMethod?,
     val sourceUrl: String?,
     val publicationStatus: JobPublicationStatus,
+    val reviewStatus: ReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -134,6 +138,7 @@ data class CompanyJobResult(
             applicationMethod = job.applicationMethod,
             sourceUrl = job.sourceUrl,
             publicationStatus = job.publicationStatus,
+            reviewStatus = job.reviewStatus,
             closedAt = job.closedAt,
         )
     }

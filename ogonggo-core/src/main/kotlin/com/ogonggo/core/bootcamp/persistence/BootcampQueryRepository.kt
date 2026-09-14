@@ -1,12 +1,15 @@
 package com.ogonggo.core.bootcamp.persistence
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.QBootcamp.bootcamp
 import com.ogonggo.core.bootcamp.domain.QBootcampMetric.bootcampMetric
 import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.review.domain.ContentSource
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
@@ -34,9 +37,16 @@ internal class BootcampQueryRepository(
         publicStatuses: Collection<BootcampStatus>,
         now: LocalDateTime,
         pageable: Pageable,
-    ): Page<Bootcamp> {
-        val predicates = publicPredicates(condition, publicStatuses, now)
+    ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable)
 
+    /** 관리 목록은 공개 조건을 고정하지 않는다. 관리자만 쓰는 목록이라 필터용 인덱스를 따로 두지 않는다. */
+    fun findManagementPage(
+        condition: BootcampManagementSearchCondition,
+        sortType: BootcampSortType,
+        pageable: Pageable,
+    ): Page<Bootcamp> = findPage(managementPredicates(condition), sortType, pageable)
+
+    private fun findPage(predicates: Array<Predicate?>, sortType: BootcampSortType, pageable: Pageable): Page<Bootcamp> {
         val content = sorted(queryFactory.selectFrom(bootcamp).where(*predicates), sortType)
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
@@ -50,12 +60,13 @@ internal class BootcampQueryRepository(
         return PageImpl(content, pageable, total)
     }
 
-    /** 공개 상태와 공개 기간, 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */
+    /** 게시 상태와 모집 상태, 공개 기간, 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */
     private fun publicPredicates(
         condition: BootcampSearchCondition,
         publicStatuses: Collection<BootcampStatus>,
         now: LocalDateTime,
     ): Array<Predicate?> = arrayOf(
+        bootcamp.publicationStatus.eq(BootcampPublicationStatus.PUBLISHED),
         bootcamp.status.`in`(publicStatuses),
         bootcamp.deletedAt.isNull,
         bootcamp.publicationStartAt.isNull.or(bootcamp.publicationStartAt.loe(now)),
@@ -65,12 +76,34 @@ internal class BootcampQueryRepository(
         keywordContains(condition.keyword),
     )
 
+    private fun managementPredicates(condition: BootcampManagementSearchCondition): Array<Predicate?> = arrayOf(
+        bootcamp.deletedAt.isNull,
+        publishedEq(condition.published),
+        sourceEq(condition.source),
+        condition.reviewStatus?.let(bootcamp.reviewStatus::eq),
+        statusEq(condition.status),
+        keywordContains(condition.keyword),
+    )
+
     private fun tuitionTypeEq(tuitionType: TuitionType?): BooleanExpression? =
         tuitionType?.let(bootcamp.tuitionType::eq)
 
-    /** 고정 조건이 이미 공개 상태로 좁혀 두므로 여기서는 그 안에서 한 상태만 더 고른다. */
+    /** 공개 목록은 고정 조건이 이미 공개 상태로 좁혀 두므로 그 안에서 한 상태만 더 고른다. */
     private fun statusEq(status: BootcampStatus?): BooleanExpression? =
         status?.let(bootcamp.status::eq)
+
+    private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {
+        null -> null
+        true -> bootcamp.publicationStatus.eq(BootcampPublicationStatus.PUBLISHED)
+        false -> bootcamp.publicationStatus.ne(BootcampPublicationStatus.PUBLISHED)
+    }
+
+    /** 등록 경로는 저장하지 않으므로 소유자 유무로 거른다. */
+    private fun sourceEq(source: ContentSource?): BooleanExpression? = when (source) {
+        null -> null
+        ContentSource.CRAWLER -> bootcamp.ownerUserId.isNull
+        ContentSource.COMPANY -> bootcamp.ownerUserId.isNotNull
+    }
 
     /**
      * 검색어는 인덱스로 좁힐 수 없어 다른 조건으로 고른 행을 차례로 확인한다.

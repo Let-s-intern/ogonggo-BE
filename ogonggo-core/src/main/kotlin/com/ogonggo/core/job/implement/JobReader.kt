@@ -2,6 +2,7 @@ package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -9,6 +10,7 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
+import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
@@ -104,6 +106,50 @@ class JobReader internal constructor(
     fun readForUpdate(jobId: Long): Job =
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    /** 삭제는 멱등해야 하므로 이미 삭제된 공고도 잠가 찾는다. */
+    fun readForDelete(jobId: Long): Job =
+        jobRepository.findIncludingDeletedByIdForUpdate(jobId)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
+    fun readManagementPage(
+        condition: JobManagementSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+    ): JobPageDto = readManagementPage(condition, sortType, page, size, LocalDateTime.now(clock))
+
+    /** 게시 상태와 무관하게 미삭제 공고를 읽는다. 모집 상태는 저장하지 않으므로 기준 시각으로 계산한다. */
+    fun readManagementPage(
+        condition: JobManagementSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+        now: LocalDateTime,
+    ): JobPageDto {
+        validatePageRequest(page, size)
+        val result = jobQueryRepository.findManagementPage(
+            condition = condition,
+            sortType = sortType,
+            now = now,
+            pageable = PageRequest.of(page, size),
+        )
+        return JobPageDto(
+            jobs = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+            hasNext = result.hasNext(),
+        )
+    }
+
+    /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 검수 상태는 기업회원 공고에만 있다. */
+    fun readPendingReviews(): List<Job> =
+        jobRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ReviewStatus.PENDING)
+
+    fun countPendingReviews(): Long =
+        jobRepository.countByReviewStatusAndDeletedAtIsNull(ReviewStatus.PENDING)
 
     /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
 

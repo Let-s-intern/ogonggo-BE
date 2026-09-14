@@ -1,98 +1,85 @@
 package com.ogonggo.adminapi.bootcamp.business
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.bootcamp.domain.Bootcamp
-import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.bootcamp.implement.BootcampAppender
-import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
+import com.ogonggo.core.bootcamp.domain.BootcampContentField
+import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampManager
+import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
-import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
-import org.junit.jupiter.api.Assertions.assertEquals
+import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
+import com.ogonggo.core.review.domain.ReviewStatus
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 class AdminBootcampServiceTest {
 
     private val bootcampReader = Mockito.mock(BootcampReader::class.java)
-    private val bootcampAppender = Mockito.mock(BootcampAppender::class.java)
     private val bootcampManager = Mockito.mock(BootcampManager::class.java)
+    private val bootcampMetricReader = Mockito.mock(BootcampMetricReader::class.java)
+    private val bootcampContentReader = Mockito.mock(BootcampContentReader::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-27T03:00:00Z"), ZoneId.of("Asia/Seoul"))
-    private val service = AdminBootcampService(bootcampReader, bootcampAppender, bootcampManager, clock)
-
-    @Test
-    fun `부트캠프를 생성하고 식별자를 반환한다`() {
-        val command = appendCommand()
-        val bootcamp = Mockito.mock(Bootcamp::class.java)
-        Mockito.`when`(bootcamp.id).thenReturn(1L)
-        Mockito.`when`(bootcampAppender.append(command)).thenReturn(bootcamp)
-
-        assertEquals(1L, service.create(command))
-        Mockito.verify(bootcampAppender).append(command)
-    }
-
-    @Test
-    fun `부트캠프를 잠금 조회한 뒤 수정한다`() {
-        val command = updateCommand()
-        val bootcamp = Mockito.mock(Bootcamp::class.java)
-        Mockito.`when`(bootcampReader.readForUpdate(1L)).thenReturn(bootcamp)
-
-        service.update(1L, command)
-
-        Mockito.verify(bootcampReader).readForUpdate(1L)
-        Mockito.verify(bootcampManager).update(bootcamp, command)
-    }
-
-    @Test
-    fun `부트캠프를 잠금 조회한 뒤 모집을 시작한다`() {
-        val bootcamp = Mockito.mock(Bootcamp::class.java)
-        Mockito.`when`(bootcampReader.readForUpdate(1L)).thenReturn(bootcamp)
-
-        service.startRecruitment(1L)
-
-        Mockito.verify(bootcampReader).readForUpdate(1L)
-        Mockito.verify(bootcampManager).startRecruitment(bootcamp)
-    }
-
-    private fun appendCommand(): BootcampAppendDto = BootcampAppendDto(
-        companyName = "오공고 교육사",
-        title = "백엔드 부트캠프",
-        programType = "개발",
-        operationType = OperationType.ONLINE,
-        recruitmentType = BootcampRecruitmentType.PERIOD,
-        recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
-        recruitmentEndAt = LocalDateTime.of(2026, 8, 31, 23, 59),
-        programStartDate = LocalDate.of(2026, 9, 1),
-        programEndDate = LocalDate.of(2026, 12, 1),
-        tuitionType = TuitionType.FREE,
-        representativeImageUrl = "https://example.com/images/bootcamp.png",
-        shortDescription = "백엔드 개발자로 성장하는 12주",
-        content = "부트캠프 상세 내용",
-        applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
-        applicationUrl = "https://example.com/apply",
+    private val service = AdminBootcampService(
+        bootcampReader,
+        bootcampManager,
+        bootcampMetricReader,
+        bootcampContentReader,
+        clock,
     )
 
-    private fun updateCommand(): BootcampUpdateDto = BootcampUpdateDto(
-        companyName = "변경 교육사",
-        title = "변경 부트캠프",
-        programType = "데이터",
-        operationType = OperationType.OFFLINE,
-        recruitmentType = BootcampRecruitmentType.PERIOD,
-        recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0),
-        recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59),
-        programStartDate = LocalDate.of(2026, 10, 1),
-        programEndDate = LocalDate.of(2027, 1, 1),
-        tuitionType = TuitionType.PAID,
-        representativeImageUrl = "https://example.com/images/updated.png",
-        shortDescription = "데이터 분석가로 성장하는 12주",
-        content = "변경된 부트캠프 상세 내용",
-        applicationMethod = ApplicationMethod.EMAIL,
-    )
+    @Test
+    fun `승인과 숨김을 함께 보내면 승인한 뒤 숨기고 내용을 고친다`() {
+        val bootcamp = lockedBootcamp(reviewStatus = ReviewStatus.REJECTED)
+        val contents = mapOf(BootcampContentField.ELIGIBILITY_AND_SELECTION_PROCESS to null)
+
+        service.updateBootcamp(
+            BOOTCAMP_ID,
+            AdminBootcampUpdateCommand(
+                visibility = AdminContentVisibility.HIDDEN,
+                reviewStatus = ReviewStatus.APPROVED,
+                contents = contents,
+            ),
+        )
+
+        val order = Mockito.inOrder(bootcampManager)
+        order.verify(bootcampManager).approveReview(bootcamp, NOW)
+        order.verify(bootcampManager).hide(bootcamp)
+        order.verify(bootcampManager).editContent(bootcamp, BootcampContentEditDto(contents = contents))
+        Mockito.verifyNoMoreInteractions(bootcampManager)
+    }
+
+    @Test
+    fun `이미 같은 검수 상태면 다시 전이하지 않는다`() {
+        lockedBootcamp(reviewStatus = ReviewStatus.PENDING)
+
+        service.updateBootcamp(BOOTCAMP_ID, AdminBootcampUpdateCommand(reviewStatus = ReviewStatus.PENDING))
+
+        Mockito.verifyNoInteractions(bootcampManager)
+    }
+
+    @Test
+    fun `삭제는 이미 삭제된 부트캠프까지 잠가 찾아 멱등하게 처리한다`() {
+        val bootcamp = Mockito.mock(Bootcamp::class.java)
+        Mockito.`when`(bootcampReader.readForDelete(BOOTCAMP_ID)).thenReturn(bootcamp)
+
+        service.deleteBootcamp(BOOTCAMP_ID)
+
+        Mockito.verify(bootcampManager).delete(bootcamp, NOW)
+    }
+
+    private fun lockedBootcamp(reviewStatus: ReviewStatus?): Bootcamp {
+        val bootcamp = Mockito.mock(Bootcamp::class.java)
+        Mockito.`when`(bootcamp.reviewStatus).thenReturn(reviewStatus)
+        Mockito.`when`(bootcampReader.readForUpdate(BOOTCAMP_ID)).thenReturn(bootcamp)
+        return bootcamp
+    }
+
+    companion object {
+        private const val BOOTCAMP_ID = 1L
+        private val NOW = LocalDateTime.of(2026, 8, 27, 12, 0)
+    }
 }

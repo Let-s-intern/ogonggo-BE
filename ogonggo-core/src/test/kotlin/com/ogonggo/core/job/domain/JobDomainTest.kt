@@ -1,6 +1,11 @@
 package com.ogonggo.core.job.domain
 
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.error.ReviewErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
@@ -111,8 +116,99 @@ class JobDomainTest {
 
         job.archive()
         assertEquals(JobPublicationStatus.ARCHIVED, job.publicationStatus)
-        assertThrows(IllegalStateException::class.java) { job.publish() }
-        assertThrows(IllegalStateException::class.java) { job.close(firstClosedAt) }
+        // 보관된 공고는 운영자가 콘솔에서 건드릴 수 있으므로 500이 아니라 409로 알린다.
+        assertEquals(JobErrorCode.JOB_ARCHIVED, assertThrows(ConflictException::class.java) { job.publish() }.errorCode)
+        assertThrows(ConflictException::class.java) { job.close(firstClosedAt) }
+    }
+
+    @Test
+    fun `기업회원 공고는 검수 대기로 시작하고 수집한 공고는 검수 상태가 없다`() {
+        assertEquals(ReviewStatus.PENDING, createJob(ownerUserId = 7L).reviewStatus)
+        assertNull(createJob().reviewStatus)
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(ownerUserId = 7L, publicationStatus = JobPublicationStatus.PUBLISHED)
+        }
+    }
+
+    @Test
+    fun `기업회원 공고는 승인 전에 게시할 수 없고 승인하면 곧바로 게시된다`() {
+        val job = createJob(ownerUserId = 7L)
+
+        val exception = assertThrows(ConflictException::class.java) { job.publish() }
+        assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
+
+        job.approveReview()
+        assertEquals(ReviewStatus.APPROVED, job.reviewStatus)
+        assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
+    }
+
+    @Test
+    fun `반려하거나 검수 대기로 되돌리면 노출을 끈다`() {
+        val rejected = createJob(ownerUserId = 7L).apply { approveReview() }
+        rejected.rejectReview()
+        assertEquals(ReviewStatus.REJECTED, rejected.reviewStatus)
+        assertEquals(JobPublicationStatus.HIDDEN, rejected.publicationStatus)
+
+        val draft = createJob(ownerUserId = 7L)
+        draft.requestReview()
+        // 게시한 적 없는 초안은 숨김으로 바꾸지 않고 그대로 둔다.
+        assertEquals(JobPublicationStatus.DRAFT, draft.publicationStatus)
+
+        val approved = createJob(ownerUserId = 7L).apply { approveReview() }
+        approved.requestReview()
+        assertEquals(ReviewStatus.PENDING, approved.reviewStatus)
+        assertEquals(JobPublicationStatus.HIDDEN, approved.publicationStatus)
+    }
+
+    @Test
+    fun `수집한 공고는 검수할 수 없다`() {
+        val exception = assertThrows(ConflictException::class.java) { createJob().approveReview() }
+
+        assertEquals(ReviewErrorCode.CONTENT_NOT_REVIEWABLE, exception.errorCode)
+    }
+
+    @Test
+    fun `제목과 본문은 넘어온 칸만 고치고 null이면 비운다`() {
+        val job = createJob()
+
+        job.editContent(
+            title = "고친 제목",
+            contents = mapOf(JobContentField.RESPONSIBILITIES to "고친 업무", JobContentField.BENEFITS to null),
+        )
+
+        assertEquals("고친 제목", job.title)
+        assertEquals("고친 업무", job.responsibilities)
+        assertNull(job.benefits)
+        assertEquals("자격 요건", job.qualifications)
+
+        job.editContent(title = null, contents = emptyMap())
+        assertEquals("고친 제목", job.title)
+
+        assertThrows(IllegalArgumentException::class.java) { job.editContent(title = " ", contents = emptyMap()) }
+        assertThrows(IllegalArgumentException::class.java) {
+            job.editContent(title = null, contents = mapOf(JobContentField.COMPENSATION to " "))
+        }
+    }
+
+    @Test
+    fun `모집 상태는 마감 처리와 종료 일시로 계산하며 종료 시각까지는 모집 중이다`() {
+        val endAt = LocalDateTime.of(2026, 9, 14, 23, 59)
+        val job = createJob(recruitmentStartAt = endAt.minusDays(7), recruitmentEndAt = endAt)
+
+        assertEquals(JobRecruitmentStatus.RECRUITING, job.recruitmentStatus(endAt))
+        assertEquals(JobRecruitmentStatus.CLOSED, job.recruitmentStatus(endAt.plusNanos(1)))
+
+        val alwaysOpen = createJob(recruitmentType = JobRecruitmentType.ALWAYS_OPEN)
+        assertEquals(JobRecruitmentStatus.RECRUITING, alwaysOpen.recruitmentStatus(endAt))
+        alwaysOpen.close(endAt)
+        assertEquals(JobRecruitmentStatus.CLOSED, alwaysOpen.recruitmentStatus(endAt))
+    }
+
+    @Test
+    fun `상시 채용에는 모집 종료 일시를 둘 수 없다`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(recruitmentType = JobRecruitmentType.ALWAYS_OPEN, recruitmentEndAt = LocalDateTime.of(2026, 9, 1, 0, 0))
+        }
     }
 
     @Test
@@ -129,6 +225,9 @@ class JobDomainTest {
     }
 
     private fun createJob(
+        ownerUserId: Long? = null,
+        recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,
+        publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
         companyName: String = "오공고",
         parentCompanyName: String? = null,
         companyLogoUrl: String? = null,
@@ -141,8 +240,12 @@ class JobDomainTest {
         experienceMinYears: Int? = 1,
         experienceMaxYears: Int? = 3,
         recruitmentStartAt: LocalDateTime? = LocalDateTime.of(2026, 8, 1, 0, 0),
-        recruitmentEndAt: LocalDateTime? = LocalDateTime.of(2026, 8, 31, 23, 59),
+        // 상시 채용은 종료 일시를 둘 수 없으므로 기본값도 모집 유형을 따른다.
+        recruitmentEndAt: LocalDateTime? =
+            if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN) null else LocalDateTime.of(2026, 8, 31, 23, 59),
     ): Job = Job(
+        ownerUserId = ownerUserId,
+        publicationStatus = publicationStatus,
         companyName = companyName,
         parentCompanyName = parentCompanyName,
         companyLogoUrl = companyLogoUrl,
@@ -157,7 +260,7 @@ class JobDomainTest {
         experienceMaxYears = experienceMaxYears,
         educationLevel = EducationLevel.ANY,
         region = region,
-        recruitmentType = JobRecruitmentType.PERIOD,
+        recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,

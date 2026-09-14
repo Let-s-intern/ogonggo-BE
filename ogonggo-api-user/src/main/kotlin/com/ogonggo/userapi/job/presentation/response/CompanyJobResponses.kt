@@ -6,9 +6,13 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.userapi.job.business.CompanyJobResult
 import com.ogonggo.userapi.job.business.CompanyJobSummary
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
+
+private const val REVIEW_STATUS_DESCRIPTION = "운영자 검수 상태입니다. 승인되어야 게시할 수 있고, 내용을 고치면 다시 검수 대기가 됩니다."
 
 data class CreateCompanyJobResponse(val id: Long)
 
@@ -26,6 +30,8 @@ data class CompanyJobSummaryResponse(
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val publicationStatus: JobPublicationStatus,
+    @Schema(description = REVIEW_STATUS_DESCRIPTION)
+    val reviewStatus: ReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -43,6 +49,7 @@ data class CompanyJobSummaryResponse(
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
             publicationStatus = result.publicationStatus,
+            reviewStatus = result.reviewStatus,
             closedAt = result.closedAt,
         )
     }
@@ -81,6 +88,8 @@ data class CompanyJobDetailResponse(
     val applicationMethod: JobApplicationMethod?,
     val sourceUrl: String?,
     val publicationStatus: JobPublicationStatus,
+    @Schema(description = REVIEW_STATUS_DESCRIPTION)
+    val reviewStatus: ReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -117,6 +126,7 @@ data class CompanyJobDetailResponse(
             applicationMethod = result.applicationMethod,
             sourceUrl = result.sourceUrl,
             publicationStatus = result.publicationStatus,
+            reviewStatus = result.reviewStatus,
             closedAt = result.closedAt,
         )
     }

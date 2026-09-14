@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.config
 
+import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.health.AdminHealthController
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -33,6 +34,10 @@ class AdminCorsConfigurationTest @Autowired constructor(
     /** 이 테스트는 CORS 배선을 본다. 헬스 체크가 200을 주도록 의존성 확인은 대역으로 둔다. */
     @MockBean
     private lateinit var healthEndpoint: HealthEndpoint
+
+    /** 관리자 콘솔 인증 필터가 쓰는 대역이다. CORS 배선만 보므로 동작은 필요 없다. */
+    @MockBean
+    private lateinit var adminAuthService: AdminAuthService
 
     @BeforeEach
     fun setUp() {

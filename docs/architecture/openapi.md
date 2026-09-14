@@ -79,7 +79,7 @@ springdoc은 `operationId`를 주지 않으면 **메서드 이름**에서 만들
 
 | 자리 | 값 |
 | --- | --- |
-| 동사 | HTTP 메서드를 따릅니다. GET 컬렉션은 `list`, GET 단건은 `get`, POST는 `create`, PUT은 `replace`, DELETE는 `delete` |
+| 동사 | HTTP 메서드를 따릅니다. GET 컬렉션은 `list`, GET 단건은 `get`, POST는 `create`, PUT은 `replace`, PATCH는 `update`, DELETE는 `delete` |
 | 소유 | 로그인한 사용자의 것이면 `My`, 로그인 없이 보는 것이면 `Public`. 해당하지 않으면 생략합니다 |
 | 리소스 | 컬렉션은 복수형, 단건은 단수형 |
 

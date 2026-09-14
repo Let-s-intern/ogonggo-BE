@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.job.presentation
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
@@ -30,6 +31,10 @@ class CrawlerJobControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var crawlerJobService: CrawlerJobService
+
+    /** 관리자 콘솔 인증 필터가 쓰는 대역이다. 내부 경로는 이 필터를 거치지 않는다. */
+    @MockBean
+    private lateinit var adminAuthService: AdminAuthService
 
     @Test
     fun `내부 API 키가 있으면 공고를 등록하고 식별자를 반환한다`() {

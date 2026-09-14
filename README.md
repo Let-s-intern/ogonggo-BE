@@ -75,7 +75,9 @@ LETSCAREER_INTERNAL_API_KEY=<same value as the LetsCareer server>
 
 Users sign in by exchanging a LetsCareer access token at `POST /api/v1/auth/letscareer`. Read [오공고 사용자 인증과 렛츠커리어 연동](docs/architecture/authentication.md) before changing anything in that flow.
 
-Administrator endpoints are still denied until the administrator authentication filter is implemented.
+Administrator console endpoints (`/api/v1/admin/**`) accept a user API access token whose account has `UserRole.ADMIN`, granted directly in the database. `ogonggo-api-admin` must be configured with the same `ogonggo.auth.jwt.secret` as the user API. Read section 7-3 of [오공고 사용자 인증과 렛츠커리어 연동](docs/architecture/authentication.md) before changing it.
+
+Before deploying the admin console changes to an existing database, apply `docs/schema/2026-09-14-admin-review.sql`.
 
 ## Docker
 

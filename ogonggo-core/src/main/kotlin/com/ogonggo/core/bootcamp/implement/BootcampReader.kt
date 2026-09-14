@@ -1,6 +1,8 @@
 package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
@@ -9,8 +11,10 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
@@ -37,6 +41,7 @@ class BootcampReader internal constructor(
         bootcampRepository.findPublicById(
             bootcampId = bootcampId,
             statuses = PUBLIC_STATUSES,
+            publicationStatus = BootcampPublicationStatus.PUBLISHED,
             now = now,
         ) ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
@@ -56,22 +61,36 @@ class BootcampReader internal constructor(
         now: LocalDateTime,
     ): BootcampPageDto {
         validatePageRequest(page, size)
-        val result = bootcampQueryRepository.findPublicPage(
+        return bootcampQueryRepository.findPublicPage(
             condition = condition,
             sortType = sortType,
             publicStatuses = PUBLIC_STATUSES,
             now = now,
             pageable = PageRequest.of(page, size),
-        )
-        return BootcampPageDto(
-            bootcamps = result.content,
-            page = result.number,
-            size = result.size,
-            totalElements = result.totalElements,
-            totalPages = result.totalPages,
-            hasNext = result.hasNext(),
-        )
+        ).toPageDto()
     }
+
+    /** 공개 여부와 무관하게 미삭제 부트캠프를 읽는다. */
+    fun readManagementPage(
+        condition: BootcampManagementSearchCondition,
+        sortType: BootcampSortType,
+        page: Int,
+        size: Int,
+    ): BootcampPageDto {
+        validatePageRequest(page, size)
+        return bootcampQueryRepository.findManagementPage(
+            condition = condition,
+            sortType = sortType,
+            pageable = PageRequest.of(page, size),
+        ).toPageDto()
+    }
+
+    /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 검수 상태는 기업회원 부트캠프에만 있다. */
+    fun readPendingReviews(): List<Bootcamp> =
+        bootcampRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ReviewStatus.PENDING)
+
+    fun countPendingReviews(): Long =
+        bootcampRepository.countByReviewStatusAndDeletedAtIsNull(ReviewStatus.PENDING)
 
     fun readOwned(ownerUserId: Long, bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(bootcampId, ownerUserId)
@@ -79,18 +98,10 @@ class BootcampReader internal constructor(
 
     fun readOwnedPage(ownerUserId: Long, page: Int, size: Int): BootcampPageDto {
         validatePageRequest(page, size)
-        val result = bootcampRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
+        return bootcampRepository.findAllByOwnerUserIdAndDeletedAtIsNull(
             ownerUserId,
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")),
-        )
-        return BootcampPageDto(
-            bootcamps = result.content,
-            page = result.number,
-            size = result.size,
-            totalElements = result.totalElements,
-            totalPages = result.totalPages,
-            hasNext = result.hasNext(),
-        )
+        ).toPageDto()
     }
 
     fun readOwnedForUpdate(ownerUserId: Long, bootcampId: Long): Bootcamp =
@@ -104,10 +115,24 @@ class BootcampReader internal constructor(
     fun readForUpdate(bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdForUpdate(bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
+
+    /** 삭제는 멱등해야 하므로 이미 삭제된 부트캠프도 잠가 찾는다. */
+    fun readForDelete(bootcampId: Long): Bootcamp =
+        bootcampRepository.findIncludingDeletedByIdForUpdate(bootcampId)
+            ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 }
 
 /** 북마크 목록도 같은 공개 조건을 따르므로 Reader 밖에서도 사용한다. */
 internal val PUBLIC_STATUSES = listOf(BootcampStatus.RECRUITING, BootcampStatus.CLOSED)
+
+private fun Page<Bootcamp>.toPageDto(): BootcampPageDto = BootcampPageDto(
+    bootcamps = content,
+    page = number,
+    size = size,
+    totalElements = totalElements,
+    totalPages = totalPages,
+    hasNext = hasNext(),
+)
 
 private fun validatePageRequest(page: Int, size: Int) {
     require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }

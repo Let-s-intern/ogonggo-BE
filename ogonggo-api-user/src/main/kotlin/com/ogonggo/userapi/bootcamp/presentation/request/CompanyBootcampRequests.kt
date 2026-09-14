@@ -204,6 +204,9 @@ private fun CompanyBootcampWriteRequest.validateRelations() {
     if (recruitmentType == BootcampRecruitmentType.PERIOD && recruitmentEnd == null) {
         invalid("recruitmentEndAt", "기간 모집의 종료 일시는 필수입니다.")
     }
+    if (recruitmentType == BootcampRecruitmentType.ALWAYS_OPEN && recruitmentEnd != null) {
+        invalid("recruitmentEndAt", "상시 모집에는 모집 종료 일시를 둘 수 없습니다.")
+    }
     if (recruitmentStart != null && recruitmentEnd != null && recruitmentStart.isAfter(recruitmentEnd)) {
         invalid("recruitmentStartAt", "모집 종료 일시보다 늦을 수 없습니다.")
     }

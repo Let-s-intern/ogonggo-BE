@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
@@ -29,6 +30,7 @@ class BootcampBookmarkReader internal constructor(
         val result = bootcampRepository.findBookmarkedBootcamps(
             userId = userId,
             statuses = PUBLIC_STATUSES,
+            publicationStatus = BootcampPublicationStatus.PUBLISHED,
             now = now,
             pageable = PageRequest.of(page, size),
         )

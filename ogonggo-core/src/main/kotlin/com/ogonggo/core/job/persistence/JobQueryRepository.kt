@@ -3,11 +3,14 @@ package com.ogonggo.core.job.persistence
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.domain.QJob.job
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
+import com.ogonggo.core.review.domain.ContentSource
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
@@ -33,9 +36,20 @@ internal class JobQueryRepository(
         condition: JobSearchCondition,
         sortType: JobSortType,
         pageable: Pageable,
-    ): Page<Job> {
-        val predicates = publishedPredicates(condition)
+    ): Page<Job> = findPage(publishedPredicates(condition), sortType, pageable)
 
+    /**
+     * 관리 목록은 게시 상태를 고정하지 않으므로 게시 인덱스를 타지 못하고 식별자 역순으로 훑는다.
+     * 관리자만 쓰는 목록이라 사용자 목록처럼 인덱스를 필터마다 두지 않는다.
+     */
+    fun findManagementPage(
+        condition: JobManagementSearchCondition,
+        sortType: JobSortType,
+        now: LocalDateTime,
+        pageable: Pageable,
+    ): Page<Job> = findPage(managementPredicates(condition, now), sortType, pageable)
+
+    private fun findPage(predicates: Array<Predicate?>, sortType: JobSortType, pageable: Pageable): Page<Job> {
         val content = sorted(queryFactory.selectFrom(job).where(*predicates), sortType)
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
@@ -92,8 +106,7 @@ internal class JobQueryRepository(
     private fun recruitingPredicates(now: LocalDateTime): Array<Predicate> = arrayOf(
         job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
         job.deletedAt.isNull,
-        job.closedAt.isNull,
-        job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)),
+        recruiting(now),
     )
 
     /** 게시 상태와 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */
@@ -105,11 +118,45 @@ internal class JobQueryRepository(
         keywordContains(condition.keyword),
     )
 
+    private fun managementPredicates(condition: JobManagementSearchCondition, now: LocalDateTime): Array<Predicate?> =
+        arrayOf(
+            job.deletedAt.isNull,
+            publishedEq(condition.published),
+            sourceEq(condition.source),
+            condition.reviewStatus?.let(job.reviewStatus::eq),
+            recruitmentStatusEq(condition.recruitmentStatus, now),
+            keywordContains(condition.keyword),
+        )
+
     private fun employmentTypeEq(employmentType: EmploymentType?): BooleanExpression? =
         employmentType?.let(job.employmentType::eq)
 
     private fun experienceTypeEq(experienceType: ExperienceType?): BooleanExpression? =
         experienceType?.let(job.experienceType::eq)
+
+    private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {
+        null -> null
+        true -> job.publicationStatus.eq(JobPublicationStatus.PUBLISHED)
+        false -> job.publicationStatus.ne(JobPublicationStatus.PUBLISHED)
+    }
+
+    /** 등록 경로는 저장하지 않으므로 소유자 유무로 거른다. */
+    private fun sourceEq(source: ContentSource?): BooleanExpression? = when (source) {
+        null -> null
+        ContentSource.CRAWLER -> job.ownerUserId.isNull
+        ContentSource.COMPANY -> job.ownerUserId.isNotNull
+    }
+
+    /** `Job.recruitmentStatus`와 같은 경계를 쓴다. 종료 일시와 같은 시각까지는 모집 중이다. */
+    private fun recruitmentStatusEq(status: JobRecruitmentStatus?, now: LocalDateTime): BooleanExpression? =
+        when (status) {
+            null -> null
+            JobRecruitmentStatus.RECRUITING -> recruiting(now)
+            JobRecruitmentStatus.CLOSED -> job.closedAt.isNotNull.or(job.recruitmentEndAt.lt(now))
+        }
+
+    private fun recruiting(now: LocalDateTime): BooleanExpression =
+        job.closedAt.isNull.and(job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)))
 
     /**
      * 검색어는 인덱스로 좁힐 수 없어 다른 조건으로 고른 행을 차례로 확인한다.

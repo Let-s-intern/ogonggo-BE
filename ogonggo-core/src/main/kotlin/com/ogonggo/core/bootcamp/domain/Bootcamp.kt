@@ -3,6 +3,8 @@ package com.ogonggo.core.bootcamp.domain
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.common.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.error.ReviewErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -10,12 +12,18 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "bootcamps")
+@Table(
+    name = "bootcamps",
+    indexes = [
+        Index(name = "idx_bootcamps_review", columnList = "review_status, deleted_at"),
+    ],
+)
 class Bootcamp internal constructor(
     ownerUserId: Long? = null,
     companyName: String,
@@ -43,12 +51,16 @@ class Bootcamp internal constructor(
     sourceUrl: String? = null,
     status: BootcampStatus = BootcampStatus.DRAFT,
     closedAt: LocalDateTime? = null,
+    publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
 ) : BaseTimeEntity() {
 
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
         require((status == BootcampStatus.CLOSED) == (closedAt != null)) {
             "모집 마감 상태와 마감 일시가 일치해야 합니다."
+        }
+        require(ownerUserId == null || publicationStatus != BootcampPublicationStatus.PUBLISHED) {
+            "기업회원 부트캠프는 검수 승인 전에 게시할 수 없습니다."
         }
         validateBootcampValues(
             companyName = companyName,
@@ -188,6 +200,17 @@ class Bootcamp internal constructor(
     var closedAt: LocalDateTime? = closedAt /* 모집 마감 처리 일시 */
         protected set
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "publication_status", nullable = false, length = 20)
+    var publicationStatus: BootcampPublicationStatus = publicationStatus /* 부트캠프 게시 상태 */
+        protected set
+
+    /** 기업회원이 올린 부트캠프만 검수하므로 등록할 때 검수 대기로 시작한다. 소유자가 없으면 값이 없다. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", length = 20)
+    var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
+        protected set
+
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 부트캠프 삭제 일시 */
         protected set
@@ -266,6 +289,27 @@ class Bootcamp internal constructor(
         this.sourceUrl = sourceUrl
     }
 
+    /** 제목과 본문 칸 중 넘어온 것만 바꾼다. 본문 값이 null이면 그 칸을 비우며, 상세 내용은 비울 수 없다. */
+    fun editContent(title: String?, contents: Map<BootcampContentField, String?>) {
+        checkModifiable()
+        require(title == null || title.isNotBlank()) { "부트캠프 프로그램명은 비어 있을 수 없습니다." }
+        require(contents.values.all { it == null || it.isNotBlank() }) { "본문 칸은 공백일 수 없습니다." }
+        require(contents.none { (field, value) -> field.required && value == null }) { "비울 수 없는 칸입니다." }
+
+        title?.let { this.title = it }
+        contents.forEach { (field, value) ->
+            when (field) {
+                BootcampContentField.CONTENT -> content = checkNotNull(value)
+                BootcampContentField.ELIGIBILITY_AND_SELECTION_PROCESS -> eligibilityAndSelectionProcess = value
+            }
+        }
+    }
+
+    fun contentOf(field: BootcampContentField): String? = when (field) {
+        BootcampContentField.CONTENT -> content
+        BootcampContentField.ELIGIBILITY_AND_SELECTION_PROCESS -> eligibilityAndSelectionProcess
+    }
+
     fun startRecruitment() {
         checkNotDeleted()
         if (status == BootcampStatus.RECRUITING) {
@@ -287,9 +331,56 @@ class Bootcamp internal constructor(
         }
     }
 
+    /** 기업회원 부트캠프는 검수 승인을 받아야만 노출한다. 게시하는 쪽이 누구든 같은 규칙을 따른다. */
+    fun publish() {
+        checkModifiable()
+        if (reviewStatus != null && reviewStatus != ReviewStatus.APPROVED) {
+            throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
+        }
+        publicationStatus = BootcampPublicationStatus.PUBLISHED
+    }
+
+    fun hide() {
+        checkModifiable()
+        publicationStatus = BootcampPublicationStatus.HIDDEN
+    }
+
     fun delete(now: LocalDateTime) {
         if (deletedAt == null) {
             deletedAt = now
+        }
+    }
+
+    /** 승인하면 곧바로 노출한다. 승인 결과를 알릴 경로가 없어 다시 게시하게 하면 부트캠프가 비노출로 남는다. */
+    fun approveReview() {
+        checkReviewable()
+        reviewStatus = ReviewStatus.APPROVED
+        publicationStatus = BootcampPublicationStatus.PUBLISHED
+    }
+
+    fun rejectReview() {
+        checkReviewable()
+        reviewStatus = ReviewStatus.REJECTED
+        unpublish()
+    }
+
+    /** 기업회원이 내용을 고치거나 운영자가 판정을 되돌리면 다시 검수를 기다리며, 그동안 노출하지 않는다. */
+    fun requestReview() {
+        checkReviewable()
+        reviewStatus = ReviewStatus.PENDING
+        unpublish()
+    }
+
+    private fun unpublish() {
+        if (publicationStatus == BootcampPublicationStatus.PUBLISHED) {
+            publicationStatus = BootcampPublicationStatus.HIDDEN
+        }
+    }
+
+    private fun checkReviewable() {
+        checkModifiable()
+        if (reviewStatus == null) {
+            throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
         }
     }
 
@@ -335,6 +426,9 @@ private fun validateBootcampValues(
     if (recruitmentType == BootcampRecruitmentType.PERIOD) {
         require(recruitmentStartAt != null) { "기간 모집의 시작 일시는 필수입니다." }
         require(recruitmentEndAt != null) { "기간 모집의 종료 일시는 필수입니다." }
+    }
+    require(recruitmentType != BootcampRecruitmentType.ALWAYS_OPEN || recruitmentEndAt == null) {
+        "상시 모집에는 모집 종료 일시를 둘 수 없습니다."
     }
     require(recruitmentStartAt == null || recruitmentEndAt == null || !recruitmentStartAt.isAfter(recruitmentEndAt)) {
         "모집 시작 일시는 종료 일시보다 늦을 수 없습니다."

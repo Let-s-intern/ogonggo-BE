@@ -2,7 +2,9 @@ package com.ogonggo.core.bootcamp.implement.dto
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampContentField
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
@@ -39,6 +41,13 @@ data class BootcampAppendDto(
     val curriculums: List<BootcampCurriculumDto.Request> = emptyList(),
     val status: BootcampStatus = BootcampStatus.DRAFT,
     val closedAt: LocalDateTime? = null,
+    val publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
+)
+
+/** 운영자가 고치는 제목과 본문 칸이다. 넘어온 칸만 바꾸며 본문 값이 null이면 그 칸을 비운다. */
+data class BootcampContentEditDto(
+    val title: String? = null,
+    val contents: Map<BootcampContentField, String?> = emptyMap(),
 )
 
 data class BootcampUpdateDto(
