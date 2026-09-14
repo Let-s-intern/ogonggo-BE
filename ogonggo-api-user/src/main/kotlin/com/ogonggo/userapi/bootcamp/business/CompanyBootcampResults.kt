@@ -2,6 +2,7 @@ package com.ogonggo.userapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
@@ -9,6 +10,7 @@ import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
+import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -47,6 +49,8 @@ data class CompanyBootcampSummary(
     val representativeImageUrl: String,
     val shortDescription: String,
     val status: BootcampStatus,
+    val publicationStatus: BootcampPublicationStatus,
+    val reviewStatus: ReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -67,6 +71,8 @@ data class CompanyBootcampSummary(
             representativeImageUrl = bootcamp.representativeImageUrl,
             shortDescription = bootcamp.shortDescription,
             status = bootcamp.status,
+            publicationStatus = bootcamp.publicationStatus,
+            reviewStatus = bootcamp.reviewStatus,
             closedAt = bootcamp.closedAt,
         )
     }
@@ -98,6 +104,8 @@ data class CompanyBootcampResult(
     val publicationEndAt: LocalDateTime?,
     val sourceUrl: String?,
     val status: BootcampStatus,
+    val publicationStatus: BootcampPublicationStatus,
+    val reviewStatus: ReviewStatus?,
     val closedAt: LocalDateTime?,
     val partners: List<UserBootcampPartnerResult>,
     val curriculums: List<UserBootcampCurriculumResult>,
@@ -133,6 +141,8 @@ data class CompanyBootcampResult(
             publicationEndAt = bootcamp.publicationEndAt,
             sourceUrl = bootcamp.sourceUrl,
             status = bootcamp.status,
+            publicationStatus = bootcamp.publicationStatus,
+            reviewStatus = bootcamp.reviewStatus,
             closedAt = bootcamp.closedAt,
             partners = partners.map { UserBootcampPartnerResult(it.name, it.displayOrder) },
             curriculums = curriculums.map {

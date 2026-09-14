@@ -109,7 +109,13 @@ summary = "내 채용공고 수정", description = "보낸 값으로 공고 전�
     @Operation(
         operationId = "publishMyJob",
         summary = "내 채용공고 게시",
-        description = "임시저장한 공고를 지원자에게 노출합니다. 이미 게시된 공고를 다시 게시해도 성공합니다.",
+        description = """
+            공고를 지원자에게 노출합니다. 이미 게시된 공고를 다시 게시해도 성공합니다.
+
+            운영자 검수에서 승인된 공고만 게시할 수 있습니다. 승인하면 곧바로 게시되므로,
+            이 요청은 승인된 뒤 운영자가 숨긴 공고를 다시 올릴 때 씁니다.
+            공고를 수정하면 다시 검수 대기가 되고 승인될 때까지 노출되지 않습니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -117,6 +123,11 @@ summary = "내 채용공고 수정", description = "보낸 값으로 공고 전�
             ApiResponse(
                 responseCode = "404",
                 description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "REVIEW_NOT_APPROVED: 검수 승인 전에는 노출할 수 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

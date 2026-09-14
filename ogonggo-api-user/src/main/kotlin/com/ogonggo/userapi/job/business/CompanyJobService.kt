@@ -47,13 +47,19 @@ class CompanyJobService(
         return CompanyJobResult.from(jobReader.readOwned(userId, jobId))
     }
 
+    /** 내용을 고치면 다시 검수를 기다리며 그동안 노출하지 않는다. 승인받은 뒤 내용을 바꿔 검수를 우회하지 못하게 한다. */
     @Transactional
     fun update(userId: Long, jobId: Long, command: JobUpdateDto) {
         verifyCompany(userId)
-        jobManager.update(jobReader.readOwnedForUpdate(userId, jobId), command)
+        val job = jobReader.readOwnedForUpdate(userId, jobId)
+        jobManager.update(job, command)
+        jobManager.requestReview(job, LocalDateTime.now(clock))
     }
 
-    /** 게시 조건을 여기 모은다. 결제가 도입되면 확인 절차가 이 자리에 들어간다. */
+    /**
+     * 게시 조건을 여기 모은다. 결제가 도입되면 확인 절차가 이 자리에 들어간다.
+     * 검수 승인 전이면 도메인이 게시를 막는다. 승인은 곧 노출이므로 이 요청은 운영자가 숨긴 공고를 다시 올릴 때 쓴다.
+     */
     @Transactional
     fun publish(userId: Long, jobId: Long) {
         verifyCompany(userId)

@@ -49,10 +49,13 @@ class CompanyBootcampService(
         return bootcamp.toResult()
     }
 
+    /** 내용을 고치면 다시 검수를 기다리며 그동안 노출하지 않는다. 승인받은 뒤 내용을 바꿔 검수를 우회하지 못하게 한다. */
     @Transactional
     fun update(userId: Long, bootcampId: Long, command: BootcampUpdateDto) {
         verifyCompany(userId)
-        bootcampManager.update(bootcampReader.readOwnedForUpdate(userId, bootcampId), command)
+        val bootcamp = bootcampReader.readOwnedForUpdate(userId, bootcampId)
+        bootcampManager.update(bootcamp, command)
+        bootcampManager.requestReview(bootcamp, LocalDateTime.now(clock))
     }
 
     @Transactional

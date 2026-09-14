@@ -6,6 +6,7 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
@@ -82,6 +83,26 @@ class CompanyJobServiceTest {
 
         Mockito.verify(jobManager).publish(job)
         Mockito.verify(jobManager).close(job, NOW)
+    }
+
+    @Test
+    fun `내용을 고치면 수정한 뒤 다시 검수를 요청한다`() {
+        givenAccount(role = UserRole.COMPANY)
+        val job = Mockito.mock(Job::class.java)
+        Mockito.`when`(jobReader.readOwnedForUpdate(USER_ID, JOB_ID)).thenReturn(job)
+        val update = JobUpdateDto(
+            companyName = "오공고",
+            title = "고친 백엔드 개발자",
+            employmentType = EmploymentType.FULL_TIME,
+            experienceType = ExperienceType.EXPERIENCED,
+            recruitmentType = JobRecruitmentType.PERIOD,
+        )
+
+        service.update(USER_ID, JOB_ID, update)
+
+        val order = Mockito.inOrder(jobManager)
+        order.verify(jobManager).update(job, update)
+        order.verify(jobManager).requestReview(job, NOW)
     }
 
     @Test

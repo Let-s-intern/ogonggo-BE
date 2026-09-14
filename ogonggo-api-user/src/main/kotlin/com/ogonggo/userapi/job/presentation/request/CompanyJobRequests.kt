@@ -7,6 +7,7 @@ import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
+import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
@@ -59,6 +60,14 @@ interface CompanyJobWriteRequest {
 private fun CompanyJobWriteRequest.educationLevelOrAny(): EducationLevel =
     educationLevel ?: EducationLevel.ANY
 
+/** 상시 채용은 종료 일시가 없어야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
+private fun CompanyJobWriteRequest.validRecruitmentEndAt(): LocalDateTime? {
+    if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN && recruitmentEndAt != null) {
+        throw InvalidRequestFieldException("recruitmentEndAt", "상시 채용에는 모집 종료 일시를 둘 수 없습니다.")
+    }
+    return recruitmentEndAt
+}
+
 data class CreateCompanyJobRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:Size(max = 150) override val parentCompanyName: String?,
@@ -110,7 +119,7 @@ data class CreateCompanyJobRequest(
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
-        recruitmentEndAt = recruitmentEndAt,
+        recruitmentEndAt = validRecruitmentEndAt(),
         closesWhenFilled = closesWhenFilled,
         autoCloseEnabled = autoCloseEnabled,
         companyAndTeamIntroduction = companyAndTeamIntroduction,
@@ -177,7 +186,7 @@ data class UpdateCompanyJobRequest(
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
-        recruitmentEndAt = recruitmentEndAt,
+        recruitmentEndAt = validRecruitmentEndAt(),
         closesWhenFilled = closesWhenFilled,
         autoCloseEnabled = autoCloseEnabled,
         companyAndTeamIntroduction = companyAndTeamIntroduction,
