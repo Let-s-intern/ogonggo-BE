@@ -6,5 +6,5 @@ enum class RecruitmentApplicationSortType(
     override val code: Int,
     override val desc: String,
 ) : EnumField {
-    LATEST(1, "최근 지원순"),
+    LATEST(1, "최근 저장순"),
 }

@@ -1,6 +1,7 @@
 package com.ogonggo.core.community.persistence
 
 import com.ogonggo.core.community.domain.RecruitmentPostComment
+import com.ogonggo.core.community.domain.RecruitmentPostCommentReport
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -58,12 +59,12 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
             SELECT comment.*, ROW_NUMBER() OVER (
                 PARTITION BY comment.parent_id
                 ORDER BY comment.created_at ASC, comment.id ASC
-            ) AS row_number
+            ) AS reply_rank
             FROM recruitment_post_comments comment
             WHERE comment.post_id = :postId
               AND comment.parent_id IN (:parentIds)
         ) ranked_comments
-        WHERE ranked_comments.row_number <= :limit
+        WHERE ranked_comments.reply_rank <= :limit
         ORDER BY parent_id ASC, created_at ASC, id ASC
         """,
         nativeQuery = true,
@@ -99,6 +100,8 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
 
     fun findByIdAndPostId(commentId: Long, postId: Long): RecruitmentPostComment?
 }
+
+internal interface RecruitmentPostCommentReportJpaRepository : JpaRepository<RecruitmentPostCommentReport, Long>
 
 data class RecruitmentPostCommentCountRow(
     val parentId: Long,

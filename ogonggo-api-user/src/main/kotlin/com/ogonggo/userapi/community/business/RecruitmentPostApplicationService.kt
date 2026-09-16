@@ -1,6 +1,8 @@
 package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.domain.ContactMethod
+import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
+import com.ogonggo.core.community.domain.RecruitmentApplicationSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
@@ -61,21 +63,45 @@ class RecruitmentPostApplicationService(
         keyword: String?,
         page: Int,
         size: Int,
+        applicationStatus: RecruitmentApplicationProgressStatus? = null,
+        sort: RecruitmentApplicationSortType = RecruitmentApplicationSortType.LATEST,
     ): RecruitmentPostApplicationPageResult {
         verifyActiveUser(userId)
         val result = applicationReader.readPage(
             userId = userId,
             recruitmentStatus = recruitmentStatus,
+            applicationStatus = applicationStatus,
             recruitmentType = recruitmentType,
             keyword = keyword,
             page = page,
             size = size,
+            sort = sort,
         )
         val authorIds = result.items.map(RecruitmentPostApplicationItem::authorUserId).distinct()
         val authorsByUserId = userProfileReader.readAll(authorIds).mapValues { (authorId, profile) ->
             RecruitmentPostAuthorResult.from(authorId, profile)
         }
         return RecruitmentPostApplicationPageResult.from(result, authorsByUserId)
+    }
+
+    @Transactional
+    fun changeApplicationStatus(
+        userId: Long,
+        postId: Long,
+        status: RecruitmentApplicationProgressStatus,
+    ) {
+        verifyActiveUser(userId)
+        applicationManager.changeStatus(postId = postId, userId = userId, status = status)
+    }
+
+    @Transactional
+    fun deleteApplication(userId: Long, postId: Long) {
+        verifyActiveUser(userId)
+        applicationManager.delete(
+            postId = postId,
+            userId = userId,
+            deletedAt = LocalDateTime.now(clock),
+        )
     }
 
     private fun verifyActiveUser(userId: Long) {
@@ -100,6 +126,7 @@ data class RecruitmentPostApplicationPageResult(
     val size: Int,
     val totalElements: Long,
     val totalPages: Int,
+    val countsByRecruitmentType: Map<RecruitmentType, Long> = emptyMap(),
 ) {
     companion object {
         internal fun from(
@@ -113,6 +140,9 @@ data class RecruitmentPostApplicationPageResult(
                     recruitmentType = item.recruitmentType,
                     recruitmentStatus = item.recruitmentStatus,
                     recruitmentEndDate = item.recruitmentEndDate,
+                    progressMethod = item.progressMethod,
+                    activityDurationMonths = item.activityDurationMonths,
+                    applicationStatus = item.applicationStatus,
                     lastClickedAt = item.lastClickedAt,
                     author = authorsByUserId[item.authorUserId]
                         ?: RecruitmentPostAuthorResult.from(item.authorUserId, null),
@@ -122,6 +152,7 @@ data class RecruitmentPostApplicationPageResult(
             size = page.size,
             totalElements = page.totalElements,
             totalPages = page.totalPages,
+            countsByRecruitmentType = page.countsByRecruitmentType,
         )
     }
 }
@@ -132,6 +163,10 @@ data class RecruitmentPostApplicationItemResult(
     val recruitmentType: RecruitmentType,
     val recruitmentStatus: RecruitmentStatus,
     val recruitmentEndDate: LocalDate,
+    val progressMethod: com.ogonggo.core.community.domain.ProgressMethod =
+        com.ogonggo.core.community.domain.ProgressMethod.ONLINE,
+    val activityDurationMonths: Int = 0,
+    val applicationStatus: RecruitmentApplicationProgressStatus = RecruitmentApplicationProgressStatus.PREPARING,
     val lastClickedAt: LocalDateTime,
     val author: RecruitmentPostAuthorResult,
 )

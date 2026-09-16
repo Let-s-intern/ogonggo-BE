@@ -14,6 +14,7 @@ import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.community.implement.PostMetricDto
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostManagementPage
@@ -36,6 +37,7 @@ class RecruitmentPostManagementService(
     private val applicationReader: RecruitmentPostApplicationReader,
     private val postReader: RecruitmentPostReader,
     private val postManager: RecruitmentPostManager,
+    private val postMetricManager: PostMetricManager,
     private val imageAssetManager: ImageAssetManager,
 ) {
 
@@ -78,7 +80,7 @@ class RecruitmentPostManagementService(
     @Transactional
     fun copy(userId: Long, postId: Long): RecruitmentPostFormResult {
         verifyActiveUser(userId)
-        val source = postReader.readOwned(userId, postId)
+        val source = postReader.readOwnedForUpdate(userId, postId)
         val copied = postManager.copyAsDraft(source)
         val copiedId = checkNotNull(copied.id) { "복사된 모집글 식별자가 없습니다." }
         copied.replaceDraftContent(
@@ -95,9 +97,10 @@ class RecruitmentPostManagementService(
     @Transactional
     fun publish(userId: Long, postId: Long) {
         verifyActiveUser(userId)
-        val post = postReader.readOwned(userId, postId)
+        val post = postReader.readOwnedForUpdate(userId, postId)
         try {
             postManager.publish(post)
+            postMetricManager.initialize(checkNotNull(post.id))
         } catch (_: IllegalArgumentException) {
             throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
         } catch (_: IllegalStateException) {

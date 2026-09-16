@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.domain.ContactMethod
+import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.domain.RecruitmentPost
@@ -91,6 +92,32 @@ class RecruitmentPostApplicationServiceTest {
     }
 
     @Test
+    fun `활성 사용자가 자신의 지원 상태를 변경한다`() {
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
+
+        service.changeApplicationStatus(USER_ID, POST_ID, RecruitmentApplicationProgressStatus.COMPLETED)
+
+        Mockito.verify(applicationManager).changeStatus(
+            postId = POST_ID,
+            userId = USER_ID,
+            status = RecruitmentApplicationProgressStatus.COMPLETED,
+        )
+    }
+
+    @Test
+    fun `활성 사용자가 자신의 지원 이력을 삭제한다`() {
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
+
+        service.deleteApplication(USER_ID, POST_ID)
+
+        Mockito.verify(applicationManager).delete(
+            postId = POST_ID,
+            userId = USER_ID,
+            deletedAt = NOW,
+        )
+    }
+
+    @Test
     fun `목록 작성자 프로필을 한 번에 조회하고 없으면 null로 반환한다`() {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
         Mockito.`when`(applicationReader.readPage(USER_ID, null, null, null, 0, 10)).thenReturn(
@@ -110,6 +137,7 @@ class RecruitmentPostApplicationServiceTest {
                 size = 10,
                 totalElements = 1,
                 totalPages = 1,
+                countsByRecruitmentType = mapOf(RecruitmentType.SIDE_PROJECT to 1L, RecruitmentType.STUDY to 0L),
             ),
         )
         Mockito.`when`(userProfileReader.readAll(listOf(AUTHOR_ID))).thenReturn(emptyMap())
@@ -117,6 +145,8 @@ class RecruitmentPostApplicationServiceTest {
         val result = service.getApplications(USER_ID, null, null, null, page = 0, size = 10)
 
         assertEquals(AUTHOR_ID, result.items.single().author.userId)
+        assertEquals(1L, result.countsByRecruitmentType[RecruitmentType.SIDE_PROJECT])
+        assertEquals(0L, result.countsByRecruitmentType[RecruitmentType.STUDY])
         assertNull(result.items.single().author.nickname)
         assertNull(result.items.single().author.profileImageUrl)
         Mockito.verify(userProfileReader).readAll(listOf(AUTHOR_ID))

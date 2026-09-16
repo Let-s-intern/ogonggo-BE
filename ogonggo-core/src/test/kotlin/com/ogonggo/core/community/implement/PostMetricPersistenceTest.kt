@@ -19,6 +19,16 @@ internal class PostMetricPersistenceTest @Autowired constructor(
 ) {
 
     @Test
+    fun `지표 행을 초기화하면 기본값으로 저장한다`() {
+        postMetricManager.initialize(POST_ID)
+
+        val metric = postMetricRepository.findByPostId(POST_ID)
+        assertEquals(0L, metric?.viewCount)
+        assertEquals(0L, metric?.commentCount)
+        assertEquals(0L, metric?.bookmarkCount)
+    }
+
+    @Test
     fun `조회 수는 지표 행이 없으면 생성하고 반복 조회마다 원자적으로 증가한다`() {
         postMetricManager.increaseViewCount(POST_ID, NOW)
         postMetricManager.increaseViewCount(POST_ID, NOW)

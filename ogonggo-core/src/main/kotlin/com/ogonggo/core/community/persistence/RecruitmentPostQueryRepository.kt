@@ -100,7 +100,10 @@ internal class RecruitmentPostQueryRepository(
         applicationStatus?.let {
             val hasApplications = JPAExpressions.selectOne()
                 .from(recruitmentPostApplication)
-                .where(recruitmentPostApplication.postId.eq(recruitmentPost.id))
+                .where(
+                    recruitmentPostApplication.postId.eq(recruitmentPost.id),
+                    recruitmentPostApplication.deletedAt.isNull,
+                )
                 .exists()
             add(if (it == RecruitmentPostApplicationStatus.HAS_APPLICATIONS) hasApplications else hasApplications.not())
         }

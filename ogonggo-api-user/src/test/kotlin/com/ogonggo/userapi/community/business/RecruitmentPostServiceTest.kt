@@ -15,6 +15,7 @@ import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostManager
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.RecruitmentPostReader
@@ -49,6 +50,7 @@ class RecruitmentPostServiceTest {
     private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
     private val postBookmarkReader = Mockito.mock(RecruitmentPostBookmarkReader::class.java)
     private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
+    private val postMetricManager = Mockito.mock(PostMetricManager::class.java)
     private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
@@ -62,6 +64,7 @@ class RecruitmentPostServiceTest {
         postReader,
         postBookmarkReader,
         postMetricReader,
+        postMetricManager,
         contentValidator,
         imageAssetManager,
         eventPublisher,
@@ -176,6 +179,7 @@ class RecruitmentPostServiceTest {
 
         assertEquals(12L, postId)
         Mockito.verify(postAppender).append(command.copy(authorUserId = USER_ID))
+        Mockito.verify(postMetricManager).initialize(12L)
     }
 
     @Test
@@ -237,7 +241,7 @@ class RecruitmentPostServiceTest {
         val post = Mockito.mock(RecruitmentPost::class.java)
         val command = updateCommand()
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
 
         // when
         service.update(USER_ID, 12L, command)
@@ -247,7 +251,7 @@ class RecruitmentPostServiceTest {
             post,
             command.copy(content = EDITOR_STATE_JSON),
         )
-        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+        Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
     }
 
     @Test
@@ -256,7 +260,7 @@ class RecruitmentPostServiceTest {
         val post = Mockito.mock(RecruitmentPost::class.java)
         val command = updateCommand().copy(content = null)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
         Mockito.`when`(post.publicationStatus).thenReturn(PublicationStatus.DRAFT)
 
         // when
@@ -288,13 +292,13 @@ class RecruitmentPostServiceTest {
         // given
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
 
         // when
         service.close(USER_ID, 12L)
 
         // then
-        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+        Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).close(post, NOW)
     }
 
@@ -303,13 +307,13 @@ class RecruitmentPostServiceTest {
         // given
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
 
         // when
         service.reopen(USER_ID, 12L)
 
         // then
-        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+        Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).reopen(post)
     }
 

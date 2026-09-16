@@ -2,6 +2,7 @@ package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.implement.PostMetricReader
+import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostReader
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -29,6 +31,8 @@ class RecruitmentPostBookmarkServiceTest {
     private val bookmarkManager = Mockito.mock(RecruitmentPostBookmarkManager::class.java)
     private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
+    private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
     private val service = RecruitmentPostBookmarkService(
         userReader,
         postReader,
@@ -37,6 +41,8 @@ class RecruitmentPostBookmarkServiceTest {
         postMetricReader,
         Clock.fixed(Instant.parse("2026-09-15T00:00:00Z"), ZONE),
         userProfileReader,
+        eventPublisher,
+        applicationReader,
     )
 
     @Test

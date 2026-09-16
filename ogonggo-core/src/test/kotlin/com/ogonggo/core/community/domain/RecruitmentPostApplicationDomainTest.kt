@@ -43,6 +43,24 @@ class RecruitmentPostApplicationDomainTest {
         assertEquals(SECOND, application.lastClickedAt)
     }
 
+    @Test
+    fun `개인 관리 상태를 변경하고 삭제 후 재접근하면 이력을 복구한다`() {
+        val application = RecruitmentPostApplication(
+            postId = POST_ID,
+            userId = USER_ID,
+            firstClickedAt = FIRST,
+            lastClickedAt = FIRST,
+        )
+
+        application.changeStatus(RecruitmentApplicationProgressStatus.COMPLETED)
+        application.delete(SECOND)
+        application.recordClick(SECOND.plusMinutes(1))
+
+        assertEquals(RecruitmentApplicationProgressStatus.COMPLETED, application.applicationStatus)
+        assertEquals(null, application.deletedAt)
+        assertEquals(SECOND.plusMinutes(1), application.lastClickedAt)
+    }
+
     companion object {
         private const val POST_ID = 12L
         private const val USER_ID = 17L

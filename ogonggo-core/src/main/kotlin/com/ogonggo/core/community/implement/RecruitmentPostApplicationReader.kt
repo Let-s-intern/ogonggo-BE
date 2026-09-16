@@ -1,8 +1,11 @@
 package com.ogonggo.core.community.implement
 
 import com.ogonggo.core.community.domain.PublicationStatus
+import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
+import com.ogonggo.core.community.domain.RecruitmentApplicationSortType
 import com.ogonggo.core.community.persistence.RecruitmentPostApplicationQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
@@ -21,15 +24,30 @@ class RecruitmentPostApplicationReader internal constructor(
         keyword: String?,
         page: Int,
         size: Int,
+        applicationStatus: RecruitmentApplicationProgressStatus? = null,
+        sort: RecruitmentApplicationSortType = RecruitmentApplicationSortType.LATEST,
     ): RecruitmentPostApplicationPage {
         validatePageRequest(page, size)
         val result = applicationQueryRepository.findPage(
             userId = userId,
             publicationStatus = PublicationStatus.PUBLISHED,
             recruitmentStatus = recruitmentStatus,
+            applicationStatus = applicationStatus,
             recruitmentType = recruitmentType,
             keyword = keyword,
+            sort = sort,
             pageable = PageRequest.of(page, size),
+        )
+        val queriedCountsByRecruitmentType = applicationQueryRepository.countByRecruitmentType(
+            userId = userId,
+            publicationStatus = PublicationStatus.PUBLISHED,
+            recruitmentStatus = recruitmentStatus,
+            keyword = keyword,
+            applicationStatus = applicationStatus,
+        )
+        val countsByRecruitmentType = mapOf(
+            RecruitmentType.SIDE_PROJECT to (queriedCountsByRecruitmentType[RecruitmentType.SIDE_PROJECT] ?: 0L),
+            RecruitmentType.STUDY to (queriedCountsByRecruitmentType[RecruitmentType.STUDY] ?: 0L),
         )
         return RecruitmentPostApplicationPage(
             items = result.content.map(RecruitmentPostApplicationItem::from),
@@ -37,6 +55,7 @@ class RecruitmentPostApplicationReader internal constructor(
             size = result.size,
             totalElements = result.totalElements,
             totalPages = result.totalPages,
+            countsByRecruitmentType = countsByRecruitmentType,
         )
     }
 
@@ -50,6 +69,7 @@ data class RecruitmentPostApplicationPage(
     val size: Int,
     val totalElements: Long,
     val totalPages: Int,
+    val countsByRecruitmentType: Map<RecruitmentType, Long> = emptyMap(),
 )
 
 data class RecruitmentPostApplicationItem(
@@ -58,6 +78,9 @@ data class RecruitmentPostApplicationItem(
     val recruitmentType: RecruitmentType,
     val recruitmentStatus: RecruitmentStatus,
     val recruitmentEndDate: LocalDate,
+    val progressMethod: ProgressMethod = ProgressMethod.ONLINE,
+    val activityDurationMonths: Int = 0,
+    val applicationStatus: RecruitmentApplicationProgressStatus = RecruitmentApplicationProgressStatus.PREPARING,
     val lastClickedAt: LocalDateTime,
     val authorUserId: Long,
 ) {
@@ -69,6 +92,9 @@ data class RecruitmentPostApplicationItem(
                 recruitmentType = row.recruitmentType,
                 recruitmentStatus = row.recruitmentStatus,
                 recruitmentEndDate = row.recruitmentEndDate,
+                progressMethod = row.progressMethod,
+                activityDurationMonths = row.activityDurationMonths,
+                applicationStatus = row.applicationStatus,
                 lastClickedAt = row.lastClickedAt,
                 authorUserId = row.authorUserId,
             )

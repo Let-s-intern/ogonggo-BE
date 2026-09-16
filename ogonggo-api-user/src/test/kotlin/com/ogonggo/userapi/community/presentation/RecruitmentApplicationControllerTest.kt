@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.core.community.domain.ContactMethod
+import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
@@ -24,7 +25,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -72,6 +76,10 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].postId").value(POST_ID))
             .andExpect(jsonPath("$.data.items[0].author.userId").value(AUTHOR_ID))
             .andExpect(jsonPath("$.data.items[0].author.nickname").value("홍길동"))
+            .andExpect(jsonPath("$.data.items[0].progressMethod").value("ONLINE"))
+            .andExpect(jsonPath("$.data.items[0].applicationStatus").value("PREPARING"))
+            .andExpect(jsonPath("$.data.countsByRecruitmentType.SIDE_PROJECT").value(1))
+            .andExpect(jsonPath("$.data.countsByRecruitmentType.STUDY").value(0))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(1))
     }
@@ -86,6 +94,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
                 "Kotlin",
                 1,
                 20,
+                applicationStatus = RecruitmentApplicationProgressStatus.COMPLETED,
             ),
         ).thenReturn(pageResult())
 
@@ -95,6 +104,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
                 .param("size", "20")
                 .param("recruitmentStatus", "RECRUITING")
                 .param("recruitmentType", "SIDE_PROJECT")
+                .param("applicationStatus", "COMPLETED")
                 .param("keyword", " Kotlin ")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
@@ -106,6 +116,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
             "Kotlin",
             1,
             20,
+            applicationStatus = RecruitmentApplicationProgressStatus.COMPLETED,
         )
     }
 
@@ -135,6 +146,44 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
         mockMvc.perform(get("/api/v1/users/me/recruitment/applications"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        mockMvc.perform(patch("/api/v1/users/me/recruitment/applications/$POST_ID"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        mockMvc.perform(delete("/api/v1/users/me/recruitment/applications/$POST_ID"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+    }
+
+    @Test
+    fun `지원 상태를 변경한다`() {
+        mockMvc.perform(
+            patch("/api/v1/users/me/recruitment/applications/$POST_ID")
+                .with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"applicationStatus":"COMPLETED"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(applicationService).changeApplicationStatus(
+            USER_ID,
+            POST_ID,
+            RecruitmentApplicationProgressStatus.COMPLETED,
+        )
+    }
+
+    @Test
+    fun `지원 이력을 삭제한다`() {
+        mockMvc.perform(
+            delete("/api/v1/users/me/recruitment/applications/$POST_ID")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(applicationService).deleteApplication(USER_ID, POST_ID)
     }
 
     @Test
@@ -176,6 +225,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
         size = 10,
         totalElements = 1,
         totalPages = 1,
+        countsByRecruitmentType = mapOf(RecruitmentType.SIDE_PROJECT to 1L, RecruitmentType.STUDY to 0L),
     )
 
     companion object {

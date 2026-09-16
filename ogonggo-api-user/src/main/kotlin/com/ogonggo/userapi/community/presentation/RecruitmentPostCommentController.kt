@@ -2,6 +2,7 @@ package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentService
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostCommentRequest
+import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostCommentReportRequest
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostCommentResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentRootResponse
@@ -52,7 +53,7 @@ class RecruitmentPostCommentController(
         )
 
     override fun deleteComment(
-        userId: Long,
+        @AuthenticationPrincipal userId: Long,
         postId: Long,
         commentId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
@@ -74,4 +75,19 @@ class RecruitmentPostCommentController(
                 ),
             ),
         )
+
+    override fun reportComment(
+        @AuthenticationPrincipal userId: Long,
+        postId: Long,
+        commentId: Long,
+        request: CreateRecruitmentPostCommentReportRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        recruitmentPostCommentService.report(
+            userId = userId,
+            postId = postId,
+            commentId = commentId,
+            reason = request.reason,
+        )
+        return SuccessResponse.created()
+    }
 }

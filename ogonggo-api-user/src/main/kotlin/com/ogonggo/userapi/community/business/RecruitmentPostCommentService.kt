@@ -9,6 +9,8 @@ import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostCommentPage
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReader
 import com.ogonggo.core.community.implement.RecruitmentPostCommentRemover
+import com.ogonggo.core.community.implement.RecruitmentPostCommentReportAppender
+import com.ogonggo.core.community.implement.RecruitmentPostCommentReportAppendCommand
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.community.error.RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PERMISSION_DENIED
@@ -36,6 +38,7 @@ class RecruitmentPostCommentService(
     private val commentRemover: RecruitmentPostCommentRemover,
     private val userProfileReader: UserProfileReader,
     private val postMetricManager: PostMetricManager,
+    private val reportAppender: RecruitmentPostCommentReportAppender,
     private val clock: Clock,
 ) {
 
@@ -119,6 +122,20 @@ class RecruitmentPostCommentService(
         )
         postMetricManager.increaseCommentCount(postId, LocalDateTime.now(clock))
         return checkNotNull(comment.id) { "저장된 댓글 식별자가 없습니다." }
+    }
+
+    @Transactional
+    fun report(userId: Long, postId: Long, commentId: Long, reason: String?) {
+        verifyActiveUser(userId)
+        postReader.readPublished(postId)
+        val comment = commentReader.readInPost(postId, commentId)
+        reportAppender.append(
+            RecruitmentPostCommentReportAppendCommand(
+                commentId = checkNotNull(comment.id) { "신고할 댓글 식별자가 없습니다." },
+                userId = userId,
+                reason = reason,
+            ),
+        )
     }
 
     private fun readValidParent(

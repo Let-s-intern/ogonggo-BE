@@ -15,3 +15,9 @@ data class RecruitmentPostCommentAppendCommand(
         content = content,
     )
 }
+
+data class RecruitmentPostCommentReportAppendCommand(
+    val commentId: Long,
+    val userId: Long,
+    val reason: String?,
+)

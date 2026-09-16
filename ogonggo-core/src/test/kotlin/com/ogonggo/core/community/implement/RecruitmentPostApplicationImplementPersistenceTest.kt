@@ -6,6 +6,7 @@ import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.persistence.RecruitmentPostApplicationJpaRepository
@@ -57,7 +58,7 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
     }
 
     @Test
-    fun `공개된 모집 중과 마감 모집글만 내 지원 목록에 포함한다`() {
+    fun `공개된 모집 중과 마감 모집글만 포함하고 최초 저장순으로 정렬한다`() {
         val userId = appendUser()
         val recruitingPostId = checkNotNull(appendPost(userId, title = "모집 중 Kotlin").id)
         val closedPostId = checkNotNull(appendPost(
@@ -77,6 +78,7 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
 
         applicationManager.recordClick(recruitingPostId, userId, CLICKED_AT)
         applicationManager.recordClick(closedPostId, userId, CLICKED_AT.plusMinutes(1))
+        applicationManager.recordClick(recruitingPostId, userId, CLICKED_AT.plusMinutes(10))
         applicationManager.recordClick(hiddenPostId, userId, CLICKED_AT.plusMinutes(2))
         applicationManager.recordClick(checkNotNull(deletedPost.id), userId, CLICKED_AT.plusMinutes(3))
 
@@ -103,6 +105,91 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
         assertEquals(listOf(recruitingPostId), keywordResult.items.map { it.postId })
     }
 
+    @Test
+    fun `지원 상태 필터를 목록과 유형별 건수에 함께 적용한다`() {
+        val userId = appendUser()
+        val preparingPostId = checkNotNull(appendPost(userId, title = "준비 중 모집글").id)
+        val completedPostId = checkNotNull(appendPost(userId, title = "지원 완료 모집글").id)
+
+        applicationManager.recordClick(preparingPostId, userId, CLICKED_AT)
+        applicationManager.recordClick(completedPostId, userId, CLICKED_AT.plusMinutes(1))
+        applicationManager.changeStatus(
+            postId = completedPostId,
+            userId = userId,
+            status = RecruitmentApplicationProgressStatus.COMPLETED,
+        )
+
+        val result = applicationReader.readPage(
+            userId = userId,
+            recruitmentStatus = null,
+            recruitmentType = null,
+            keyword = null,
+            page = 0,
+            size = 10,
+            applicationStatus = RecruitmentApplicationProgressStatus.COMPLETED,
+        )
+
+        assertEquals(listOf(completedPostId), result.items.map { it.postId })
+        assertEquals(1L, result.countsByRecruitmentType[RecruitmentType.SIDE_PROJECT])
+        assertEquals(0L, result.countsByRecruitmentType[RecruitmentType.STUDY])
+    }
+
+    @Test
+    fun `지원 상태 변경과 soft delete가 목록과 applicationCount에 반영된다`() {
+        val userId = appendUser()
+        val postId = checkNotNull(appendPost(userId).id)
+
+        applicationManager.recordClick(postId, userId, CLICKED_AT)
+        applicationManager.changeStatus(postId, userId, RecruitmentApplicationProgressStatus.COMPLETED)
+        applicationManager.delete(postId, userId, CLICKED_AT.plusMinutes(1))
+        applicationRepository.flush()
+
+        val deleted = applicationRepository.findByPostIdAndUserId(postId, userId)
+        assertEquals(RecruitmentApplicationProgressStatus.COMPLETED, deleted?.applicationStatus)
+        assertNotNull(deleted?.deletedAt)
+        assertEquals(emptyList<Long>(), applicationReader.readPage(userId, null, null, null, 0, 10).items.map { it.postId })
+        assertEquals(emptyMap<Long, Long>(), applicationReader.countByPostIds(listOf(postId)))
+    }
+
+    @Test
+    fun `지원 목록의 유형별 건수는 사이드 프로젝트와 스터디만 검색 조건으로 집계한다`() {
+        val userId = appendUser()
+        val sideProjectId = checkNotNull(
+            appendPost(userId, title = "Kotlin 사이드 프로젝트", recruitmentType = RecruitmentType.SIDE_PROJECT).id,
+        )
+        val studyId = checkNotNull(
+            appendPost(userId, title = "Kotlin 스터디", recruitmentType = RecruitmentType.STUDY).id,
+        )
+        val closedSideProjectId = checkNotNull(
+            appendPost(
+                userId,
+                title = "Kotlin 마감 사이드 프로젝트",
+                recruitmentType = RecruitmentType.SIDE_PROJECT,
+                recruitmentStatus = RecruitmentStatus.CLOSED,
+                closedAt = CLICKED_AT,
+            ).id,
+        )
+
+        applicationManager.recordClick(sideProjectId, userId, CLICKED_AT)
+        applicationManager.recordClick(studyId, userId, CLICKED_AT.plusMinutes(1))
+        applicationManager.recordClick(closedSideProjectId, userId, CLICKED_AT.plusMinutes(2))
+
+        val allCounts = applicationReader.readPage(userId, null, null, null, 0, 10).countsByRecruitmentType
+        assertEquals(2L, allCounts[RecruitmentType.SIDE_PROJECT])
+        assertEquals(1L, allCounts[RecruitmentType.STUDY])
+
+        val recruitingCounts = applicationReader.readPage(
+            userId = userId,
+            recruitmentStatus = RecruitmentStatus.RECRUITING,
+            recruitmentType = RecruitmentType.SIDE_PROJECT,
+            keyword = "Kotlin",
+            page = 0,
+            size = 10,
+        ).countsByRecruitmentType
+        assertEquals(1L, recruitingCounts[RecruitmentType.SIDE_PROJECT])
+        assertEquals(1L, recruitingCounts[RecruitmentType.STUDY])
+    }
+
     private fun appendUser(): Long = checkNotNull(
         userRepository.saveAndFlush(
             User.ofLetsCareer(
@@ -115,6 +202,7 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
     private fun appendPost(
         userId: Long,
         title: String = "Kotlin 팀원 모집",
+        recruitmentType: RecruitmentType = RecruitmentType.SIDE_PROJECT,
         publicationStatus: PublicationStatus = PublicationStatus.PUBLISHED,
         recruitmentStatus: RecruitmentStatus = RecruitmentStatus.RECRUITING,
         closedAt: LocalDateTime? = null,
@@ -122,7 +210,7 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
         RecruitmentPost(
             authorUserId = userId,
             title = title,
-            recruitmentType = RecruitmentType.SIDE_PROJECT,
+            recruitmentType = recruitmentType,
             capacity = 4,
             progressMethod = ProgressMethod.ONLINE,
             activityDurationMonths = 3,

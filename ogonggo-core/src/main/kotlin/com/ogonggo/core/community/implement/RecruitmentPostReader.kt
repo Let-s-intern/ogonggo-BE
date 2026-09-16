@@ -34,6 +34,10 @@ class RecruitmentPostReader internal constructor(
         }
 
     fun readOwned(ownerUserId: Long, postId: Long): RecruitmentPost =
+        postRepository.findOwnedById(ownerUserId, postId)
+            ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
+
+    fun readOwnedForUpdate(ownerUserId: Long, postId: Long): RecruitmentPost =
         postRepository.findOwnedByIdForUpdate(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 

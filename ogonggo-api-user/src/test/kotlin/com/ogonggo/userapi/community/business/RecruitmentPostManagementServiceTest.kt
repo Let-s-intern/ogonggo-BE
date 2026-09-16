@@ -7,6 +7,7 @@ import com.ogonggo.core.community.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostMetricDto
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostManagementPage
@@ -34,6 +35,7 @@ class RecruitmentPostManagementServiceTest {
     private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
     private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
     private val postManager = Mockito.mock(RecruitmentPostManager::class.java)
+    private val postMetricManager = Mockito.mock(PostMetricManager::class.java)
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val service = RecruitmentPostManagementService(
         userReader,
@@ -42,6 +44,7 @@ class RecruitmentPostManagementServiceTest {
         applicationReader,
         postReader,
         postManager,
+        postMetricManager,
         imageAssetManager,
     )
 
@@ -146,7 +149,7 @@ class RecruitmentPostManagementServiceTest {
         val source = publishedPost(12L)
         val copied = formPost(101L, PublicationStatus.DRAFT)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(source)
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(source)
         Mockito.`when`(postManager.copyAsDraft(source)).thenReturn(copied)
         Mockito.`when`(copied.title).thenReturn("공개 모집글")
         val copiedContent = copied.content
@@ -159,7 +162,7 @@ class RecruitmentPostManagementServiceTest {
         assertEquals(RecruitmentPostManagementStatus.DRAFT, result.status)
         assertEquals("공개 모집글", result.title)
         assertEquals(false, result.agreedToPolicy)
-        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+        Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).copyAsDraft(source)
         Mockito.verify(imageAssetManager).copyPostImages(USER_ID, 12L, 101L, copied.content)
     }
@@ -190,14 +193,15 @@ class RecruitmentPostManagementServiceTest {
         // given
         val draft = formPost(15L, PublicationStatus.DRAFT)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readOwned(USER_ID, 15L)).thenReturn(draft)
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 15L)).thenReturn(draft)
 
         // when
         service.publish(USER_ID, 15L)
 
         // then
-        Mockito.verify(postReader).readOwned(USER_ID, 15L)
+        Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 15L)
         Mockito.verify(postManager).publish(draft)
+        Mockito.verify(postMetricManager).initialize(15L)
     }
 
     @Test
