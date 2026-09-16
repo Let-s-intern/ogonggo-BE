@@ -5,9 +5,11 @@ import com.ogonggo.core.community.domain.RecruitmentPostCommentReport
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import jakarta.persistence.LockModeType
 
 internal interface RecruitmentPostCommentJpaRepository : JpaRepository<RecruitmentPostComment, Long> {
 
@@ -99,6 +101,24 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
     fun findByIdAndPostIdAndParentIdIsNull(commentId: Long, postId: Long): RecruitmentPostComment?
 
     fun findByIdAndPostId(commentId: Long, postId: Long): RecruitmentPostComment?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select comment from RecruitmentPostComment comment where comment.id = :commentId")
+    fun findByIdForUpdate(@Param("commentId") commentId: Long): RecruitmentPostComment?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select comment
+        from RecruitmentPostComment comment
+        where comment.id = :commentId
+          and comment.postId = :postId
+        """,
+    )
+    fun findByIdAndPostIdForUpdate(
+        @Param("commentId") commentId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPostComment?
 }
 
 internal interface RecruitmentPostCommentReportJpaRepository : JpaRepository<RecruitmentPostCommentReport, Long>

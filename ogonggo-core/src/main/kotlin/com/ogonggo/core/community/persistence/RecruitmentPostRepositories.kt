@@ -152,17 +152,27 @@ internal interface PostMetricJpaRepository : JpaRepository<PostMetric, Long> {
     @Query(
         """
         update PostMetric metric
-        set metric.bookmarkCount = (
-                select count(bookmark)
-                from RecruitmentPostBookmark bookmark
-                where bookmark.postId = :postId
-                  and bookmark.deletedAt is null
-            ),
+        set metric.bookmarkCount = metric.bookmarkCount + 1,
             metric.updatedAt = :now
         where metric.postId = :postId
         """,
     )
-    fun syncBookmarkCount(
+    fun increaseBookmarkCount(
+        @Param("postId") postId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update PostMetric metric
+        set metric.bookmarkCount = metric.bookmarkCount - 1,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+          and metric.bookmarkCount > 0
+        """,
+    )
+    fun decreaseBookmarkCount(
         @Param("postId") postId: Long,
         @Param("now") now: LocalDateTime,
     ): Int

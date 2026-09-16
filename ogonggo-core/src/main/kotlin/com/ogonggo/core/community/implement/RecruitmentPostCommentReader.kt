@@ -26,6 +26,16 @@ class RecruitmentPostCommentReader internal constructor(
         commentRepository.findByIdAndPostId(commentId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
 
+    fun readForUpdate(commentId: Long): RecruitmentPostComment =
+        commentRepository.findByIdForUpdate(commentId)
+            ?: throw EntityNotFoundException(
+                RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PARENT_NOT_FOUND,
+            )
+
+    fun readInPostForUpdate(postId: Long, commentId: Long): RecruitmentPostComment =
+        commentRepository.findByIdAndPostIdForUpdate(commentId, postId)
+            ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
+
     fun readRootPage(
         postId: Long,
         page: Int,

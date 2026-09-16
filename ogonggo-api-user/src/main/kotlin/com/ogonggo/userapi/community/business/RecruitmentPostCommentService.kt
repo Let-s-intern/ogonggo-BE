@@ -95,9 +95,9 @@ class RecruitmentPostCommentService(
     @Transactional
     fun delete(userId: Long, postId: Long, commentId: Long) {
         verifyActiveUser(userId)
-        postReader.readPublished(postId)
+        postReader.readPublishedForUpdate(postId)
 
-        val comment = commentReader.readInPost(postId, commentId)
+        val comment = commentReader.readInPostForUpdate(postId, commentId)
         if (comment.userId != userId) {
             throw ForbiddenException(RECRUITMENT_POST_COMMENT_PERMISSION_DENIED)
         }
@@ -109,7 +109,7 @@ class RecruitmentPostCommentService(
     @Transactional
     fun create(userId: Long, postId: Long, command: CreateRecruitmentPostCommentCommand): Long {
         verifyActiveUser(userId)
-        postReader.readPublished(postId)
+        postReader.readPublishedForUpdate(postId)
         command.parentId?.let { parentId -> readValidParent(parentId, postId) }
 
         val comment = commentAppender.append(
@@ -141,7 +141,7 @@ class RecruitmentPostCommentService(
     private fun readValidParent(
         parentId: Long,
         postId: Long,
-    ) = commentReader.read(parentId).also { parent ->
+    ) = commentReader.readForUpdate(parentId).also { parent ->
         if (!parent.belongsTo(postId)) {
             throw InvalidValueException(
                 RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PARENT_TARGET_MISMATCH,

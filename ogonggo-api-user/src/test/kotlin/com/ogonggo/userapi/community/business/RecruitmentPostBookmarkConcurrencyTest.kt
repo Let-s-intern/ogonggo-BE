@@ -70,6 +70,10 @@ class RecruitmentPostBookmarkConcurrencyTest @Autowired constructor(
                 listOf(postId),
                 bookmarkService.getBookmarks(USER_ID, page = 0, size = 10).items.map { it.id },
             )
+            assertEquals(
+                1L,
+                bookmarkService.getBookmarks(USER_ID, page = 0, size = 10).items.single().bookmarkCount,
+            )
         } finally {
             executor.shutdownNow()
         }
