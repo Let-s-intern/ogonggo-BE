@@ -90,6 +90,9 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1users~1me/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1profile/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1recruitment-posts/post").isObject)
+        val recruitmentPostList = document.at("/paths/~1api~1v1~1recruitment-posts/get")
+        assertPageParameter(recruitmentPostList, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(recruitmentPostList, "size", defaultValue = "10", minimum = 1, maximum = 100)
         val recruitmentPostAuthorProperties = document.at(
             "/components/schemas/RecruitmentPostAuthorResponse/properties",
         )
@@ -113,7 +116,7 @@ class UserOpenApiContractTest @Autowired constructor(
         val recruitmentPostBookmarks = document.at("/paths/~1api~1v1~1recruitment-post-bookmarks/get")
         assertTrue(recruitmentPostBookmarks.isObject)
         assertTrue(recruitmentPostBookmarks.at("/security/0/BearerAuth").isArray)
-        assertEquals("string", recruitmentPostBookmarks.parameter("cursor")["schema"]["type"].asText())
+        assertPageParameter(recruitmentPostBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(recruitmentPostBookmarks, "size", defaultValue = "10", minimum = 1, maximum = 100)
         val addRecruitmentPostBookmark =
             document.at("/paths/~1api~1v1~1recruitment-post-bookmarks~1{postId}/post")
@@ -142,6 +145,36 @@ class UserOpenApiContractTest @Autowired constructor(
         assertPageParameter(myRecruitmentApplications, "size", defaultValue = "10", minimum = 1, maximum = 100)
         listOf("recruitmentStatus", "recruitmentType", "keyword", "sort")
             .forEach { name -> assertTrue(myRecruitmentApplications.parameter(name).isObject) }
+        val myRecruitmentPosts = document.at("/paths/~1api~1v1~1me~1recruitment-posts/get")
+        assertTrue(myRecruitmentPosts.at("/security/0/BearerAuth").isArray)
+        assertPageParameter(myRecruitmentPosts, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(myRecruitmentPosts, "size", defaultValue = "10", minimum = 1, maximum = 100)
+        listOf("status", "recruitmentStatus", "applicationStatus", "recruitmentType", "keyword", "sort")
+            .forEach { name -> assertTrue(myRecruitmentPosts.parameter(name).isObject) }
+        assertTrue(document.at("/components/schemas/RecruitmentPostManagementItemResponse/properties/applicationCount").isObject)
+        val copyMyRecruitmentPost =
+            document.at("/paths/~1api~1v1~1me~1recruitment-posts~1{postId}~1copy/post")
+        assertTrue(copyMyRecruitmentPost.at("/security/0/BearerAuth").isArray)
+        assertTrue(copyMyRecruitmentPost.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(
+            copyMyRecruitmentPost.at("/responses/404/description").asText()
+                .startsWith("RECRUITMENT_POST_NOT_FOUND"),
+        )
+        val myRecruitmentPostForm =
+            document.at("/paths/~1api~1v1~1me~1recruitment-posts~1{postId}/get")
+        assertTrue(myRecruitmentPostForm.at("/security/0/BearerAuth").isArray)
+        assertTrue(myRecruitmentPostForm.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(
+            myRecruitmentPostForm.at("/responses/404/description").asText()
+                .startsWith("RECRUITMENT_POST_NOT_FOUND"),
+        )
+        assertEquals(
+            copyMyRecruitmentPost.at("/responses/201/content/application~1json/schema"),
+            myRecruitmentPostForm.at("/responses/200/content/application~1json/schema"),
+        )
+        val formResponseProperties = document.at("/components/schemas/RecruitmentPostFormResponse/properties")
+        listOf("postId", "status", "recruitmentStatus", "title", "technologyStacks", "positions", "agreedToPolicy")
+            .forEach { field -> assertTrue(formResponseProperties.has(field)) }
         assertTrue(document.at("/paths/~1api~1v1~1auth~1letscareer/post").isObject)
         assertFalse(document.at("/paths/~1health").isObject)
 

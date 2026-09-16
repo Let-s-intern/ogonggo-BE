@@ -56,7 +56,7 @@ class RecruitmentPostBookmarkServiceTest {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.WITHDRAWN))
 
         val exception = assertThrows(ForbiddenException::class.java) {
-            service.getBookmarks(USER_ID, cursor = null, size = 10)
+            service.getBookmarks(USER_ID, page = 0, size = 10)
         }
 
         assertEquals(UserErrorCode.USER_WITHDRAWN, exception.errorCode)

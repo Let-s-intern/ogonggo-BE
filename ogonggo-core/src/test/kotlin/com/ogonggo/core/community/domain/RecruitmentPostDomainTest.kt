@@ -27,6 +27,57 @@ class RecruitmentPostDomainTest {
     }
 
     @Test
+    @DisplayName("임시저장 모집글은 게시 전 필드를 입력하지 않아도 생성할 수 있다")
+    fun createDraftPostWithoutPublishedFields() {
+        // when
+        val post = RecruitmentPost(
+            authorUserId = 1L,
+            title = "작성 중인 모집글",
+            recruitmentType = null,
+            capacity = null,
+            progressMethod = null,
+            activityDurationMonths = null,
+            technologyStacks = emptyList(),
+            summary = null,
+            content = null,
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = null,
+            recruitmentEndDate = null,
+            positions = emptyList(),
+            contactMethod = null,
+            contactValue = null,
+            publicationStatus = PublicationStatus.DRAFT,
+        )
+
+        // then
+        assertEquals(PublicationStatus.DRAFT, post.publicationStatus)
+        assertEquals(null, post.recruitmentType)
+        assertEquals(null, post.capacity)
+        assertEquals(null, post.content)
+    }
+
+    @Test
+    @DisplayName("모집글을 복사하면 내용은 유지하고 새 임시저장 상태로 시작한다")
+    fun copyAsDraft() {
+        // given
+        val source = createPostFixture()
+        source.close(LocalDateTime.of(2026, 9, 30, 23, 59))
+
+        // when
+        val copied = source.copyAsDraft()
+
+        // then
+        assertEquals(source.title, copied.title)
+        assertEquals(source.recruitmentType, copied.recruitmentType)
+        assertEquals(source.capacity, copied.capacity)
+        assertEquals(source.content, copied.content)
+        assertEquals(PublicationStatus.DRAFT, copied.publicationStatus)
+        assertEquals(RecruitmentStatus.RECRUITING, copied.recruitmentStatus)
+        assertEquals(null, copied.closedAt)
+        assertEquals(null, copied.id)
+    }
+
+    @Test
     @DisplayName("모집 기간이 뒤집히면 생성할 수 없다")
     fun rejectReversedRecruitmentPeriod() {
         // given
@@ -148,6 +199,128 @@ class RecruitmentPostDomainTest {
         // then
         assertEquals(RecruitmentStatus.RECRUITING, post.recruitmentStatus)
         assertEquals(null, post.closedAt)
+    }
+
+    @Test
+    @DisplayName("임시저장 모집글은 제목을 제외한 필드를 비워서 전체 수정할 수 있다")
+    fun updateDraftWithNullableFields() {
+        // given
+        val post = RecruitmentPost(
+            authorUserId = 1L,
+            title = "작성 중인 모집글",
+            recruitmentType = RecruitmentType.SIDE_PROJECT,
+            capacity = 4,
+            progressMethod = ProgressMethod.ONLINE,
+            activityDurationMonths = 3,
+            technologyStacks = listOf("Kotlin"),
+            summary = "요약",
+            content = "{\"root\":{\"children\":[]}}",
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = LocalDate.of(2026, 9, 1),
+            recruitmentEndDate = LocalDate.of(2026, 9, 30),
+            positions = listOf(RecruitmentPosition.BACKEND),
+            contactMethod = ContactMethod.EMAIL,
+            contactValue = "team@example.com",
+            publicationStatus = PublicationStatus.DRAFT,
+        )
+
+        // when
+        post.updateDraft(
+            title = "작성 중인 모집글",
+            recruitmentType = null,
+            capacity = null,
+            progressMethod = null,
+            activityDurationMonths = null,
+            technologyStacks = emptyList(),
+            summary = null,
+            content = null,
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = null,
+            recruitmentEndDate = null,
+            positions = emptyList(),
+            contactMethod = null,
+            contactValue = null,
+        )
+
+        // then
+        assertEquals(PublicationStatus.DRAFT, post.publicationStatus)
+        assertEquals(null, post.recruitmentType)
+        assertEquals(null, post.content)
+        assertEquals(emptyList<RecruitmentPosition>(), post.positions)
+    }
+
+    @Test
+    @DisplayName("임시저장 모집글 게시 시 필수값이 없으면 게시하지 않는다")
+    fun rejectPublishingIncompleteDraft() {
+        // given
+        val post = RecruitmentPost(
+            authorUserId = 1L,
+            title = "작성 중인 모집글",
+            recruitmentType = null,
+            capacity = null,
+            progressMethod = null,
+            activityDurationMonths = null,
+            technologyStacks = emptyList(),
+            summary = null,
+            content = null,
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = null,
+            recruitmentEndDate = null,
+            positions = emptyList(),
+            contactMethod = null,
+            contactValue = null,
+            publicationStatus = PublicationStatus.DRAFT,
+        )
+
+        // when
+        val exception = assertThrows(IllegalArgumentException::class.java) { post.publish() }
+
+        // then
+        assertEquals("모집 구분은 필수입니다.", exception.message)
+        assertEquals(PublicationStatus.DRAFT, post.publicationStatus)
+    }
+
+    @Test
+    @DisplayName("필수값을 채운 임시저장 모집글은 공개 상태로 전환한다")
+    fun publishCompletedDraft() {
+        // given
+        val post = RecruitmentPost(
+            authorUserId = 1L,
+            title = "작성 중인 모집글",
+            recruitmentType = RecruitmentType.SIDE_PROJECT,
+            capacity = 4,
+            progressMethod = ProgressMethod.ONLINE,
+            activityDurationMonths = 3,
+            technologyStacks = listOf("Kotlin"),
+            summary = "요약",
+            content = "{\"root\":{\"children\":[]}}",
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = LocalDate.of(2026, 9, 1),
+            recruitmentEndDate = LocalDate.of(2026, 9, 30),
+            positions = listOf(RecruitmentPosition.BACKEND),
+            contactMethod = ContactMethod.EMAIL,
+            contactValue = "team@example.com",
+            publicationStatus = PublicationStatus.DRAFT,
+        )
+
+        // when
+        post.publish()
+
+        // then
+        assertEquals(PublicationStatus.PUBLISHED, post.publicationStatus)
+    }
+
+    @Test
+    @DisplayName("이미 공개된 모집글을 다시 게시해도 공개 상태를 유지한다")
+    fun publishPublishedPostIsIdempotent() {
+        // given
+        val post = createPostFixture()
+
+        // when
+        post.publish()
+
+        // then
+        assertEquals(PublicationStatus.PUBLISHED, post.publicationStatus)
     }
 
     @Test

@@ -7,24 +7,25 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.RecruitmentPostCursor
-import com.ogonggo.core.community.implement.RecruitmentPostCursorPage
+import com.ogonggo.core.community.implement.RecruitmentPostPage
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDate
 
 data class RecruitmentPostListQuery(
-    val cursor: RecruitmentPostCursor?,
+    val page: Int,
     val size: Int,
     val sortType: RecruitmentPostSortType,
     val filter: RecruitmentPostListFilter,
 )
 
-data class RecruitmentPostCursorPageResult(
+data class RecruitmentPostPageResult(
     val items: List<RecruitmentPostSummary>,
-    val hasNext: Boolean,
-    val nextCursor: RecruitmentPostCursor?,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )
 
 data class RecruitmentPostSummary(
@@ -41,6 +42,8 @@ data class RecruitmentPostSummary(
     val recruitmentEndDate: LocalDate,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val applicationCount: Long = 0,
+    val bookmarkCount: Long = 0,
     val bookmarked: Boolean = false,
 ) {
     companion object {
@@ -49,20 +52,23 @@ data class RecruitmentPostSummary(
             metric: PostMetricDto,
             author: RecruitmentPostAuthorResult,
             bookmarked: Boolean = false,
+            applicationCount: Long = 0,
         ): RecruitmentPostSummary = RecruitmentPostSummary(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             author = author,
             title = post.title,
-            recruitmentType = post.recruitmentType,
-            progressMethod = post.progressMethod,
+            recruitmentType = checkNotNull(post.recruitmentType),
+            progressMethod = checkNotNull(post.progressMethod),
             recruitmentStatus = post.recruitmentStatus,
-            capacity = post.capacity,
-            activityDurationMonths = post.activityDurationMonths,
+            capacity = checkNotNull(post.capacity),
+            activityDurationMonths = checkNotNull(post.activityDurationMonths),
             technologyStacks = post.technologyStacks.toList(),
-            recruitmentStartDate = post.recruitmentStartDate,
-            recruitmentEndDate = post.recruitmentEndDate,
+            recruitmentStartDate = checkNotNull(post.recruitmentStartDate),
+            recruitmentEndDate = checkNotNull(post.recruitmentEndDate),
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
+            applicationCount = applicationCount,
+            bookmarkCount = metric.bookmarkCount,
             bookmarked = bookmarked,
         )
     }
@@ -87,6 +93,7 @@ data class RecruitmentPostDetailResult(
     val eligibilityAndSelectionProcess: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val bookmarkCount: Long = 0,
     val bookmarked: Boolean = false,
 ) {
     companion object {
@@ -99,24 +106,25 @@ data class RecruitmentPostDetailResult(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             author = author,
             title = post.title,
-            recruitmentType = post.recruitmentType,
+            recruitmentType = checkNotNull(post.recruitmentType),
             recruitmentStatus = post.recruitmentStatus,
-            recruitmentStartDate = post.recruitmentStartDate,
-            recruitmentEndDate = post.recruitmentEndDate,
-            progressMethod = post.progressMethod,
-            capacity = post.capacity,
-            activityDurationMonths = post.activityDurationMonths,
+            recruitmentStartDate = checkNotNull(post.recruitmentStartDate),
+            recruitmentEndDate = checkNotNull(post.recruitmentEndDate),
+            progressMethod = checkNotNull(post.progressMethod),
+            capacity = checkNotNull(post.capacity),
+            activityDurationMonths = checkNotNull(post.activityDurationMonths),
             technologyStacks = post.technologyStacks.toList(),
             positions = post.positions.toList(),
             contact = RecruitmentPostContactResult(
-                method = post.contactMethod,
-                value = post.contactValue,
+                method = checkNotNull(post.contactMethod),
+                value = checkNotNull(post.contactValue),
             ),
-            summary = post.summary,
-            content = post.content,
+            summary = checkNotNull(post.summary),
+            content = checkNotNull(post.content),
             eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
+            bookmarkCount = metric.bookmarkCount,
             bookmarked = bookmarked,
         )
     }
@@ -142,44 +150,30 @@ data class RecruitmentPostContactResult(
     val value: String,
 )
 
-internal fun RecruitmentPostCursorPage.toResult(
+internal fun RecruitmentPostPage.toResult(
     metrics: Map<Long, PostMetricDto>,
     authorsByUserId: Map<Long, RecruitmentPostAuthorResult>,
     bookmarkedPostIds: Set<Long> = emptySet(),
-    queryKey: String,
-): RecruitmentPostCursorPageResult = RecruitmentPostCursorPageResult(
+    applicationCounts: Map<Long, Long> = emptyMap(),
+    includeBookmarkCount: Boolean = true,
+): RecruitmentPostPageResult = RecruitmentPostPageResult(
     items = posts.map { post ->
         RecruitmentPostSummary.from(
             post,
             metrics[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }] ?: PostMetricDto.EMPTY,
             authorsByUserId[post.authorUserId] ?: RecruitmentPostAuthorResult.from(post.authorUserId, null),
             bookmarked = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." } in bookmarkedPostIds,
+            applicationCount = applicationCounts[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }] ?: 0L,
+        ).copy(
+            bookmarkCount = if (includeBookmarkCount) {
+                metrics[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }]?.bookmarkCount ?: 0L
+            } else {
+                0L
+            },
         )
     },
-    hasNext = hasNext,
-    nextCursor = if (hasNext) posts.lastOrNull()?.let { post ->
-        val postId = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }
-        val metric = metrics[postId] ?: PostMetricDto.EMPTY
-        when (sortType) {
-            RecruitmentPostSortType.LATEST -> RecruitmentPostCursor(
-                queryKey = queryKey,
-                sortType = sortType,
-                id = postId,
-            )
-            RecruitmentPostSortType.DEADLINE -> RecruitmentPostCursor(
-                queryKey = queryKey,
-                sortType = sortType,
-                deadline = post.recruitmentEndDate,
-                id = postId,
-            )
-            RecruitmentPostSortType.VIEW_COUNT,
-            RecruitmentPostSortType.COMMENT_COUNT,
-            -> RecruitmentPostCursor(
-                queryKey = queryKey,
-                sortType = sortType,
-                metricCount = if (sortType == RecruitmentPostSortType.VIEW_COUNT) metric.viewCount else metric.commentCount,
-                id = postId,
-            )
-        }
-    } else null,
+    page = page,
+    size = size,
+    totalElements = totalElements,
+    totalPages = totalPages,
 )

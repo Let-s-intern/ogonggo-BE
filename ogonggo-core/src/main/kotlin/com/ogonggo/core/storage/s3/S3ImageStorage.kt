@@ -3,8 +3,9 @@ package com.ogonggo.core.storage.s3
 import org.springframework.stereotype.Component
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
-import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
 
 /**
  * 이미지 바이트를 S3에 저장하고 클라이언트가 사용할 표시용 URL을 반환한다.
@@ -44,6 +45,19 @@ class S3ImageStorage(
             DeleteObjectRequest.builder()
                 .bucket(properties.bucket)
                 .key(key)
+                .build(),
+        )
+    }
+
+    fun copy(sourceKey: String, targetKey: String, contentType: String) {
+        check(properties.bucket.isNotBlank()) { "S3 bucket 설정이 없습니다." }
+        s3Client.copyObject(
+            CopyObjectRequest.builder()
+                .sourceBucket(properties.bucket)
+                .sourceKey(sourceKey)
+                .destinationBucket(properties.bucket)
+                .destinationKey(targetKey)
+                .contentType(contentType)
                 .build(),
         )
     }

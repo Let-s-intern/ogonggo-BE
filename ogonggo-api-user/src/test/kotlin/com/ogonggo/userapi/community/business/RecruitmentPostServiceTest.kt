@@ -3,19 +3,22 @@ package com.ogonggo.userapi.community.business
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.RecruitmentPostReader
-import com.ogonggo.core.community.implement.RecruitmentPostCursorPage
+import com.ogonggo.core.community.implement.RecruitmentPostPage
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
@@ -46,6 +49,7 @@ class RecruitmentPostServiceTest {
     private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
     private val postBookmarkReader = Mockito.mock(RecruitmentPostBookmarkReader::class.java)
     private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
+    private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
@@ -63,6 +67,7 @@ class RecruitmentPostServiceTest {
         eventPublisher,
         clock,
         userProfileReader,
+        applicationReader,
     )
 
     @Test
@@ -70,7 +75,7 @@ class RecruitmentPostServiceTest {
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(postReader.readPublished(12L)).thenReturn(post)
         stubPublicPost(post)
-        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto.EMPTY)
+        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto(viewCount = 0, commentCount = 0, bookmarkCount = 7))
 
         val result = service.getRecruitmentPost(12L)
 
@@ -82,6 +87,7 @@ class RecruitmentPostServiceTest {
         assertEquals(null, result.author.nickname)
         assertEquals(null, result.author.profileImageUrl)
         assertFalse(result.bookmarked)
+        assertEquals(0L, result.bookmarkCount)
         Mockito.verify(postReader).readPublished(12L)
         Mockito.verifyNoInteractions(postBookmarkReader)
         Mockito.verify(eventPublisher).publishEvent(RecruitmentPostViewedEvent(12L))
@@ -91,13 +97,14 @@ class RecruitmentPostServiceTest {
     fun `로그인 사용자가 북마크한 모집글 상세에는 bookmarked true를 반환한다`() {
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(postReader.readPublished(12L)).thenReturn(post)
-        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto.EMPTY)
+        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto(viewCount = 0, commentCount = 0, bookmarkCount = 7))
         Mockito.`when`(postBookmarkReader.readBookmarkedPostIds(USER_ID, listOf(12L))).thenReturn(setOf(12L))
         stubPublicPost(post)
 
         val result = service.getRecruitmentPost(USER_ID, 12L)
 
         assertTrue(result.bookmarked)
+        assertEquals(7L, result.bookmarkCount)
         Mockito.verify(postBookmarkReader).readBookmarkedPostIds(USER_ID, listOf(12L))
     }
 
@@ -106,26 +113,31 @@ class RecruitmentPostServiceTest {
         val firstPost = Mockito.mock(RecruitmentPost::class.java)
         val secondPost = Mockito.mock(RecruitmentPost::class.java)
         val query = RecruitmentPostListQuery(
-            cursor = null,
+            page = 0,
             size = 10,
             sortType = RecruitmentPostSortType.LATEST,
             filter = RecruitmentPostListFilter(),
         )
         Mockito.`when`(
-            postReader.readPublishedCursorPage(
-                cursor = null,
+            postReader.readPublishedPage(
+                page = 0,
                 size = 10,
                 filter = RecruitmentPostListFilter(),
                 sortType = RecruitmentPostSortType.LATEST,
             ),
         ).thenReturn(
-            RecruitmentPostCursorPage(
+            RecruitmentPostPage(
                 posts = listOf(firstPost, secondPost),
-                hasNext = false,
-                sortType = RecruitmentPostSortType.LATEST,
+                page = 0,
+                size = 10,
+                totalElements = 2,
+                totalPages = 1,
             ),
         )
-        Mockito.`when`(postMetricReader.readAll(listOf(12L, 13L))).thenReturn(emptyMap())
+        Mockito.`when`(postMetricReader.readAll(listOf(12L, 13L))).thenReturn(
+            mapOf(12L to PostMetricDto(viewCount = 0, commentCount = 0, bookmarkCount = 4)),
+        )
+        Mockito.`when`(applicationReader.countByPostIds(listOf(12L, 13L))).thenReturn(mapOf(12L to 3L))
         Mockito.`when`(postBookmarkReader.readBookmarkedPostIds(USER_ID, listOf(12L, 13L))).thenReturn(setOf(12L))
         Mockito.`when`(userProfileReader.readAll(listOf(USER_ID, OTHER_AUTHOR_ID))).thenReturn(
             mapOf(
@@ -140,6 +152,8 @@ class RecruitmentPostServiceTest {
 
         assertEquals(2, result.items.size)
         assertTrue(result.items.first().bookmarked)
+        assertEquals(4L, result.items.first().bookmarkCount)
+        assertEquals(3L, result.items.first().applicationCount)
         assertFalse(result.items.last().bookmarked)
         assertEquals("홍길동", result.items.first().author.nickname)
         assertEquals("https://cdn.example.com/17.png", result.items.first().author.profileImageUrl)
@@ -184,6 +198,40 @@ class RecruitmentPostServiceTest {
     }
 
     @Test
+    fun `제목만 입력한 임시저장 모집글을 생성한다`() {
+        // given
+        val command = RecruitmentPostDraftAppendCommand(
+            authorUserId = USER_ID,
+            title = "작성 중인 모집글",
+            recruitmentType = null,
+            capacity = null,
+            progressMethod = null,
+            activityDurationMonths = null,
+            technologyStacks = emptyList(),
+            summary = null,
+            content = null,
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = null,
+            recruitmentEndDate = null,
+            positions = emptyList(),
+            contactMethod = null,
+            contactValue = null,
+        )
+        val savedPost = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postAppender.appendDraft(command)).thenReturn(savedPost)
+        Mockito.`when`(savedPost.id).thenReturn(12L)
+
+        // when
+        val postId = service.createDraft(USER_ID, command)
+
+        // then
+        assertEquals(12L, postId)
+        Mockito.verify(postAppender).appendDraft(command)
+        Mockito.verify(imageAssetManager).syncPostImages(USER_ID, 12L, null, null, NOW)
+    }
+
+    @Test
     fun `작성자가 모집글을 수정하면 본문을 검증하고 기존 모집글을 갱신한다`() {
         // given
         val post = Mockito.mock(RecruitmentPost::class.java)
@@ -200,6 +248,24 @@ class RecruitmentPostServiceTest {
             command.copy(content = EDITOR_STATE_JSON),
         )
         Mockito.verify(postReader).readOwned(USER_ID, 12L)
+    }
+
+    @Test
+    fun `작성자가 임시저장 모집글을 수정하면 임시저장 전용 갱신을 수행한다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        val command = updateCommand().copy(content = null)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.publicationStatus).thenReturn(PublicationStatus.DRAFT)
+
+        // when
+        service.update(USER_ID, 12L, command)
+
+        // then
+        Mockito.verify(postManager).updateDraft(post, command)
+        Mockito.verifyNoMoreInteractions(postManager)
+        Mockito.verify(imageAssetManager).syncPostImages(USER_ID, 12L, "", null, NOW)
     }
 
     @Test

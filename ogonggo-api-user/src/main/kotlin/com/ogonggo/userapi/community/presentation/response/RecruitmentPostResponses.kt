@@ -37,6 +37,7 @@ data class RecruitmentPostDetailResponse(
     val eligibilityAndSelectionProcess: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val bookmarkCount: Long = 0,
     val bookmarked: Boolean = false,
 ) {
     companion object {
@@ -63,6 +64,7 @@ data class RecruitmentPostDetailResponse(
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
                 viewCount = result.viewCount,
                 commentCount = result.commentCount,
+                bookmarkCount = result.bookmarkCount,
                 bookmarked = result.bookmarked,
             )
     }
@@ -108,6 +110,8 @@ data class RecruitmentPostSummaryResponse(
     val recruitmentEndDate: LocalDate,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val applicationCount: Long = 0,
+    val bookmarkCount: Long = 0,
     val bookmarked: Boolean = false,
 ) {
     companion object {
@@ -125,6 +129,8 @@ data class RecruitmentPostSummaryResponse(
             recruitmentEndDate = summary.recruitmentEndDate,
             viewCount = summary.viewCount,
             commentCount = summary.commentCount,
+            applicationCount = summary.applicationCount,
+            bookmarkCount = summary.bookmarkCount,
             bookmarked = summary.bookmarked,
         )
     }

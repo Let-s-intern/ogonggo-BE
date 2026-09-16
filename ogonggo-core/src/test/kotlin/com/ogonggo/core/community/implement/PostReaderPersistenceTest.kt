@@ -60,13 +60,13 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `공개 모집글을 모집 구분으로 필터링하고 커서로 조회한다`() {
+    fun `공개 모집글을 모집 구분으로 필터링하고 페이지로 조회한다`() {
         postAppender.append(createCommand(title = "스터디 모집", recruitmentType = RecruitmentType.STUDY))
         postAppender.append(createCommand(title = "사이드 프로젝트 모집", recruitmentType = RecruitmentType.SIDE_PROJECT))
         postRepository.save(createPost(title = "비공개 모집", publicationStatus = PublicationStatus.HIDDEN))
 
-        val result = postReader.readPublishedCursorPage(
-            cursor = null,
+        val result = postReader.readPublishedPage(
+            page = 0,
             size = 1,
             filter = RecruitmentPostListFilter(recruitmentTypes = setOf(RecruitmentType.STUDY)),
             sortType = RecruitmentPostSortType.LATEST,
@@ -74,7 +74,8 @@ internal class PostReaderPersistenceTest @Autowired constructor(
 
         assertEquals(1, result.posts.size)
         assertEquals("스터디 모집", result.posts.single().title)
-        assertFalse(result.hasNext)
+        assertEquals(1, result.totalElements)
+        assertEquals(1, result.totalPages)
     }
 
     @Test
@@ -94,8 +95,8 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             ),
         )
 
-        val result = postReader.readPublishedCursorPage(
-            cursor = null,
+        val result = postReader.readPublishedPage(
+            page = 0,
             size = 10,
             filter = RecruitmentPostListFilter(positions = setOf(RecruitmentPosition.DESIGN)),
             sortType = RecruitmentPostSortType.LATEST,
@@ -110,15 +111,16 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         postAppender.append(createCommand(title = "사이드 프로젝트 모집", recruitmentType = RecruitmentType.SIDE_PROJECT))
         postRepository.save(createPost(title = "비공개 모집", publicationStatus = PublicationStatus.HIDDEN))
 
-        val result = postReader.readPublishedCursorPage(
-            cursor = null,
+        val result = postReader.readPublishedPage(
+            page = 0,
             size = 10,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
         assertEquals(setOf("스터디 모집", "사이드 프로젝트 모집"), result.posts.map(RecruitmentPost::title).toSet())
-        assertFalse(result.hasNext)
+        assertEquals(2, result.totalElements)
+        assertEquals(1, result.totalPages)
     }
 
     @Test
@@ -131,15 +133,16 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             postReader.readPublished(checkNotNull(deletedPost.id))
         }
 
-        val result = postReader.readPublishedCursorPage(
-            cursor = null,
+        val result = postReader.readPublishedPage(
+            page = 0,
             size = 10,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
         assertEquals(emptyList<RecruitmentPost>(), result.posts)
-        assertFalse(result.hasNext)
+        assertEquals(0, result.totalElements)
+        assertEquals(0, result.totalPages)
     }
 
     @Test
@@ -156,49 +159,41 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `최신순 커서로 다음 목록을 중복 없이 조회한다`() {
+    fun `최신순 페이지로 다음 목록을 중복 없이 조회한다`() {
         postAppender.append(createCommand(title = "첫 번째", recruitmentType = RecruitmentType.STUDY))
         postAppender.append(createCommand(title = "두 번째", recruitmentType = RecruitmentType.STUDY))
         postAppender.append(createCommand(title = "세 번째", recruitmentType = RecruitmentType.STUDY))
 
-        val first = postReader.readPublishedCursorPage(
-            cursor = null,
+        val first = postReader.readPublishedPage(
+            page = 0,
             size = 2,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
-        val last = first.posts.last()
-        val cursor = RecruitmentPostCursor(
-            queryKey = RecruitmentPostListFilter().cursorKey(RecruitmentPostSortType.LATEST),
-            sortType = RecruitmentPostSortType.LATEST,
-            id = checkNotNull(last.id),
-        )
-
-        val second = postReader.readPublishedCursorPage(
-            cursor = cursor,
+        val second = postReader.readPublishedPage(
+            page = 1,
             size = 2,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
+        assertEquals(0, first.page)
+        assertEquals(3, first.totalElements)
+        assertEquals(2, first.totalPages)
         assertEquals(listOf("첫 번째"), second.posts.map(RecruitmentPost::title))
-        assertFalse(second.hasNext)
+        assertEquals(1, second.page)
+        assertEquals(3, second.totalElements)
+        assertEquals(2, second.totalPages)
     }
 
     @Test
-    fun `커서의 정렬 조건이 현재 요청과 다르면 거부한다`() {
-        val cursor = RecruitmentPostCursor(
-            queryKey = RecruitmentPostListFilter().cursorKey(RecruitmentPostSortType.LATEST),
-            sortType = RecruitmentPostSortType.LATEST,
-            id = 1L,
-        )
-
+    fun `페이지 번호가 음수면 거부한다`() {
         assertThrows(IllegalArgumentException::class.java) {
-            postReader.readPublishedCursorPage(
-                cursor = cursor,
+            postReader.readPublishedPage(
+                page = -1,
                 size = 10,
                 filter = RecruitmentPostListFilter(),
-                sortType = RecruitmentPostSortType.DEADLINE,
+                sortType = RecruitmentPostSortType.LATEST,
             )
         }
     }

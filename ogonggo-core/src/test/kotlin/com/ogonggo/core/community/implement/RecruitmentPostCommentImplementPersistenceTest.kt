@@ -63,7 +63,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
     }
 
     @Test
-    fun `부모 댓글은 커서 페이지로 조회하고 대댓글 미리보기는 5개에서 끊는다`() {
+    fun `부모 댓글과 대댓글을 페이지로 조회하고 대댓글 미리보기는 5개에서 끊는다`() {
         // given
         val post = postAppender.append(postCommand())
         val root = commentAppender.append(
@@ -99,7 +99,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // when
         val rootPage = commentReader.readRootPage(
             postId = postId,
-            cursor = null,
+            page = 0,
             size = 1,
         )
         val previews = commentReader.readReplyPreviews(
@@ -110,33 +110,39 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         val replies = commentReader.readReplyPage(
             postId = postId,
             parentId = rootId,
-            cursor = null,
+            page = 0,
             size = 5,
         )
         val nextRootPage = commentReader.readRootPage(
             postId = postId,
-            cursor = rootPage.nextCursor,
+            page = 1,
             size = 1,
         )
         val nextReplies = commentReader.readReplyPage(
             postId = postId,
             parentId = rootId,
-            cursor = replies.nextCursor,
+            page = 1,
             size = 5,
         )
 
         // then
         assertEquals(1, rootPage.comments.size)
-        assertEquals(true, rootPage.hasNext)
-        assertNotNull(rootPage.nextCursor)
+        assertEquals(0, rootPage.page)
+        assertEquals(2, rootPage.totalElements)
+        assertEquals(2, rootPage.totalPages)
         assertEquals(5, previews.getValue(rootId).comments.size)
-        assertEquals(true, previews.getValue(rootId).hasNext)
+        assertEquals(6, previews.getValue(rootId).totalElements)
+        assertEquals(2, previews.getValue(rootId).totalPages)
         assertEquals(5, replies.comments.size)
-        assertEquals(true, replies.hasNext)
+        assertEquals(0, replies.page)
+        assertEquals(6, replies.totalElements)
+        assertEquals(2, replies.totalPages)
         assertEquals(1, nextRootPage.comments.size)
-        assertEquals(false, nextRootPage.hasNext)
+        assertEquals(1, nextRootPage.page)
+        assertEquals(2, nextRootPage.totalPages)
         assertEquals(1, nextReplies.comments.size)
-        assertEquals(false, nextReplies.hasNext)
+        assertEquals(1, nextReplies.page)
+        assertEquals(2, nextReplies.totalPages)
         assertEquals(8, commentRepository.count())
     }
 
@@ -173,7 +179,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // then
         assertEquals(false, commentRepository.findById(parentId).isPresent)
         assertEquals(false, commentRepository.findById(replyId).isPresent)
-        assertEquals(true, commentReader.readRootPage(postId, null, 10).comments.isEmpty())
+        assertEquals(true, commentReader.readRootPage(postId, page = 0, size = 10).comments.isEmpty())
         assertThrows(EntityNotFoundException::class.java) {
             commentReader.readInPost(postId, parentId)
         }

@@ -68,7 +68,7 @@ class RecruitmentPostBookmarkConcurrencyTest @Autowired constructor(
             assertInstanceOf(ConflictException::class.java, completed.single(Result<Unit>::isFailure).exceptionOrNull())
             assertEquals(
                 listOf(postId),
-                bookmarkService.getBookmarks(USER_ID, cursor = null, size = 10).items.map { it.id },
+                bookmarkService.getBookmarks(USER_ID, page = 0, size = 10).items.map { it.id },
             )
         } finally {
             executor.shutdownNow()

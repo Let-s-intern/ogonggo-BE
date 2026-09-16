@@ -10,4 +10,6 @@ class RecruitmentPostAppender internal constructor(
 ) {
 
     fun append(command: RecruitmentPostAppendCommand): RecruitmentPost = postRepository.save(command.toEntity())
+
+    fun appendDraft(command: RecruitmentPostDraftAppendCommand): RecruitmentPost = postRepository.save(command.toEntity())
 }

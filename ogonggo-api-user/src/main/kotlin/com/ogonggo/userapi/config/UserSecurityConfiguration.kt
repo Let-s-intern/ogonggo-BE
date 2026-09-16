@@ -76,7 +76,21 @@ class UserSecurityConfiguration {
                 // 아래의 조회 전체 허용보다 먼저 선언해야 적용된다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").permitAll()
-                it.requestMatchers(HttpMethod.GET, "/api/v1/users/me/recruitment/applications").authenticated()
+                it.requestMatchers(
+                    "/api/v1/users/me/recruitment/applications",
+                    "/api/v1/users/me/recruitment/applications/**",
+                ).authenticated()
+                it.requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/me/recruitment-posts",
+                    "/api/v1/me/recruitment-posts/*",
+                ).authenticated()
+                it.requestMatchers(
+                    HttpMethod.POST,
+                    "/api/v1/me/recruitment-posts/drafts",
+                    "/api/v1/me/recruitment-posts/*/copy",
+                    "/api/v1/me/recruitment-posts/*/publish",
+                ).authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/recruitment-posts/*/applications").authenticated()
                 it.requestMatchers("/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").authenticated()
                 // 채용공고와 부트캠프 조회는 로그인 없이 연다.

@@ -43,7 +43,7 @@ class RecruitmentApplicationController(
             userId = userId,
             recruitmentStatus = recruitmentStatus,
             recruitmentType = recruitmentType,
-            keyword = keyword?.trim()?.takeIf(String::isNotEmpty),
+            keyword = normalizeRecruitmentPostKeyword(keyword),
             page = page - 1,
             size = size,
         )

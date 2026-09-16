@@ -2,7 +2,7 @@ package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.userapi.community.business.RecruitmentPostBookmarkService
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
-import com.ogonggo.userapi.response.CursorPageResponse
+import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -25,15 +25,17 @@ class RecruitmentPostBookmarkController(
     @GetMapping
     override fun getBookmarks(
         @AuthenticationPrincipal userId: Long,
-        @RequestParam(required = false) cursor: String?,
+        @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
-    ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>> {
-        val result = bookmarkService.getBookmarks(userId, RecruitmentPostBookmarkCursorCodec.decode(cursor), size)
+    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>> {
+        val result = bookmarkService.getBookmarks(userId, page - 1, size)
         return SuccessResponse.ok(
-            CursorPageResponse(
+            PageResponse.fromZeroBased(
                 items = result.items.map(RecruitmentPostSummaryResponse::from),
-                hasNext = result.hasNext,
-                nextCursor = result.nextCursor?.let(RecruitmentPostBookmarkCursorCodec::encode),
+                page = result.page,
+                size = result.size,
+                totalElements = result.totalElements,
+                totalPages = result.totalPages,
             ),
         )
     }

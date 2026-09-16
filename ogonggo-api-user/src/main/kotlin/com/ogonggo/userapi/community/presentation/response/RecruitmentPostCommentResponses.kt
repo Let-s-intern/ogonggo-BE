@@ -1,29 +1,21 @@
 package com.ogonggo.userapi.community.presentation.response
 
-import com.ogonggo.core.community.implement.RecruitmentPostCommentCursor
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentAuthorResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentPageResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentReplyPageResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentRootResult
+import com.ogonggo.userapi.response.PageResponse
 import java.time.LocalDateTime
 
-data class RecruitmentPostCommentPageResponse(
-    val items: List<RecruitmentPostCommentRootResponse>,
-    val nextCursor: String?,
-    val hasNext: Boolean,
-) {
-    companion object {
-        fun from(
-            result: RecruitmentPostCommentPageResult,
-            cursorEncoder: (RecruitmentPostCommentCursor) -> String,
-        ): RecruitmentPostCommentPageResponse = RecruitmentPostCommentPageResponse(
-            items = result.items.map { RecruitmentPostCommentRootResponse.from(it, cursorEncoder) },
-            nextCursor = result.nextCursor?.let(cursorEncoder),
-            hasNext = result.hasNext,
-        )
-    }
-}
+internal fun RecruitmentPostCommentPageResult.toPageResponse(): PageResponse<RecruitmentPostCommentRootResponse> =
+    PageResponse.fromZeroBased(
+        items = items.map(RecruitmentPostCommentRootResponse::from),
+        page = page,
+        size = size,
+        totalElements = totalElements,
+        totalPages = totalPages,
+    )
 
 data class RecruitmentPostCommentRootResponse(
     val id: Long,
@@ -33,13 +25,10 @@ data class RecruitmentPostCommentRootResponse(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val mine: Boolean,
-    val replies: RecruitmentPostCommentReplyPageResponse,
+    val replies: PageResponse<RecruitmentPostCommentResponse>,
 ) {
     companion object {
-        fun from(
-            result: RecruitmentPostCommentRootResult,
-            cursorEncoder: (RecruitmentPostCommentCursor) -> String,
-        ): RecruitmentPostCommentRootResponse = RecruitmentPostCommentRootResponse(
+        fun from(result: RecruitmentPostCommentRootResult): RecruitmentPostCommentRootResponse = RecruitmentPostCommentRootResponse(
             id = result.comment.id,
             parentId = result.comment.parentId,
             author = RecruitmentPostCommentAuthorResponse.from(result.comment.author),
@@ -47,27 +36,19 @@ data class RecruitmentPostCommentRootResponse(
             createdAt = result.comment.createdAt,
             updatedAt = result.comment.updatedAt,
             mine = result.comment.mine,
-            replies = RecruitmentPostCommentReplyPageResponse.from(result.replies, cursorEncoder),
+            replies = result.replies.toPageResponse(),
         )
     }
 }
 
-data class RecruitmentPostCommentReplyPageResponse(
-    val items: List<RecruitmentPostCommentResponse>,
-    val nextCursor: String?,
-    val hasNext: Boolean,
-) {
-    companion object {
-        fun from(
-            result: RecruitmentPostCommentReplyPageResult,
-            cursorEncoder: (RecruitmentPostCommentCursor) -> String,
-        ): RecruitmentPostCommentReplyPageResponse = RecruitmentPostCommentReplyPageResponse(
-            items = result.items.map(RecruitmentPostCommentResponse::from),
-            nextCursor = result.nextCursor?.let(cursorEncoder),
-            hasNext = result.hasNext,
-        )
-    }
-}
+internal fun RecruitmentPostCommentReplyPageResult.toPageResponse(): PageResponse<RecruitmentPostCommentResponse> =
+    PageResponse.fromZeroBased(
+        items = items.map(RecruitmentPostCommentResponse::from),
+        page = page,
+        size = size,
+        totalElements = totalElements,
+        totalPages = totalPages,
+    )
 
 data class RecruitmentPostCommentResponse(
     val id: Long,

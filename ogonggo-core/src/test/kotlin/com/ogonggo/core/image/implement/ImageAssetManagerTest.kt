@@ -6,6 +6,7 @@ import com.ogonggo.core.image.domain.ImageAssetStatus
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
 import com.ogonggo.core.storage.s3.S3ImageStorage
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Duration
@@ -42,6 +43,35 @@ class ImageAssetManagerTest {
 
         assertEquals(ImageAssetStatus.UNREFERENCED, asset.status)
         assertEquals(now, asset.unreferencedAt)
+    }
+
+    @Test
+    fun `게시글 이미지를 새 저장 키와 새 자산으로 복제하고 본문 참조를 치환한다`() {
+        val asset = uploadedAsset().also { it.attach(12L) }
+        Mockito.`when`(
+            repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(setOf(asset.id), 17L),
+        ).thenReturn(listOf(asset))
+        Mockito.`when`(storage.publicUrl(Mockito.anyString())).thenAnswer { invocation ->
+            "https://cdn.example.com/${invocation.arguments[0]}"
+        }
+
+        val copiedContent = manager.copyPostImages(
+            ownerUserId = 17L,
+            sourcePostId = 12L,
+            targetPostId = 101L,
+            content = content(asset),
+        )
+
+        assertTrue(copiedContent.orEmpty().contains("https://cdn.example.com/images/"))
+        assertTrue(copiedContent.orEmpty().contains("imageId"))
+        assertTrue(!copiedContent.orEmpty().contains(asset.id))
+        val copyInvocation = Mockito.mockingDetails(storage).invocations.single { it.method.name == "copy" }
+        assertEquals(asset.storageKey, copyInvocation.arguments[0])
+        assertTrue((copyInvocation.arguments[1] as String).startsWith("images/"))
+        assertEquals(asset.mimeType, copyInvocation.arguments[2])
+        val saveInvocation = Mockito.mockingDetails(repository).invocations.single { it.method.name == "save" }
+        assertEquals(101L, (saveInvocation.arguments[0] as ImageAsset).postId)
+        assertEquals(12L, asset.postId)
     }
 
     @Test

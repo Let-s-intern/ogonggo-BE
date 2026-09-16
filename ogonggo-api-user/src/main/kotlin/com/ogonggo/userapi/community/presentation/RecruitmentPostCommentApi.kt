@@ -2,10 +2,11 @@ package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostCommentRequest
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostCommentResponse
-import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentPageResponse
-import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentReplyPageResponse
+import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentResponse
+import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentRootResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
+import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -36,14 +37,14 @@ interface RecruitmentPostCommentApi {
     @Operation(
         operationId = "getRecruitmentPostComments",
         summary = "사이드 프로젝트·스터디 모집글 부모 댓글 조회",
-        description = "부모 댓글을 최신순 커서 페이지로 조회하고 대댓글 미리보기 5건을 함께 반환합니다.",
+        description = "부모 댓글을 최신순 페이지로 조회하고 대댓글 미리보기 5건을 함께 반환합니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "댓글 조회 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: postId, size 또는 cursor가 올바르지 않음",
+                description = "BAD_REQUEST: postId, page 또는 size가 올바르지 않음",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -58,21 +59,21 @@ interface RecruitmentPostCommentApi {
         @Parameter(hidden = true)
         @AuthenticationPrincipal userId: Long?,
         @PathVariable("postId") @Positive postId: Long,
-        @RequestParam(required = false) cursor: String?,
+        @RequestParam(defaultValue = "1") @Min(1) page: Int,
         @RequestParam(defaultValue = "10") @Min(1) @Max(30) size: Int,
-    ): ResponseEntity<SuccessResponse<RecruitmentPostCommentPageResponse>>
+    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostCommentRootResponse>>>
 
     @Operation(
         operationId = "getRecruitmentPostCommentReplies",
         summary = "사이드 프로젝트·스터디 모집글 대댓글 더보기",
-        description = "특정 부모 댓글의 대댓글을 오래된 순서의 커서 페이지로 조회합니다.",
+        description = "특정 부모 댓글의 대댓글을 오래된 순서의 페이지로 조회합니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "대댓글 조회 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 요청 파라미터 또는 cursor가 올바르지 않음",
+                description = "BAD_REQUEST: 요청 파라미터가 올바르지 않음",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -88,9 +89,9 @@ interface RecruitmentPostCommentApi {
         @AuthenticationPrincipal userId: Long?,
         @PathVariable("postId") @Positive postId: Long,
         @PathVariable("commentId") @Positive commentId: Long,
-        @RequestParam(required = false) cursor: String?,
+        @RequestParam(defaultValue = "1") @Min(1) page: Int,
         @RequestParam(defaultValue = "5") @Min(1) @Max(30) size: Int,
-    ): ResponseEntity<SuccessResponse<RecruitmentPostCommentReplyPageResponse>>
+    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostCommentResponse>>>
 
     @Operation(
         operationId = "deleteRecruitmentPostComment",

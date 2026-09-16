@@ -11,13 +11,15 @@ import java.time.LocalDateTime
 data class PostMetricDto(
     val viewCount: Long,
     val commentCount: Long,
+    val bookmarkCount: Long = 0,
 ) {
     companion object {
-        val EMPTY = PostMetricDto(viewCount = 0, commentCount = 0)
+        val EMPTY = PostMetricDto(viewCount = 0, commentCount = 0, bookmarkCount = 0)
 
         internal fun from(metric: PostMetric): PostMetricDto = PostMetricDto(
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
+            bookmarkCount = metric.bookmarkCount,
         )
     }
 }
@@ -75,6 +77,20 @@ class PostMetricManager internal constructor(
         val updated = postMetricRepository.decreaseCommentCount(postId, amount, now)
         if (updated > 0 || postMetricRepository.findByPostId(postId) == null) return
         error("댓글 카운터가 실제 댓글 수보다 작습니다. postId=$postId, amount=$amount")
+    }
+
+    @Transactional
+    fun syncBookmarkCount(postId: Long, now: LocalDateTime) {
+        if (postMetricRepository.syncBookmarkCount(postId, now) > 0) return
+
+        try {
+            postMetricRegistrar.create(postId)
+        } catch (_: DataIntegrityViolationException) {
+            // 다른 요청이 만든 지표 행을 그대로 사용한다.
+        }
+        check(postMetricRepository.syncBookmarkCount(postId, now) > 0) {
+            "모집글 북마크 수를 갱신하지 못했습니다. postId=$postId"
+        }
     }
 
     private fun updateOrCreate(postId: Long, update: () -> Int) {

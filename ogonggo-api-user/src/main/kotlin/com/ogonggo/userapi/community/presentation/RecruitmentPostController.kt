@@ -9,7 +9,7 @@ import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPost
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostDetailResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
 import com.ogonggo.userapi.response.SuccessResponse
-import com.ogonggo.userapi.response.CursorPageResponse
+import com.ogonggo.userapi.response.PageResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.RestController
@@ -35,16 +35,18 @@ class RecruitmentPostController(
     override fun getRecruitmentPosts(
         userId: Long?,
         request: RecruitmentPostListRequest,
-    ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>> {
+    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>> {
         val result = recruitmentPostService.getRecruitmentPosts(
             userId,
-            request.toQuery(RecruitmentPostCursorCodec.decode(request.cursor)),
+            request.toQuery(),
         )
         return SuccessResponse.ok(
-            CursorPageResponse(
+            PageResponse.fromZeroBased(
                 items = result.items.map(RecruitmentPostSummaryResponse::from),
-                hasNext = result.hasNext,
-                nextCursor = result.nextCursor?.let(RecruitmentPostCursorCodec::encode),
+                page = result.page,
+                size = result.size,
+                totalElements = result.totalElements,
+                totalPages = result.totalPages,
             ),
         )
     }

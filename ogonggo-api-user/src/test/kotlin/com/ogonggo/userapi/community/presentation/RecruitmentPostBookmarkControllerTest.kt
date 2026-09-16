@@ -8,8 +8,7 @@ import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.community.business.RecruitmentPostBookmarkService
-import com.ogonggo.core.community.implement.RecruitmentPostBookmarkCursor
-import com.ogonggo.userapi.community.business.RecruitmentPostBookmarkCursorPageResult
+import com.ogonggo.userapi.community.business.RecruitmentPostBookmarkPageResult
 import com.ogonggo.userapi.community.business.RecruitmentPostAuthorResult
 import com.ogonggo.userapi.community.business.RecruitmentPostSummary
 import com.ogonggo.userapi.config.UserSecurityConfiguration
@@ -29,7 +28,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
-import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [RecruitmentPostBookmarkController::class])
 @Import(UserSecurityConfiguration::class, UserApiExceptionHandler::class)
@@ -44,16 +42,22 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
 
     @Test
-    fun `내 모집글 북마크 목록을 커서 페이지로 조회한다`() {
-        Mockito.`when`(bookmarkService.getBookmarks(USER_ID, null, 10)).thenReturn(bookmarkPage())
+    fun `내 모집글 북마크 목록을 페이지로 조회한다`() {
+        Mockito.`when`(bookmarkService.getBookmarks(USER_ID, 0, 10)).thenReturn(bookmarkPage())
 
-        mockMvc.perform(get("/api/v1/recruitment-post-bookmarks").with(authenticatedUser()))
+        mockMvc.perform(
+            get("/api/v1/recruitment-post-bookmarks")
+                .with(authenticatedUser())
+                .param("page", "1"),
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.items[0].id").value(POST_ID))
             .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
-            .andExpect(jsonPath("$.data.hasNext").value(true))
-            .andExpect(jsonPath("$.data.nextCursor").isNotEmpty)
+            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
+            .andExpect(jsonPath("$.data.pageInfo.pageSize").value(10))
+            .andExpect(jsonPath("$.data.pageInfo.totalElements").value(1))
+            .andExpect(jsonPath("$.data.pageInfo.totalPages").value(1))
     }
 
     @Test
@@ -105,7 +109,7 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
         UsernamePasswordAuthenticationToken(USER_ID, null, emptyList()),
     )
 
-    private fun bookmarkPage() = RecruitmentPostBookmarkCursorPageResult(
+    private fun bookmarkPage() = RecruitmentPostBookmarkPageResult(
         items = listOf(
             RecruitmentPostSummary(
                 id = POST_ID,
@@ -126,11 +130,10 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
                 bookmarked = true,
             ),
         ),
-        hasNext = true,
-        nextCursor = RecruitmentPostBookmarkCursor(
-            updatedAt = LocalDateTime.of(2026, 9, 14, 10, 0),
-            id = 45L,
-        ),
+        page = 0,
+        size = 10,
+        totalElements = 1,
+        totalPages = 1,
     )
 
     companion object {

@@ -8,4 +8,5 @@ enum class PublicationStatus(
 ) : EnumField {
     PUBLISHED(1, "공개"),
     HIDDEN(2, "비공개"),
+    DRAFT(3, "임시저장"),
 }

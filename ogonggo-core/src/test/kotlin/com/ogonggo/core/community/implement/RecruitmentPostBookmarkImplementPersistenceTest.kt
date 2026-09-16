@@ -58,7 +58,7 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
         val userId = appendUser()
         bookmarkManager.append(userId = userId, postId = postId, now = LocalDateTime.of(2026, 9, 14, 10, 0))
 
-        val page = bookmarkReader.readBookmarkedPublishedCursorPage(userId, cursor = null, size = 10)
+        val page = bookmarkReader.readBookmarkedPublishedPage(userId, page = 0, size = 10)
 
         assertEquals(listOf(postId), page.items.map { checkNotNull(it.post.id) })
     }

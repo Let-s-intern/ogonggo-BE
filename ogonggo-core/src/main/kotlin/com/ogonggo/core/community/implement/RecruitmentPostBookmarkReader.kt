@@ -4,37 +4,29 @@ import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.persistence.RecruitmentPostBookmarkJpaRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
-import java.time.LocalDateTime
 
 @Component
 class RecruitmentPostBookmarkReader internal constructor(
     private val bookmarkRepository: RecruitmentPostBookmarkJpaRepository,
 ) {
 
-    fun readBookmarkedPublishedCursorPage(
+    fun readBookmarkedPublishedPage(
         userId: Long,
-        cursor: RecruitmentPostBookmarkCursor?,
+        page: Int,
         size: Int,
-    ): RecruitmentPostBookmarkCursorPage {
-        validateBookmarkCursorPageSize(size)
-        val bookmarkedPosts = bookmarkRepository.findBookmarkedPublishedCursorPage(
+    ): RecruitmentPostBookmarkPage {
+        validateBookmarkPageRequest(page, size)
+        val bookmarkedPosts = bookmarkRepository.findBookmarkedPublishedPage(
             userId = userId,
             publicationStatus = PublicationStatus.PUBLISHED,
-            cursorUpdatedAt = cursor?.updatedAt,
-            cursorId = cursor?.id,
-            pageable = PageRequest.of(0, size + 1),
+            pageable = PageRequest.of(page, size),
         )
-        return RecruitmentPostBookmarkCursorPage(
-            items = bookmarkedPosts.take(size).map { bookmarkedPost ->
-                RecruitmentPostBookmarkItem(
-                    post = bookmarkedPost.post,
-                    cursor = RecruitmentPostBookmarkCursor(
-                        updatedAt = bookmarkedPost.updatedAt,
-                        id = bookmarkedPost.bookmarkId,
-                    ),
-                )
-            },
-            hasNext = bookmarkedPosts.size > size,
+        return RecruitmentPostBookmarkPage(
+            items = bookmarkedPosts.content.map { bookmarkedPost -> RecruitmentPostBookmarkItem(bookmarkedPost.post) },
+            page = bookmarkedPosts.number,
+            size = bookmarkedPosts.size,
+            totalElements = bookmarkedPosts.totalElements,
+            totalPages = bookmarkedPosts.totalPages,
         )
     }
 
@@ -42,21 +34,19 @@ class RecruitmentPostBookmarkReader internal constructor(
         if (postIds.isEmpty()) emptySet() else bookmarkRepository.findActivePostIds(userId, postIds)
 }
 
-data class RecruitmentPostBookmarkCursor(
-    val updatedAt: LocalDateTime,
-    val id: Long,
-)
-
 data class RecruitmentPostBookmarkItem(
     val post: com.ogonggo.core.community.domain.RecruitmentPost,
-    val cursor: RecruitmentPostBookmarkCursor,
 )
 
-data class RecruitmentPostBookmarkCursorPage(
+data class RecruitmentPostBookmarkPage(
     val items: List<RecruitmentPostBookmarkItem>,
-    val hasNext: Boolean,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )
 
-private fun validateBookmarkCursorPageSize(size: Int) {
+private fun validateBookmarkPageRequest(page: Int, size: Int) {
+    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
     require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
 }

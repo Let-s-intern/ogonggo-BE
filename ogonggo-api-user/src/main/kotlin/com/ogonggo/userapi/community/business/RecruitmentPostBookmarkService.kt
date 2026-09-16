@@ -4,7 +4,6 @@ import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
-import com.ogonggo.core.community.implement.RecruitmentPostBookmarkCursor
 import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserStatus
@@ -30,18 +29,18 @@ class RecruitmentPostBookmarkService(
     @Transactional(readOnly = true)
     fun getBookmarks(
         userId: Long,
-        cursor: RecruitmentPostBookmarkCursor?,
+        page: Int,
         size: Int,
-    ): RecruitmentPostBookmarkCursorPageResult {
+    ): RecruitmentPostBookmarkPageResult {
         verifyActiveUser(userId)
-        val result = postBookmarkReader.readBookmarkedPublishedCursorPage(userId, cursor, size)
+        val result = postBookmarkReader.readBookmarkedPublishedPage(userId, page, size)
         val postIds = result.items.map { item -> checkNotNull(item.post.id) { "조회된 모집글 식별자가 없습니다." } }
         val authorIds = result.items.map { it.post.authorUserId }.distinct()
         val authorsByUserId = userProfileReader.readAll(authorIds).mapValues { (authorId, profile) ->
             RecruitmentPostAuthorResult.from(authorId, profile)
         }
         val metrics = postMetricReader.readAll(postIds)
-        return RecruitmentPostBookmarkCursorPageResult(
+        return RecruitmentPostBookmarkPageResult(
             items = result.items.map { item ->
                 val post = item.post
                 val postId = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }
@@ -53,8 +52,10 @@ class RecruitmentPostBookmarkService(
                     bookmarked = true,
                 )
             },
-            hasNext = result.hasNext,
-            nextCursor = result.items.lastOrNull()?.cursor?.takeIf { result.hasNext },
+            page = result.page,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
         )
     }
 
@@ -81,8 +82,10 @@ class RecruitmentPostBookmarkService(
     }
 }
 
-data class RecruitmentPostBookmarkCursorPageResult(
+data class RecruitmentPostBookmarkPageResult(
     val items: List<RecruitmentPostSummary>,
-    val hasNext: Boolean,
-    val nextCursor: RecruitmentPostBookmarkCursor?,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )

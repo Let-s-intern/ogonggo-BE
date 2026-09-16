@@ -77,6 +77,52 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `지원 이력 목록의 검색어와 필터를 서비스에 전달한다`() {
+        Mockito.`when`(
+            applicationService.getApplications(
+                USER_ID,
+                RecruitmentStatus.RECRUITING,
+                RecruitmentType.SIDE_PROJECT,
+                "Kotlin",
+                1,
+                20,
+            ),
+        ).thenReturn(pageResult())
+
+        mockMvc.perform(
+            get("/api/v1/users/me/recruitment/applications")
+                .param("page", "2")
+                .param("size", "20")
+                .param("recruitmentStatus", "RECRUITING")
+                .param("recruitmentType", "SIDE_PROJECT")
+                .param("keyword", " Kotlin ")
+                .with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        Mockito.verify(applicationService).getApplications(
+            USER_ID,
+            RecruitmentStatus.RECRUITING,
+            RecruitmentType.SIDE_PROJECT,
+            "Kotlin",
+            1,
+            20,
+        )
+    }
+
+    @Test
+    fun `지원 이력 목록 검색어가 허용 길이를 벗어나면 400으로 응답한다`() {
+        listOf("", "가", " 가 ", "가".repeat(101)).forEach { keyword ->
+            mockMvc.perform(
+                get("/api/v1/users/me/recruitment/applications")
+                    .param("keyword", keyword)
+                    .with(authenticatedUser()),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+    }
+
+    @Test
     fun `인증이 없거나 postId가 잘못되면 표준 오류로 응답한다`() {
         mockMvc.perform(post("/api/v1/recruitment-posts/{postId}/applications", POST_ID))
             .andExpect(status().isUnauthorized)

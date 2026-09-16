@@ -47,8 +47,8 @@ class RecruitmentPostApplicationService(
         )
         return RecruitmentPostApplicationCreateResult(
             postId = postId,
-            contactMethod = post.contactMethod,
-            contactValue = post.contactValue,
+            contactMethod = checkNotNull(post.contactMethod),
+            contactValue = checkNotNull(post.contactValue),
             clickedAt = clickedAt,
         )
     }

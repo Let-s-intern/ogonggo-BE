@@ -9,6 +9,7 @@ import com.ogonggo.core.community.domain.QRecruitmentPostApplication.recruitment
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.Projections
 import com.querydsl.core.types.dsl.BooleanExpression
+import com.querydsl.core.Tuple
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
@@ -67,6 +68,21 @@ internal class RecruitmentPostApplicationQueryRepository(
             .fetchOne() ?: 0L
 
         return PageImpl(content, pageable, total)
+    }
+
+    fun countByPostIds(postIds: Collection<Long>): Map<Long, Long> {
+        if (postIds.isEmpty()) return emptyMap()
+
+        return queryFactory
+            .select(recruitmentPostApplication.postId, recruitmentPostApplication.count())
+            .from(recruitmentPostApplication)
+            .where(recruitmentPostApplication.postId.`in`(postIds))
+            .groupBy(recruitmentPostApplication.postId)
+            .fetch()
+            .associate { row: Tuple ->
+                row.get(recruitmentPostApplication.postId)!! to
+                    (row.get(recruitmentPostApplication.count()) ?: 0L)
+            }
     }
 
     private fun predicates(

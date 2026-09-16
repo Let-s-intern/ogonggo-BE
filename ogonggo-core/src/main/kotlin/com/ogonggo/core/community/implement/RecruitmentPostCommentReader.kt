@@ -7,7 +7,6 @@ import com.ogonggo.core.error.EntityNotFoundException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
-import java.time.LocalDateTime
 
 @Component
 class RecruitmentPostCommentReader internal constructor(
@@ -29,41 +28,36 @@ class RecruitmentPostCommentReader internal constructor(
 
     fun readRootPage(
         postId: Long,
-        cursor: RecruitmentPostCommentCursor?,
+        page: Int,
         size: Int,
-    ): RecruitmentPostCommentPage = readPage(
-        size = size,
-        cursor = cursor,
-        firstPage = { pageable -> commentRepository.findRootComments(postId, pageable) },
-        nextPage = { nextCursor, pageable ->
-            commentRepository.findRootCommentsAfter(
-                postId = postId,
-                createdAt = nextCursor.createdAt,
-                commentId = nextCursor.id,
-                pageable = pageable,
-            )
-        },
-    )
+    ): RecruitmentPostCommentPage {
+        validatePageRequest(page, size)
+        val result = commentRepository.findRootComments(postId, PageRequest.of(page, size))
+        return RecruitmentPostCommentPage(
+            comments = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+        )
+    }
 
     fun readReplyPage(
         postId: Long,
         parentId: Long,
-        cursor: RecruitmentPostCommentCursor?,
+        page: Int,
         size: Int,
-    ): RecruitmentPostCommentPage = readPage(
-        size = size,
-        cursor = cursor,
-        firstPage = { pageable -> commentRepository.findReplies(postId, parentId, pageable) },
-        nextPage = { nextCursor, pageable ->
-            commentRepository.findRepliesAfter(
-                postId = postId,
-                parentId = parentId,
-                createdAt = nextCursor.createdAt,
-                commentId = nextCursor.id,
-                pageable = pageable,
-            )
-        },
-    )
+    ): RecruitmentPostCommentPage {
+        validatePageRequest(page, size)
+        val result = commentRepository.findReplies(postId, parentId, PageRequest.of(page, size))
+        return RecruitmentPostCommentPage(
+            comments = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+        )
+    }
 
     fun readReplyPreviews(
         postId: Long,
@@ -72,62 +66,37 @@ class RecruitmentPostCommentReader internal constructor(
     ): Map<Long, RecruitmentPostCommentPage> {
         if (parentIds.isEmpty()) return emptyMap()
 
-        val replies = commentRepository.findRepliesByParentIds(postId, parentIds, size + 1)
+        val replies = commentRepository.findRepliesByParentIds(postId, parentIds, size)
+        val replyCounts = commentRepository.countRepliesByParentIds(postId, parentIds)
+            .associate { it.parentId to it.count }
         return replies
             .groupBy { checkNotNull(it.parentId) { "대댓글 부모 식별자가 없습니다." } }
             .mapValues { (_, comments) ->
-                val hasNext = comments.size > size
-                val items = comments.take(size)
+                val parentId = checkNotNull(comments.first().parentId)
+                val totalElements = replyCounts[parentId] ?: comments.size.toLong()
                 RecruitmentPostCommentPage(
-                    comments = items,
-                    nextCursor = items.lastOrNull()?.let { comment ->
-                        if (hasNext) comment.toCursor() else null
-                    },
-                    hasNext = hasNext,
+                    comments = comments,
+                    page = 0,
+                    size = size,
+                    totalElements = totalElements,
+                    totalPages = pageCount(totalElements, size),
                 )
             }
-    }
-
-    private fun readPage(
-        size: Int,
-        cursor: RecruitmentPostCommentCursor?,
-        firstPage: (PageRequest) -> List<RecruitmentPostComment>,
-        nextPage: (RecruitmentPostCommentCursor, PageRequest) -> List<RecruitmentPostComment>,
-    ): RecruitmentPostCommentPage {
-        require(size > 0) { "댓글 조회 크기는 양수여야 합니다." }
-
-        val comments = if (cursor == null) {
-            firstPage(PageRequest.of(0, size + 1))
-        } else {
-            nextPage(cursor, PageRequest.of(0, size + 1))
-        }
-        val pageComments = comments.take(size)
-        val hasNext = comments.size > size
-
-        return RecruitmentPostCommentPage(
-            comments = pageComments,
-            nextCursor = if (hasNext) pageComments.lastOrNull()?.toCursor() else null,
-            hasNext = hasNext,
-        )
-    }
-}
-
-data class RecruitmentPostCommentCursor(
-    val createdAt: LocalDateTime,
-    val id: Long,
-) {
-    init {
-        require(id > 0) { "댓글 커서의 식별자는 양수여야 합니다." }
     }
 }
 
 data class RecruitmentPostCommentPage(
     val comments: List<RecruitmentPostComment>,
-    val nextCursor: RecruitmentPostCommentCursor?,
-    val hasNext: Boolean,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )
 
-private fun RecruitmentPostComment.toCursor(): RecruitmentPostCommentCursor {
-    val commentId = checkNotNull(id) { "댓글 식별자가 없습니다." }
-    return RecruitmentPostCommentCursor(createdAt = createdAt, id = commentId)
+private fun validatePageRequest(page: Int, size: Int) {
+    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
+    require(size > 0) { "댓글 조회 크기는 양수여야 합니다." }
 }
+
+private fun pageCount(totalElements: Long, size: Int): Int =
+    if (totalElements == 0L) 0 else ((totalElements - 1) / size + 1).toInt()

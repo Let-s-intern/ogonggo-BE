@@ -34,18 +34,10 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
 ) {
 
     @Test
-    fun `비로그인 사용자가 부모 댓글을 커서 조회하면 대댓글 미리보기와 다음 커서를 반환한다`() {
+    fun `비로그인 사용자가 부모 댓글을 페이지로 조회하면 대댓글 미리보기도 페이지 정보와 함께 반환한다`() {
         // given
-        val nextCursor = com.ogonggo.core.community.implement.RecruitmentPostCommentCursor(
-            createdAt = CREATED_AT,
-            id = COMMENT_ID,
-        )
-        val replyCursor = com.ogonggo.core.community.implement.RecruitmentPostCommentCursor(
-            createdAt = CREATED_AT.plusMinutes(1),
-            id = 102L,
-        )
         Mockito.`when`(
-            recruitmentPostCommentService.readComments(null, POST_ID, null, 10),
+            recruitmentPostCommentService.readComments(null, POST_ID, 0, 10),
         ).thenReturn(
             RecruitmentPostCommentPageResult(
                 items = listOf(
@@ -53,30 +45,37 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
                         comment = commentResult(),
                         replies = RecruitmentPostCommentReplyPageResult(
                             items = listOf(commentResult(parentId = COMMENT_ID)),
-                            nextCursor = replyCursor,
-                            hasNext = true,
+                            page = 0,
+                            size = 5,
+                            totalElements = 6,
+                            totalPages = 2,
                         ),
                     ),
                 ),
-                nextCursor = nextCursor,
-                hasNext = true,
+                page = 0,
+                size = 10,
+                totalElements = 1,
+                totalPages = 1,
             ),
         )
 
         // when
         mockMvc.perform(
             get("/api/v1/recruitment-posts/$POST_ID/comments")
+                .param("page", "1")
                 .param("size", "10"),
         )
             // then
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].id").value(COMMENT_ID))
             .andExpect(jsonPath("$.data.items[0].replies.items[0].parentId").value(COMMENT_ID))
-            .andExpect(jsonPath("$.data.items[0].replies.hasNext").value(true))
-            .andExpect(jsonPath("$.data.nextCursor").isNotEmpty)
-            .andExpect(jsonPath("$.data.hasNext").value(true))
+            .andExpect(jsonPath("$.data.items[0].replies.pageInfo.pageNum").value(1))
+            .andExpect(jsonPath("$.data.items[0].replies.pageInfo.totalElements").value(6))
+            .andExpect(jsonPath("$.data.items[0].replies.pageInfo.totalPages").value(2))
+            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
+            .andExpect(jsonPath("$.data.pageInfo.totalElements").value(1))
 
-        Mockito.verify(recruitmentPostCommentService).readComments(null, POST_ID, null, 10)
+        Mockito.verify(recruitmentPostCommentService).readComments(null, POST_ID, 0, 10)
     }
 
     @MockBean

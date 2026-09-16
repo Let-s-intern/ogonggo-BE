@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.stubbing.Answer
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse
 
@@ -80,5 +81,29 @@ class S3ImageStorageTest {
         storage.delete("images/image-id.png")
 
         assertTrue(deleteObjectCalled)
+    }
+
+    @Test
+    fun `S3에서 이미지 객체를 새 키로 복사한다`() {
+        var copyObjectCalled = false
+        val s3Client = Mockito.mock(
+            S3Client::class.java,
+            Answer { invocation ->
+                if (invocation.method.name == "copyObject") {
+                    copyObjectCalled = true
+                    CopyObjectResponse.builder().build()
+                } else {
+                    Mockito.RETURNS_DEFAULTS.answer(invocation)
+                }
+            },
+        )
+        val storage = S3ImageStorage(
+            s3Client = s3Client,
+            properties = S3ImageStorageProperties(bucket = "ogonggo-images"),
+        )
+
+        storage.copy("images/source.png", "images/target.png", "image/png")
+
+        assertTrue(copyObjectCalled)
     }
 }

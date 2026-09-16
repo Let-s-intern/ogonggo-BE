@@ -9,8 +9,6 @@ import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
-import com.ogonggo.core.community.implement.RecruitmentPostCursor
-import com.ogonggo.core.community.implement.cursorKey
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -19,7 +17,7 @@ import com.ogonggo.userapi.community.business.RecruitmentPostContactResult
 import com.ogonggo.userapi.community.business.RecruitmentPostDetailResult
 import com.ogonggo.userapi.community.business.RecruitmentPostListQuery
 import com.ogonggo.userapi.community.business.RecruitmentPostService
-import com.ogonggo.userapi.community.business.RecruitmentPostCursorPageResult
+import com.ogonggo.userapi.community.business.RecruitmentPostPageResult
 import com.ogonggo.userapi.community.business.RecruitmentPostSummary
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
@@ -92,31 +90,25 @@ class RecruitmentPostControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `모집글 목록을 커서와 enum 필터로 조회한다`() {
+    fun `모집글 목록을 페이지와 enum 필터로 조회한다`() {
         val filter = RecruitmentPostListFilter(
             recruitmentTypes = setOf(RecruitmentType.STUDY, RecruitmentType.SIDE_PROJECT),
             progressMethods = setOf(ProgressMethod.ONLINE),
             recruitmentStatuses = setOf(RecruitmentStatus.RECRUITING),
             positions = setOf(RecruitmentPosition.BACKEND),
         )
-        val cursor = RecruitmentPostCursor(
-            queryKey = filter.cursorKey(RecruitmentPostSortType.DEADLINE),
-            sortType = RecruitmentPostSortType.DEADLINE,
-            deadline = LocalDate.of(2026, 9, 30),
-            id = 13L,
-        )
         Mockito.`when`(
             recruitmentPostService.getRecruitmentPosts(
                 null,
                 RecruitmentPostListQuery(
-                    cursor = cursor,
+                    page = 1,
                     size = 2,
                     sortType = RecruitmentPostSortType.DEADLINE,
                     filter = filter,
                 ),
             ),
         ).thenReturn(
-            RecruitmentPostCursorPageResult(
+            RecruitmentPostPageResult(
                 items = listOf(
                     RecruitmentPostSummary(
                         id = 12L,
@@ -136,14 +128,16 @@ class RecruitmentPostControllerTest @Autowired constructor(
                         recruitmentEndDate = LocalDate.of(2026, 9, 30),
                     ),
                 ),
-                hasNext = true,
-                nextCursor = cursor,
+                page = 1,
+                size = 2,
+                totalElements = 3,
+                totalPages = 2,
             ),
         )
 
         mockMvc.perform(
             get("/api/v1/recruitment-posts")
-                .param("cursor", RecruitmentPostCursorCodec.encode(cursor))
+                .param("page", "2")
                 .param("size", "2")
                 .param("sort", "DEADLINE")
                 .param("recruitmentTypes", "STUDY", "SIDE_PROJECT")
@@ -158,12 +152,14 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].author.nickname").value("홍길동"))
             .andExpect(jsonPath("$.data.items[0].author.profileImageUrl").value("https://cdn.example.com/17.png"))
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
-            .andExpect(jsonPath("$.data.hasNext").value(true))
-            .andExpect(jsonPath("$.data.nextCursor").isNotEmpty)
+            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
+            .andExpect(jsonPath("$.data.pageInfo.pageSize").value(2))
+            .andExpect(jsonPath("$.data.pageInfo.totalElements").value(3))
+            .andExpect(jsonPath("$.data.pageInfo.totalPages").value(2))
 
         Mockito.verify(recruitmentPostService).getRecruitmentPosts(
             null,
-            RecruitmentPostListQuery(cursor, 2, RecruitmentPostSortType.DEADLINE, filter),
+            RecruitmentPostListQuery(1, 2, RecruitmentPostSortType.DEADLINE, filter),
         )
     }
 
@@ -173,13 +169,13 @@ class RecruitmentPostControllerTest @Autowired constructor(
             recruitmentPostService.getRecruitmentPosts(
                 null,
                 RecruitmentPostListQuery(
-                    cursor = null,
+                    page = 0,
                     size = 10,
                     sortType = RecruitmentPostSortType.LATEST,
                     filter = RecruitmentPostListFilter(),
                 ),
             ),
-        ).thenReturn(RecruitmentPostCursorPageResult(emptyList(), false, null))
+        ).thenReturn(RecruitmentPostPageResult(emptyList(), 0, 10, 0, 0))
 
         mockMvc.perform(get("/api/v1/recruitment-posts"))
             .andExpect(status().isOk)
@@ -196,8 +192,8 @@ class RecruitmentPostControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `모집글 커서 형식이 올바르지 않으면 400을 반환한다`() {
-        mockMvc.perform(get("/api/v1/recruitment-posts").param("cursor", "invalid"))
+    fun `모집글 페이지 번호가 1보다 작으면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/recruitment-posts").param("page", "0"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
 

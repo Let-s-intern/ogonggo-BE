@@ -6,7 +6,6 @@ import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostCommentCursor
 import com.ogonggo.core.community.implement.RecruitmentPostCommentPage
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReader
 import com.ogonggo.core.community.implement.RecruitmentPostCommentRemover
@@ -44,25 +43,27 @@ class RecruitmentPostCommentService(
     fun readComments(
         userId: Long?,
         postId: Long,
-        cursor: RecruitmentPostCommentCursor?,
+        page: Int,
         size: Int,
     ): RecruitmentPostCommentPageResult {
         postReader.readPublished(postId)
-        val page = commentReader.readRootPage(postId, cursor, size)
-        val parentIds = page.comments.mapNotNull { it.id }
+        val result = commentReader.readRootPage(postId, page, size)
+        val parentIds = result.comments.mapNotNull { it.id }
         val previews = commentReader.readReplyPreviews(postId, parentIds, REPLY_PREVIEW_SIZE)
-        val profiles = readProfiles(page.comments + previews.values.flatMap { it.comments })
+        val profiles = readProfiles(result.comments + previews.values.flatMap { it.comments })
 
         return RecruitmentPostCommentPageResult(
-            items = page.comments.map { comment ->
+            items = result.comments.map { comment ->
                 RecruitmentPostCommentRootResult(
                     comment = comment.toResult(userId, profiles),
                     replies = previews[comment.requiredId()]?.toReplyPageResult(userId, profiles)
                         ?: RecruitmentPostCommentReplyPageResult.EMPTY,
                 )
             },
-            nextCursor = page.nextCursor,
-            hasNext = page.hasNext,
+            page = result.page,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
         )
     }
 
@@ -71,18 +72,20 @@ class RecruitmentPostCommentService(
         userId: Long?,
         postId: Long,
         parentId: Long,
-        cursor: RecruitmentPostCommentCursor?,
+        page: Int,
         size: Int,
     ): RecruitmentPostCommentReplyPageResult {
         postReader.readPublished(postId)
         commentReader.readRoot(postId, parentId)
-        val page = commentReader.readReplyPage(postId, parentId, cursor, size)
-        val profiles = readProfiles(page.comments)
+        val result = commentReader.readReplyPage(postId, parentId, page, size)
+        val profiles = readProfiles(result.comments)
 
         return RecruitmentPostCommentReplyPageResult(
-            items = page.comments.map { it.toResult(userId, profiles) },
-            nextCursor = page.nextCursor,
-            hasNext = page.hasNext,
+            items = result.comments.map { it.toResult(userId, profiles) },
+            page = result.page,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
         )
     }
 
@@ -170,8 +173,10 @@ class RecruitmentPostCommentService(
         profiles: Map<Long, UserProfileDto>,
     ): RecruitmentPostCommentReplyPageResult = RecruitmentPostCommentReplyPageResult(
         items = comments.map { it.toResult(viewerUserId, profiles) },
-        nextCursor = nextCursor,
-        hasNext = hasNext,
+        page = page,
+        size = size,
+        totalElements = totalElements,
+        totalPages = totalPages,
     )
 
     private fun RecruitmentPostComment.requiredId(): Long =
@@ -184,20 +189,26 @@ class RecruitmentPostCommentService(
 
 data class RecruitmentPostCommentPageResult(
     val items: List<RecruitmentPostCommentRootResult>,
-    val nextCursor: RecruitmentPostCommentCursor?,
-    val hasNext: Boolean,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )
 
 data class RecruitmentPostCommentReplyPageResult(
     val items: List<RecruitmentPostCommentResult>,
-    val nextCursor: RecruitmentPostCommentCursor?,
-    val hasNext: Boolean,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 ) {
     companion object {
         val EMPTY = RecruitmentPostCommentReplyPageResult(
             items = emptyList(),
-            nextCursor = null,
-            hasNext = false,
+            page = 0,
+            size = 5,
+            totalElements = 0,
+            totalPages = 0,
         )
     }
 }

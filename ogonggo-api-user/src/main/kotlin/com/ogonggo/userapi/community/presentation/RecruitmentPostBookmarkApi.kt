@@ -2,7 +2,7 @@ package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
-import com.ogonggo.userapi.response.CursorPageResponse
+import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.ErrorResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -25,13 +25,13 @@ interface RecruitmentPostBookmarkApi {
     @Operation(
         operationId = "listMyRecruitmentPostBookmarks",
         summary = "사이드·스터디 모집글 북마크 목록 조회",
-        description = "북마크를 마지막으로 활성화한 순서의 커서 페이지를 조회합니다.",
+        description = "북마크를 마지막으로 활성화한 순서의 페이지를 조회합니다.",
     )
     fun getBookmarks(
         @Parameter(hidden = true) userId: Long,
-        cursor: String?,
+        @Min(1) page: Int,
         @Min(1) @Max(100) size: Int,
-    ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>>
+    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>>
 
     @Operation(operationId = "createRecruitmentPostBookmark", summary = "사이드·스터디 모집글 북마크 등록")
     @ApiResponses(

@@ -39,6 +39,9 @@ class RecruitmentPostApplicationReader internal constructor(
             totalPages = result.totalPages,
         )
     }
+
+    fun countByPostIds(postIds: Collection<Long>): Map<Long, Long> =
+        applicationQueryRepository.countByPostIds(postIds)
 }
 
 data class RecruitmentPostApplicationPage(

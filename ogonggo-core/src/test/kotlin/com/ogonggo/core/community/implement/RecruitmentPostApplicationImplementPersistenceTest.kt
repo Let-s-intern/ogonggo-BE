@@ -90,6 +90,17 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
         )
 
         assertEquals(listOf(closedPostId, recruitingPostId), result.items.map { it.postId })
+
+        val keywordResult = applicationReader.readPage(
+            userId = userId,
+            recruitmentStatus = null,
+            recruitmentType = null,
+            keyword = "kotlin",
+            page = 0,
+            size = 10,
+        )
+
+        assertEquals(listOf(recruitingPostId), keywordResult.items.map { it.postId })
     }
 
     private fun appendUser(): Long = checkNotNull(

@@ -17,18 +17,40 @@ class RecruitmentPostManager internal constructor(
             capacity = command.capacity,
             progressMethod = command.progressMethod,
             activityDurationMonths = command.activityDurationMonths,
-            technologyStacks = command.technologyStacks,
+            technologyStacks = command.technologyStacks.orEmpty(),
             summary = command.summary,
             content = command.content,
             eligibilityAndSelectionProcess = command.eligibilityAndSelectionProcess,
             recruitmentStartDate = command.recruitmentStartDate,
             recruitmentEndDate = command.recruitmentEndDate,
-            positions = command.positions,
+            positions = command.positions.orEmpty(),
             contactMethod = command.contactMethod,
             contactValue = command.contactValue,
         )
         postRepository.save(post)
     }
+
+    fun updateDraft(post: RecruitmentPost, command: RecruitmentPostUpdateCommand) {
+        post.updateDraft(
+            title = command.title,
+            recruitmentType = command.recruitmentType,
+            capacity = command.capacity,
+            progressMethod = command.progressMethod,
+            activityDurationMonths = command.activityDurationMonths,
+            technologyStacks = command.technologyStacks.orEmpty(),
+            summary = command.summary,
+            content = command.content,
+            eligibilityAndSelectionProcess = command.eligibilityAndSelectionProcess,
+            recruitmentStartDate = command.recruitmentStartDate,
+            recruitmentEndDate = command.recruitmentEndDate,
+            positions = command.positions.orEmpty(),
+            contactMethod = command.contactMethod,
+            contactValue = command.contactValue,
+        )
+        postRepository.save(post)
+    }
+
+    fun copyAsDraft(post: RecruitmentPost): RecruitmentPost = postRepository.save(post.copyAsDraft())
 
     fun delete(post: RecruitmentPost, deletedAt: LocalDateTime) {
         post.delete(deletedAt)
@@ -38,6 +60,8 @@ class RecruitmentPostManager internal constructor(
     fun close(post: RecruitmentPost, closedAt: LocalDateTime) = change(post) { close(closedAt) }
 
     fun reopen(post: RecruitmentPost) = change(post) { reopen() }
+
+    fun publish(post: RecruitmentPost) = change(post) { publish() }
 
     private fun change(post: RecruitmentPost, change: RecruitmentPost.() -> Unit) {
         post.change()

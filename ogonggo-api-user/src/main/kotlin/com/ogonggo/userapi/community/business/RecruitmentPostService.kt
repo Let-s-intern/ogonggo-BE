@@ -1,13 +1,15 @@
 package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostReader
-import com.ogonggo.core.community.implement.cursorKey
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -34,6 +36,7 @@ class RecruitmentPostService(
     private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
     private val userProfileReader: UserProfileReader,
+    private val applicationReader: RecruitmentPostApplicationReader,
 ) {
 
     @Transactional(readOnly = true)
@@ -42,26 +45,29 @@ class RecruitmentPostService(
     @Transactional(readOnly = true)
     fun getRecruitmentPost(userId: Long?, postId: Long): RecruitmentPostDetailResult {
         val post = postReader.readPublished(postId)
+        val metric = postMetricReader.read(postId)
         val result = RecruitmentPostDetailResult.from(
             post = post,
-            metric = postMetricReader.read(postId),
+            metric = metric,
             author = RecruitmentPostAuthorResult.from(
                 userId = post.authorUserId,
                 profile = userProfileReader.read(post.authorUserId),
             ),
             bookmarked = userId != null && postBookmarkReader.readBookmarkedPostIds(userId, listOf(postId)).contains(postId),
         )
-        eventPublisher.publishEvent(RecruitmentPostViewedEvent(result.id))
-        return result
+        return result.copy(
+            bookmarkCount = if (userId != null) metric.bookmarkCount else 0L,
+        )
+            .also { eventPublisher.publishEvent(RecruitmentPostViewedEvent(it.id)) }
     }
 
     @Transactional(readOnly = true)
-    fun getRecruitmentPosts(query: RecruitmentPostListQuery): RecruitmentPostCursorPageResult =
+    fun getRecruitmentPosts(query: RecruitmentPostListQuery): RecruitmentPostPageResult =
         getRecruitmentPosts(null, query)
 
     @Transactional(readOnly = true)
-    fun getRecruitmentPosts(userId: Long?, query: RecruitmentPostListQuery): RecruitmentPostCursorPageResult {
-        val page = postReader.readPublishedCursorPage(query.cursor, query.size, query.filter, query.sortType)
+    fun getRecruitmentPosts(userId: Long?, query: RecruitmentPostListQuery): RecruitmentPostPageResult {
+        val page = postReader.readPublishedPage(query.page, query.size, query.filter, query.sortType)
         val postIds = page.posts.map { checkNotNull(it.id) { "조회된 모집글 식별자가 없습니다." } }
         val authorIds = page.posts.map { it.authorUserId }.distinct()
         val authorsByUserId = userProfileReader.readAll(authorIds).mapValues { (authorId, profile) ->
@@ -71,7 +77,8 @@ class RecruitmentPostService(
             metrics = postMetricReader.readAll(postIds),
             authorsByUserId = authorsByUserId,
             bookmarkedPostIds = if (userId == null) emptySet() else postBookmarkReader.readBookmarkedPostIds(userId, postIds),
-            queryKey = query.filter.cursorKey(query.sortType),
+            applicationCounts = applicationReader.countByPostIds(postIds),
+            includeBookmarkCount = userId != null,
         )
     }
 
@@ -94,12 +101,30 @@ class RecruitmentPostService(
     }
 
     @Transactional
+    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendCommand): Long {
+        verifyActiveUser(userId)
+        val sanitizedCommand = command.copy(
+            authorUserId = userId,
+            content = command.content?.let(contentValidator::validateAndSerialize),
+        )
+        val post = postAppender.appendDraft(sanitizedCommand)
+        imageAssetManager.syncPostImages(
+            ownerUserId = userId,
+            postId = checkNotNull(post.id),
+            previousContent = null,
+            currentContent = sanitizedCommand.content,
+            now = LocalDateTime.now(clock),
+        )
+        return checkNotNull(post.id) { "저장된 모집글 식별자가 없습니다." }
+    }
+
+    @Transactional
     fun update(userId: Long, postId: Long, command: RecruitmentPostUpdateCommand) {
         verifyActiveUser(userId)
         val post = postReader.readOwned(userId, postId)
-        val previousContent = post.content
+        val previousContent = post.content.orEmpty()
         val sanitizedCommand = command.copy(
-            content = contentValidator.validateAndSerialize(command.content),
+            content = command.content?.let(contentValidator::validateAndSerialize),
         )
         imageAssetManager.syncPostImages(
             ownerUserId = userId,
@@ -108,7 +133,11 @@ class RecruitmentPostService(
             currentContent = sanitizedCommand.content,
             now = LocalDateTime.now(clock),
         )
-        postManager.update(post, sanitizedCommand)
+        if (post.publicationStatus == PublicationStatus.DRAFT) {
+            postManager.updateDraft(post, sanitizedCommand)
+        } else {
+            postManager.update(post, sanitizedCommand)
+        }
     }
 
     @Transactional

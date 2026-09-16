@@ -2,6 +2,7 @@ package com.ogonggo.core.image.implement
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAsset
@@ -13,6 +14,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Component
 class ImageAssetManager internal constructor(
@@ -49,7 +51,7 @@ class ImageAssetManager internal constructor(
         ownerUserId: Long,
         postId: Long,
         previousContent: String?,
-        currentContent: String,
+        currentContent: String?,
         now: LocalDateTime,
     ) {
         val previousIds = extractImageReferences(previousContent).keys
@@ -69,6 +71,64 @@ class ImageAssetManager internal constructor(
                 .forEach { it.unreference(now) }
         }
         imageAssetRepository.saveAll(currentAssets)
+    }
+
+    @Transactional
+    fun copyPostImages(
+        ownerUserId: Long,
+        sourcePostId: Long,
+        targetPostId: Long,
+        content: String?,
+    ): String? {
+        val references = extractImageReferences(content)
+        if (references.isEmpty()) return content
+
+        val sourceAssets = imageAssetRepository
+            .findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(references.keys, ownerUserId)
+            .associateBy(ImageAsset::id)
+        if (
+            sourceAssets.size != references.size ||
+            sourceAssets.values.any {
+                it.status != ImageAssetStatus.ATTACHED ||
+                    it.postId != sourcePostId ||
+                    references[it.id] != it.url
+            }
+        ) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+
+        val copiedKeys = mutableListOf<String>()
+        val replacements = mutableMapOf<String, ImageReference>()
+        try {
+            references.keys.forEach { sourceId ->
+                val source = checkNotNull(sourceAssets[sourceId])
+                val targetId = UUID.randomUUID().toString()
+                val extension = source.storageKey.substringAfterLast('.', "bin")
+                val targetKey = "images/$targetId.$extension"
+                val targetUrl = s3ImageStorage.publicUrl(targetKey)
+
+                s3ImageStorage.copy(source.storageKey, targetKey, source.mimeType)
+                copiedKeys += targetKey
+
+                val targetAsset = ImageAsset.uploading(
+                    id = targetId,
+                    ownerUserId = ownerUserId,
+                    storageKey = targetKey,
+                    url = targetUrl,
+                    mimeType = source.mimeType,
+                    size = source.size,
+                ).also {
+                    it.markUploaded()
+                    it.attach(targetPostId)
+                }
+                imageAssetRepository.save(targetAsset)
+                replacements[sourceId] = ImageReference(targetId, targetUrl)
+            }
+            return replaceImageReferences(content, replacements)
+        } catch (exception: Exception) {
+            copiedKeys.asReversed().forEach { key -> runCatching { s3ImageStorage.delete(key) } }
+            throw exception
+        }
     }
 
     @Transactional
@@ -162,4 +222,34 @@ class ImageAssetManager internal constructor(
         }
         node.elements().forEachRemaining { child -> collectImageReferences(child, references) }
     }
+
+    private fun replaceImageReferences(
+        content: String?,
+        replacements: Map<String, ImageReference>,
+    ): String? {
+        if (content.isNullOrBlank() || replacements.isEmpty()) return content
+        val root = objectMapper.readTree(content)
+        replaceImageReferences(root, replacements)
+        return objectMapper.writeValueAsString(root)
+    }
+
+    private fun replaceImageReferences(
+        node: JsonNode,
+        replacements: Map<String, ImageReference>,
+    ) {
+        if (node.isObject && node.path("type").asText() == "image") {
+            val imageId = node.path("imageId").asText(null)
+            replacements[imageId]?.let { replacement ->
+                val objectNode = node as ObjectNode
+                objectNode.put("imageId", replacement.id)
+                objectNode.put("src", replacement.url)
+            }
+        }
+        node.elements().forEachRemaining { child -> replaceImageReferences(child, replacements) }
+    }
+
+    private data class ImageReference(
+        val id: String,
+        val url: String,
+    )
 }

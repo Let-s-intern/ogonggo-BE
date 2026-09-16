@@ -15,12 +15,14 @@ internal class PostMetric(
     val postId: Long,
     viewCount: Long = 0,
     commentCount: Long = 0,
+    bookmarkCount: Long = 0,
 ) : BaseTimeEntity() {
 
     init {
         require(postId > 0) { "모집글 식별자는 양수여야 합니다." }
         require(viewCount >= 0) { "조회 수는 음수일 수 없습니다." }
         require(commentCount >= 0) { "댓글 수는 음수일 수 없습니다." }
+        require(bookmarkCount >= 0) { "북마크 수는 음수일 수 없습니다." }
     }
 
     @Id
@@ -34,5 +36,9 @@ internal class PostMetric(
 
     @Column(name = "comment_count", nullable = false)
     var commentCount: Long = commentCount
+        protected set
+
+    @Column(name = "bookmark_count", nullable = false, columnDefinition = "bigint default 0")
+    var bookmarkCount: Long = bookmarkCount
         protected set
 }

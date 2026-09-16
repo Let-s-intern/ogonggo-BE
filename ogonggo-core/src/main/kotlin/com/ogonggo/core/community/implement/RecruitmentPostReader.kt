@@ -41,25 +41,25 @@ class RecruitmentPostReader internal constructor(
         postRepository.findOwnedByIdForDelete(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
-    fun readPublishedCursorPage(
-        cursor: RecruitmentPostCursor?,
+    fun readPublishedPage(
+        page: Int,
         size: Int,
         filter: RecruitmentPostListFilter,
         sortType: RecruitmentPostSortType,
-    ): RecruitmentPostCursorPage {
-        validatePageRequest(size)
-        require(cursor == null || cursor.sortType == sortType) {
-            "모집글 커서의 정렬 기준이 현재 요청과 다릅니다."
-        }
-        require(cursor == null || cursor.queryKey == filter.cursorKey(sortType)) {
-            "모집글 커서의 조회 조건이 현재 요청과 다릅니다."
-        }
-
-        val posts = postQueryRepository.findPublishedCursorPage(cursor, size, filter, sortType)
-        return RecruitmentPostCursorPage(
-            posts = posts.take(size),
-            hasNext = posts.size > size,
+    ): RecruitmentPostPage {
+        validatePageRequest(page, size)
+        val result = postQueryRepository.findPublishedPage(
+            page = page,
+            size = size,
+            filter = filter,
             sortType = sortType,
+        )
+        return RecruitmentPostPage(
+            posts = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
         )
     }
 }
@@ -71,20 +71,15 @@ data class RecruitmentPostListFilter(
     val positions: Set<RecruitmentPosition> = emptySet(),
 )
 
-data class RecruitmentPostCursorPage(
+data class RecruitmentPostPage(
     val posts: List<RecruitmentPost>,
-    val hasNext: Boolean,
-    val sortType: RecruitmentPostSortType,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )
 
-private fun validatePageRequest(size: Int) {
+private fun validatePageRequest(page: Int, size: Int) {
+    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
     require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
-}
-
-fun RecruitmentPostListFilter.cursorKey(sortType: RecruitmentPostSortType): String = buildString {
-    append(sortType.name)
-    append("|types=").append(recruitmentTypes.map { it.name }.sorted().joinToString(","))
-    append("|progress=").append(progressMethods.map { it.name }.sorted().joinToString(","))
-    append("|statuses=").append(recruitmentStatuses.map { it.name }.sorted().joinToString(","))
-    append("|positions=").append(positions.map { it.name }.sorted().joinToString(","))
 }

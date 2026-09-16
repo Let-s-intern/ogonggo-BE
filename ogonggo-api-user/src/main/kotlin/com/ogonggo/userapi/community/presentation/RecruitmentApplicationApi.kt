@@ -74,7 +74,12 @@ interface RecruitmentApplicationApi {
     @Operation(
         operationId = "listMyRecruitmentApplications",
         summary = "내 모집글 지원 이력 목록 조회",
-        description = "모집글의 외부 지원 링크를 연 이력을 최근 접근순으로 조회합니다. 실제 지원 상태는 포함하지 않습니다.",
+        description = """
+            모집글의 외부 지원 링크를 연 이력을 최근 접근순으로 조회합니다. 실제 지원 상태는 포함하지 않습니다.
+
+            keyword를 보내면 모집글 제목에 포함되는지 대소문자를 구분하지 않고 검색합니다.
+            검색어는 2자 이상 100자 이하여야 하며, 모집 상태·모집 유형 필터와 함께 사용할 수 있습니다.
+        """,
     )
     @ApiResponses(
         value = [
