@@ -81,6 +81,16 @@ data class RecruitmentPostDraftAppendCommand(
     )
 }
 
+sealed interface RecruitmentPostSaveCommand {
+    data class Draft(
+        val command: RecruitmentPostDraftAppendCommand,
+    ) : RecruitmentPostSaveCommand
+
+    data class Published(
+        val command: RecruitmentPostAppendCommand,
+    ) : RecruitmentPostSaveCommand
+}
+
 data class RecruitmentPostUpdateCommand(
     val title: String,
     val recruitmentType: RecruitmentType?,

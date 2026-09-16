@@ -3,6 +3,7 @@ package com.ogonggo.core.community.implement
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
+import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.common.CoreJpaConfiguration
@@ -85,6 +86,29 @@ internal class PostImplementPersistenceTest @Autowired constructor(
 
         assertEquals(firstDeletedAt, reloadedPost.deletedAt)
         assertEquals(1, postRepository.count())
+    }
+
+    @Test
+    fun `모집 종료일이 지난 공개 모집글만 자동 마감한다`() {
+        val expiredPost = postAppender.append(createCommand())
+        val notExpiredPost = postAppender.append(
+            createCommand().copy(recruitmentEndDate = LocalDate.of(2026, 10, 1)),
+        )
+        val closedAt = LocalDateTime.of(2026, 10, 1, 0, 0)
+
+        val closedCount = postManager.closeExpired(
+            today = LocalDate.of(2026, 10, 1),
+            closedAt = closedAt,
+        )
+        postRepository.flush()
+
+        val reloadedExpiredPost = postRepository.findById(checkNotNull(expiredPost.id)).orElseThrow()
+        val reloadedNotExpiredPost = postRepository.findById(checkNotNull(notExpiredPost.id)).orElseThrow()
+        assertEquals(1, closedCount)
+        assertEquals(RecruitmentStatus.CLOSED, reloadedExpiredPost.recruitmentStatus)
+        assertEquals(closedAt, reloadedExpiredPost.closedAt)
+        assertEquals(RecruitmentStatus.RECRUITING, reloadedNotExpiredPost.recruitmentStatus)
+        assertEquals(null, reloadedNotExpiredPost.closedAt)
     }
 
     private fun createCommand() = RecruitmentPostAppendCommand(

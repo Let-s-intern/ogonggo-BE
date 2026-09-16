@@ -107,7 +107,7 @@ interface RecruitmentApplicationApi {
             ),
         ],
     )
-    @GetMapping("/api/v1/users/me/recruitment/applications")
+    @GetMapping("/api/v1/me/recruitment-applications")
     fun getApplications(
         @Parameter(hidden = true) userId: Long,
         @Min(1) page: Int,
@@ -149,7 +149,7 @@ interface RecruitmentApplicationApi {
             ),
         ],
     )
-    @PatchMapping("/api/v1/users/me/recruitment/applications/{postId}")
+    @PatchMapping("/api/v1/me/recruitment-applications/{postId}")
     fun updateApplicationStatus(
         @Parameter(hidden = true) userId: Long,
         @PathVariable("postId") @Positive postId: Long,
@@ -181,7 +181,7 @@ interface RecruitmentApplicationApi {
             ),
         ],
     )
-    @DeleteMapping("/api/v1/users/me/recruitment/applications/{postId}")
+    @DeleteMapping("/api/v1/me/recruitment-applications/{postId}")
     fun deleteApplication(
         @Parameter(hidden = true) userId: Long,
         @PathVariable("postId") @Positive postId: Long,

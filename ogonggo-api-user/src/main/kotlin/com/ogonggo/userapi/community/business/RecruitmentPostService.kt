@@ -9,10 +9,14 @@ import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostReader
+import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.community.domain.PublicationStatus
+import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -104,6 +108,12 @@ class RecruitmentPostService(
     }
 
     @Transactional
+    fun save(userId: Long, command: RecruitmentPostSaveCommand): Long = when (command) {
+        is RecruitmentPostSaveCommand.Draft -> createDraft(userId, command.command)
+        is RecruitmentPostSaveCommand.Published -> create(userId, command.command)
+    }
+
+    @Transactional
     fun createDraft(userId: Long, command: RecruitmentPostDraftAppendCommand): Long {
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
@@ -122,7 +132,12 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun update(userId: Long, postId: Long, command: RecruitmentPostUpdateCommand) {
+    fun update(
+        userId: Long,
+        postId: Long,
+        command: RecruitmentPostUpdateCommand,
+        saveMode: RecruitmentPostSaveMode? = null,
+    ) {
         verifyActiveUser(userId)
         val post = postReader.readOwnedForUpdate(userId, postId)
         val previousContent = post.content.orEmpty()
@@ -138,6 +153,16 @@ class RecruitmentPostService(
         )
         if (post.publicationStatus == PublicationStatus.DRAFT) {
             postManager.updateDraft(post, sanitizedCommand)
+            if (saveMode == RecruitmentPostSaveMode.PUBLISH) {
+                try {
+                    postManager.publish(post)
+                    postMetricManager.initialize(postId)
+                } catch (_: IllegalArgumentException) {
+                    throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
+                } catch (_: IllegalStateException) {
+                    throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
+                }
+            }
         } else {
             postManager.update(post, sanitizedCommand)
         }

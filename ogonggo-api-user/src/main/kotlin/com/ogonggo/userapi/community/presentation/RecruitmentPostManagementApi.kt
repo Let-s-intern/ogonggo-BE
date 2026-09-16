@@ -93,7 +93,7 @@ interface RecruitmentPostManagementApi {
             ),
         ],
     )
-    @PostMapping("/{postId}/copy")
+    @PostMapping("/{postId}/copies")
     fun copyMyRecruitmentPost(
         @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
         @PathVariable("postId") @Min(1) postId: Long,

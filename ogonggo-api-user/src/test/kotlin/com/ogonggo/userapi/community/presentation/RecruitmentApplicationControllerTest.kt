@@ -70,7 +70,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
     fun `내 모집글 지원 이력 목록을 페이지로 조회한다`() {
         Mockito.`when`(applicationService.getApplications(USER_ID, null, null, null, 0, 10)).thenReturn(pageResult())
 
-        mockMvc.perform(get("/api/v1/users/me/recruitment/applications").with(authenticatedUser()))
+        mockMvc.perform(get("/api/v1/me/recruitment-applications").with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.items[0].postId").value(POST_ID))
@@ -99,7 +99,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
         ).thenReturn(pageResult())
 
         mockMvc.perform(
-            get("/api/v1/users/me/recruitment/applications")
+            get("/api/v1/me/recruitment-applications")
                 .param("page", "2")
                 .param("size", "20")
                 .param("recruitmentStatus", "RECRUITING")
@@ -124,7 +124,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
     fun `지원 이력 목록 검색어가 허용 길이를 벗어나면 400으로 응답한다`() {
         listOf("", "가", " 가 ", "가".repeat(101)).forEach { keyword ->
             mockMvc.perform(
-                get("/api/v1/users/me/recruitment/applications")
+                get("/api/v1/me/recruitment-applications")
                     .param("keyword", keyword)
                     .with(authenticatedUser()),
             )
@@ -143,15 +143,15 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
 
-        mockMvc.perform(get("/api/v1/users/me/recruitment/applications"))
+        mockMvc.perform(get("/api/v1/me/recruitment-applications"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
-        mockMvc.perform(patch("/api/v1/users/me/recruitment/applications/$POST_ID"))
+        mockMvc.perform(patch("/api/v1/me/recruitment-applications/$POST_ID"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
-        mockMvc.perform(delete("/api/v1/users/me/recruitment/applications/$POST_ID"))
+        mockMvc.perform(delete("/api/v1/me/recruitment-applications/$POST_ID"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
     }
@@ -159,7 +159,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
     @Test
     fun `지원 상태를 변경한다`() {
         mockMvc.perform(
-            patch("/api/v1/users/me/recruitment/applications/$POST_ID")
+            patch("/api/v1/me/recruitment-applications/$POST_ID")
                 .with(authenticatedUser())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"applicationStatus":"COMPLETED"}"""),
@@ -177,7 +177,7 @@ class RecruitmentApplicationControllerTest @Autowired constructor(
     @Test
     fun `지원 이력을 삭제한다`() {
         mockMvc.perform(
-            delete("/api/v1/users/me/recruitment/applications/$POST_ID")
+            delete("/api/v1/me/recruitment-applications/$POST_ID")
                 .with(authenticatedUser()),
         )
             .andExpect(status().isOk)

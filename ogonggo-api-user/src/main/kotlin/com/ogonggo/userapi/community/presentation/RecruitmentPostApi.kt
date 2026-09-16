@@ -83,7 +83,10 @@ interface RecruitmentPostApi {
         @ParameterObject @Valid @ModelAttribute request: RecruitmentPostListRequest,
     ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>>
 
-    @Operation(summary = "사이드 프로젝트·스터디 모집글 생성")
+    @Operation(
+        summary = "사이드 프로젝트·스터디 모집글 생성",
+        description = "saveMode가 DRAFT면 제목 중심으로 임시저장하고, PUBLISH면 게시 필수값과 운영 정책 동의를 검증한 뒤 공개합니다.",
+    )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
         value = [
@@ -106,7 +109,10 @@ interface RecruitmentPostApi {
         @RequestBody @Valid request: CreateRecruitmentPostRequest,
     ): ResponseEntity<SuccessResponse<CreateRecruitmentPostResponse>>
 
-    @Operation(summary = "사이드 프로젝트·스터디 모집글 수정")
+    @Operation(
+        summary = "사이드 프로젝트·스터디 모집글 수정",
+        description = "saveMode가 PUBLISH면 임시저장 모집글을 갱신 후 게시 상태로 전환합니다. 생략하면 기존 저장 동작을 따릅니다.",
+    )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
         value = [

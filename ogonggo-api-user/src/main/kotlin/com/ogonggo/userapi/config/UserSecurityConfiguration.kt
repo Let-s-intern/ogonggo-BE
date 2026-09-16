@@ -77,8 +77,8 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").permitAll()
                 it.requestMatchers(
-                    "/api/v1/users/me/recruitment/applications",
-                    "/api/v1/users/me/recruitment/applications/**",
+                    "/api/v1/me/recruitment-applications",
+                    "/api/v1/me/recruitment-applications/**",
                 ).authenticated()
                 it.requestMatchers(
                     HttpMethod.GET,
@@ -88,7 +88,7 @@ class UserSecurityConfiguration {
                 it.requestMatchers(
                     HttpMethod.POST,
                     "/api/v1/me/recruitment-posts/drafts",
-                    "/api/v1/me/recruitment-posts/*/copy",
+                    "/api/v1/me/recruitment-posts/*/copies",
                     "/api/v1/me/recruitment-posts/*/publish",
                 ).authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/recruitment-posts/*/applications").authenticated()
@@ -105,7 +105,11 @@ class UserSecurityConfiguration {
                 // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/bootcamps/*/application-url-clicks").authenticated()
                 it.requestMatchers("/api/v1/bootcamp-bookmarks", "/api/v1/bootcamp-bookmarks/**").authenticated()
-                it.requestMatchers("/api/v1/recruitment-post-bookmarks", "/api/v1/recruitment-post-bookmarks/**").authenticated()
+                it.requestMatchers(
+                    "/api/v1/recruitment-post-bookmarks",
+                    "/api/v1/recruitment-post-bookmarks/**",
+                    "/api/v1/recruitment-posts/*/bookmarks/me",
+                ).authenticated()
                 it.anyRequest().denyAll()
             }
             .addFilterBefore(

@@ -4,6 +4,7 @@ import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.RecruitmentPostBookmark
 import com.ogonggo.core.community.domain.PostMetric
 import com.ogonggo.core.community.domain.PublicationStatus
+import com.ogonggo.core.community.domain.RecruitmentStatus
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Page
 import jakarta.persistence.LockModeType
@@ -13,10 +14,32 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 internal interface RecruitmentPostJpaRepository : JpaRepository<RecruitmentPost, Long>, JpaSpecificationExecutor<RecruitmentPost> {
     fun findByIdAndPublicationStatusAndDeletedAtIsNull(id: Long, publicationStatus: PublicationStatus): RecruitmentPost?
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPost post
+        set post.recruitmentStatus = :closedStatus,
+            post.closedAt = :closedAt,
+            post.updatedAt = :closedAt
+        where post.publicationStatus = :publishedStatus
+          and post.recruitmentStatus = :recruitingStatus
+          and post.recruitmentEndDate < :today
+          and post.deletedAt is null
+        """,
+    )
+    fun closeExpired(
+        @Param("today") today: LocalDate,
+        @Param("closedAt") closedAt: LocalDateTime,
+        @Param("publishedStatus") publishedStatus: PublicationStatus = PublicationStatus.PUBLISHED,
+        @Param("recruitingStatus") recruitingStatus: RecruitmentStatus = RecruitmentStatus.RECRUITING,
+        @Param("closedStatus") closedStatus: RecruitmentStatus = RecruitmentStatus.CLOSED,
+    ): Int
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(

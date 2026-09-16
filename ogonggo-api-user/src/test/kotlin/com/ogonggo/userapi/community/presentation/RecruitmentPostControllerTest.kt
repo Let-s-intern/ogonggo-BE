@@ -7,6 +7,8 @@ import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
@@ -214,7 +216,9 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @Test
     fun `인증된 사용자가 모집글을 생성하면 201과 식별자를 반환한다`() {
-        Mockito.`when`(recruitmentPostService.create(USER_ID, createCommand())).thenReturn(12L)
+        Mockito.`when`(
+            recruitmentPostService.save(USER_ID, RecruitmentPostSaveCommand.Published(createCommand())),
+        ).thenReturn(12L)
 
         mockMvc.perform(
             post("/api/v1/recruitment-posts")
@@ -225,6 +229,39 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.id").value(12))
+    }
+
+    @Test
+    fun `제목만 입력한 모집글은 생성 API에서 임시저장한다`() {
+        val command = RecruitmentPostDraftAppendCommand(
+            authorUserId = USER_ID,
+            title = "작성 중인 모집글",
+            recruitmentType = null,
+            capacity = null,
+            progressMethod = null,
+            activityDurationMonths = null,
+            technologyStacks = emptyList(),
+            summary = null,
+            content = null,
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = null,
+            recruitmentEndDate = null,
+            positions = emptyList(),
+            contactMethod = null,
+            contactValue = null,
+        )
+        Mockito.`when`(
+            recruitmentPostService.save(USER_ID, RecruitmentPostSaveCommand.Draft(command)),
+        ).thenReturn(13L)
+
+        mockMvc.perform(
+            post("/api/v1/recruitment-posts")
+                .with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"작성 중인 모집글\",\"saveMode\":\"DRAFT\"}"),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(13))
     }
 
     @Test
@@ -249,7 +286,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
 
-        Mockito.verify(recruitmentPostService).update(USER_ID, 12L, updateCommand())
+        Mockito.verify(recruitmentPostService).update(USER_ID, 12L, updateCommand(), null)
     }
 
     @Test

@@ -178,7 +178,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
     fun `내 모집글을 새 임시저장 글로 복사하고 작성 폼 전체를 반환한다`() {
         Mockito.`when`(managementService.copy(USER_ID, POST_ID)).thenReturn(copyResult())
 
-        mockMvc.perform(post("/api/v1/me/recruitment-posts/$POST_ID/copy").with(authenticatedUser()))
+        mockMvc.perform(post("/api/v1/me/recruitment-posts/$POST_ID/copies").with(authenticatedUser()))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.postId").value(101))
@@ -211,7 +211,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
 
     @Test
     fun `인증 없이 모집글 복사를 요청하면 인증 오류를 반환한다`() {
-        mockMvc.perform(post("/api/v1/me/recruitment-posts/$POST_ID/copy"))
+        mockMvc.perform(post("/api/v1/me/recruitment-posts/$POST_ID/copies"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 

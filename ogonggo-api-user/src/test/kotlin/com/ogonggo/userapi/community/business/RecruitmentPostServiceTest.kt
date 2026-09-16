@@ -3,6 +3,7 @@ package com.ogonggo.userapi.community.business
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -21,6 +22,7 @@ import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.community.implement.RecruitmentPostPage
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
+import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -233,6 +235,56 @@ class RecruitmentPostServiceTest {
         assertEquals(12L, postId)
         Mockito.verify(postAppender).appendDraft(command)
         Mockito.verify(imageAssetManager).syncPostImages(USER_ID, 12L, null, null, NOW)
+    }
+
+    @Test
+    fun `저장 명령이 임시저장 분기로 전달된다`() {
+        val command = RecruitmentPostDraftAppendCommand(
+            authorUserId = USER_ID,
+            title = "작성 중인 모집글",
+            recruitmentType = null,
+            capacity = null,
+            progressMethod = null,
+            activityDurationMonths = null,
+            technologyStacks = emptyList(),
+            summary = null,
+            content = null,
+            eligibilityAndSelectionProcess = null,
+            recruitmentStartDate = null,
+            recruitmentEndDate = null,
+            positions = emptyList(),
+            contactMethod = null,
+            contactValue = null,
+        )
+        val savedPost = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postAppender.appendDraft(command)).thenReturn(savedPost)
+        Mockito.`when`(savedPost.id).thenReturn(12L)
+
+        val postId = service.save(USER_ID, RecruitmentPostSaveCommand.Draft(command))
+
+        assertEquals(12L, postId)
+        Mockito.verify(postAppender).appendDraft(command)
+    }
+
+    @Test
+    fun `임시저장 모집글을 게시 저장하면 갱신 후 게시하고 지표를 초기화한다`() {
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        val command = updateCommand()
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.publicationStatus).thenReturn(PublicationStatus.DRAFT)
+
+        service.update(
+            userId = USER_ID,
+            postId = 12L,
+            command = command,
+            saveMode = RecruitmentPostSaveMode.PUBLISH,
+        )
+
+        Mockito.verify(postManager).updateDraft(post, command)
+        Mockito.verify(postManager).publish(post)
+        Mockito.verify(postMetricManager).initialize(12L)
     }
 
     @Test

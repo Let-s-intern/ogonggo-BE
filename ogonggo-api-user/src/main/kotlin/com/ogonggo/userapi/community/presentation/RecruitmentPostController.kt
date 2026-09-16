@@ -56,7 +56,7 @@ class RecruitmentPostController(
         request: CreateRecruitmentPostRequest,
     ): ResponseEntity<SuccessResponse<CreateRecruitmentPostResponse>> =
         SuccessResponse.created(
-            CreateRecruitmentPostResponse(recruitmentPostService.create(userId, request.toCommand(userId))),
+            CreateRecruitmentPostResponse(recruitmentPostService.save(userId, request.toSaveCommand(userId))),
         )
 
     override fun updateRecruitmentPost(
@@ -64,7 +64,7 @@ class RecruitmentPostController(
         postId: Long,
         request: UpdateRecruitmentPostRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        recruitmentPostService.update(userId, postId, request.toCommand())
+        recruitmentPostService.update(userId, postId, request.toCommand(), request.saveMode)
         return SuccessResponse.ok()
     }
 
