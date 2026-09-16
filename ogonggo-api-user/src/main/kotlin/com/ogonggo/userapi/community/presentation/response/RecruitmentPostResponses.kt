@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.community.presentation.response
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
@@ -30,11 +32,14 @@ data class RecruitmentPostDetailResponse(
     val positions: List<RecruitmentPosition>,
     val contact: RecruitmentPostContactResponse,
     val summary: String,
-    val content: String,
+    val content: JsonNode,
     val eligibilityAndSelectionProcess: String?,
 ) {
     companion object {
-        fun from(result: RecruitmentPostDetailResult): RecruitmentPostDetailResponse =
+        fun from(
+            result: RecruitmentPostDetailResult,
+            objectMapper: ObjectMapper,
+        ): RecruitmentPostDetailResponse =
             RecruitmentPostDetailResponse(
                 id = result.id,
                 author = RecruitmentPostAuthorResponse.from(result.author),
@@ -50,7 +55,7 @@ data class RecruitmentPostDetailResponse(
                 positions = result.positions,
                 contact = RecruitmentPostContactResponse.from(result.contact),
                 summary = result.summary,
-                content = result.content,
+                content = objectMapper.readTree(result.content),
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
             )
     }

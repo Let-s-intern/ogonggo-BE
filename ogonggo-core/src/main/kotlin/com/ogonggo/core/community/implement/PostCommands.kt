@@ -42,3 +42,20 @@ data class PostAppendCommand(
         contactValue = contactValue,
     )
 }
+
+data class PostUpdateCommand(
+    val title: String,
+    val recruitmentType: RecruitmentType,
+    val capacity: Int,
+    val progressMethod: ProgressMethod,
+    val activityDurationMonths: Int,
+    val technologyStacks: List<String>,
+    val summary: String,
+    val content: String,
+    val eligibilityAndSelectionProcess: String?,
+    val recruitmentStartDate: LocalDate,
+    val recruitmentEndDate: LocalDate,
+    val positions: List<RecruitmentPosition>,
+    val contactMethod: ContactMethod,
+    val contactValue: String,
+)

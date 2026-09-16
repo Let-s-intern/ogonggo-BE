@@ -7,6 +7,7 @@ import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
+import com.ogonggo.core.community.implement.PostUpdateCommand
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
@@ -28,8 +29,10 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -58,7 +61,8 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.id").value(12))
             .andExpect(jsonPath("$.data.author.userId").value(17))
             .andExpect(jsonPath("$.data.contact.method").value("EMAIL"))
-            .andExpect(jsonPath("$.data.content").value("<p>상세 내용</p>"))
+            .andExpect(jsonPath("$.data.content.root.type").value("root"))
+            .andExpect(jsonPath("$.data.content.root.children[0].type").value("paragraph"))
             .andExpect(jsonPath("$.data.eligibilityAndSelectionProcess").doesNotExist())
     }
 
@@ -218,6 +222,66 @@ class RecruitmentPostControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `작성자가 모집글을 수정하면 200을 반환한다`() {
+        mockMvc.perform(
+            put("/api/v1/recruitment-posts/12")
+                .with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(UPDATE_BODY),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(recruitmentPostService).update(USER_ID, 12L, updateCommand())
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 모집글을 수정할 수 없다`() {
+        mockMvc.perform(
+            put("/api/v1/recruitment-posts/12")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(UPDATE_BODY),
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+    }
+
+    @Test
+    fun `작성자가 모집글을 삭제하면 200과 빈 데이터를 반환한다`() {
+        mockMvc.perform(
+            delete("/api/v1/recruitment-posts/12")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
+            .andExpect(jsonPath("$.data").doesNotExist())
+
+        Mockito.verify(recruitmentPostService).delete(USER_ID, 12L)
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 모집글을 삭제할 수 없다`() {
+        mockMvc.perform(delete("/api/v1/recruitment-posts/12"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
+    fun `삭제할 모집글 식별자가 1보다 작으면 400을 반환한다`() {
+        mockMvc.perform(
+            delete("/api/v1/recruitment-posts/0")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
     fun `필수 제목이 없으면 400을 반환하고 서비스를 호출하지 않는다`() {
         mockMvc.perform(
             post("/api/v1/recruitment-posts")
@@ -258,13 +322,30 @@ class RecruitmentPostControllerTest @Autowired constructor(
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin", "Spring"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = EDITOR_STATE_JSON,
         eligibilityAndSelectionProcess = "주 1회 회의에 참여할 수 있는 분",
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),
         positions = listOf(RecruitmentPosition.BACKEND),
         contactMethod = ContactMethod.EMAIL,
         contactValue = "team@example.com",
+    )
+
+    private fun updateCommand() = PostUpdateCommand(
+        title = "수정된 모집글",
+        recruitmentType = RecruitmentType.STUDY,
+        capacity = 6,
+        progressMethod = ProgressMethod.HYBRID,
+        activityDurationMonths = 4,
+        technologyStacks = listOf("Kotlin"),
+        summary = "수정된 소개",
+        content = EDITOR_STATE_JSON,
+        eligibilityAndSelectionProcess = null,
+        recruitmentStartDate = LocalDate.of(2026, 9, 2),
+        recruitmentEndDate = LocalDate.of(2026, 10, 1),
+        positions = listOf(RecruitmentPosition.FRONTEND),
+        contactMethod = ContactMethod.EMAIL,
+        contactValue = "updated@example.com",
     )
 
     private fun detailResult() = RecruitmentPostDetailResult(
@@ -282,13 +363,17 @@ class RecruitmentPostControllerTest @Autowired constructor(
         positions = listOf(RecruitmentPosition.BACKEND),
         contact = RecruitmentPostContactResult(ContactMethod.EMAIL, "team@example.com"),
         summary = "함께 공부할 분을 모집합니다.",
-        content = "<p>상세 내용</p>",
+        content = EDITOR_STATE_JSON,
         eligibilityAndSelectionProcess = null,
     )
 
     companion object {
         private const val USER_ID = 17L
-        private const val VALID_BODY = """
+        private val EDITOR_STATE_JSON = """
+            {"root":{"children":[{"children":[{"detail":0,"format":0,"mode":"normal","style":"","text":"모집 상세 내용입니다.","type":"text","version":1}],"direction":null,"format":"","indent":0,"textFormat":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}
+        """.trimIndent()
+
+        private val VALID_BODY = """
             {
               "title": "사이드 프로젝트 팀원 모집",
               "recruitmentType": "SIDE_PROJECT",
@@ -297,7 +382,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
               "activityDurationMonths": 3,
               "technologyStacks": ["Kotlin", "Spring"],
               "summary": "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-              "content": "<p>모집 상세 내용입니다.</p>",
+              "content": $EDITOR_STATE_JSON,
               "eligibilityAndSelectionProcess": "주 1회 회의에 참여할 수 있는 분",
               "recruitmentStartDate": "2026-09-01",
               "recruitmentEndDate": "2026-09-30",
@@ -305,6 +390,25 @@ class RecruitmentPostControllerTest @Autowired constructor(
               "contactMethod": "EMAIL",
               "contactValue": "team@example.com",
               "agreedToPolicy": true
+            }
+        """
+
+        private val UPDATE_BODY = """
+            {
+              "title": "수정된 모집글",
+              "recruitmentType": "STUDY",
+              "capacity": 6,
+              "progressMethod": "HYBRID",
+              "activityDurationMonths": 4,
+              "technologyStacks": ["Kotlin"],
+              "summary": "수정된 소개",
+              "content": $EDITOR_STATE_JSON,
+              "eligibilityAndSelectionProcess": null,
+              "recruitmentStartDate": "2026-09-02",
+              "recruitmentEndDate": "2026-10-01",
+              "positions": ["FRONTEND"],
+              "contactMethod": "EMAIL",
+              "contactValue": "updated@example.com"
             }
         """
     }

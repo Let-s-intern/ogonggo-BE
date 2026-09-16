@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.community.business
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.Post
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -8,7 +9,11 @@ import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.PostAppendCommand
 import com.ogonggo.core.community.implement.PostAppender
+import com.ogonggo.core.community.implement.PostManager
 import com.ogonggo.core.community.implement.PostReader
+import com.ogonggo.core.community.implement.PostUpdateCommand
+import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
@@ -16,15 +21,30 @@ import com.ogonggo.core.user.implement.dto.UserAccountDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 class RecruitmentPostServiceTest {
 
     private val userReader = Mockito.mock(UserReader::class.java)
     private val postAppender = Mockito.mock(PostAppender::class.java)
+    private val postManager = Mockito.mock(PostManager::class.java)
     private val postReader = Mockito.mock(PostReader::class.java)
-    private val service = RecruitmentPostService(userReader, postAppender, postReader)
+    private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
+    private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
+    private val service = RecruitmentPostService(
+        userReader,
+        postAppender,
+        postManager,
+        postReader,
+        contentValidator,
+        imageAssetManager,
+        clock,
+    )
 
     @Test
     fun `공개 모집글 상세 조회 결과를 변환한다`() {
@@ -45,7 +65,7 @@ class RecruitmentPostServiceTest {
         Mockito.`when`(post.contactMethod).thenReturn(ContactMethod.EMAIL)
         Mockito.`when`(post.contactValue).thenReturn("team@example.com")
         Mockito.`when`(post.summary).thenReturn("함께 공부할 분을 모집합니다.")
-        Mockito.`when`(post.content).thenReturn("<p>상세 내용</p>")
+        Mockito.`when`(post.content).thenReturn(EDITOR_STATE_JSON)
         Mockito.`when`(post.eligibilityAndSelectionProcess).thenReturn(null)
 
         val result = service.getRecruitmentPost(12L)
@@ -54,7 +74,7 @@ class RecruitmentPostServiceTest {
         assertEquals(USER_ID, result.author.userId)
         assertEquals(listOf(RecruitmentPosition.BACKEND), result.positions)
         assertEquals(ContactMethod.EMAIL, result.contact.method)
-        assertEquals("<p>상세 내용</p>", result.content)
+        assertEquals(EDITOR_STATE_JSON, result.content)
         Mockito.verify(postReader).readPublished(12L)
     }
 
@@ -70,6 +90,59 @@ class RecruitmentPostServiceTest {
 
         assertEquals(12L, postId)
         Mockito.verify(postAppender).append(command.copy(authorUserId = USER_ID))
+    }
+
+    @Test
+    fun `모집글 생성 전에 Lexical EditorState JSON을 검증한다`() {
+        val command = createCommand(authorUserId = USER_ID)
+        val savedPost = Mockito.mock(Post::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        val anyCommand = Mockito.any(PostAppendCommand::class.java) ?: command
+        Mockito.`when`(postAppender.append(anyCommand)).thenReturn(savedPost)
+        Mockito.`when`(savedPost.id).thenReturn(12L)
+
+        service.create(USER_ID, command)
+
+        Mockito.verify(postAppender).append(
+            command.copy(
+                authorUserId = USER_ID,
+                content = EDITOR_STATE_JSON,
+            ),
+        )
+    }
+
+    @Test
+    fun `작성자가 모집글을 수정하면 본문을 검증하고 기존 모집글을 갱신한다`() {
+        // given
+        val post = Mockito.mock(Post::class.java)
+        val command = updateCommand()
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+
+        // when
+        service.update(USER_ID, 12L, command)
+
+        // then
+        Mockito.verify(postManager).update(
+            post,
+            command.copy(content = EDITOR_STATE_JSON),
+        )
+        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+    }
+
+    @Test
+    fun `작성자가 모집글을 삭제하면 삭제용 소유 조회와 삭제를 수행한다`() {
+        // given
+        val post = Mockito.mock(Post::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForDelete(USER_ID, 12L)).thenReturn(post)
+
+        // when
+        service.delete(USER_ID, 12L)
+
+        // then
+        Mockito.verify(postReader).readOwnedForDelete(USER_ID, 12L)
+        Mockito.verify(postManager).delete(post, NOW)
     }
 
     private fun activeUser(): UserAccountDto = UserAccountDto(
@@ -90,7 +163,7 @@ class RecruitmentPostServiceTest {
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin", "Spring"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = EDITOR_STATE_JSON,
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),
@@ -99,7 +172,29 @@ class RecruitmentPostServiceTest {
         contactValue = "team@example.com",
     )
 
+    private fun updateCommand() = PostUpdateCommand(
+        title = "수정된 모집글",
+        recruitmentType = RecruitmentType.STUDY,
+        capacity = 6,
+        progressMethod = ProgressMethod.HYBRID,
+        activityDurationMonths = 4,
+        technologyStacks = listOf("Kotlin"),
+        summary = "수정된 소개",
+        content = EDITOR_STATE_JSON,
+        eligibilityAndSelectionProcess = null,
+        recruitmentStartDate = LocalDate.of(2026, 9, 2),
+        recruitmentEndDate = LocalDate.of(2026, 10, 1),
+        positions = listOf(RecruitmentPosition.FRONTEND),
+        contactMethod = ContactMethod.EMAIL,
+        contactValue = "updated@example.com",
+    )
+
     companion object {
         private const val USER_ID = 17L
+        private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
+        private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 11, 9, 0)
+        private val EDITOR_STATE_JSON = """
+            {"root":{"children":[{"children":[{"detail":0,"format":0,"mode":"normal","style":"","text":"모집 상세 내용입니다.","type":"text","version":1}],"direction":null,"format":"","indent":0,"textFormat":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}
+        """.trimIndent()
     }
 }

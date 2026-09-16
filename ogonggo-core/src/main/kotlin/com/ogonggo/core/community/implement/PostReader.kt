@@ -18,6 +18,10 @@ import org.springframework.stereotype.Component
 interface PostReader {
     fun readPublished(postId: Long): Post
 
+    fun readOwned(ownerUserId: Long, postId: Long): Post
+
+    fun readOwnedForDelete(ownerUserId: Long, postId: Long): Post
+
     fun readPublishedPage(
         page: Int,
         size: Int,
@@ -32,7 +36,15 @@ internal class PostReaderImpl(
 ) : PostReader {
 
     override fun readPublished(postId: Long): Post =
-        postRepository.findByIdAndPublicationStatus(postId, PublicationStatus.PUBLISHED)
+        postRepository.findByIdAndPublicationStatusAndDeletedAtIsNull(postId, PublicationStatus.PUBLISHED)
+            ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
+
+    override fun readOwned(ownerUserId: Long, postId: Long): Post =
+        postRepository.findOwnedByIdForUpdate(ownerUserId, postId)
+            ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
+
+    override fun readOwnedForDelete(ownerUserId: Long, postId: Long): Post =
+        postRepository.findOwnedByIdForDelete(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
     override fun readPublishedPage(
@@ -84,6 +96,7 @@ private fun publishedRecruitmentPosts(filter: RecruitmentPostListFilter): Specif
     Specification { root, query, criteriaBuilder ->
         val predicates = mutableListOf(
             criteriaBuilder.equal(root.get<PublicationStatus>("publicationStatus"), PublicationStatus.PUBLISHED),
+            criteriaBuilder.isNull(root.get<Any>("deletedAt")),
         )
 
         if (filter.recruitmentTypes.isNotEmpty()) {
