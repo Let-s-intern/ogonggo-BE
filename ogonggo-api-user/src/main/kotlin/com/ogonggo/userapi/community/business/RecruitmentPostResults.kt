@@ -11,6 +11,7 @@ import com.ogonggo.core.community.implement.RecruitmentPostCursor
 import com.ogonggo.core.community.implement.RecruitmentPostCursorPage
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.implement.PostMetricDto
+import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDate
 
 data class RecruitmentPostListQuery(
@@ -28,6 +29,7 @@ data class RecruitmentPostCursorPageResult(
 
 data class RecruitmentPostSummary(
     val id: Long,
+    val author: RecruitmentPostAuthorResult,
     val title: String,
     val recruitmentType: RecruitmentType,
     val progressMethod: ProgressMethod,
@@ -39,10 +41,17 @@ data class RecruitmentPostSummary(
     val recruitmentEndDate: LocalDate,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val bookmarked: Boolean = false,
 ) {
     companion object {
-        internal fun from(post: RecruitmentPost, metric: PostMetricDto): RecruitmentPostSummary = RecruitmentPostSummary(
+        internal fun from(
+            post: RecruitmentPost,
+            metric: PostMetricDto,
+            author: RecruitmentPostAuthorResult,
+            bookmarked: Boolean = false,
+        ): RecruitmentPostSummary = RecruitmentPostSummary(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
+            author = author,
             title = post.title,
             recruitmentType = post.recruitmentType,
             progressMethod = post.progressMethod,
@@ -54,6 +63,7 @@ data class RecruitmentPostSummary(
             recruitmentEndDate = post.recruitmentEndDate,
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
+            bookmarked = bookmarked,
         )
     }
 }
@@ -77,11 +87,17 @@ data class RecruitmentPostDetailResult(
     val eligibilityAndSelectionProcess: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val bookmarked: Boolean = false,
 ) {
     companion object {
-        internal fun from(post: RecruitmentPost, metric: PostMetricDto): RecruitmentPostDetailResult = RecruitmentPostDetailResult(
+        internal fun from(
+            post: RecruitmentPost,
+            metric: PostMetricDto,
+            author: RecruitmentPostAuthorResult,
+            bookmarked: Boolean = false,
+        ): RecruitmentPostDetailResult = RecruitmentPostDetailResult(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
-            author = RecruitmentPostAuthorResult(userId = post.authorUserId),
+            author = author,
             title = post.title,
             recruitmentType = post.recruitmentType,
             recruitmentStatus = post.recruitmentStatus,
@@ -101,13 +117,25 @@ data class RecruitmentPostDetailResult(
             eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
+            bookmarked = bookmarked,
         )
     }
 }
 
 data class RecruitmentPostAuthorResult(
     val userId: Long,
-)
+    val nickname: String?,
+    val profileImageUrl: String?,
+) {
+    companion object {
+        internal fun from(userId: Long, profile: UserProfileDto?): RecruitmentPostAuthorResult =
+            RecruitmentPostAuthorResult(
+                userId = userId,
+                nickname = profile?.nickname,
+                profileImageUrl = profile?.profileImageUrl,
+            )
+    }
+}
 
 data class RecruitmentPostContactResult(
     val method: ContactMethod,
@@ -116,12 +144,16 @@ data class RecruitmentPostContactResult(
 
 internal fun RecruitmentPostCursorPage.toResult(
     metrics: Map<Long, PostMetricDto>,
+    authorsByUserId: Map<Long, RecruitmentPostAuthorResult>,
+    bookmarkedPostIds: Set<Long> = emptySet(),
     queryKey: String,
 ): RecruitmentPostCursorPageResult = RecruitmentPostCursorPageResult(
     items = posts.map { post ->
         RecruitmentPostSummary.from(
             post,
             metrics[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }] ?: PostMetricDto.EMPTY,
+            authorsByUserId[post.authorUserId] ?: RecruitmentPostAuthorResult.from(post.authorUserId, null),
+            bookmarked = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." } in bookmarkedPostIds,
         )
     },
     hasNext = hasNext,

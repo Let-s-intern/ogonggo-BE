@@ -22,6 +22,17 @@ class RecruitmentPostReader internal constructor(
         postRepository.findByIdAndPublicationStatusAndDeletedAtIsNull(postId, PublicationStatus.PUBLISHED)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
 
+    fun readPublishedForUpdate(postId: Long): RecruitmentPost =
+        postRepository.findPublishedByIdForUpdate(
+            postId = postId,
+            publicationStatus = PublicationStatus.PUBLISHED,
+        ) ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
+
+    fun readIncludingDeleted(postId: Long): RecruitmentPost =
+        postRepository.findById(postId).orElseThrow {
+            EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)
+        }
+
     fun readOwned(ownerUserId: Long, postId: Long): RecruitmentPost =
         postRepository.findOwnedByIdForUpdate(ownerUserId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND)

@@ -22,19 +22,22 @@ class RecruitmentPostController(
 ) : RecruitmentPostApi {
 
     override fun getRecruitmentPost(
+        userId: Long?,
         postId: Long,
     ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> {
         val responseBody = RecruitmentPostDetailResponse.from(
-            recruitmentPostService.getRecruitmentPost(postId),
+            recruitmentPostService.getRecruitmentPost(userId, postId),
             objectMapper,
         )
         return SuccessResponse.ok(responseBody)
     }
 
     override fun getRecruitmentPosts(
+        userId: Long?,
         request: RecruitmentPostListRequest,
     ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>> {
         val result = recruitmentPostService.getRecruitmentPosts(
+            userId,
             request.toQuery(RecruitmentPostCursorCodec.decode(request.cursor)),
         )
         return SuccessResponse.ok(
@@ -60,6 +63,22 @@ class RecruitmentPostController(
         request: UpdateRecruitmentPostRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
         recruitmentPostService.update(userId, postId, request.toCommand())
+        return SuccessResponse.ok()
+    }
+
+    override fun closeRecruitmentPost(
+        userId: Long,
+        postId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        recruitmentPostService.close(userId, postId)
+        return SuccessResponse.ok()
+    }
+
+    override fun reopenRecruitmentPost(
+        userId: Long,
+        postId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        recruitmentPostService.reopen(userId, postId)
         return SuccessResponse.ok()
     }
 

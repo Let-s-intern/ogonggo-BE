@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -57,6 +58,7 @@ interface RecruitmentPostApi {
     )
     @GetMapping("/{postId}")
     fun getRecruitmentPost(
+        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long?,
         @PathVariable("postId") @Positive postId: Long,
     ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>>
 
@@ -76,6 +78,7 @@ interface RecruitmentPostApi {
     )
     @GetMapping
     fun getRecruitmentPosts(
+        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long?,
         @Valid @ModelAttribute request: RecruitmentPostListRequest,
     ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>>
 
@@ -129,6 +132,62 @@ interface RecruitmentPostApi {
         @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
         @PathVariable("postId") @Positive postId: Long,
         @RequestBody @Valid request: UpdateRecruitmentPostRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(operationId = "closeMyRecruitmentPost", summary = "내 사이드 프로젝트·스터디 모집글 마감")
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "마감 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "postId가 1 미만",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "USER_SUSPENDED 또는 USER_WITHDRAWN",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "RECRUITMENT_POST_NOT_FOUND: 모집글이 없거나 본인 글이 아님",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @PatchMapping("/{postId}/close")
+    fun closeRecruitmentPost(
+        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
+        @PathVariable("postId") @Positive postId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(operationId = "reopenMyRecruitmentPost", summary = "내 사이드 프로젝트·스터디 모집글 재모집")
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "재모집 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "postId가 1 미만",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "USER_SUSPENDED 또는 USER_WITHDRAWN",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "RECRUITMENT_POST_NOT_FOUND: 모집글이 없거나 본인 글이 아님",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @PatchMapping("/{postId}/reopen")
+    fun reopenRecruitmentPost(
+        @Parameter(hidden = true) @AuthenticationPrincipal userId: Long,
+        @PathVariable("postId") @Positive postId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(

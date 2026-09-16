@@ -76,6 +76,8 @@ class UserSecurityConfiguration {
                 // 아래의 조회 전체 허용보다 먼저 선언해야 적용된다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/api/v1/users/me/recruitment/applications").authenticated()
+                it.requestMatchers(HttpMethod.POST, "/api/v1/recruitment-posts/*/applications").authenticated()
                 it.requestMatchers("/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").authenticated()
                 // 채용공고와 부트캠프 조회는 로그인 없이 연다.
                 // 액세스 토큰을 보내면 북마크 여부가 채워지고, 없으면 비로그인 응답을 준다.
@@ -89,6 +91,7 @@ class UserSecurityConfiguration {
                 // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/bootcamps/*/application-url-clicks").authenticated()
                 it.requestMatchers("/api/v1/bootcamp-bookmarks", "/api/v1/bootcamp-bookmarks/**").authenticated()
+                it.requestMatchers("/api/v1/recruitment-post-bookmarks", "/api/v1/recruitment-post-bookmarks/**").authenticated()
                 it.anyRequest().denyAll()
             }
             .addFilterBefore(

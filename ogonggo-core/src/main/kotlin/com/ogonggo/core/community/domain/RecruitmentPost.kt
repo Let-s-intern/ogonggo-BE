@@ -166,6 +166,14 @@ class RecruitmentPost internal constructor(
         }
     }
 
+    fun reopen() {
+        checkNotDeleted()
+        if (recruitmentStatus == RecruitmentStatus.CLOSED) {
+            recruitmentStatus = RecruitmentStatus.RECRUITING
+            closedAt = null
+        }
+    }
+
     fun delete(deletedAt: LocalDateTime) {
         if (this.deletedAt == null) {
             this.deletedAt = deletedAt

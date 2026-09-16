@@ -33,6 +33,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -55,17 +56,20 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @Test
     fun `인증되지 않은 사용자도 공개 모집글 상세를 조회한다`() {
-        Mockito.`when`(recruitmentPostService.getRecruitmentPost(12L)).thenReturn(detailResult())
+        Mockito.`when`(recruitmentPostService.getRecruitmentPost(null, 12L)).thenReturn(detailResult())
 
         mockMvc.perform(get("/api/v1/recruitment-posts/12"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.id").value(12))
             .andExpect(jsonPath("$.data.author.userId").value(17))
+            .andExpect(jsonPath("$.data.author.nickname").value("홍길동"))
+            .andExpect(jsonPath("$.data.author.profileImageUrl").value("https://cdn.example.com/17.png"))
             .andExpect(jsonPath("$.data.contact.method").value("EMAIL"))
             .andExpect(jsonPath("$.data.content.root.type").value("root"))
             .andExpect(jsonPath("$.data.content.root.children[0].type").value("paragraph"))
             .andExpect(jsonPath("$.data.eligibilityAndSelectionProcess").doesNotExist())
+            .andExpect(jsonPath("$.data.bookmarked").value(false))
     }
 
     @Test
@@ -79,7 +83,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @Test
     fun `존재하지 않는 모집글은 404를 반환한다`() {
-        Mockito.`when`(recruitmentPostService.getRecruitmentPost(12L))
+        Mockito.`when`(recruitmentPostService.getRecruitmentPost(null, 12L))
             .thenThrow(EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND))
 
         mockMvc.perform(get("/api/v1/recruitment-posts/12"))
@@ -103,6 +107,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         )
         Mockito.`when`(
             recruitmentPostService.getRecruitmentPosts(
+                null,
                 RecruitmentPostListQuery(
                     cursor = cursor,
                     size = 2,
@@ -115,6 +120,11 @@ class RecruitmentPostControllerTest @Autowired constructor(
                 items = listOf(
                     RecruitmentPostSummary(
                         id = 12L,
+                        author = RecruitmentPostAuthorResult(
+                            userId = 17L,
+                            nickname = "홍길동",
+                            profileImageUrl = "https://cdn.example.com/17.png",
+                        ),
                         title = "스터디 모집",
                         recruitmentType = RecruitmentType.STUDY,
                         progressMethod = ProgressMethod.ONLINE,
@@ -144,11 +154,15 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.items[0].id").value(12))
+            .andExpect(jsonPath("$.data.items[0].author.userId").value(17))
+            .andExpect(jsonPath("$.data.items[0].author.nickname").value("홍길동"))
+            .andExpect(jsonPath("$.data.items[0].author.profileImageUrl").value("https://cdn.example.com/17.png"))
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
             .andExpect(jsonPath("$.data.hasNext").value(true))
             .andExpect(jsonPath("$.data.nextCursor").isNotEmpty)
 
         Mockito.verify(recruitmentPostService).getRecruitmentPosts(
+            null,
             RecruitmentPostListQuery(cursor, 2, RecruitmentPostSortType.DEADLINE, filter),
         )
     }
@@ -157,6 +171,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
     fun `인증되지 않은 사용자도 공개 모집글 목록을 조회할 수 있다`() {
         Mockito.`when`(
             recruitmentPostService.getRecruitmentPosts(
+                null,
                 RecruitmentPostListQuery(
                     cursor = null,
                     size = 10,
@@ -250,6 +265,48 @@ class RecruitmentPostControllerTest @Autowired constructor(
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+    }
+
+    @Test
+    fun `작성자가 모집글을 마감하면 200을 반환한다`() {
+        mockMvc.perform(
+            patch("/api/v1/recruitment-posts/12/close")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(recruitmentPostService).close(USER_ID, 12L)
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 모집글을 마감할 수 없다`() {
+        mockMvc.perform(patch("/api/v1/recruitment-posts/12/close"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
+    }
+
+    @Test
+    fun `작성자가 모집글을 재모집하면 200을 반환한다`() {
+        mockMvc.perform(
+            patch("/api/v1/recruitment-posts/12/reopen")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(recruitmentPostService).reopen(USER_ID, 12L)
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 모집글을 재모집할 수 없다`() {
+        mockMvc.perform(patch("/api/v1/recruitment-posts/12/reopen"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(recruitmentPostService)
     }
 
     @Test
@@ -356,7 +413,11 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     private fun detailResult() = RecruitmentPostDetailResult(
         id = 12L,
-        author = RecruitmentPostAuthorResult(userId = 17L),
+        author = RecruitmentPostAuthorResult(
+            userId = 17L,
+            nickname = "홍길동",
+            profileImageUrl = "https://cdn.example.com/17.png",
+        ),
         title = "스터디 모집",
         recruitmentType = RecruitmentType.STUDY,
         recruitmentStatus = RecruitmentStatus.RECRUITING,

@@ -34,4 +34,13 @@ class RecruitmentPostManager internal constructor(
         post.delete(deletedAt)
         postRepository.save(post)
     }
+
+    fun close(post: RecruitmentPost, closedAt: LocalDateTime) = change(post) { close(closedAt) }
+
+    fun reopen(post: RecruitmentPost) = change(post) { reopen() }
+
+    private fun change(post: RecruitmentPost, change: RecruitmentPost.() -> Unit) {
+        post.change()
+        postRepository.save(post)
+    }
 }

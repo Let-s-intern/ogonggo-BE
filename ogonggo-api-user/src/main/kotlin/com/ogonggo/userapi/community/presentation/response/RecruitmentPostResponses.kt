@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.community.presentation.response
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
@@ -36,6 +37,7 @@ data class RecruitmentPostDetailResponse(
     val eligibilityAndSelectionProcess: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val bookmarked: Boolean = false,
 ) {
     companion object {
         fun from(
@@ -61,16 +63,24 @@ data class RecruitmentPostDetailResponse(
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
                 viewCount = result.viewCount,
                 commentCount = result.commentCount,
+                bookmarked = result.bookmarked,
             )
     }
 }
 
+@JsonInclude(JsonInclude.Include.ALWAYS)
 data class RecruitmentPostAuthorResponse(
     val userId: Long,
+    val nickname: String?,
+    val profileImageUrl: String?,
 ) {
     companion object {
         fun from(result: RecruitmentPostAuthorResult): RecruitmentPostAuthorResponse =
-            RecruitmentPostAuthorResponse(userId = result.userId)
+            RecruitmentPostAuthorResponse(
+                userId = result.userId,
+                nickname = result.nickname,
+                profileImageUrl = result.profileImageUrl,
+            )
     }
 }
 
@@ -86,6 +96,7 @@ data class RecruitmentPostContactResponse(
 
 data class RecruitmentPostSummaryResponse(
     val id: Long,
+    val author: RecruitmentPostAuthorResponse,
     val title: String,
     val recruitmentType: RecruitmentType,
     val progressMethod: ProgressMethod,
@@ -97,10 +108,12 @@ data class RecruitmentPostSummaryResponse(
     val recruitmentEndDate: LocalDate,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
+    val bookmarked: Boolean = false,
 ) {
     companion object {
         fun from(summary: RecruitmentPostSummary): RecruitmentPostSummaryResponse = RecruitmentPostSummaryResponse(
             id = summary.id,
+            author = RecruitmentPostAuthorResponse.from(summary.author),
             title = summary.title,
             recruitmentType = summary.recruitmentType,
             progressMethod = summary.progressMethod,
@@ -112,6 +125,7 @@ data class RecruitmentPostSummaryResponse(
             recruitmentEndDate = summary.recruitmentEndDate,
             viewCount = summary.viewCount,
             commentCount = summary.commentCount,
+            bookmarked = summary.bookmarked,
         )
     }
 }

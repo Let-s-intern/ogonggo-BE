@@ -121,6 +121,36 @@ class RecruitmentPostDomainTest {
     }
 
     @Test
+    @DisplayName("마감한 모집글을 재모집하면 모집 중 상태와 마감 시각을 초기화한다")
+    fun reopenPost() {
+        // given
+        val post = createPostFixture()
+        val closedAt = LocalDateTime.of(2026, 9, 30, 23, 59)
+        post.close(closedAt)
+
+        // when
+        post.reopen()
+
+        // then
+        assertEquals(RecruitmentStatus.RECRUITING, post.recruitmentStatus)
+        assertEquals(null, post.closedAt)
+    }
+
+    @Test
+    @DisplayName("모집 중인 글을 재모집해도 상태가 바뀌지 않는다")
+    fun reopenRecruitingPostIsIdempotent() {
+        // given
+        val post = createPostFixture()
+
+        // when
+        post.reopen()
+
+        // then
+        assertEquals(RecruitmentStatus.RECRUITING, post.recruitmentStatus)
+        assertEquals(null, post.closedAt)
+    }
+
+    @Test
     @DisplayName("모집글을 삭제하면 최초 삭제 시각을 유지한다")
     fun deletePost() {
         // given

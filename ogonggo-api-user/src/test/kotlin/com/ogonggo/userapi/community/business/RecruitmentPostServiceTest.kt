@@ -3,24 +3,32 @@ package com.ogonggo.userapi.community.business
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
+import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.RecruitmentPostReader
+import com.ogonggo.core.community.implement.RecruitmentPostCursorPage
+import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.core.user.implement.dto.UserProfileDto
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
@@ -36,7 +44,9 @@ class RecruitmentPostServiceTest {
     private val postAppender = Mockito.mock(RecruitmentPostAppender::class.java)
     private val postManager = Mockito.mock(RecruitmentPostManager::class.java)
     private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
+    private val postBookmarkReader = Mockito.mock(RecruitmentPostBookmarkReader::class.java)
     private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
+    private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
@@ -46,34 +56,20 @@ class RecruitmentPostServiceTest {
         postAppender,
         postManager,
         postReader,
+        postBookmarkReader,
         postMetricReader,
         contentValidator,
         imageAssetManager,
         eventPublisher,
         clock,
+        userProfileReader,
     )
 
     @Test
     fun `공개 모집글 상세 조회 결과를 변환한다`() {
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(postReader.readPublished(12L)).thenReturn(post)
-        Mockito.`when`(post.id).thenReturn(12L)
-        Mockito.`when`(post.authorUserId).thenReturn(USER_ID)
-        Mockito.`when`(post.title).thenReturn("스터디 모집")
-        Mockito.`when`(post.recruitmentType).thenReturn(RecruitmentType.STUDY)
-        Mockito.`when`(post.recruitmentStatus).thenReturn(RecruitmentStatus.RECRUITING)
-        Mockito.`when`(post.recruitmentStartDate).thenReturn(LocalDate.of(2026, 9, 1))
-        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 30))
-        Mockito.`when`(post.progressMethod).thenReturn(ProgressMethod.ONLINE)
-        Mockito.`when`(post.capacity).thenReturn(6)
-        Mockito.`when`(post.activityDurationMonths).thenReturn(3)
-        Mockito.`when`(post.technologyStacks).thenReturn(mutableListOf("Kotlin", "Spring"))
-        Mockito.`when`(post.positions).thenReturn(mutableListOf(RecruitmentPosition.BACKEND))
-        Mockito.`when`(post.contactMethod).thenReturn(ContactMethod.EMAIL)
-        Mockito.`when`(post.contactValue).thenReturn("team@example.com")
-        Mockito.`when`(post.summary).thenReturn("함께 공부할 분을 모집합니다.")
-        Mockito.`when`(post.content).thenReturn(EDITOR_STATE_JSON)
-        Mockito.`when`(post.eligibilityAndSelectionProcess).thenReturn(null)
+        stubPublicPost(post)
         Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto.EMPTY)
 
         val result = service.getRecruitmentPost(12L)
@@ -83,8 +79,75 @@ class RecruitmentPostServiceTest {
         assertEquals(listOf(RecruitmentPosition.BACKEND), result.positions)
         assertEquals(ContactMethod.EMAIL, result.contact.method)
         assertEquals(EDITOR_STATE_JSON, result.content)
+        assertEquals(null, result.author.nickname)
+        assertEquals(null, result.author.profileImageUrl)
+        assertFalse(result.bookmarked)
         Mockito.verify(postReader).readPublished(12L)
+        Mockito.verifyNoInteractions(postBookmarkReader)
         Mockito.verify(eventPublisher).publishEvent(RecruitmentPostViewedEvent(12L))
+    }
+
+    @Test
+    fun `로그인 사용자가 북마크한 모집글 상세에는 bookmarked true를 반환한다`() {
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(postReader.readPublished(12L)).thenReturn(post)
+        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto.EMPTY)
+        Mockito.`when`(postBookmarkReader.readBookmarkedPostIds(USER_ID, listOf(12L))).thenReturn(setOf(12L))
+        stubPublicPost(post)
+
+        val result = service.getRecruitmentPost(USER_ID, 12L)
+
+        assertTrue(result.bookmarked)
+        Mockito.verify(postBookmarkReader).readBookmarkedPostIds(USER_ID, listOf(12L))
+    }
+
+    @Test
+    fun `모집글 목록의 작성자 프로필을 한 번에 조회하고 북마크 여부를 표시한다`() {
+        val firstPost = Mockito.mock(RecruitmentPost::class.java)
+        val secondPost = Mockito.mock(RecruitmentPost::class.java)
+        val query = RecruitmentPostListQuery(
+            cursor = null,
+            size = 10,
+            sortType = RecruitmentPostSortType.LATEST,
+            filter = RecruitmentPostListFilter(),
+        )
+        Mockito.`when`(
+            postReader.readPublishedCursorPage(
+                cursor = null,
+                size = 10,
+                filter = RecruitmentPostListFilter(),
+                sortType = RecruitmentPostSortType.LATEST,
+            ),
+        ).thenReturn(
+            RecruitmentPostCursorPage(
+                posts = listOf(firstPost, secondPost),
+                hasNext = false,
+                sortType = RecruitmentPostSortType.LATEST,
+            ),
+        )
+        Mockito.`when`(postMetricReader.readAll(listOf(12L, 13L))).thenReturn(emptyMap())
+        Mockito.`when`(postBookmarkReader.readBookmarkedPostIds(USER_ID, listOf(12L, 13L))).thenReturn(setOf(12L))
+        Mockito.`when`(userProfileReader.readAll(listOf(USER_ID, OTHER_AUTHOR_ID))).thenReturn(
+            mapOf(
+                USER_ID to profile(nickname = "홍길동", profileImageUrl = "https://cdn.example.com/17.png"),
+                OTHER_AUTHOR_ID to profile(nickname = "김길동", profileImageUrl = null),
+            ),
+        )
+        stubPublicPost(firstPost, postId = 12L, authorUserId = USER_ID)
+        stubPublicPost(secondPost, postId = 13L, authorUserId = OTHER_AUTHOR_ID)
+
+        val result = service.getRecruitmentPosts(USER_ID, query)
+
+        assertEquals(2, result.items.size)
+        assertTrue(result.items.first().bookmarked)
+        assertFalse(result.items.last().bookmarked)
+        assertEquals("홍길동", result.items.first().author.nickname)
+        assertEquals("https://cdn.example.com/17.png", result.items.first().author.profileImageUrl)
+        assertEquals("김길동", result.items.last().author.nickname)
+        assertEquals(null, result.items.last().author.profileImageUrl)
+        Mockito.verify(userProfileReader).readAll(listOf(USER_ID, OTHER_AUTHOR_ID))
+        Mockito.verify(userProfileReader, Mockito.never()).read(Mockito.anyLong())
+        Mockito.verify(postBookmarkReader).readBookmarkedPostIds(USER_ID, listOf(12L, 13L))
     }
 
     @Test
@@ -154,6 +217,36 @@ class RecruitmentPostServiceTest {
         Mockito.verify(postManager).delete(post, NOW)
     }
 
+    @Test
+    fun `작성자가 모집글을 마감하면 소유 모집글을 잠금 조회하고 마감한다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+
+        // when
+        service.close(USER_ID, 12L)
+
+        // then
+        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+        Mockito.verify(postManager).close(post, NOW)
+    }
+
+    @Test
+    fun `작성자가 모집글을 재모집하면 소유 모집글을 잠금 조회하고 재모집한다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
+
+        // when
+        service.reopen(USER_ID, 12L)
+
+        // then
+        Mockito.verify(postReader).readOwned(USER_ID, 12L)
+        Mockito.verify(postManager).reopen(post)
+    }
+
     private fun activeUser(): UserAccountDto = UserAccountDto(
         userId = USER_ID,
         letsCareerUserId = 100L,
@@ -161,6 +254,45 @@ class RecruitmentPostServiceTest {
         status = UserStatus.ACTIVE,
         role = UserRole.USER,
         joinedAt = LocalDateTime.of(2026, 1, 1, 0, 0),
+    )
+
+    private fun stubPublicPost(
+        post: RecruitmentPost,
+        postId: Long = 12L,
+        authorUserId: Long = USER_ID,
+    ) {
+        Mockito.`when`(post.id).thenReturn(postId)
+        Mockito.`when`(post.authorUserId).thenReturn(authorUserId)
+        Mockito.`when`(post.title).thenReturn("스터디 모집")
+        Mockito.`when`(post.recruitmentType).thenReturn(RecruitmentType.STUDY)
+        Mockito.`when`(post.recruitmentStatus).thenReturn(RecruitmentStatus.RECRUITING)
+        Mockito.`when`(post.recruitmentStartDate).thenReturn(LocalDate.of(2026, 9, 1))
+        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 30))
+        Mockito.`when`(post.progressMethod).thenReturn(ProgressMethod.ONLINE)
+        Mockito.`when`(post.capacity).thenReturn(6)
+        Mockito.`when`(post.activityDurationMonths).thenReturn(3)
+        Mockito.`when`(post.technologyStacks).thenReturn(mutableListOf("Kotlin", "Spring"))
+        Mockito.`when`(post.positions).thenReturn(mutableListOf(RecruitmentPosition.BACKEND))
+        Mockito.`when`(post.contactMethod).thenReturn(ContactMethod.EMAIL)
+        Mockito.`when`(post.contactValue).thenReturn("team@example.com")
+        Mockito.`when`(post.summary).thenReturn("함께 공부할 분을 모집합니다.")
+        Mockito.`when`(post.content).thenReturn(EDITOR_STATE_JSON)
+        Mockito.`when`(post.eligibilityAndSelectionProcess).thenReturn(null)
+    }
+
+    private fun profile(nickname: String?, profileImageUrl: String?) = UserProfileDto(
+        name = null,
+        email = null,
+        nickname = nickname,
+        profileImageUrl = profileImageUrl,
+        university = null,
+        major = null,
+        grade = null,
+        wishField = null,
+        wishJob = null,
+        wishIndustry = null,
+        wishEmploymentType = null,
+        wishCompany = null,
     )
 
     private fun createCommand(authorUserId: Long): RecruitmentPostAppendCommand = RecruitmentPostAppendCommand(
@@ -200,6 +332,7 @@ class RecruitmentPostServiceTest {
 
     companion object {
         private const val USER_ID = 17L
+        private const val OTHER_AUTHOR_ID = 18L
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 11, 9, 0)
         private val EDITOR_STATE_JSON = """
