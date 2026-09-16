@@ -7,6 +7,7 @@ import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.community.domain.PublicationStatus
@@ -31,6 +32,7 @@ class RecruitmentPostService(
     private val postReader: RecruitmentPostReader,
     private val postBookmarkReader: RecruitmentPostBookmarkReader,
     private val postMetricReader: PostMetricReader,
+    private val postMetricManager: PostMetricManager,
     private val contentValidator: LexicalEditorStateValidator,
     private val imageAssetManager: ImageAssetManager,
     private val eventPublisher: ApplicationEventPublisher,
@@ -90,6 +92,7 @@ class RecruitmentPostService(
             content = contentValidator.validateAndSerialize(command.content),
         )
         val post = postAppender.append(sanitizedCommand)
+        postMetricManager.initialize(checkNotNull(post.id))
         imageAssetManager.syncPostImages(
             ownerUserId = userId,
             postId = checkNotNull(post.id),
@@ -121,7 +124,7 @@ class RecruitmentPostService(
     @Transactional
     fun update(userId: Long, postId: Long, command: RecruitmentPostUpdateCommand) {
         verifyActiveUser(userId)
-        val post = postReader.readOwned(userId, postId)
+        val post = postReader.readOwnedForUpdate(userId, postId)
         val previousContent = post.content.orEmpty()
         val sanitizedCommand = command.copy(
             content = command.content?.let(contentValidator::validateAndSerialize),
@@ -152,7 +155,7 @@ class RecruitmentPostService(
     fun close(userId: Long, postId: Long) {
         verifyActiveUser(userId)
         postManager.close(
-            postReader.readOwned(userId, postId),
+            postReader.readOwnedForUpdate(userId, postId),
             LocalDateTime.now(clock),
         )
     }
@@ -160,7 +163,7 @@ class RecruitmentPostService(
     @Transactional
     fun reopen(userId: Long, postId: Long) {
         verifyActiveUser(userId)
-        postManager.reopen(postReader.readOwned(userId, postId))
+        postManager.reopen(postReader.readOwnedForUpdate(userId, postId))
     }
 
     private fun verifyActiveUser(userId: Long) {

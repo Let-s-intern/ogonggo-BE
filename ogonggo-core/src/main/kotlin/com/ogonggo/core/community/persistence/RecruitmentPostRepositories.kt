@@ -33,6 +33,20 @@ internal interface RecruitmentPostJpaRepository : JpaRepository<RecruitmentPost,
         @Param("publicationStatus") publicationStatus: PublicationStatus,
     ): RecruitmentPost?
 
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id = :postId
+          and post.authorUserId = :authorUserId
+          and post.deletedAt is null
+        """,
+    )
+    fun findOwnedById(
+        @Param("authorUserId") authorUserId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPost?
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         """

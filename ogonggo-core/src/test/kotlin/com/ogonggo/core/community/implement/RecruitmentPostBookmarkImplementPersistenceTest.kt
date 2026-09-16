@@ -7,6 +7,7 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.community.persistence.RecruitmentPostBookmarkJpaRepository
+import com.ogonggo.core.community.persistence.PostMetricJpaRepository
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.persistence.UserJpaRepository
@@ -27,6 +28,8 @@ import java.time.LocalDateTime
     RecruitmentPostAppender::class,
     RecruitmentPostBookmarkManager::class,
     RecruitmentPostBookmarkReader::class,
+    PostMetricManager::class,
+    PostMetricRegistrar::class,
 )
 internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
@@ -34,6 +37,8 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
     private val bookmarkReader: RecruitmentPostBookmarkReader,
     private val bookmarkRepository: RecruitmentPostBookmarkJpaRepository,
     private val userRepository: UserJpaRepository,
+    private val postMetricManager: PostMetricManager,
+    private val postMetricRepository: PostMetricJpaRepository,
 ) {
 
     @Test
@@ -75,6 +80,21 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
         }
 
         assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_BOOKMARK_ALREADY_EXISTS, exception.errorCode)
+    }
+
+    @Test
+    fun `북마크 수는 활성 북마크만 다시 세어 반영한다`() {
+        val postId = appendPost()
+        val userId = appendUser()
+        val now = LocalDateTime.of(2026, 9, 14, 10, 0)
+
+        bookmarkManager.append(userId = userId, postId = postId, now = now)
+        postMetricManager.syncBookmarkCount(postId, now)
+        assertEquals(1L, postMetricRepository.findByPostId(postId)?.bookmarkCount)
+
+        bookmarkManager.delete(userId = userId, postId = postId, now = now.plusMinutes(1))
+        postMetricManager.syncBookmarkCount(postId, now.plusMinutes(1))
+        assertEquals(0L, postMetricRepository.findByPostId(postId)?.bookmarkCount)
     }
 
     private fun appendPost(): Long = checkNotNull(postAppender.append(

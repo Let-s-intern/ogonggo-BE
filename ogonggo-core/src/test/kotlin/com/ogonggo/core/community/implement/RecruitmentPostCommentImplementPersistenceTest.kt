@@ -7,6 +7,7 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostCommentJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostCommentReportJpaRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -26,6 +27,7 @@ import java.time.LocalDate
     RecruitmentPostCommentAppender::class,
     RecruitmentPostCommentRemover::class,
     RecruitmentPostCommentReader::class,
+    RecruitmentPostCommentReportAppender::class,
 )
 internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
@@ -33,6 +35,8 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
     private val commentRemover: RecruitmentPostCommentRemover,
     private val commentReader: RecruitmentPostCommentReader,
     private val commentRepository: RecruitmentPostCommentJpaRepository,
+    private val reportAppender: RecruitmentPostCommentReportAppender,
+    private val reportRepository: RecruitmentPostCommentReportJpaRepository,
     private val postRepository: RecruitmentPostJpaRepository,
     private val entityManager: EntityManager,
 ) {
@@ -217,6 +221,38 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // then
         assertEquals(true, commentRepository.findById(parentId).isPresent)
         assertEquals(false, commentRepository.findById(replyId).isPresent)
+    }
+
+    @Test
+    fun `동일 사용자가 같은 댓글을 중복 신고할 수 있다`() {
+        val post = postAppender.append(postCommand())
+        val comment = commentAppender.append(
+            RecruitmentPostCommentAppendCommand(
+                postId = checkNotNull(post.id),
+                parentId = null,
+                userId = 17L,
+                content = "신고 대상 댓글입니다.",
+            ),
+        )
+        val commentId = checkNotNull(comment.id)
+
+        reportAppender.append(
+            RecruitmentPostCommentReportAppendCommand(
+                commentId = commentId,
+                userId = 17L,
+                reason = null,
+            ),
+        )
+        reportAppender.append(
+            RecruitmentPostCommentReportAppendCommand(
+                commentId = commentId,
+                userId = 17L,
+                reason = "반복 신고",
+            ),
+        )
+        reportRepository.flush()
+
+        assertEquals(2L, reportRepository.count())
     }
 
     private fun postCommand() = RecruitmentPostAppendCommand(

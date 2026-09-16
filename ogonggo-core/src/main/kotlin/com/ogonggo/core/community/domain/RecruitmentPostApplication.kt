@@ -3,6 +3,8 @@ package com.ogonggo.core.community.domain
 import com.ogonggo.core.common.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -34,6 +36,7 @@ internal class RecruitmentPostApplication(
 
     firstClickedAt: LocalDateTime,
     lastClickedAt: LocalDateTime,
+    applicationStatus: RecruitmentApplicationProgressStatus = RecruitmentApplicationProgressStatus.PREPARING,
 ) : BaseTimeEntity() {
 
     init {
@@ -55,9 +58,34 @@ internal class RecruitmentPostApplication(
     var lastClickedAt: LocalDateTime = lastClickedAt
         protected set
 
+    @Enumerated(EnumType.STRING)
+    @Column(
+        name = "application_status",
+        nullable = false,
+        columnDefinition = "varchar(20) default 'PREPARING'",
+    )
+    var applicationStatus: RecruitmentApplicationProgressStatus = applicationStatus
+        protected set
+
+    @Column(name = "deleted_at")
+    var deletedAt: LocalDateTime? = null
+        protected set
+
     fun recordClick(clickedAt: LocalDateTime) {
+        deletedAt = null
         if (clickedAt.isAfter(lastClickedAt)) {
             lastClickedAt = clickedAt
+        }
+    }
+
+    fun changeStatus(status: RecruitmentApplicationProgressStatus) {
+        check(deletedAt == null) { "삭제된 지원 이력의 상태는 변경할 수 없습니다." }
+        applicationStatus = status
+    }
+
+    fun delete(deletedAt: LocalDateTime) {
+        if (this.deletedAt == null) {
+            this.deletedAt = deletedAt
         }
     }
 }

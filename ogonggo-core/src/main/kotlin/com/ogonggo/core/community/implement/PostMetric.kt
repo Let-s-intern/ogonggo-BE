@@ -66,6 +66,14 @@ class PostMetricManager internal constructor(
         updateOrCreate(postId) { postMetricRepository.increaseViewCount(postId, 1, now) }
     }
 
+    /** 공개 모집글 생성·게시 시점에 지표 행을 같은 트랜잭션으로 준비한다. */
+    @Transactional
+    fun initialize(postId: Long) {
+        if (postMetricRepository.findByPostId(postId) == null) {
+            postMetricRepository.save(PostMetric(postId = postId))
+        }
+    }
+
     @Transactional
     fun increaseCommentCount(postId: Long, now: LocalDateTime) {
         updateOrCreate(postId) { postMetricRepository.increaseCommentCount(postId, now) }
@@ -81,26 +89,25 @@ class PostMetricManager internal constructor(
 
     @Transactional
     fun syncBookmarkCount(postId: Long, now: LocalDateTime) {
-        if (postMetricRepository.syncBookmarkCount(postId, now) > 0) return
-
-        try {
-            postMetricRegistrar.create(postId)
-        } catch (_: DataIntegrityViolationException) {
-            // 다른 요청이 만든 지표 행을 그대로 사용한다.
-        }
+        ensureMetricExists(postId)
         check(postMetricRepository.syncBookmarkCount(postId, now) > 0) {
             "모집글 북마크 수를 갱신하지 못했습니다. postId=$postId"
         }
     }
 
     private fun updateOrCreate(postId: Long, update: () -> Int) {
-        if (update() > 0) return
+        // update로 없는 행을 먼저 잠그면 REQUIRES_NEW insert가 gap lock에 막힐 수 있다.
+        ensureMetricExists(postId)
+        check(update() > 0) { "모집글 지표 행을 갱신하지 못했습니다. postId=$postId" }
+    }
+
+    private fun ensureMetricExists(postId: Long) {
+        if (postMetricRepository.findByPostId(postId) != null) return
 
         try {
             postMetricRegistrar.create(postId)
         } catch (_: DataIntegrityViolationException) {
             // 다른 요청이 만든 지표 행을 그대로 사용한다.
         }
-        check(update() > 0) { "모집글 지표 행을 갱신하지 못했습니다. postId=$postId" }
     }
 }

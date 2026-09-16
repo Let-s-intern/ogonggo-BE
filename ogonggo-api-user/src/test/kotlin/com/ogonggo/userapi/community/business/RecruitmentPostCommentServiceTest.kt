@@ -8,6 +8,8 @@ import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReader
 import com.ogonggo.core.community.implement.RecruitmentPostCommentRemover
+import com.ogonggo.core.community.implement.RecruitmentPostCommentReportAppender
+import com.ogonggo.core.community.implement.RecruitmentPostCommentReportAppendCommand
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -32,6 +34,7 @@ class RecruitmentPostCommentServiceTest {
     private val commentRemover = Mockito.mock(RecruitmentPostCommentRemover::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val postMetricManager = Mockito.mock(PostMetricManager::class.java)
+    private val reportAppender = Mockito.mock(RecruitmentPostCommentReportAppender::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-12T00:00:00Z"), ZONE)
     private val service = RecruitmentPostCommentService(
         userReader,
@@ -41,6 +44,7 @@ class RecruitmentPostCommentServiceTest {
         commentRemover,
         userProfileReader,
         postMetricManager,
+        reportAppender,
         clock,
     )
 
@@ -121,6 +125,38 @@ class RecruitmentPostCommentServiceTest {
         // then
         assertEquals("RECRUITMENT_POST_COMMENT_PERMISSION_DENIED", exception.errorCode.code)
         Mockito.verifyNoInteractions(commentRemover)
+    }
+
+    @Test
+    fun `활성 사용자가 사유 없이 댓글을 신고할 수 있다`() {
+        val comment = Mockito.mock(RecruitmentPostComment::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(commentReader.readInPost(POST_ID, COMMENT_ID)).thenReturn(comment)
+        Mockito.`when`(comment.id).thenReturn(COMMENT_ID)
+
+        service.report(USER_ID, POST_ID, COMMENT_ID, reason = null)
+
+        Mockito.verify(reportAppender).append(
+            RecruitmentPostCommentReportAppendCommand(
+                commentId = COMMENT_ID,
+                userId = USER_ID,
+                reason = null,
+            ),
+        )
+    }
+
+    @Test
+    fun `정지 사용자는 댓글을 신고할 수 없다`() {
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(
+            activeUser().copy(status = UserStatus.SUSPENDED),
+        )
+
+        val exception = assertThrows(BusinessException::class.java) {
+            service.report(USER_ID, POST_ID, COMMENT_ID, reason = "신고 사유")
+        }
+
+        assertEquals("USER_SUSPENDED", exception.errorCode.code)
+        Mockito.verifyNoInteractions(postReader, commentReader, reportAppender)
     }
 
     private fun activeUser(): UserAccountDto = UserAccountDto(

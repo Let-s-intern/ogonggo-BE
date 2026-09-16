@@ -8,6 +8,7 @@ import com.ogonggo.userapi.community.business.RecruitmentPostCommentReplyPageRes
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentRootResult
 import com.ogonggo.userapi.community.business.RecruitmentPostCommentService
+import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostCommentReportRequest
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
 import org.junit.jupiter.api.Test
@@ -149,6 +150,33 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
             delete("/api/v1/recruitment-posts/$POST_ID/comments/$COMMENT_ID"),
         )
             // then
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(recruitmentPostCommentService)
+    }
+
+    @Test
+    fun `인증된 사용자가 댓글을 사유 없이 신고하면 201을 반환한다`() {
+        mockMvc.perform(
+            post("/api/v1/recruitment-posts/$POST_ID/comments/$COMMENT_ID/reports")
+                .with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.status").value(201))
+
+        Mockito.verify(recruitmentPostCommentService).report(USER_ID, POST_ID, COMMENT_ID, null)
+    }
+
+    @Test
+    fun `인증되지 않은 사용자는 댓글을 신고할 수 없다`() {
+        mockMvc.perform(
+            post("/api/v1/recruitment-posts/$POST_ID/comments/$COMMENT_ID/reports")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"),
+        )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 

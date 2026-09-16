@@ -4,12 +4,14 @@ import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -24,6 +26,8 @@ class RecruitmentPostBookmarkService(
     private val postMetricReader: PostMetricReader,
     private val clock: Clock,
     private val userProfileReader: UserProfileReader,
+    private val eventPublisher: ApplicationEventPublisher,
+    private val applicationReader: RecruitmentPostApplicationReader,
 ) {
 
     @Transactional(readOnly = true)
@@ -40,6 +44,7 @@ class RecruitmentPostBookmarkService(
             RecruitmentPostAuthorResult.from(authorId, profile)
         }
         val metrics = postMetricReader.readAll(postIds)
+        val applicationCounts = applicationReader.countByPostIds(postIds)
         return RecruitmentPostBookmarkPageResult(
             items = result.items.map { item ->
                 val post = item.post
@@ -50,6 +55,7 @@ class RecruitmentPostBookmarkService(
                     author = authorsByUserId[post.authorUserId]
                         ?: RecruitmentPostAuthorResult.from(post.authorUserId, null),
                     bookmarked = true,
+                    applicationCount = applicationCounts[postId] ?: 0L,
                 )
             },
             page = result.page,
@@ -64,6 +70,7 @@ class RecruitmentPostBookmarkService(
         verifyActiveUser(userId)
         postReader.readPublished(postId)
         postBookmarkManager.append(userId, postId, LocalDateTime.now(clock))
+        eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
     }
 
     @Transactional
@@ -71,6 +78,7 @@ class RecruitmentPostBookmarkService(
         verifyActiveUser(userId)
         postReader.readIncludingDeleted(postId)
         postBookmarkManager.delete(userId, postId, LocalDateTime.now(clock))
+        eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
     }
 
     private fun verifyActiveUser(userId: Long) {

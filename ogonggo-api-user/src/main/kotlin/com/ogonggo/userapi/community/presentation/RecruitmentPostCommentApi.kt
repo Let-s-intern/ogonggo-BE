@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostCommentRequest
+import com.ogonggo.userapi.community.presentation.request.CreateRecruitmentPostCommentReportRequest
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostCommentResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostCommentRootResponse
@@ -166,4 +167,44 @@ interface RecruitmentPostCommentApi {
         @PathVariable("postId") @Positive postId: Long,
         @RequestBody @Valid request: CreateRecruitmentPostCommentRequest,
     ): ResponseEntity<SuccessResponse<CreateRecruitmentPostCommentResponse>>
+
+    @Operation(
+        operationId = "reportRecruitmentPostComment",
+        summary = "사이드 프로젝트·스터디 모집글 댓글 신고",
+        description = "로그인한 활성 사용자가 댓글을 신고합니다. 신고 사유는 생략할 수 있고, 동일 댓글을 중복 신고할 수 있습니다.",
+    )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "201", description = "신고 접수 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 신고 사유가 500자를 초과함",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "UNAUTHORIZED: 인증이 필요함",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "USER_SUSPENDED 또는 USER_WITHDRAWN: 활성 사용자만 신고 가능",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "RECRUITMENT_POST_NOT_FOUND 또는 RECRUITMENT_POST_COMMENT_NOT_FOUND",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @PostMapping("/{commentId}/reports")
+    fun reportComment(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("postId") @Positive postId: Long,
+        @PathVariable("commentId") @Positive commentId: Long,
+        @RequestBody @Valid request: CreateRecruitmentPostCommentReportRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
 }
