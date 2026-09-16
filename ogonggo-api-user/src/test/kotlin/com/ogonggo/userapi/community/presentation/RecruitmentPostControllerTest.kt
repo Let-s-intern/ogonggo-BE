@@ -6,9 +6,11 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.PostAppendCommand
-import com.ogonggo.core.community.implement.PostUpdateCommand
+import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
+import com.ogonggo.core.community.implement.RecruitmentPostCursor
+import com.ogonggo.core.community.implement.cursorKey
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -17,7 +19,7 @@ import com.ogonggo.userapi.community.business.RecruitmentPostContactResult
 import com.ogonggo.userapi.community.business.RecruitmentPostDetailResult
 import com.ogonggo.userapi.community.business.RecruitmentPostListQuery
 import com.ogonggo.userapi.community.business.RecruitmentPostService
-import com.ogonggo.userapi.community.business.RecruitmentPostPageResult
+import com.ogonggo.userapi.community.business.RecruitmentPostCursorPageResult
 import com.ogonggo.userapi.community.business.RecruitmentPostSummary
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
@@ -86,24 +88,30 @@ class RecruitmentPostControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `모집글 목록을 페이지와 enum 필터로 조회한다`() {
+    fun `모집글 목록을 커서와 enum 필터로 조회한다`() {
         val filter = RecruitmentPostListFilter(
             recruitmentTypes = setOf(RecruitmentType.STUDY, RecruitmentType.SIDE_PROJECT),
             progressMethods = setOf(ProgressMethod.ONLINE),
             recruitmentStatuses = setOf(RecruitmentStatus.RECRUITING),
             positions = setOf(RecruitmentPosition.BACKEND),
         )
+        val cursor = RecruitmentPostCursor(
+            queryKey = filter.cursorKey(RecruitmentPostSortType.DEADLINE),
+            sortType = RecruitmentPostSortType.DEADLINE,
+            deadline = LocalDate.of(2026, 9, 30),
+            id = 13L,
+        )
         Mockito.`when`(
             recruitmentPostService.getRecruitmentPosts(
                 RecruitmentPostListQuery(
-                    page = 1,
+                    cursor = cursor,
                     size = 2,
                     sortType = RecruitmentPostSortType.DEADLINE,
                     filter = filter,
                 ),
             ),
         ).thenReturn(
-            RecruitmentPostPageResult(
+            RecruitmentPostCursorPageResult(
                 items = listOf(
                     RecruitmentPostSummary(
                         id = 12L,
@@ -118,16 +126,14 @@ class RecruitmentPostControllerTest @Autowired constructor(
                         recruitmentEndDate = LocalDate.of(2026, 9, 30),
                     ),
                 ),
-                page = 1,
-                size = 2,
-                totalElements = 3,
-                totalPages = 2,
+                hasNext = true,
+                nextCursor = cursor,
             ),
         )
 
         mockMvc.perform(
             get("/api/v1/recruitment-posts")
-                .param("page", "2")
+                .param("cursor", RecruitmentPostCursorCodec.encode(cursor))
                 .param("size", "2")
                 .param("sort", "DEADLINE")
                 .param("recruitmentTypes", "STUDY", "SIDE_PROJECT")
@@ -139,11 +145,11 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.items[0].id").value(12))
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
-            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
-            .andExpect(jsonPath("$.data.pageInfo.totalElements").value(3))
+            .andExpect(jsonPath("$.data.hasNext").value(true))
+            .andExpect(jsonPath("$.data.nextCursor").isNotEmpty)
 
         Mockito.verify(recruitmentPostService).getRecruitmentPosts(
-            RecruitmentPostListQuery(1, 2, RecruitmentPostSortType.DEADLINE, filter),
+            RecruitmentPostListQuery(cursor, 2, RecruitmentPostSortType.DEADLINE, filter),
         )
     }
 
@@ -152,13 +158,13 @@ class RecruitmentPostControllerTest @Autowired constructor(
         Mockito.`when`(
             recruitmentPostService.getRecruitmentPosts(
                 RecruitmentPostListQuery(
-                    page = 0,
+                    cursor = null,
                     size = 10,
                     sortType = RecruitmentPostSortType.LATEST,
                     filter = RecruitmentPostListFilter(),
                 ),
             ),
-        ).thenReturn(RecruitmentPostPageResult(emptyList(), 0, 10, 0, 0))
+        ).thenReturn(RecruitmentPostCursorPageResult(emptyList(), false, null))
 
         mockMvc.perform(get("/api/v1/recruitment-posts"))
             .andExpect(status().isOk)
@@ -175,8 +181,8 @@ class RecruitmentPostControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `페이지 번호가 1보다 작으면 400을 반환한다`() {
-        mockMvc.perform(get("/api/v1/recruitment-posts").param("page", "0"))
+    fun `모집글 커서 형식이 올바르지 않으면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/recruitment-posts").param("cursor", "invalid"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
 
@@ -313,7 +319,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         UsernamePasswordAuthenticationToken(USER_ID, null, emptyList()),
     )
 
-    private fun createCommand() = PostAppendCommand(
+    private fun createCommand() = RecruitmentPostAppendCommand(
         authorUserId = USER_ID,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -331,7 +337,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         contactValue = "team@example.com",
     )
 
-    private fun updateCommand() = PostUpdateCommand(
+    private fun updateCommand() = RecruitmentPostUpdateCommand(
         title = "수정된 모집글",
         recruitmentType = RecruitmentType.STUDY,
         capacity = 6,

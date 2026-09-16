@@ -2,16 +2,18 @@ package com.ogonggo.userapi.community.business
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.PostAppendCommand
-import com.ogonggo.core.community.implement.PostAppender
-import com.ogonggo.core.community.implement.PostManager
-import com.ogonggo.core.community.implement.PostReader
-import com.ogonggo.core.community.implement.PostUpdateCommand
+import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostAppender
+import com.ogonggo.core.community.implement.RecruitmentPostManager
+import com.ogonggo.core.community.implement.PostMetricReader
+import com.ogonggo.core.community.implement.PostMetricDto
+import com.ogonggo.core.community.implement.RecruitmentPostReader
+import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserRole
@@ -21,6 +23,7 @@ import com.ogonggo.core.user.implement.dto.UserAccountDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -30,25 +33,29 @@ import java.time.ZoneId
 class RecruitmentPostServiceTest {
 
     private val userReader = Mockito.mock(UserReader::class.java)
-    private val postAppender = Mockito.mock(PostAppender::class.java)
-    private val postManager = Mockito.mock(PostManager::class.java)
-    private val postReader = Mockito.mock(PostReader::class.java)
+    private val postAppender = Mockito.mock(RecruitmentPostAppender::class.java)
+    private val postManager = Mockito.mock(RecruitmentPostManager::class.java)
+    private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
+    private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
     private val service = RecruitmentPostService(
         userReader,
         postAppender,
         postManager,
         postReader,
+        postMetricReader,
         contentValidator,
         imageAssetManager,
+        eventPublisher,
         clock,
     )
 
     @Test
     fun `공개 모집글 상세 조회 결과를 변환한다`() {
-        val post = Mockito.mock(Post::class.java)
+        val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(postReader.readPublished(12L)).thenReturn(post)
         Mockito.`when`(post.id).thenReturn(12L)
         Mockito.`when`(post.authorUserId).thenReturn(USER_ID)
@@ -67,6 +74,7 @@ class RecruitmentPostServiceTest {
         Mockito.`when`(post.summary).thenReturn("함께 공부할 분을 모집합니다.")
         Mockito.`when`(post.content).thenReturn(EDITOR_STATE_JSON)
         Mockito.`when`(post.eligibilityAndSelectionProcess).thenReturn(null)
+        Mockito.`when`(postMetricReader.read(12L)).thenReturn(PostMetricDto.EMPTY)
 
         val result = service.getRecruitmentPost(12L)
 
@@ -76,12 +84,13 @@ class RecruitmentPostServiceTest {
         assertEquals(ContactMethod.EMAIL, result.contact.method)
         assertEquals(EDITOR_STATE_JSON, result.content)
         Mockito.verify(postReader).readPublished(12L)
+        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostViewedEvent(12L))
     }
 
     @Test
     fun `활성 사용자가 생성한 모집글의 식별자를 반환한다`() {
         val command = createCommand(authorUserId = 999L)
-        val savedPost = Mockito.mock(Post::class.java)
+        val savedPost = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postAppender.append(command.copy(authorUserId = USER_ID))).thenReturn(savedPost)
         Mockito.`when`(savedPost.id).thenReturn(12L)
@@ -95,9 +104,9 @@ class RecruitmentPostServiceTest {
     @Test
     fun `모집글 생성 전에 Lexical EditorState JSON을 검증한다`() {
         val command = createCommand(authorUserId = USER_ID)
-        val savedPost = Mockito.mock(Post::class.java)
+        val savedPost = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        val anyCommand = Mockito.any(PostAppendCommand::class.java) ?: command
+        val anyCommand = Mockito.any(RecruitmentPostAppendCommand::class.java) ?: command
         Mockito.`when`(postAppender.append(anyCommand)).thenReturn(savedPost)
         Mockito.`when`(savedPost.id).thenReturn(12L)
 
@@ -114,7 +123,7 @@ class RecruitmentPostServiceTest {
     @Test
     fun `작성자가 모집글을 수정하면 본문을 검증하고 기존 모집글을 갱신한다`() {
         // given
-        val post = Mockito.mock(Post::class.java)
+        val post = Mockito.mock(RecruitmentPost::class.java)
         val command = updateCommand()
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postReader.readOwned(USER_ID, 12L)).thenReturn(post)
@@ -133,7 +142,7 @@ class RecruitmentPostServiceTest {
     @Test
     fun `작성자가 모집글을 삭제하면 삭제용 소유 조회와 삭제를 수행한다`() {
         // given
-        val post = Mockito.mock(Post::class.java)
+        val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postReader.readOwnedForDelete(USER_ID, 12L)).thenReturn(post)
 
@@ -154,7 +163,7 @@ class RecruitmentPostServiceTest {
         joinedAt = LocalDateTime.of(2026, 1, 1, 0, 0),
     )
 
-    private fun createCommand(authorUserId: Long): PostAppendCommand = PostAppendCommand(
+    private fun createCommand(authorUserId: Long): RecruitmentPostAppendCommand = RecruitmentPostAppendCommand(
         authorUserId = authorUserId,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -172,7 +181,7 @@ class RecruitmentPostServiceTest {
         contactValue = "team@example.com",
     )
 
-    private fun updateCommand() = PostUpdateCommand(
+    private fun updateCommand() = RecruitmentPostUpdateCommand(
         title = "수정된 모집글",
         recruitmentType = RecruitmentType.STUDY,
         capacity = 6,

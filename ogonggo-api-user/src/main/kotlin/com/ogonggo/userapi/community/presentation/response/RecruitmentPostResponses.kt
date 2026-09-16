@@ -34,6 +34,8 @@ data class RecruitmentPostDetailResponse(
     val summary: String,
     val content: JsonNode,
     val eligibilityAndSelectionProcess: String?,
+    val viewCount: Long = 0,
+    val commentCount: Long = 0,
 ) {
     companion object {
         fun from(
@@ -57,6 +59,8 @@ data class RecruitmentPostDetailResponse(
                 summary = result.summary,
                 content = objectMapper.readTree(result.content),
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
+                viewCount = result.viewCount,
+                commentCount = result.commentCount,
             )
     }
 }
@@ -91,6 +95,8 @@ data class RecruitmentPostSummaryResponse(
     val technologyStacks: List<String>,
     val recruitmentStartDate: LocalDate,
     val recruitmentEndDate: LocalDate,
+    val viewCount: Long = 0,
+    val commentCount: Long = 0,
 ) {
     companion object {
         fun from(summary: RecruitmentPostSummary): RecruitmentPostSummaryResponse = RecruitmentPostSummaryResponse(
@@ -104,6 +110,8 @@ data class RecruitmentPostSummaryResponse(
             technologyStacks = summary.technologyStacks,
             recruitmentStartDate = summary.recruitmentStartDate,
             recruitmentEndDate = summary.recruitmentEndDate,
+            viewCount = summary.viewCount,
+            commentCount = summary.commentCount,
         )
     }
 }

@@ -8,8 +8,8 @@ import com.ogonggo.userapi.community.presentation.request.UpdateRecruitmentPostR
 import com.ogonggo.userapi.community.presentation.response.CreateRecruitmentPostResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostDetailResponse
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
-import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
+import com.ogonggo.userapi.response.CursorPageResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.RestController
@@ -23,25 +23,25 @@ class RecruitmentPostController(
 
     override fun getRecruitmentPost(
         postId: Long,
-    ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> =
-        SuccessResponse.ok(
-            RecruitmentPostDetailResponse.from(
-                recruitmentPostService.getRecruitmentPost(postId),
-                objectMapper,
-            ),
+    ): ResponseEntity<SuccessResponse<RecruitmentPostDetailResponse>> {
+        val responseBody = RecruitmentPostDetailResponse.from(
+            recruitmentPostService.getRecruitmentPost(postId),
+            objectMapper,
         )
+        return SuccessResponse.ok(responseBody)
+    }
 
     override fun getRecruitmentPosts(
         request: RecruitmentPostListRequest,
-    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>> {
-        val result = recruitmentPostService.getRecruitmentPosts(request.toQuery())
+    ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>> {
+        val result = recruitmentPostService.getRecruitmentPosts(
+            request.toQuery(RecruitmentPostCursorCodec.decode(request.cursor)),
+        )
         return SuccessResponse.ok(
-            PageResponse.fromZeroBased(
+            CursorPageResponse(
                 items = result.items.map(RecruitmentPostSummaryResponse::from),
-                page = result.page,
-                size = result.size,
-                totalElements = result.totalElements,
-                totalPages = result.totalPages,
+                hasNext = result.hasNext,
+                nextCursor = result.nextCursor?.let(RecruitmentPostCursorCodec::encode),
             ),
         )
     }

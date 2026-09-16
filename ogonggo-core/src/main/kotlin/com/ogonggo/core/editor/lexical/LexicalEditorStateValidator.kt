@@ -6,6 +6,16 @@ import org.springframework.stereotype.Component
 
 private fun invalid(reason: String): Nothing = throw LexicalEditorStateException(reason)
 
+object LexicalEditorStateJson {
+    fun isValid(content: String): Boolean {
+        if (content.length > MAX_SERIALIZED_LENGTH || content.isBlank()) return false
+        return runCatching { DEFAULT_OBJECT_MAPPER.readTree(content) != null }.getOrDefault(false)
+    }
+
+    private val DEFAULT_OBJECT_MAPPER = ObjectMapper()
+    private const val MAX_SERIALIZED_LENGTH = 200_000
+}
+
 /**
  * Lexical EditorState를 저장하기 전에 JSON 형식과 크기만 검증한다.
  * 검증을 통과한 JSON은 DB에 저장할 수 있는 canonical 문자열로 반환한다.

@@ -1,6 +1,7 @@
 package com.ogonggo.core.community.domain
 
 import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.editor.lexical.LexicalEditorStateJson
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
@@ -12,6 +13,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
+import java.net.URI
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -21,7 +23,7 @@ import java.time.LocalDateTime
  */
 @Entity
 @Table(name = "community_posts")
-class Post internal constructor(
+class RecruitmentPost internal constructor(
     authorUserId: Long,
     title: String,
     recruitmentType: RecruitmentType,
@@ -55,6 +57,7 @@ class Post internal constructor(
             recruitmentStartDate = recruitmentStartDate,
             recruitmentEndDate = recruitmentEndDate,
             positions = positions,
+            contactMethod = contactMethod,
             contactValue = contactValue,
         )
         require((recruitmentStatus == RecruitmentStatus.CLOSED) == (closedAt != null)) {
@@ -97,6 +100,7 @@ class Post internal constructor(
     @CollectionTable(name = "community_post_technology_stacks", joinColumns = [JoinColumn(name = "post_id")])
     @Column(name = "technology_stack", nullable = false, length = 50)
     var technologyStacks: MutableList<String> = technologyStacks.toMutableList()
+        get() = field.toMutableList()
         protected set
 
     @Column(nullable = false, length = 500)
@@ -124,6 +128,7 @@ class Post internal constructor(
     @Enumerated(EnumType.STRING)
     @Column(name = "position", nullable = false, length = 30)
     var positions: MutableList<RecruitmentPosition> = positions.toMutableList()
+        get() = field.toMutableList()
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -195,6 +200,7 @@ class Post internal constructor(
             recruitmentStartDate = recruitmentStartDate,
             recruitmentEndDate = recruitmentEndDate,
             positions = positions,
+            contactMethod = contactMethod,
             contactValue = contactValue,
         )
 
@@ -230,13 +236,14 @@ private fun validateEditableValues(
     recruitmentStartDate: LocalDate,
     recruitmentEndDate: LocalDate,
     positions: List<RecruitmentPosition>,
+    contactMethod: ContactMethod,
     contactValue: String,
 ) {
     require(title.isNotBlank() && title.length <= 255) { "모집글 제목은 1자 이상 255자 이하여야 합니다." }
     require(capacity > 0) { "모집 인원은 1명 이상이어야 합니다." }
     require(activityDurationMonths > 0) { "활동 기간은 1개월 이상이어야 합니다." }
     require(summary.isNotBlank() && summary.length <= 500) { "한 줄 소개는 1자 이상 500자 이하여야 합니다." }
-    require(content.isNotBlank()) { "모집글 본문은 비어 있을 수 없습니다." }
+    require(LexicalEditorStateJson.isValid(content)) { "모집글 본문은 올바른 에디터 JSON이어야 합니다." }
     require(eligibilityAndSelectionProcess == null || eligibilityAndSelectionProcess.isNotBlank()) {
         "지원 자격 및 전형은 공백일 수 없습니다."
     }
@@ -245,5 +252,25 @@ private fun validateEditableValues(
     require(positions.distinct().size == positions.size) { "중복된 모집 포지션은 등록할 수 없습니다." }
     require(technologyStacks.all(String::isNotBlank)) { "기술 스택은 공백일 수 없습니다." }
     require(technologyStacks.distinct().size == technologyStacks.size) { "중복된 기술 스택은 등록할 수 없습니다." }
+    require(technologyStacks.size <= TECHNOLOGY_STACK_MAX_COUNT) { "기술 스택은 20개 이하로 입력해야 합니다." }
+    require(technologyStacks.all { it.length <= TECHNOLOGY_STACK_MAX_LENGTH }) {
+        "기술 스택은 50자 이하여야 합니다."
+    }
     require(contactValue.isNotBlank()) { "연락 방법 값은 비어 있을 수 없습니다." }
+    when (contactMethod) {
+        ContactMethod.EMAIL -> require(EMAIL_PATTERN.matches(contactValue)) {
+            "이메일 형식으로 입력해 주세요."
+        }
+        ContactMethod.OPEN_KAKAO -> require(isHttpUrl(contactValue)) {
+            "카카오톡 오픈채팅 링크를 입력해 주세요."
+        }
+    }
 }
+
+private fun isHttpUrl(value: String): Boolean = runCatching {
+    URI(value).let { it.scheme in setOf("http", "https") && !it.host.isNullOrBlank() }
+}.getOrDefault(false)
+
+private const val TECHNOLOGY_STACK_MAX_COUNT = 20
+private const val TECHNOLOGY_STACK_MAX_LENGTH = 50
+private val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")

@@ -15,4 +15,12 @@ class UserProfileReader internal constructor(
 
     fun read(userId: Long): UserProfileDto? =
         userProfileRepository.findByUserId(userId)?.let(UserProfileDto::from)
+
+    fun readAll(userIds: Collection<Long>): Map<Long, UserProfileDto> =
+        if (userIds.isEmpty()) {
+            emptyMap()
+        } else {
+            userProfileRepository.findAllByUserIdIn(userIds)
+                .associate { profile -> profile.userId to UserProfileDto.from(profile) }
+        }
 }

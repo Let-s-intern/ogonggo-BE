@@ -1,18 +1,21 @@
 package com.ogonggo.core.community.implement
 
 import com.ogonggo.core.community.domain.ContactMethod
-import com.ogonggo.core.community.domain.Post
+import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.common.CoreJpaConfiguration
-import com.ogonggo.core.community.persistence.PostJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostQueryRepository
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -23,12 +26,12 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(PostAppenderImpl::class, PostManagerImpl::class, PostReaderImpl::class)
+@Import(RecruitmentPostAppender::class, RecruitmentPostManager::class, RecruitmentPostReader::class, RecruitmentPostQueryRepository::class)
 internal class PostReaderPersistenceTest @Autowired constructor(
-    private val postAppender: PostAppender,
-    private val postManager: PostManager,
-    private val postReader: PostReader,
-    private val postRepository: PostJpaRepository,
+    private val postAppender: RecruitmentPostAppender,
+    private val postManager: RecruitmentPostManager,
+    private val postReader: RecruitmentPostReader,
+    private val postRepository: RecruitmentPostJpaRepository,
 ) {
 
     @Test
@@ -57,13 +60,13 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `공개 모집글을 모집 구분으로 필터링하고 페이지로 조회한다`() {
+    fun `공개 모집글을 모집 구분으로 필터링하고 커서로 조회한다`() {
         postAppender.append(createCommand(title = "스터디 모집", recruitmentType = RecruitmentType.STUDY))
         postAppender.append(createCommand(title = "사이드 프로젝트 모집", recruitmentType = RecruitmentType.SIDE_PROJECT))
         postRepository.save(createPost(title = "비공개 모집", publicationStatus = PublicationStatus.HIDDEN))
 
-        val result = postReader.readPublishedPage(
-            page = 0,
+        val result = postReader.readPublishedCursorPage(
+            cursor = null,
             size = 1,
             filter = RecruitmentPostListFilter(recruitmentTypes = setOf(RecruitmentType.STUDY)),
             sortType = RecruitmentPostSortType.LATEST,
@@ -71,8 +74,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
 
         assertEquals(1, result.posts.size)
         assertEquals("스터디 모집", result.posts.single().title)
-        assertEquals(1, result.totalElements)
-        assertEquals(1, result.totalPages)
+        assertFalse(result.hasNext)
     }
 
     @Test
@@ -92,14 +94,14 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             ),
         )
 
-        val result = postReader.readPublishedPage(
-            page = 0,
+        val result = postReader.readPublishedCursorPage(
+            cursor = null,
             size = 10,
             filter = RecruitmentPostListFilter(positions = setOf(RecruitmentPosition.DESIGN)),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(listOf("백엔드 모집"), result.posts.map(Post::title))
+        assertEquals(listOf("백엔드 모집"), result.posts.map(RecruitmentPost::title))
     }
 
     @Test
@@ -108,15 +110,15 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         postAppender.append(createCommand(title = "사이드 프로젝트 모집", recruitmentType = RecruitmentType.SIDE_PROJECT))
         postRepository.save(createPost(title = "비공개 모집", publicationStatus = PublicationStatus.HIDDEN))
 
-        val result = postReader.readPublishedPage(
-            page = 0,
+        val result = postReader.readPublishedCursorPage(
+            cursor = null,
             size = 10,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(setOf("스터디 모집", "사이드 프로젝트 모집"), result.posts.map(Post::title).toSet())
-        assertEquals(2, result.totalElements)
+        assertEquals(setOf("스터디 모집", "사이드 프로젝트 모집"), result.posts.map(RecruitmentPost::title).toSet())
+        assertFalse(result.hasNext)
     }
 
     @Test
@@ -129,15 +131,15 @@ internal class PostReaderPersistenceTest @Autowired constructor(
             postReader.readPublished(checkNotNull(deletedPost.id))
         }
 
-        val result = postReader.readPublishedPage(
-            page = 0,
+        val result = postReader.readPublishedCursorPage(
+            cursor = null,
             size = 10,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(emptyList<Post>(), result.posts)
-        assertEquals(0, result.totalElements)
+        assertEquals(emptyList<RecruitmentPost>(), result.posts)
+        assertFalse(result.hasNext)
     }
 
     @Test
@@ -154,26 +156,58 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `마지막 페이지를 넘어가면 빈 목록과 전체 개수를 반환한다`() {
-        postAppender.append(createCommand(title = "스터디 모집", recruitmentType = RecruitmentType.STUDY))
+    fun `최신순 커서로 다음 목록을 중복 없이 조회한다`() {
+        postAppender.append(createCommand(title = "첫 번째", recruitmentType = RecruitmentType.STUDY))
+        postAppender.append(createCommand(title = "두 번째", recruitmentType = RecruitmentType.STUDY))
+        postAppender.append(createCommand(title = "세 번째", recruitmentType = RecruitmentType.STUDY))
 
-        val result = postReader.readPublishedPage(
-            page = 1,
-            size = 10,
+        val first = postReader.readPublishedCursorPage(
+            cursor = null,
+            size = 2,
+            filter = RecruitmentPostListFilter(),
+            sortType = RecruitmentPostSortType.LATEST,
+        )
+        val last = first.posts.last()
+        val cursor = RecruitmentPostCursor(
+            queryKey = RecruitmentPostListFilter().cursorKey(RecruitmentPostSortType.LATEST),
+            sortType = RecruitmentPostSortType.LATEST,
+            id = checkNotNull(last.id),
+        )
+
+        val second = postReader.readPublishedCursorPage(
+            cursor = cursor,
+            size = 2,
             filter = RecruitmentPostListFilter(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
-        assertEquals(emptyList<Post>(), result.posts)
-        assertEquals(1, result.totalElements)
-        assertEquals(1, result.totalPages)
+        assertEquals(listOf("첫 번째"), second.posts.map(RecruitmentPost::title))
+        assertFalse(second.hasNext)
+    }
+
+    @Test
+    fun `커서의 정렬 조건이 현재 요청과 다르면 거부한다`() {
+        val cursor = RecruitmentPostCursor(
+            queryKey = RecruitmentPostListFilter().cursorKey(RecruitmentPostSortType.LATEST),
+            sortType = RecruitmentPostSortType.LATEST,
+            id = 1L,
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            postReader.readPublishedCursorPage(
+                cursor = cursor,
+                size = 10,
+                filter = RecruitmentPostListFilter(),
+                sortType = RecruitmentPostSortType.DEADLINE,
+            )
+        }
     }
 
     private fun createCommand(
         title: String,
         recruitmentType: RecruitmentType,
         positions: List<RecruitmentPosition> = listOf(RecruitmentPosition.BACKEND),
-    ) = PostAppendCommand(
+    ) = RecruitmentPostAppendCommand(
         authorUserId = 1L,
         title = title,
         recruitmentType = recruitmentType,
@@ -182,7 +216,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = "{\"root\":{\"children\":[]}}",
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),
@@ -194,7 +228,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     private fun createPost(
         title: String,
         publicationStatus: PublicationStatus,
-    ) = Post(
+    ) = RecruitmentPost(
         authorUserId = 1L,
         title = title,
         recruitmentType = RecruitmentType.STUDY,
@@ -203,7 +237,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         activityDurationMonths = 3,
         technologyStacks = listOf("Kotlin"),
         summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
-        content = "<p>모집 상세 내용입니다.</p>",
+        content = "{\"root\":{\"children\":[]}}",
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),

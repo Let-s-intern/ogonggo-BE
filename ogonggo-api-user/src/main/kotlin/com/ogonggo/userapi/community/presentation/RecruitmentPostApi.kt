@@ -8,7 +8,7 @@ import com.ogonggo.userapi.community.presentation.response.RecruitmentPostDetail
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
-import com.ogonggo.userapi.response.PageResponse
+import com.ogonggo.userapi.response.CursorPageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -62,14 +62,14 @@ interface RecruitmentPostApi {
 
     @Operation(
         summary = "사이드 프로젝트·스터디 모집글 목록 조회",
-        description = "공개 모집글을 페이징하고 모집 구분·진행 방식·모집 상태·포지션으로 필터링합니다.",
+        description = "공개 모집글을 커서로 페이징하고 모집 구분·진행 방식·모집 상태·포지션으로 필터링합니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "페이지 또는 enum 필터가 올바르지 않음",
+                description = "커서, 페이지 크기 또는 enum 필터가 올바르지 않음",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
@@ -77,7 +77,7 @@ interface RecruitmentPostApi {
     @GetMapping
     fun getRecruitmentPosts(
         @Valid @ModelAttribute request: RecruitmentPostListRequest,
-    ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>>
+    ): ResponseEntity<SuccessResponse<CursorPageResponse<RecruitmentPostSummaryResponse>>>
 
     @Operation(summary = "사이드 프로젝트·스터디 모집글 생성")
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
