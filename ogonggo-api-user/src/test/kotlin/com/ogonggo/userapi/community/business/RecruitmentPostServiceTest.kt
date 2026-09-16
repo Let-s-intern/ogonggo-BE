@@ -10,6 +10,7 @@ import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
@@ -26,6 +27,7 @@ import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
 import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
@@ -35,6 +37,7 @@ import com.ogonggo.core.user.implement.dto.UserProfileDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
@@ -302,6 +305,7 @@ class RecruitmentPostServiceTest {
         Mockito.verify(postManager).update(
             post,
             command.copy(content = EDITOR_STATE_JSON),
+            LocalDate.of(2026, 9, 11),
         )
         Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
     }
@@ -360,6 +364,7 @@ class RecruitmentPostServiceTest {
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 30))
 
         // when
         service.reopen(USER_ID, 12L)
@@ -367,6 +372,24 @@ class RecruitmentPostServiceTest {
         // then
         Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).reopen(post)
+    }
+
+    @Test
+    fun `종료일이 현재보다 미래가 아니면 명시적으로 재모집할 수 없다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 11))
+
+        // when
+        val exception = assertThrows(ConflictException::class.java) {
+            service.reopen(USER_ID, 12L)
+        }
+
+        // then
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_REOPEN_END_DATE_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(postManager)
     }
 
     private fun activeUser(): UserAccountDto = UserAccountDto(

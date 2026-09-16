@@ -376,6 +376,7 @@ class RecruitmentPostDomainTest {
             positions = updateCommand.positions,
             contactMethod = updateCommand.contactMethod,
             contactValue = updateCommand.contactValue,
+            today = LocalDate.of(2026, 9, 11),
         )
 
         // then
@@ -411,11 +412,75 @@ class RecruitmentPostDomainTest {
                 positions = post.positions,
                 contactMethod = post.contactMethod,
                 contactValue = post.contactValue,
+                today = LocalDate.of(2026, 9, 11),
             )
         }
 
         // then
         assertEquals("모집 시작일은 마감일보다 늦을 수 없습니다.", exception.message)
+    }
+
+    @Test
+    @DisplayName("마감된 모집글의 종료일을 미래로 변경하면 재모집한다")
+    fun reopenClosedPostWhenEndDateMovesToFuture() {
+        // given
+        val post = createPostFixture(recruitmentEndDate = LocalDate.of(2026, 9, 10))
+        post.close(LocalDateTime.of(2026, 9, 11, 9, 0))
+
+        // when
+        post.update(
+            title = post.title,
+            recruitmentType = post.recruitmentType,
+            capacity = post.capacity,
+            progressMethod = post.progressMethod,
+            activityDurationMonths = post.activityDurationMonths,
+            technologyStacks = post.technologyStacks,
+            summary = post.summary,
+            content = post.content,
+            eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
+            recruitmentStartDate = post.recruitmentStartDate,
+            recruitmentEndDate = LocalDate.of(2026, 9, 30),
+            positions = post.positions,
+            contactMethod = post.contactMethod,
+            contactValue = post.contactValue,
+            today = LocalDate.of(2026, 9, 11),
+        )
+
+        // then
+        assertEquals(RecruitmentStatus.RECRUITING, post.recruitmentStatus)
+        assertEquals(null, post.closedAt)
+    }
+
+    @Test
+    @DisplayName("마감일을 바꾸지 않은 마감 모집글은 수정해도 마감 상태를 유지한다")
+    fun keepClosedWhenEndDateDoesNotChange() {
+        // given
+        val post = createPostFixture(recruitmentEndDate = LocalDate.of(2026, 9, 30))
+        val closedAt = LocalDateTime.of(2026, 9, 11, 9, 0)
+        post.close(closedAt)
+
+        // when
+        post.update(
+            title = "내용만 수정한 모집글",
+            recruitmentType = post.recruitmentType,
+            capacity = post.capacity,
+            progressMethod = post.progressMethod,
+            activityDurationMonths = post.activityDurationMonths,
+            technologyStacks = post.technologyStacks,
+            summary = post.summary,
+            content = post.content,
+            eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
+            recruitmentStartDate = post.recruitmentStartDate,
+            recruitmentEndDate = post.recruitmentEndDate,
+            positions = post.positions,
+            contactMethod = post.contactMethod,
+            contactValue = post.contactValue,
+            today = LocalDate.of(2026, 9, 11),
+        )
+
+        // then
+        assertEquals(RecruitmentStatus.CLOSED, post.recruitmentStatus)
+        assertEquals(closedAt, post.closedAt)
     }
 
     private fun createPostFixture(

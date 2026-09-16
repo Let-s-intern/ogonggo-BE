@@ -61,6 +61,7 @@ internal class PostImplementPersistenceTest @Autowired constructor(
                 contactMethod = ContactMethod.OPEN_KAKAO,
                 contactValue = "https://open.kakao.com/o/updated",
             ),
+            LocalDate.of(2026, 9, 11),
         )
         postRepository.flush()
         val reloadedPost = postRepository.findById(postId).orElseThrow()

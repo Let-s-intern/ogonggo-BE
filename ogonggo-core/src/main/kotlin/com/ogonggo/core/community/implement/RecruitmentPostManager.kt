@@ -12,7 +12,7 @@ class RecruitmentPostManager internal constructor(
     private val postRepository: RecruitmentPostJpaRepository,
 ) {
 
-    fun update(post: RecruitmentPost, command: RecruitmentPostUpdateCommand) {
+    fun update(post: RecruitmentPost, command: RecruitmentPostUpdateCommand, today: LocalDate) {
         post.update(
             title = command.title,
             recruitmentType = command.recruitmentType,
@@ -28,6 +28,7 @@ class RecruitmentPostManager internal constructor(
             positions = command.positions.orEmpty(),
             contactMethod = command.contactMethod,
             contactValue = command.contactValue,
+            today = today,
         )
         postRepository.save(post)
     }
