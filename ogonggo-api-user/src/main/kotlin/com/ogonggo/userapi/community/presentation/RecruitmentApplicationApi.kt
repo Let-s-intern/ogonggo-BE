@@ -38,7 +38,14 @@ interface RecruitmentApplicationApi {
     @Operation(
         operationId = "createRecruitmentPostApplication",
         summary = "모집글 외부 지원 링크 접근 기록",
-        description = "실제 지원서 제출이 아니라 모집글의 외부 지원 연락처를 열었다는 이력을 저장합니다.",
+        description = """
+            실제 지원서 제출이 아니라 모집글의 외부 지원 연락처를 열었다는 이력을 저장합니다.
+
+            ### 추가사항
+
+            - 성공 후 FE가 응답의 `contactValue`를 사용해 카카오톡 또는 이메일을 열어야 합니다.
+            - 동일 사용자의 재접근은 새 이력을 생성하지 않고 `lastClickedAt`만 갱신합니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -85,6 +92,12 @@ interface RecruitmentApplicationApi {
             keyword를 보내면 모집글 제목에 포함되는지 대소문자를 구분하지 않고 검색합니다.
             검색어는 2자 이상 100자 이하여야 하며, 모집 상태·모집 유형·지원 상태 필터와 함께 사용할 수 있습니다.
             countsByRecruitmentType에는 현재 검색·모집 상태·지원 상태 필터를 적용한 SIDE_PROJECT, STUDY 건수를 반환합니다.
+
+            ### 추가사항
+
+            - `applicationStatus`는 사용자의 개인 관리 상태입니다.
+            - 지원 이력은 최초 접근 시각 기준으로 정렬됩니다.
+            - `countsByRecruitmentType`는 현재 필터 조건이 적용된 결과입니다.
         """,
     )
     @ApiResponses(
@@ -122,7 +135,14 @@ interface RecruitmentApplicationApi {
     @Operation(
         operationId = "updateRecruitmentPostApplicationStatus",
         summary = "내 모집글 지원 상태 변경",
-        description = "실제 지원서 처리 상태가 아닌 사용자의 개인 관리 상태를 변경합니다.",
+        description = """
+            실제 지원서 처리 상태가 아닌 사용자의 개인 관리 상태를 변경합니다.
+
+            ### 추가사항
+
+            - 모집글 작성자에게 보이는 지원자 정보에는 영향을 주지 않습니다.
+            - 삭제된 지원 이력은 상태를 변경할 수 없습니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -159,7 +179,14 @@ interface RecruitmentApplicationApi {
     @Operation(
         operationId = "deleteRecruitmentPostApplication",
         summary = "내 모집글 지원 이력 삭제",
-        description = "지원 이력을 개인 목록에서 숨기고 모집글의 활성 applicationCount 집계에서도 제외합니다.",
+        description = """
+            지원 이력을 개인 목록에서 숨기고 모집글의 활성 `applicationCount` 집계에서도 제외합니다.
+
+            ### 추가사항
+
+            - 지원 이력은 소프트 삭제됩니다.
+            - 이후 다시 외부 지원 링크에 접근하면 기존 이력이 재활성화됩니다.
+        """,
     )
     @ApiResponses(
         value = [
