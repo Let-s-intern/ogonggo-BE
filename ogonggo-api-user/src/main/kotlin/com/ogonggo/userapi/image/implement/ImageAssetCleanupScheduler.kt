@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.image.implement
 
 import com.ogonggo.core.image.implement.ImageAssetManager
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
@@ -18,6 +19,11 @@ class ImageAssetCleanupScheduler(
 ) {
 
     @Scheduled(fixedDelayString = "\${ogonggo.storage.s3.cleanup.fixed-delay-ms:3600000}")
+    @SchedulerLock(
+        name = "imageAssetCleanup",
+        lockAtLeastFor = "\${ogonggo.storage.s3.cleanup.lock-at-least-for:PT55M}",
+        lockAtMostFor = "\${ogonggo.storage.s3.cleanup.lock-at-most-for:PT2H}",
+    )
     fun cleanup() {
         val deletedCount = imageAssetManager.cleanup(
             now = LocalDateTime.now(clock),
