@@ -81,6 +81,10 @@ Business Service를 돕는 조회·생성·변경·정책 구현을 제공합니
 
 Spring Data JPA, QueryDSL 등 저장 기술을 담당합니다. Repository는 core 내부 구현이며 기본적으로 `internal`로 둡니다.
 
+Spring Data JPA Repository는 CRUD·단순 조회·잠금처럼 메서드 의미가 바로 드러나는 작업만
+담당합니다. 선택 필터·정렬·페이지네이션·DTO projection이 필요한 동적 조회는 QueryDSL
+Custom Repository로 작성하며, 조건이 많은 정적 `@Query` 문자열로 확장하지 않습니다.
+
 ## 4. API Service와 core는 어떻게 함께 쓰는가
 
 두 API가 같은 core 컴포넌트를 사용하더라도 Business Service의 역할을 core에 넘기는 것은 아닙니다.
@@ -208,6 +212,9 @@ API 모듈의 HTTP 계약은 이 규칙을 따르지 않습니다. `presentation
 - 조회를 구현할 때 지연 로딩 예외, N+1 쿼리, DTO 변환 시점을 기능별로 검토합니다.
 
 ## 8. 엔티티 삭제와 JPA 연관관계 규칙
+
+다중 도메인 기능이 대상을 참조하는 저장 모델의 선택지는
+[`bookmark-target-model-review.md`](bookmark-target-model-review.md)에서 ADR 결정 전 검토 원문으로 비교한다.
 
 ### 삭제
 
