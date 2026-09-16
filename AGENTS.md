@@ -23,6 +23,7 @@
 | API 성공 응답, 페이지네이션, HTTP 상태, 응답 DTO 소유 위치 | [`docs/architecture/api-response.md`](docs/architecture/api-response.md) | 도메인 API의 성공·목록 응답을 추가하거나 변경할 때 |
 | REST URI, HTTP 메서드, 상태 전이 API, 멱등성 | [`docs/architecture/rest-api-design.md`](docs/architecture/rest-api-design.md) | API 경로·메서드·상태 코드를 추가하거나 변경할 때 |
 | OpenAPI, Swagger UI, API 계약 인터페이스, 명세 테스트 | [`docs/architecture/openapi.md`](docs/architecture/openapi.md) | Controller·Swagger 명세·API 계약 테스트를 추가하거나 변경할 때 |
+| 테스트 작성 방식, 공통 규칙, 계층 선택, 테스트 추가·유지·제거 | [`docs/architecture/testing.md`](docs/architecture/testing.md) | 자동화 테스트를 추가·수정·삭제하거나 테스트 범위를 검토할 때 |
 | 시간대, Clock, 현재 시각 생성, JPA Auditing, 시간 테스트 | [`docs/architecture/time-handling.md`](docs/architecture/time-handling.md) | 시간 기반 기능·엔티티 일시·스케줄러·외부 시간 연동을 추가하거나 변경할 때 |
 | 사용자 인증, 렛츠커리어 로그인 연동, 토큰 수명, 내부 API 키, 사용자 역할과 기업회원 등록, 브라우저 CORS 허용 오리진 | [`docs/architecture/authentication.md`](docs/architecture/authentication.md) | 로그인·토큰·세션 흐름이나 사용자 역할을 바꾸거나, 렛츠커리어 연동 지점 또는 CORS 허용 오리진을 수정할 때 |
 | 배포 검증, GitHub Actions 게이트, 자동 롤백, 시크릿 로그 마스킹 | [`docs/infra/ci-cd-validation.md`](docs/infra/ci-cd-validation.md) | 배포 워크플로, 시크릿, 배포 절차를 수정할 때 |
