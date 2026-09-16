@@ -40,7 +40,14 @@ interface RecruitmentPostManagementApi {
     @Operation(
         operationId = "createMyRecruitmentPostDraft",
         summary = "내 모집글 임시저장 생성",
-        description = "제목만 필수로 받고 나머지 필드는 선택적으로 저장합니다.",
+        description = """
+            제목만 필수로 받고 나머지 필드는 선택적으로 저장합니다.
+
+            ### 추가사항
+
+            - 기존 호환용 임시저장 API입니다.
+            - 신규 생성 화면에서는 `POST /api/v1/recruitment-posts`에 `saveMode=DRAFT`를 사용하는 것을 권장합니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -66,7 +73,15 @@ interface RecruitmentPostManagementApi {
     @Operation(
         operationId = "copyMyRecruitmentPost",
         summary = "내 모집글 복사",
-        description = "작성자의 모집글을 새 임시저장 모집글로 복사하고 작성 화면용 데이터를 반환합니다.",
+        description = """
+            작성자의 모집글을 새 임시저장 모집글로 복사하고 작성 화면용 데이터를 반환합니다.
+
+            ### 추가사항
+
+            - 새로운 `postId`를 가진 `DRAFT` 글이 생성됩니다.
+            - 본문과 이미지 정보가 복사됩니다.
+            - `agreedToPolicy`는 `false`입니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -102,7 +117,14 @@ interface RecruitmentPostManagementApi {
     @Operation(
         operationId = "publishMyRecruitmentPost",
         summary = "내 모집글 게시",
-        description = "임시저장 모집글의 필수값과 정책 동의를 검증한 뒤 공개 상태로 전환합니다. 이미 게시된 글은 멱등 성공합니다.",
+        description = """
+            임시저장 모집글의 필수값과 정책 동의를 검증한 뒤 공개 상태로 전환합니다. 이미 게시된 글은 멱등 성공합니다.
+
+            ### 추가사항
+
+            - 기존 호환용 게시 API입니다.
+            - 신규 수정·게시 흐름에서는 `PUT /api/v1/recruitment-posts/{postId}`와 `saveMode=PUBLISH` 사용을 권장합니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -134,7 +156,15 @@ interface RecruitmentPostManagementApi {
     @Operation(
         operationId = "getMyRecruitmentPostForm",
         summary = "내 모집글 작성 폼 상세 조회",
-        description = "작성자의 임시저장·공개·비공개 모집글을 작성 화면용 전체 필드로 조회합니다.",
+        description = """
+            작성자의 임시저장·공개·비공개 모집글을 작성 화면용 전체 필드로 조회합니다.
+
+            ### 추가사항
+
+            - 본인이 작성한 `DRAFT`, `PUBLISHED`, `HIDDEN` 글을 조회할 수 있습니다.
+            - `content`는 문자열이 아닌 JSON 객체입니다.
+            - `agreedToPolicy`는 현재 항상 `false`로 반환됩니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -175,6 +205,12 @@ interface RecruitmentPostManagementApi {
 
             keyword를 보내면 모집글 제목에 포함되는지 대소문자를 구분하지 않고 검색합니다.
             검색어는 2자 이상 100자 이하여야 하며, 게시 상태·모집 상태·지원 이력·모집 유형 필터와 함께 사용할 수 있습니다.
+
+            ### 추가사항
+
+            - `keyword`는 앞뒤 공백을 제거한 뒤 검색합니다.
+            - `DRAFT` 글의 `recruitmentStatus`는 `null`입니다.
+            - `DRAFT` 글의 `continueWriting`은 `true`입니다.
         """,
     )
     @ApiResponses(

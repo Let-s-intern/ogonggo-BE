@@ -40,7 +40,15 @@ interface RecruitmentPostApi {
     @Operation(
         operationId = "getPublicRecruitmentPost",
         summary = "사이드 프로젝트·스터디 모집글 상세 조회",
-        description = "공개된 모집글의 기본 정보와 본문을 조회합니다. 로그인 없이 호출할 수 있습니다.",
+        description = """
+            공개된 모집글의 기본 정보와 본문을 조회합니다. 로그인 없이 호출할 수 있습니다.
+
+            ### 추가사항
+
+            - 조회 시 조회수 집계 이벤트가 발생합니다.
+            - `DRAFT`, `HIDDEN`, 삭제된 글은 조회할 수 없습니다.
+            - `CLOSED` 상태의 공개 글은 조회할 수 있습니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -65,7 +73,15 @@ interface RecruitmentPostApi {
 
     @Operation(
         summary = "사이드 프로젝트·스터디 모집글 목록 조회",
-        description = "공개 모집글을 페이지로 페이징하고 모집 구분·진행 방식·모집 상태·포지션으로 필터링합니다.",
+        description = """
+            공개 모집글을 페이지로 페이징하고 모집 구분·진행 방식·모집 상태·포지션으로 필터링합니다.
+
+            ### 추가사항
+
+            - 공개 게시글만 조회됩니다.
+            - 비로그인 사용자는 `bookmarked=false`, `bookmarkCount=0`으로 반환됩니다.
+            - 다중 필터는 동일한 Query Parameter를 반복해서 전달합니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -85,7 +101,16 @@ interface RecruitmentPostApi {
 
     @Operation(
         summary = "사이드 프로젝트·스터디 모집글 생성",
-        description = "saveMode가 DRAFT면 제목 중심으로 임시저장하고, PUBLISH면 게시 필수값과 운영 정책 동의를 검증한 뒤 공개합니다.",
+        description = """
+            `saveMode`가 `DRAFT`면 제목 중심으로 임시저장하고, `PUBLISH`면 게시 필수값과 운영 정책 동의를 검증한 뒤 공개합니다.
+
+            ### 추가사항
+
+            - `saveMode` 기본값은 `PUBLISH`입니다. 임시저장 시 반드시 `DRAFT`를 전달해야 합니다.
+            - `DRAFT`는 제목만 필수입니다.
+            - `PUBLISH`는 전체 게시 필수값과 `agreedToPolicy=true`가 필요합니다.
+            - `PUBLISH` 생성 결과의 게시 상태는 `PUBLISHED`, 모집 상태는 `RECRUITING`입니다.
+        """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -111,7 +136,15 @@ interface RecruitmentPostApi {
 
     @Operation(
         summary = "사이드 프로젝트·스터디 모집글 수정",
-        description = "saveMode가 PUBLISH면 임시저장 모집글을 갱신 후 게시 상태로 전환합니다. 생략하면 기존 저장 동작을 따릅니다.",
+        description = """
+            `saveMode`가 `PUBLISH`면 임시저장 모집글을 갱신 후 게시 상태로 전환합니다. 생략하면 기존 저장 동작을 따릅니다.
+
+            ### 추가사항
+
+            - 전체 수정 방식이므로 공개 모집글 수정 시 전체 필드를 전달해야 합니다.
+            - `saveMode=PUBLISH`이면 임시저장 글을 수정한 뒤 같은 ID로 게시합니다.
+            - 모집 마감 글의 기간을 수정해도 자동으로 `RECRUITING` 상태가 되지 않습니다.
+        """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -141,7 +174,20 @@ interface RecruitmentPostApi {
         @RequestBody @Valid request: UpdateRecruitmentPostRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(operationId = "closeMyRecruitmentPost", summary = "내 사이드 프로젝트·스터디 모집글 마감")
+    @Operation(
+        operationId = "closeMyRecruitmentPost",
+        summary = "내 사이드 프로젝트·스터디 모집글 마감",
+        description = """
+            작성자 본인의 모집글을 수동으로 마감합니다.
+
+            ### 추가사항
+
+            - 수동 조기 마감용 API입니다.
+            - 이미 마감된 글에 다시 호출해도 성공 처리됩니다.
+            - 모집 종료일 다음 날 스케줄러가 자동 마감합니다.
+            - 종료일 당일에는 모집 중 상태가 유지됩니다.
+        """,
+    )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
         value = [
@@ -169,7 +215,20 @@ interface RecruitmentPostApi {
         @PathVariable("postId") @Positive postId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
-    @Operation(operationId = "reopenMyRecruitmentPost", summary = "내 사이드 프로젝트·스터디 모집글 재모집")
+    @Operation(
+        operationId = "reopenMyRecruitmentPost",
+        summary = "내 사이드 프로젝트·스터디 모집글 재모집",
+        description = """
+            작성자 본인의 마감된 모집글을 다시 모집 중 상태로 변경합니다.
+
+            ### 추가사항
+
+            - `CLOSED` 상태를 `RECRUITING` 상태로 변경합니다.
+            - 모집 기간이나 게시글 내용은 변경하지 않습니다.
+            - 이미 모집 중인 글에 호출해도 성공 처리됩니다.
+            - 모집 기간 수정만으로 자동 재모집되지는 않습니다.
+        """,
+    )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
         value = [
@@ -200,7 +259,14 @@ interface RecruitmentPostApi {
     @Operation(
         operationId = "deleteMyRecruitmentPost",
         summary = "내 사이드 프로젝트·스터디 모집글 삭제",
-        description = "작성자 본인의 모집글을 소프트 삭제합니다. 이미 삭제된 글을 다시 삭제해도 성공합니다.",
+        description = """
+            작성자 본인의 모집글을 소프트 삭제합니다. 이미 삭제된 글을 다시 삭제해도 성공합니다.
+
+            ### 추가사항
+
+            - 실제 데이터 삭제가 아닌 소프트 삭제 방식입니다.
+            - 삭제된 글의 첨부 이미지 연결도 해제됩니다.
+        """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(

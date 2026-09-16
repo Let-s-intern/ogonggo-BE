@@ -38,7 +38,15 @@ interface RecruitmentPostCommentApi {
     @Operation(
         operationId = "getRecruitmentPostComments",
         summary = "사이드 프로젝트·스터디 모집글 부모 댓글 조회",
-        description = "부모 댓글을 최신순 페이지로 조회하고 대댓글 미리보기 5건을 함께 반환합니다.",
+        description = """
+            부모 댓글을 최신순 페이지로 조회하고 대댓글 미리보기 5건을 함께 반환합니다.
+
+            ### 추가사항
+
+            - 부모 댓글은 최신순으로 반환됩니다.
+            - 대댓글은 최대 5개까지 미리보기로 반환됩니다.
+            - `CLOSED` 상태의 공개 모집글도 댓글 조회가 가능합니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -67,7 +75,14 @@ interface RecruitmentPostCommentApi {
     @Operation(
         operationId = "getRecruitmentPostCommentReplies",
         summary = "사이드 프로젝트·스터디 모집글 대댓글 더보기",
-        description = "특정 부모 댓글의 대댓글을 오래된 순서의 페이지로 조회합니다.",
+        description = """
+            특정 부모 댓글의 대댓글을 오래된 순서의 페이지로 조회합니다.
+
+            ### 추가사항
+
+            - `commentId`는 부모 댓글이어야 합니다.
+            - 대댓글에 다시 답글을 작성할 수 없습니다.
+        """,
     )
     @ApiResponses(
         value = [
@@ -97,7 +112,14 @@ interface RecruitmentPostCommentApi {
     @Operation(
         operationId = "deleteRecruitmentPostComment",
         summary = "사이드 프로젝트·스터디 모집글 댓글 삭제",
-        description = "댓글 작성자 본인의 댓글을 물리 삭제합니다. 부모 댓글 삭제 시 대댓글도 함께 삭제됩니다.",
+        description = """
+            댓글 작성자 본인의 댓글을 물리 삭제합니다. 부모 댓글 삭제 시 대댓글도 함께 삭제됩니다.
+
+            ### 추가사항
+
+            - 댓글 작성자 본인만 삭제할 수 있습니다.
+            - 삭제된 댓글 수만큼 모집글의 `commentCount`가 감소합니다.
+        """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -132,7 +154,14 @@ interface RecruitmentPostCommentApi {
     @Operation(
         operationId = "createRecruitmentPostComment",
         summary = "사이드 프로젝트·스터디 모집글 댓글 작성",
-        description = "공개된 모집글에 일반 댓글 또는 1단계 대댓글을 작성합니다.",
+        description = """
+            공개된 모집글에 일반 댓글 또는 1단계 대댓글을 작성합니다.
+
+            ### 추가사항
+
+            - 댓글은 부모 댓글과 1단계 대댓글까지만 지원합니다.
+            - 댓글 작성 성공 시 모집글의 `commentCount`가 증가합니다.
+        """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -171,7 +200,15 @@ interface RecruitmentPostCommentApi {
     @Operation(
         operationId = "reportRecruitmentPostComment",
         summary = "사이드 프로젝트·스터디 모집글 댓글 신고",
-        description = "로그인한 활성 사용자가 댓글을 신고합니다. 신고 사유는 생략할 수 있고, 동일 댓글을 중복 신고할 수 있습니다.",
+        description = """
+            로그인한 활성 사용자가 댓글을 신고합니다. 신고 사유는 생략할 수 있고, 동일 댓글을 중복 신고할 수 있습니다.
+
+            ### 추가사항
+
+            - 신고 사유는 생략할 수 있습니다.
+            - 동일 댓글에 대한 중복 신고 제한은 없습니다.
+            - 성공 시 별도 응답 데이터는 없습니다.
+        """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
