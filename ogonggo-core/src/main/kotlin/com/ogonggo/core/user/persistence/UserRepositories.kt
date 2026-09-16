@@ -12,6 +12,7 @@ internal interface UserJpaRepository : JpaRepository<User, Long> {
 
 internal interface UserProfileJpaRepository : JpaRepository<UserProfile, Long> {
     fun findByUserId(userId: Long): UserProfile?
+    fun findAllByUserIdIn(userIds: Collection<Long>): List<UserProfile>
 }
 
 internal interface CompanyProfileJpaRepository : JpaRepository<CompanyProfile, Long> {

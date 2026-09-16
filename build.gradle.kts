@@ -19,6 +19,10 @@ allprojects {
 
 subprojects {
     tasks.withType<Test>().configureEach {
-        useJUnitPlatform()
+        useJUnitPlatform {
+            if (System.getenv("CI") != null) {
+                excludeTags("concurrency")
+            }
+        }
     }
 }

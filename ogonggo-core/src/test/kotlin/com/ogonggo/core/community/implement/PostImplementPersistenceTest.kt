@@ -1,0 +1,131 @@
+package com.ogonggo.core.community.implement
+
+import com.ogonggo.core.community.domain.ContactMethod
+import com.ogonggo.core.community.domain.ProgressMethod
+import com.ogonggo.core.community.domain.RecruitmentPosition
+import com.ogonggo.core.community.domain.RecruitmentStatus
+import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
+import com.ogonggo.core.common.CoreJpaConfiguration
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.ContextConfiguration
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+@DataJpaTest
+@ContextConfiguration(classes = [CoreJpaConfiguration::class])
+@Import(RecruitmentPostAppender::class, RecruitmentPostManager::class)
+internal class PostImplementPersistenceTest @Autowired constructor(
+    private val postAppender: RecruitmentPostAppender,
+    private val postManager: RecruitmentPostManager,
+    private val postRepository: RecruitmentPostJpaRepository,
+) {
+
+    @Test
+    fun `모집글과 기술 스택 및 포지션을 함께 저장한다`() {
+        val savedPost = postAppender.append(createCommand())
+        val postId = checkNotNull(savedPost.id)
+        val reloadedPost = postRepository.findById(postId).orElseThrow()
+
+        assertNotNull(savedPost.id)
+        assertEquals("사이드 프로젝트 팀원 모집", reloadedPost.title)
+        assertEquals(listOf("Kotlin", "Spring"), reloadedPost.technologyStacks)
+        assertEquals(listOf(RecruitmentPosition.BACKEND, RecruitmentPosition.DESIGN), reloadedPost.positions)
+    }
+
+    @Test
+    fun `모집글 수정 시 기본 정보와 컬렉션을 함께 갱신한다`() {
+        val savedPost = postAppender.append(createCommand())
+        val postId = checkNotNull(savedPost.id)
+
+        postManager.update(
+            savedPost,
+            RecruitmentPostUpdateCommand(
+                title = "수정된 모집글",
+                recruitmentType = RecruitmentType.STUDY,
+                capacity = 6,
+                progressMethod = ProgressMethod.HYBRID,
+                activityDurationMonths = 5,
+                technologyStacks = listOf("Java"),
+                summary = "수정된 소개",
+                content = "{\"root\":{\"children\":[]}}",
+                eligibilityAndSelectionProcess = "수정된 자격",
+                recruitmentStartDate = LocalDate.of(2026, 9, 2),
+                recruitmentEndDate = LocalDate.of(2026, 10, 1),
+                positions = listOf(RecruitmentPosition.FRONTEND),
+                contactMethod = ContactMethod.OPEN_KAKAO,
+                contactValue = "https://open.kakao.com/o/updated",
+            ),
+        )
+        postRepository.flush()
+        val reloadedPost = postRepository.findById(postId).orElseThrow()
+
+        assertEquals("수정된 모집글", reloadedPost.title)
+        assertEquals(RecruitmentType.STUDY, reloadedPost.recruitmentType)
+        assertEquals(listOf("Java"), reloadedPost.technologyStacks)
+        assertEquals(listOf(RecruitmentPosition.FRONTEND), reloadedPost.positions)
+        assertEquals("https://open.kakao.com/o/updated", reloadedPost.contactValue)
+    }
+
+    @Test
+    fun `모집글 삭제 시 행을 보존하고 삭제 시각을 기록한다`() {
+        val savedPost = postAppender.append(createCommand())
+        val postId = checkNotNull(savedPost.id)
+        val firstDeletedAt = LocalDateTime.of(2026, 9, 11, 9, 0)
+
+        postManager.delete(savedPost, firstDeletedAt)
+        postManager.delete(savedPost, firstDeletedAt.plusDays(1))
+        postRepository.flush()
+
+        val reloadedPost = postRepository.findById(postId).orElseThrow()
+
+        assertEquals(firstDeletedAt, reloadedPost.deletedAt)
+        assertEquals(1, postRepository.count())
+    }
+
+    @Test
+    fun `모집 종료일이 지난 공개 모집글만 자동 마감한다`() {
+        val expiredPost = postAppender.append(createCommand())
+        val notExpiredPost = postAppender.append(
+            createCommand().copy(recruitmentEndDate = LocalDate.of(2026, 10, 1)),
+        )
+        val closedAt = LocalDateTime.of(2026, 10, 1, 0, 0)
+
+        val closedCount = postManager.closeExpired(
+            today = LocalDate.of(2026, 10, 1),
+            closedAt = closedAt,
+        )
+        postRepository.flush()
+
+        val reloadedExpiredPost = postRepository.findById(checkNotNull(expiredPost.id)).orElseThrow()
+        val reloadedNotExpiredPost = postRepository.findById(checkNotNull(notExpiredPost.id)).orElseThrow()
+        assertEquals(1, closedCount)
+        assertEquals(RecruitmentStatus.CLOSED, reloadedExpiredPost.recruitmentStatus)
+        assertEquals(closedAt, reloadedExpiredPost.closedAt)
+        assertEquals(RecruitmentStatus.RECRUITING, reloadedNotExpiredPost.recruitmentStatus)
+        assertEquals(null, reloadedNotExpiredPost.closedAt)
+    }
+
+    private fun createCommand() = RecruitmentPostAppendCommand(
+        authorUserId = 1L,
+        title = "사이드 프로젝트 팀원 모집",
+        recruitmentType = RecruitmentType.SIDE_PROJECT,
+        capacity = 4,
+        progressMethod = ProgressMethod.ONLINE,
+        activityDurationMonths = 3,
+        technologyStacks = listOf("Kotlin", "Spring"),
+        summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
+        content = "{\"root\":{\"children\":[]}}",
+        eligibilityAndSelectionProcess = null,
+        recruitmentStartDate = LocalDate.of(2026, 9, 1),
+        recruitmentEndDate = LocalDate.of(2026, 9, 30),
+        positions = listOf(RecruitmentPosition.BACKEND, RecruitmentPosition.DESIGN),
+        contactMethod = ContactMethod.EMAIL,
+        contactValue = "team@example.com",
+    )
+}
