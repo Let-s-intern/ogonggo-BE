@@ -90,6 +90,11 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1users~1me/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1profile/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1recruitment-posts/post").isObject)
+        val saveRecruitmentPostProperties = document.at(
+            "/components/schemas/CreateRecruitmentPostRequest/properties",
+        )
+        assertTrue(saveRecruitmentPostProperties.has("saveMode"))
+        assertTrue(saveRecruitmentPostProperties.has("agreedToPolicy"))
         val recruitmentPostList = document.at("/paths/~1api~1v1~1recruitment-posts/get")
         assertPageParameter(recruitmentPostList, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(recruitmentPostList, "size", defaultValue = "10", minimum = 1, maximum = 100)
@@ -148,7 +153,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertPageParameter(recruitmentPostBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(recruitmentPostBookmarks, "size", defaultValue = "10", minimum = 1, maximum = 100)
         val addRecruitmentPostBookmark =
-            document.at("/paths/~1api~1v1~1recruitment-post-bookmarks~1{postId}/post")
+            document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}~1bookmarks~1me/put")
         assertTrue(addRecruitmentPostBookmark.isObject)
         assertTrue(addRecruitmentPostBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(
@@ -156,7 +161,7 @@ class UserOpenApiContractTest @Autowired constructor(
                 .startsWith("RECRUITMENT_POST_BOOKMARK_ALREADY_EXISTS"),
         )
         val deleteRecruitmentPostBookmark =
-            document.at("/paths/~1api~1v1~1recruitment-post-bookmarks~1{postId}/delete")
+            document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}~1bookmarks~1me/delete")
         assertTrue(deleteRecruitmentPostBookmark.isObject)
         assertTrue(deleteRecruitmentPostBookmark.at("/responses/200/content/application~1json/schema").isObject)
         val recruitmentApplication =
@@ -168,7 +173,7 @@ class UserOpenApiContractTest @Autowired constructor(
                 .startsWith("RECRUITMENT_POST_CLOSED"),
         )
         val myRecruitmentApplications =
-            document.at("/paths/~1api~1v1~1users~1me~1recruitment~1applications/get")
+            document.at("/paths/~1api~1v1~1me~1recruitment-applications/get")
         assertTrue(myRecruitmentApplications.at("/security/0/BearerAuth").isArray)
         assertPageParameter(myRecruitmentApplications, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(myRecruitmentApplications, "size", defaultValue = "10", minimum = 1, maximum = 100)
@@ -184,12 +189,12 @@ class UserOpenApiContractTest @Autowired constructor(
                 .isObject,
         )
         val updateRecruitmentApplication = document.at(
-            "/paths/~1api~1v1~1users~1me~1recruitment~1applications~1{postId}/patch",
+            "/paths/~1api~1v1~1me~1recruitment-applications~1{postId}/patch",
         )
         assertTrue(updateRecruitmentApplication.at("/security/0/BearerAuth").isArray)
         assertTrue(updateRecruitmentApplication.at("/requestBody/content/application~1json/schema").isObject)
         val deleteRecruitmentApplication = document.at(
-            "/paths/~1api~1v1~1users~1me~1recruitment~1applications~1{postId}/delete",
+            "/paths/~1api~1v1~1me~1recruitment-applications~1{postId}/delete",
         )
         assertTrue(deleteRecruitmentApplication.at("/security/0/BearerAuth").isArray)
         assertTrue(deleteRecruitmentApplication.at("/responses/404/description").asText().startsWith("RECRUITMENT_POST_APPLICATION_NOT_FOUND"))
@@ -214,7 +219,7 @@ class UserOpenApiContractTest @Autowired constructor(
             .forEach { name -> assertTrue(myRecruitmentPosts.parameter(name).isObject) }
         assertTrue(document.at("/components/schemas/RecruitmentPostManagementItemResponse/properties/applicationCount").isObject)
         val copyMyRecruitmentPost =
-            document.at("/paths/~1api~1v1~1me~1recruitment-posts~1{postId}~1copy/post")
+            document.at("/paths/~1api~1v1~1me~1recruitment-posts~1{postId}~1copies/post")
         assertTrue(copyMyRecruitmentPost.at("/security/0/BearerAuth").isArray)
         assertTrue(copyMyRecruitmentPost.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(

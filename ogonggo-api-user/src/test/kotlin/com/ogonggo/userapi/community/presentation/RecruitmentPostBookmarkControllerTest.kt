@@ -24,7 +24,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -62,11 +62,11 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
 
     @Test
     fun `모집글 북마크를 등록하고 해제한다`() {
-        mockMvc.perform(post("/api/v1/recruitment-post-bookmarks/{postId}", POST_ID).with(authenticatedUser()))
+        mockMvc.perform(put("/api/v1/recruitment-posts/{postId}/bookmarks/me", POST_ID).with(authenticatedUser()))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.status").value(201))
 
-        mockMvc.perform(delete("/api/v1/recruitment-post-bookmarks/{postId}", POST_ID).with(authenticatedUser()))
+        mockMvc.perform(delete("/api/v1/recruitment-posts/{postId}/bookmarks/me", POST_ID).with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
 
@@ -79,7 +79,7 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
         Mockito.doThrow(ConflictException(RecruitmentPostErrorCode.RECRUITMENT_POST_BOOKMARK_ALREADY_EXISTS))
             .`when`(bookmarkService).addBookmark(USER_ID, POST_ID)
 
-        mockMvc.perform(post("/api/v1/recruitment-post-bookmarks/{postId}", POST_ID).with(authenticatedUser()))
+        mockMvc.perform(put("/api/v1/recruitment-posts/{postId}/bookmarks/me", POST_ID).with(authenticatedUser()))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("RECRUITMENT_POST_BOOKMARK_ALREADY_EXISTS"))
     }
@@ -90,7 +90,7 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
-        mockMvc.perform(post("/api/v1/recruitment-post-bookmarks/0").with(authenticatedUser()))
+        mockMvc.perform(put("/api/v1/recruitment-posts/0/bookmarks/me").with(authenticatedUser()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
     }
@@ -100,7 +100,7 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
         Mockito.doThrow(EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND))
             .`when`(bookmarkService).addBookmark(USER_ID, POST_ID)
 
-        mockMvc.perform(post("/api/v1/recruitment-post-bookmarks/{postId}", POST_ID).with(authenticatedUser()))
+        mockMvc.perform(put("/api/v1/recruitment-posts/{postId}/bookmarks/me", POST_ID).with(authenticatedUser()))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("RECRUITMENT_POST_NOT_FOUND"))
     }

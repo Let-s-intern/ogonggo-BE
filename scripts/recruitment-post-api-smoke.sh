@@ -38,13 +38,13 @@ cleanup() {
         cleanup_request DELETE "/api/v1/recruitment-posts/${POST_ID:-0}/comments/$COMMENT_ROOT_ID"
     fi
     if [[ -n "${APPLICATION_POST_ID:-}" ]]; then
-        cleanup_request DELETE "/api/v1/users/me/recruitment/applications/$APPLICATION_POST_ID"
+        cleanup_request DELETE "/api/v1/me/recruitment-applications/$APPLICATION_POST_ID"
     fi
     if [[ -n "${APPLICATION_SORT_POST_ID:-}" ]]; then
-        cleanup_request DELETE "/api/v1/users/me/recruitment/applications/$APPLICATION_SORT_POST_ID"
+        cleanup_request DELETE "/api/v1/me/recruitment-applications/$APPLICATION_SORT_POST_ID"
     fi
     if [[ -n "${BOOKMARK_POST_ID:-}" ]]; then
-        cleanup_request DELETE "/api/v1/recruitment-post-bookmarks/$BOOKMARK_POST_ID"
+        cleanup_request DELETE "/api/v1/recruitment-posts/$BOOKMARK_POST_ID/bookmarks/me"
     fi
     if [[ -n "${COPY_ID:-}" ]]; then
         cleanup_request DELETE "/api/v1/recruitment-posts/$COPY_ID"
@@ -239,7 +239,7 @@ expect_success 201 draft-create POST \
     '/api/v1/me/recruitment-posts/drafts' "$ACCESS_TOKEN" "$DRAFT_BODY"
 DRAFT_ID="$(extract_id '.data.id')"
 expect_error 401 UNAUTHORIZED auth-draft-copy POST \
-    "/api/v1/me/recruitment-posts/$DRAFT_ID/copy" '' ''
+    "/api/v1/me/recruitment-posts/$DRAFT_ID/copies" '' ''
 expect_error 401 UNAUTHORIZED auth-draft-publish POST \
     "/api/v1/me/recruitment-posts/$DRAFT_ID/publish" '' '{"agreedToPolicy":true}'
 
@@ -308,7 +308,7 @@ assert_json ".data.items | any(.[]; .postId == $POST_ID and .applicationCount ==
     '작성한 모집글 필터 목록의 공개 글 검증에 실패했습니다.'
 
 expect_success 201 copy POST \
-    "/api/v1/me/recruitment-posts/$POST_ID/copy" "$ACCESS_TOKEN"
+    "/api/v1/me/recruitment-posts/$POST_ID/copies" "$ACCESS_TOKEN"
 COPY_ID="$(extract_id '.data.postId')"
 [[ "$COPY_ID" != "$POST_ID" ]] || die '모집글 복사 ID가 원본과 같습니다.'
 assert_json ".data.postId == $COPY_ID and .data.status == \"DRAFT\"" \
@@ -335,9 +335,9 @@ assert_json '.data.recruitmentStatus == "RECRUITING"' '모집글 재모집 상�
 expect_error 401 UNAUTHORIZED auth-application-create POST \
     "/api/v1/recruitment-posts/$POST_ID/applications" '' ''
 expect_error 401 UNAUTHORIZED auth-application-status PATCH \
-    "/api/v1/users/me/recruitment/applications/$POST_ID" '' '{"applicationStatus":"COMPLETED"}'
+    "/api/v1/me/recruitment-applications/$POST_ID" '' '{"applicationStatus":"COMPLETED"}'
 expect_error 401 UNAUTHORIZED auth-application-delete DELETE \
-    "/api/v1/users/me/recruitment/applications/$POST_ID" '' ''
+    "/api/v1/me/recruitment-applications/$POST_ID" '' ''
 expect_success 200 application-create POST \
     "/api/v1/recruitment-posts/$POST_ID/applications" "$ACCESS_TOKEN"
 APPLICATION_POST_ID="$POST_ID"
@@ -348,7 +348,7 @@ expect_success 200 application-create-idempotent POST \
 assert_json ".data.postId == $POST_ID" '외부 지원 링크 접근 멱등 응답 검증에 실패했습니다.'
 
 expect_success 200 application-list GET \
-    '/api/v1/users/me/recruitment/applications?page=1&size=100&recruitmentStatus=RECRUITING&recruitmentType=SIDE_PROJECT&applicationStatus=PREPARING&keyword=Curl&sort=LATEST' \
+    '/api/v1/me/recruitment-applications?page=1&size=100&recruitmentStatus=RECRUITING&recruitmentType=SIDE_PROJECT&applicationStatus=PREPARING&keyword=Curl&sort=LATEST' \
     "$ACCESS_TOKEN"
 assert_json ".data.items | any(.[]; .postId == $POST_ID and .recruitmentType == \"SIDE_PROJECT\" and .progressMethod == \"HYBRID\" and .activityDurationMonths == 4 and .applicationStatus == \"PREPARING\")" \
     '내 지원 목록의 모집글·진행 방식·활동 기간·지원 상태 검증에 실패했습니다.'
@@ -357,15 +357,15 @@ assert_json '(.data.countsByRecruitmentType.SIDE_PROJECT | type) == "number" and
 assert_json '.data.pageInfo.pageNum == 1 and .data.pageInfo.pageSize == 100' \
     '내 지원 목록의 페이지 정보 검증에 실패했습니다.'
 expect_error 400 BAD_REQUEST application-list-invalid-status GET \
-    '/api/v1/users/me/recruitment/applications?page=1&size=100&applicationStatus=INVALID&keyword=Curl&sort=LATEST' \
+    '/api/v1/me/recruitment-applications?page=1&size=100&applicationStatus=INVALID&keyword=Curl&sort=LATEST' \
     "$ACCESS_TOKEN" ''
 
 for application_status in PREPARING COMPLETED IN_PROGRESS ENDED; do
     expect_success 200 "application-status-$application_status" PATCH \
-        "/api/v1/users/me/recruitment/applications/$POST_ID" "$ACCESS_TOKEN" \
+        "/api/v1/me/recruitment-applications/$POST_ID" "$ACCESS_TOKEN" \
         "{\"applicationStatus\":\"$application_status\"}"
     expect_success 200 "application-list-filter-$application_status" GET \
-        "/api/v1/users/me/recruitment/applications?page=1&size=100&applicationStatus=$application_status&keyword=Curl&sort=LATEST" \
+        "/api/v1/me/recruitment-applications?page=1&size=100&applicationStatus=$application_status&keyword=Curl&sort=LATEST" \
         "$ACCESS_TOKEN"
     assert_json ".data.items | (all(.[]; .applicationStatus == \"$application_status\") and any(.[]; .postId == $POST_ID))" \
         "지원 상태 필터 $application_status 결과 검증에 실패했습니다."
@@ -373,7 +373,7 @@ for application_status in PREPARING COMPLETED IN_PROGRESS ENDED; do
         "지원 상태 필터 ${application_status}의 유형별 건수 검증에 실패했습니다."
 done
 expect_success 200 application-list-after-status GET \
-    '/api/v1/users/me/recruitment/applications?page=1&size=100&keyword=Curl&sort=LATEST' \
+    '/api/v1/me/recruitment-applications?page=1&size=100&keyword=Curl&sort=LATEST' \
     "$ACCESS_TOKEN"
 assert_json ".data.items | any(.[]; .postId == $POST_ID and .applicationStatus == \"ENDED\")" \
     '내 지원 상태 변경 결과 검증에 실패했습니다.'
@@ -387,21 +387,21 @@ expect_success 200 sort-application-create POST \
     "/api/v1/recruitment-posts/$SORT_POST_ID/applications" "$ACCESS_TOKEN"
 APPLICATION_SORT_POST_ID="$SORT_POST_ID"
 expect_success 200 application-list-sorted GET \
-    '/api/v1/users/me/recruitment/applications?page=1&size=100&keyword=Curl&sort=LATEST' \
+    '/api/v1/me/recruitment-applications?page=1&size=100&keyword=Curl&sort=LATEST' \
     "$ACCESS_TOKEN"
 assert_json ".data.items | map(select(.postId == $POST_ID or .postId == $SORT_POST_ID)) | map(.postId) == [$SORT_POST_ID, $POST_ID]" \
     '지원 목록이 firstClickedAt 최신순으로 정렬되지 않았습니다.'
 
 expect_success 200 application-delete DELETE \
-    "/api/v1/users/me/recruitment/applications/$POST_ID" "$ACCESS_TOKEN"
+    "/api/v1/me/recruitment-applications/$POST_ID" "$ACCESS_TOKEN"
 APPLICATION_POST_ID=''
 expect_error 404 RECRUITMENT_POST_APPLICATION_NOT_FOUND application-delete-again DELETE \
-    "/api/v1/users/me/recruitment/applications/$POST_ID" "$ACCESS_TOKEN" ''
+    "/api/v1/me/recruitment-applications/$POST_ID" "$ACCESS_TOKEN" ''
 expect_success 200 sort-application-delete DELETE \
-    "/api/v1/users/me/recruitment/applications/$SORT_POST_ID" "$ACCESS_TOKEN"
+    "/api/v1/me/recruitment-applications/$SORT_POST_ID" "$ACCESS_TOKEN"
 APPLICATION_SORT_POST_ID=''
 expect_success 200 application-list-after-delete GET \
-    '/api/v1/users/me/recruitment/applications?page=1&size=100&keyword=Curl&sort=LATEST' \
+    '/api/v1/me/recruitment-applications?page=1&size=100&keyword=Curl&sort=LATEST' \
     "$ACCESS_TOKEN"
 assert_json ".data.items | all(.[]; .postId != $POST_ID)" '삭제한 지원 이력이 목록에 남아 있습니다.'
 expect_success 200 public-list-after-application-delete GET \
@@ -414,7 +414,7 @@ expect_success 200 application-reapply POST \
     "/api/v1/recruitment-posts/$POST_ID/applications" "$ACCESS_TOKEN"
 APPLICATION_POST_ID="$POST_ID"
 expect_success 200 application-list-after-reapply GET \
-    '/api/v1/users/me/recruitment/applications?page=1&size=100&applicationStatus=ENDED&keyword=Curl&sort=LATEST' \
+    '/api/v1/me/recruitment-applications?page=1&size=100&applicationStatus=ENDED&keyword=Curl&sort=LATEST' \
     "$ACCESS_TOKEN"
 assert_json "(.data.items | any(.[]; .postId == $POST_ID and .applicationStatus == \"ENDED\")) and .data.countsByRecruitmentType.SIDE_PROJECT == 1" \
     '삭제한 지원 이력이 재신청 후 기존 상태로 복구되지 않았습니다.'
@@ -424,15 +424,15 @@ expect_success 200 public-list-after-application-reapply GET \
 assert_json ".data.items | any(.[]; .id == $POST_ID and .applicationCount == 1)" \
     '지원 이력 재신청 후 applicationCount가 복구되지 않았습니다.'
 expect_success 200 application-delete-after-reapply DELETE \
-    "/api/v1/users/me/recruitment/applications/$POST_ID" "$ACCESS_TOKEN"
+    "/api/v1/me/recruitment-applications/$POST_ID" "$ACCESS_TOKEN"
 APPLICATION_POST_ID=''
 
-expect_success 201 bookmark-create POST \
-    "/api/v1/recruitment-post-bookmarks/$POST_ID" "$ACCESS_TOKEN"
+expect_success 201 bookmark-create PUT \
+    "/api/v1/recruitment-posts/$POST_ID/bookmarks/me" "$ACCESS_TOKEN"
 BOOKMARK_POST_ID="$POST_ID"
 assert_json '.data == null' '북마크 등록의 data가 null이 아닙니다.'
-expect_error 409 RECRUITMENT_POST_BOOKMARK_ALREADY_EXISTS bookmark-create-again POST \
-    "/api/v1/recruitment-post-bookmarks/$POST_ID" "$ACCESS_TOKEN" ''
+expect_error 409 RECRUITMENT_POST_BOOKMARK_ALREADY_EXISTS bookmark-create-again PUT \
+    "/api/v1/recruitment-posts/$POST_ID/bookmarks/me" "$ACCESS_TOKEN" ''
 expect_success 200 bookmark-list GET \
     '/api/v1/recruitment-post-bookmarks?page=1&size=100' "$ACCESS_TOKEN"
 assert_json ".data.items | any(.[]; .id == $POST_ID and .bookmarked == true)" \
@@ -442,9 +442,9 @@ assert_json ".data.id == $POST_ID and .data.bookmarked == true and .data.bookmar
     '북마크 등록 후 공개 상세 지표 검증에 실패했습니다.'
 
 expect_success 200 bookmark-delete DELETE \
-    "/api/v1/recruitment-post-bookmarks/$POST_ID" "$ACCESS_TOKEN"
+    "/api/v1/recruitment-posts/$POST_ID/bookmarks/me" "$ACCESS_TOKEN"
 expect_success 200 bookmark-delete-again DELETE \
-    "/api/v1/recruitment-post-bookmarks/$POST_ID" "$ACCESS_TOKEN"
+    "/api/v1/recruitment-posts/$POST_ID/bookmarks/me" "$ACCESS_TOKEN"
 BOOKMARK_POST_ID=''
 expect_success 200 bookmark-list-after-delete GET \
     '/api/v1/recruitment-post-bookmarks?page=1&size=100' "$ACCESS_TOKEN"

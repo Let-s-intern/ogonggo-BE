@@ -10,19 +10,19 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Validated
 @RestController
-@RequestMapping("/api/v1/recruitment-post-bookmarks")
+@RequestMapping("/api/v1")
 class RecruitmentPostBookmarkController(
     private val bookmarkService: RecruitmentPostBookmarkService,
 ) : RecruitmentPostBookmarkApi {
 
-    @GetMapping
+    @GetMapping("/recruitment-post-bookmarks")
     override fun getBookmarks(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
@@ -40,7 +40,7 @@ class RecruitmentPostBookmarkController(
         )
     }
 
-    @PostMapping("/{postId}")
+    @PutMapping("/recruitment-posts/{postId}/bookmarks/me")
     override fun addBookmark(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("postId") postId: Long,
@@ -49,7 +49,7 @@ class RecruitmentPostBookmarkController(
         return SuccessResponse.created()
     }
 
-    @DeleteMapping("/{postId}")
+    @DeleteMapping("/recruitment-posts/{postId}/bookmarks/me")
     override fun deleteBookmark(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("postId") postId: Long,
