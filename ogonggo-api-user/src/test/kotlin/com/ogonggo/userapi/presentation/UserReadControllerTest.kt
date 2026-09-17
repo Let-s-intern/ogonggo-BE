@@ -104,7 +104,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `인기 공고는 페이지 정보 없이 목록으로 응답한다`() {
-        Mockito.`when`(userJobService.getPopularJobs(USER_ID)).thenReturn(listOf(jobSummary()))
+        Mockito.`when`(userJobService.getPopularJobs(USER_ID, null)).thenReturn(listOf(jobSummary()))
 
         mockMvc.perform(get("/api/v1/jobs/popular").with(authenticatedUser()))
             .andExpect(status().isOk)
@@ -116,7 +116,18 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].viewCount").value(12))
             .andExpect(jsonPath("$.data[0].bookmarkCount").value(3))
 
-        Mockito.verify(userJobService).getPopularJobs(USER_ID)
+        Mockito.verify(userJobService).getPopularJobs(USER_ID, null)
+    }
+
+    @Test
+    fun `인기 공고는 고용 형태로 좁혀 조회한다`() {
+        Mockito.`when`(userJobService.getPopularJobs(USER_ID, EmploymentType.INTERN)).thenReturn(listOf(jobSummary()))
+
+        mockMvc.perform(get("/api/v1/jobs/popular").param("employmentType", "INTERN").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].id").value(1))
+
+        Mockito.verify(userJobService).getPopularJobs(USER_ID, EmploymentType.INTERN)
     }
 
     @Test
@@ -458,7 +469,7 @@ class UserReadControllerTest @Autowired constructor(
     fun `익명 사용자도 공고와 부트캠프 조회 API를 호출할 수 있다`() {
         Mockito.`when`(userJobService.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult())
-        Mockito.`when`(userJobService.getPopularJobs(null)).thenReturn(listOf(jobSummary(bookmarked = false)))
+        Mockito.`when`(userJobService.getPopularJobs(null, null)).thenReturn(listOf(jobSummary(bookmarked = false)))
         Mockito.`when`(userJobService.getJobCalendar(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
             .thenReturn(emptyList())
         Mockito.`when`(userBootcampService.getBootcamps(null, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))

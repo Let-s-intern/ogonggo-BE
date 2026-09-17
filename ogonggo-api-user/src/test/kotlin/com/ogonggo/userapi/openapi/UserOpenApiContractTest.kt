@@ -254,7 +254,7 @@ class UserOpenApiContractTest @Autowired constructor(
         val popularJobs = document.at("/paths/~1api~1v1~1jobs~1popular/get")
         assertTrue(popularJobs.isObject)
         assertTrue(popularJobs.at("/security/0/BearerAuth").isArray)
-        assertFalse(popularJobs.has("parameters"))
+        assertEquals(listOf("employmentType"), popularJobs.at("/parameters").map { it.at("/name").asText() })
 
         // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 인증이 필수다.
         val similarJobs = document.at("/paths/~1api~1v1~1jobs~1similar/get")

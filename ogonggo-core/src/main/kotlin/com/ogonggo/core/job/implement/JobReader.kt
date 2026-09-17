@@ -1,6 +1,7 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -62,13 +63,16 @@ class JobReader internal constructor(
         )
     }
 
-    fun readPopularRecruiting(limit: Int): List<Job> =
-        readPopularRecruiting(limit, LocalDateTime.now(clock))
+    fun readPopularRecruiting(employmentType: EmploymentType?, limit: Int): List<Job> =
+        readPopularRecruiting(employmentType, limit, LocalDateTime.now(clock))
 
-    /** 마감됐거나 모집 종료 일시가 지난 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다. */
-    fun readPopularRecruiting(limit: Int, now: LocalDateTime): List<Job> {
+    /**
+     * 마감됐거나 모집 종료 일시가 지난 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다.
+     * 고용 형태를 주면 그 고용 형태의 공고만 읽는다.
+     */
+    fun readPopularRecruiting(employmentType: EmploymentType?, limit: Int, now: LocalDateTime): List<Job> {
         require(limit in 1..100) { "인기 공고 개수는 1 이상 100 이하여야 합니다." }
-        return jobQueryRepository.findPopularRecruiting(limit, now)
+        return jobQueryRepository.findPopularRecruiting(employmentType, limit, now)
     }
 
     fun readRecruitingMatched(
