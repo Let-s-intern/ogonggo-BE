@@ -81,7 +81,7 @@ data class CreateRecruitmentPostRequest(
         val contactMethod = required(contactMethod, "contactMethod")
         val contactValue = requiredText(contactValue, "contactValue")
 
-        validateRelations(recruitmentStartDate, recruitmentEndDate, positions, contactMethod, contactValue)
+        validateRelations()
         return RecruitmentPostAppendCommand(
             authorUserId = authorUserId,
             title = title,
@@ -105,12 +105,7 @@ data class CreateRecruitmentPostRequest(
         if (recruitmentStartDate != null && recruitmentEndDate != null && recruitmentStartDate.isAfter(recruitmentEndDate)) {
             invalid("recruitmentStartDate", "모집 마감일보다 늦을 수 없습니다.")
         }
-        if (technologyStacks.orEmpty().any(String::isBlank)) {
-            invalid("technologyStacks", "기술 스택은 공백일 수 없습니다.")
-        }
-        if (technologyStacks.orEmpty().distinct().size != technologyStacks.orEmpty().size) {
-            invalid("technologyStacks", "중복된 기술 스택은 등록할 수 없습니다.")
-        }
+        validateTechnologyStacks(technologyStacks)
         if (positions.orEmpty().distinct().size != positions.orEmpty().size) {
             invalid("positions", "중복된 모집 포지션은 등록할 수 없습니다.")
         }
@@ -125,29 +120,6 @@ data class CreateRecruitmentPostRequest(
                 ContactMethod.OPEN_KAKAO -> if (!isHttpUrl(contactValue)) {
                     invalid("contactValue", "카카오톡 오픈채팅 링크를 입력해 주세요.")
                 }
-            }
-        }
-    }
-
-    private fun validateRelations(
-        recruitmentStartDate: LocalDate,
-        recruitmentEndDate: LocalDate,
-        positions: List<RecruitmentPosition>,
-        contactMethod: ContactMethod,
-        contactValue: String,
-    ) {
-        if (recruitmentStartDate.isAfter(recruitmentEndDate)) {
-            invalid("recruitmentStartDate", "모집 마감일보다 늦을 수 없습니다.")
-        }
-        if (positions.distinct().size != positions.size) {
-            invalid("positions", "중복된 모집 포지션은 등록할 수 없습니다.")
-        }
-        when (contactMethod) {
-            ContactMethod.EMAIL -> if (!EMAIL_PATTERN.matches(contactValue)) {
-                invalid("contactValue", "이메일 형식으로 입력해 주세요.")
-            }
-            ContactMethod.OPEN_KAKAO -> if (!isHttpUrl(contactValue)) {
-                invalid("contactValue", "카카오톡 오픈채팅 링크를 입력해 주세요.")
             }
         }
     }
@@ -211,12 +183,7 @@ data class UpdateRecruitmentPostRequest(
         if (recruitmentStartDate != null && recruitmentEndDate != null && recruitmentStartDate.isAfter(recruitmentEndDate)) {
             invalid("recruitmentStartDate", "모집 마감일보다 늦을 수 없습니다.")
         }
-        if (technologyStacks.orEmpty().any(String::isBlank)) {
-            invalid("technologyStacks", "기술 스택은 공백일 수 없습니다.")
-        }
-        if (technologyStacks.orEmpty().distinct().size != technologyStacks.orEmpty().size) {
-            invalid("technologyStacks", "중복된 기술 스택은 등록할 수 없습니다.")
-        }
+        validateTechnologyStacks(technologyStacks)
         if (positions.orEmpty().distinct().size != positions.orEmpty().size) {
             invalid("positions", "중복된 모집 포지션은 등록할 수 없습니다.")
         }
@@ -302,12 +269,7 @@ data class CreateRecruitmentPostDraftRequest(
         if (recruitmentStartDate != null && recruitmentEndDate != null && recruitmentStartDate.isAfter(recruitmentEndDate)) {
             invalid("recruitmentStartDate", "모집 마감일보다 늦을 수 없습니다.")
         }
-        if (technologyStacks.orEmpty().any(String::isBlank)) {
-            invalid("technologyStacks", "기술 스택은 공백일 수 없습니다.")
-        }
-        if (technologyStacks.orEmpty().distinct().size != technologyStacks.orEmpty().size) {
-            invalid("technologyStacks", "중복된 기술 스택은 등록할 수 없습니다.")
-        }
+        validateTechnologyStacks(technologyStacks)
         if (positions.orEmpty().distinct().size != positions.orEmpty().size) {
             invalid("positions", "중복된 모집 포지션은 등록할 수 없습니다.")
         }
@@ -339,4 +301,18 @@ data class PublishRecruitmentPostRequest(
 
 private fun invalid(field: String, reason: String): Nothing = throw InvalidRequestFieldException(field, reason)
 
+private fun validateTechnologyStacks(technologyStacks: List<String>?) {
+    val stacks = technologyStacks.orEmpty()
+    if (stacks.any(String::isBlank)) {
+        invalid("technologyStacks", "기술 스택은 공백일 수 없습니다.")
+    }
+    if (stacks.distinct().size != stacks.size) {
+        invalid("technologyStacks", "중복된 기술 스택은 등록할 수 없습니다.")
+    }
+    if (stacks.any { it.length > TECHNOLOGY_STACK_MAX_LENGTH }) {
+        invalid("technologyStacks", "기술 스택은 50자 이하여야 합니다.")
+    }
+}
+
 private val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+private const val TECHNOLOGY_STACK_MAX_LENGTH = 50
