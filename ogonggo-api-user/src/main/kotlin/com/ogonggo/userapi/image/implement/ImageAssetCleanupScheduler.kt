@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.image.implement
 
 import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -16,6 +17,7 @@ class ImageAssetCleanupScheduler(
     private val clock: Clock,
     @Value("\${ogonggo.storage.s3.cleanup.retention-hours:24}")
     private val retentionHours: Long,
+    private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
     @Scheduled(fixedDelayString = "\${ogonggo.storage.s3.cleanup.fixed-delay-ms:3600000}")
@@ -25,16 +27,17 @@ class ImageAssetCleanupScheduler(
         lockAtMostFor = "\${ogonggo.storage.s3.cleanup.lock-at-most-for:PT2H}",
     )
     fun cleanup() {
-        val deletedCount = imageAssetManager.cleanup(
-            now = LocalDateTime.now(clock),
-            retention = Duration.ofHours(retentionHours),
-        )
-        if (deletedCount > 0) {
-            log.info("고아 이미지 정리 완료. deletedCount={}", deletedCount)
+        val deletedCount = schedulerExecutionObserver.observe(SCHEDULER_NAME) {
+            imageAssetManager.cleanup(
+                now = LocalDateTime.now(clock),
+                retention = Duration.ofHours(retentionHours),
+            )
         }
+        log.info("고아 이미지 정리 완료. deletedCount={}", deletedCount)
     }
 
     companion object {
+        private const val SCHEDULER_NAME = "imageAssetCleanup"
         private val log = LoggerFactory.getLogger(ImageAssetCleanupScheduler::class.java)
     }
 }

@@ -1,6 +1,8 @@
 package com.ogonggo.userapi.community.implement
 
 import com.ogonggo.core.community.implement.RecruitmentPostManager
+import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -14,7 +16,11 @@ class RecruitmentPostAutoCloseSchedulerTest {
 
     private val manager = Mockito.mock(RecruitmentPostManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-10-01T00:00:00Z"), ZONE)
-    private val scheduler = RecruitmentPostAutoCloseScheduler(manager, clock)
+    private val scheduler = RecruitmentPostAutoCloseScheduler(
+        manager,
+        clock,
+        SchedulerExecutionObserver(SimpleMeterRegistry()),
+    )
 
     @Test
     fun `현재 날짜 기준으로 만료 모집글 자동 마감을 요청한다`() {

@@ -412,6 +412,11 @@ jobs:
             exit 1
           fi
 
+          # ShedLock은 JPA 엔티티가 아니어서 ddl-auto가 생성하지 않는다.
+          # 운영 선행 DDL과 같은 파일을 적용해 기동 시 테이블 검증까지 확인한다.
+          docker exec -i ci-mysql mysql -uroot -proot ogonggo \
+            < docs/schema/2026-09-17-lc3309-shedlock.sql
+
           docker run -d --name ci-app --network ogonggo-ci -p 18080:8080 \
             -e SERVER_PORT=8080 \
             -e SPRING_DATASOURCE_URL="jdbc:mysql://ci-mysql:3306/ogonggo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8" \
