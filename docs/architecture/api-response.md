@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-14
+- 최종 변경일: 2026-09-17
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -75,10 +75,12 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 
 | 목록 | 필터 | 검색어 |
 | --- | --- | --- |
-| `GET /api/v1/jobs` | `employmentType`, `experienceType` | `keyword` — 회사명 또는 공고 제목 |
+| `GET /api/v1/jobs` | `employmentType`, `experienceType`, `jobField`, `jobRole` | `keyword` — 회사명 또는 공고 제목 |
+| `GET /api/v1/job-bookmarks` | `GET /api/v1/jobs`와 같음 | `GET /api/v1/jobs`와 같음 |
 | `GET /api/v1/bootcamps` | `tuitionType`, `status` | `keyword` — 운영 회사명 또는 프로그램명 |
+| `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
 
-검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
+검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 아직 고정된 값 집합이 없는 자유 문자열이라 공고의 값과 정확히 같은지로 거르며, 100자 이하이고 빈 값은 보내지 않은 것과 같습니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
 | `sort` | 의미 | 순서 |
 | --- | --- | --- |
@@ -141,11 +143,11 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 채용공고 북마크
 
-일반 채용공고 목록과 상세 응답은 현재 사용자의 상태를 나타내는 `bookmarked`를 포함합니다. `GET /api/v1/job-bookmarks`는 게시 중인 미삭제 북마크 공고만 최근 북마크 순으로 반환하며 일반 목록과 같은 페이지 응답을 사용합니다. 달력 응답은 최소 필드 계약을 유지하므로 `bookmarked`를 추가하지 않습니다.
+일반 채용공고 목록과 상세 응답은 현재 사용자의 상태를 나타내는 `bookmarked`를 포함합니다. `GET /api/v1/job-bookmarks`는 게시 중인 미삭제 북마크 공고만 최근 북마크 순으로 반환하며 일반 목록과 같은 페이지 응답과 선택 필터·검색어를 사용합니다. 달력 응답은 최소 필드 계약을 유지하므로 `bookmarked`를 추가하지 않습니다.
 
 ### 부트캠프 북마크
 
-부트캠프도 같은 계약을 사용합니다. 목록과 상세 응답에 `bookmarked`를 포함하고, `GET /api/v1/bootcamp-bookmarks`는 지금 공개된 미삭제 북마크 부트캠프만 최근 북마크 순으로 반환합니다.
+부트캠프도 같은 계약을 사용합니다. 목록과 상세 응답에 `bookmarked`를 포함하고, `GET /api/v1/bootcamp-bookmarks`는 지금 공개된 미삭제 북마크 부트캠프만 최근 북마크 순으로 반환하며, 일반 목록과 같은 선택 필터·검색어를 사용합니다. `status`에 `DRAFT`를 보내면 일반 목록과 같이 400입니다.
 
 공개 여부는 목록 조회와 같은 조건, 즉 `RECRUITING`·`CLOSED` 상태이면서 공개 기간 안에 있는지로 판단합니다. 북마크해 둔 부트캠프라도 공개가 끝나면 목록에서 빠지며, 이때도 해제는 계속 할 수 있도록 해제는 삭제 여부를 가리지 않고 조회합니다.
 

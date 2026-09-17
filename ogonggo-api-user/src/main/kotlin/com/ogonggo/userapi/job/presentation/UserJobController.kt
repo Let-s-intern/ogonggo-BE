@@ -39,6 +39,8 @@ class UserJobController(
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: JobSortType,
         @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "jobField", required = false) jobField: String?,
+        @RequestParam(name = "jobRole", required = false) jobRole: String?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
@@ -46,6 +48,8 @@ class UserJobController(
             condition = JobSearchCondition(
                 employmentType = employmentType,
                 experienceType = experienceType,
+                jobField = jobField,
+                jobRole = jobRole,
                 keyword = keyword,
             ),
             sortType = sortType,

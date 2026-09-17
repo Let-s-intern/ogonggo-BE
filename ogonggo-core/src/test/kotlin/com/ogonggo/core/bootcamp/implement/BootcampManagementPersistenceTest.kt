@@ -58,7 +58,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
 
         assertThrows(EntityNotFoundException::class.java) { bootcampReader.readPublic(bootcampId, NOW) }
         assertEquals(0L, publicPage().totalElements)
-        assertEquals(0L, bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10, NOW).totalElements)
+        assertEquals(0L, bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW).totalElements)
         val exception = assertThrows(ConflictException::class.java) { bootcampManager.publish(bootcamp) }
         assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
 
@@ -66,7 +66,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
 
         assertEquals(bootcampId, bootcampReader.readPublic(bootcampId, NOW).id)
         assertEquals(listOf(bootcampId), publicPage().bootcamps.map { it.id })
-        assertEquals(1L, bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10, NOW).totalElements)
+        assertEquals(1L, bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW).totalElements)
 
         bootcampManager.hide(bootcamp)
         assertEquals(0L, publicPage().totalElements)

@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkManager
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
@@ -21,8 +22,13 @@ class UserBootcampBookmarkService(
     private val clock: Clock,
 ) {
 
-    fun getBookmarks(userId: Long, page: Int, size: Int): UserBootcampPageResult {
-        val result = bootcampBookmarkReader.readBookmarkedPublicPage(userId, page, size)
+    fun getBookmarks(
+        userId: Long,
+        condition: BootcampSearchCondition,
+        page: Int,
+        size: Int,
+    ): UserBootcampPageResult {
+        val result = bootcampBookmarkReader.readBookmarkedPublicPage(userId, condition, page, size)
         val bootcampIds = result.bootcamps.map(Bootcamp::requiredId)
         return UserBootcampPageResult.from(
             result = result,

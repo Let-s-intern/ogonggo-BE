@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -71,11 +72,11 @@ class UserJobBookmarkServiceTest {
         Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
         Mockito.`when`(job.region).thenReturn("서울")
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
-        Mockito.`when`(jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, 0, 10)).thenReturn(
+        Mockito.`when`(jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10)).thenReturn(
             JobPageDto(listOf(job), 0, 10, 1, 1, false),
         )
 
-        val result = service.getBookmarks(USER_ID, 0, 10)
+        val result = service.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10)
 
         assertEquals(true, result.items.single().bookmarked)
     }

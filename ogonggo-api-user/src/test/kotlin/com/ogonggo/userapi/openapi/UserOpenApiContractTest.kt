@@ -288,6 +288,8 @@ class UserOpenApiContractTest @Autowired constructor(
         val jobBookmarks = document.at("/paths/~1api~1v1~1job-bookmarks/get")
         assertTrue(jobBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(jobBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
+        listOf("employmentType", "experienceType", "jobField", "jobRole", "keyword")
+            .forEach { name -> assertTrue(jobBookmarks.parameter(name).isObject) }
         val addBookmark = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/post")
         assertTrue(addBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(addBookmark.at("/responses/409/description").asText().startsWith("JOB_BOOKMARK_ALREADY_EXISTS"))
@@ -297,6 +299,9 @@ class UserOpenApiContractTest @Autowired constructor(
         val bootcampBookmarks = document.at("/paths/~1api~1v1~1bootcamp-bookmarks/get")
         assertTrue(bootcampBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(bootcampBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
+        listOf("tuitionType", "status", "keyword")
+            .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }
+        assertTrue(bootcampBookmarks.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         val addBootcampBookmark = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/post")
         assertTrue(addBootcampBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(

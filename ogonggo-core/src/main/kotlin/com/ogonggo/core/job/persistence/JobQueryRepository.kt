@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.domain.QJob.job
+import com.ogonggo.core.job.domain.QJobBookmark.jobBookmark
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.review.domain.ContentSource
 import com.querydsl.core.types.Predicate
@@ -37,6 +38,38 @@ internal class JobQueryRepository(
         sortType: JobSortType,
         pageable: Pageable,
     ): Page<Job> = findPage(publishedPredicates(condition), sortType, pageable)
+
+    /**
+     * 북마크한 공고 중 게시된 것만 최근 북마크 순으로 읽는다. 선택 필터는 공개 목록과 같다.
+     * 공고와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
+     */
+    fun findBookmarkedPublishedPage(
+        userId: Long,
+        condition: JobSearchCondition,
+        pageable: Pageable,
+    ): Page<Job> {
+        val predicates = arrayOf(
+            jobBookmark.userId.eq(userId),
+            jobBookmark.deletedAt.isNull,
+            *publishedPredicates(condition),
+        )
+        val content = queryFactory.select(job)
+            .from(job)
+            .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
+            .where(*predicates)
+            .orderBy(jobBookmark.updatedAt.desc(), jobBookmark.id.desc())
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+
+        val total = queryFactory.select(job.count())
+            .from(job)
+            .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
+            .where(*predicates)
+            .fetchOne() ?: 0L
+
+        return PageImpl(content, pageable, total)
+    }
 
     /**
      * 관리 목록은 게시 상태를 고정하지 않으므로 게시 인덱스를 타지 못하고 식별자 역순으로 훑는다.
@@ -116,6 +149,8 @@ internal class JobQueryRepository(
         job.deletedAt.isNull,
         employmentTypeEq(condition.employmentType),
         experienceTypeEq(condition.experienceType),
+        jobFieldEq(condition.jobField),
+        jobRoleEq(condition.jobRole),
         keywordContains(condition.keyword),
     )
 
@@ -134,6 +169,12 @@ internal class JobQueryRepository(
 
     private fun experienceTypeEq(experienceType: ExperienceType?): BooleanExpression? =
         experienceType?.let(job.experienceType::eq)
+
+    private fun jobFieldEq(jobField: String?): BooleanExpression? =
+        jobField?.takeIf(String::isNotBlank)?.let(job.jobField::eq)
+
+    private fun jobRoleEq(jobRole: String?): BooleanExpression? =
+        jobRole?.takeIf(String::isNotBlank)?.let(job.jobRole::eq)
 
     private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {
         null -> null

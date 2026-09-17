@@ -42,6 +42,10 @@ import java.time.LocalDateTime
             columnList = "publication_status, deleted_at, experience_type",
         ),
         Index(
+            name = "idx_jobs_published_job_field",
+            columnList = "publication_status, deleted_at, job_field",
+        ),
+        Index(
             name = "idx_jobs_published_job_role",
             columnList = "publication_status, deleted_at, job_role",
         ),

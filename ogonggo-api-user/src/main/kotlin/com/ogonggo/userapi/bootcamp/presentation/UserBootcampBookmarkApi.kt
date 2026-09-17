@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
@@ -16,13 +18,37 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 
 @Tag(name = "부트캠프 북마크")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
 interface UserBootcampBookmarkApi {
 
-    @Operation(operationId = "listMyBootcampBookmarks", summary = "부트캠프 북마크 목록 조회")
+    @Operation(
+        operationId = "listMyBootcampBookmarks",
+        summary = "부트캠프 북마크 목록 조회",
+        description = """
+            북마크한 부트캠프 중 지금 공개된 부트캠프만 최근 북마크 순으로 반환합니다.
+
+            부트캠프 목록과 같은 필터를 사용할 수 있습니다.
+            tuitionType과 status로 목록을 좁히며 각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않습니다.
+            status는 RECRUITING(모집중)과 CLOSED(모집 마감)만 받으며 그 밖의 값은 400입니다.
+
+            keyword는 운영 회사명 또는 프로그램명에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
+            2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 공개 목록에서 고를 수 없는 모집 상태입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
     fun getBookmarks(
         @Parameter(hidden = true)
         userId: Long,
@@ -31,6 +57,10 @@ interface UserBootcampBookmarkApi {
         @Min(1)
         @Max(100)
         size: Int,
+        tuitionType: TuitionType?,
+        status: BootcampStatus?,
+        @Size(min = 2, max = 100)
+        keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(operationId = "createBootcampBookmark", summary = "부트캠프 북마크 등록")

@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -21,8 +22,8 @@ class UserJobBookmarkService(
     private val clock: Clock,
 ) {
 
-    fun getBookmarks(userId: Long, page: Int, size: Int): UserJobPageResult {
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(userId, page, size)
+    fun getBookmarks(userId: Long, condition: JobSearchCondition, page: Int, size: Int): UserJobPageResult {
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(userId, condition, page, size)
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,

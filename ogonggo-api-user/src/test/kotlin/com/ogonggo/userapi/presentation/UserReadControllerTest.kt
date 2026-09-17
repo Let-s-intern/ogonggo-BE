@@ -221,10 +221,12 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `고용 형태와 경력 유형 필터는 정렬과 함께 조회 조건으로 전달된다`() {
+    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달된다`() {
         val condition = JobSearchCondition(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
+            jobField = "개발",
+            jobRole = "백엔드",
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
             .thenReturn(jobPageResult())
@@ -233,6 +235,8 @@ class UserReadControllerTest @Autowired constructor(
             get("/api/v1/jobs")
                 .param("employmentType", "INTERN")
                 .param("experienceType", "NEWCOMER")
+                .param("jobField", "개발")
+                .param("jobRole", "백엔드")
                 .param("sort", "VIEW_COUNT")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
