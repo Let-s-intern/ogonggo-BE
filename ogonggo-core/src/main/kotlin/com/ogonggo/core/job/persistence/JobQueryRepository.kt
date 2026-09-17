@@ -68,12 +68,13 @@ internal class JobQueryRepository(
      * 공고에서 출발하면 게시 공고 전체를 읽어 정렬해야 하므로 지표에서 출발한다.
      * 상위 지표만 먼저 고르면 그중 마감된 공고가 빠져 limit건을 채우지 못하므로 한 쿼리에서 거른다.
      * 지표 행은 첫 조회 시점에 생기므로 한 번도 조회되지 않은 공고는 대상이 아니다.
+     * 고용 형태가 없으면 모든 고용 형태를 대상으로 한다.
      */
-    fun findPopularRecruiting(limit: Int, now: LocalDateTime): List<Job> =
+    fun findPopularRecruiting(employmentType: EmploymentType?, limit: Int, now: LocalDateTime): List<Job> =
         queryFactory.select(job)
             .from(jobMetric)
             .join(job).on(job.id.eq(jobMetric.jobId))
-            .where(*recruitingPredicates(now))
+            .where(*recruitingPredicates(now), employmentTypeEq(employmentType))
             .orderBy(jobMetric.viewCount.desc(), jobMetric.jobId.desc())
             .limit(limit.toLong())
             .fetch()

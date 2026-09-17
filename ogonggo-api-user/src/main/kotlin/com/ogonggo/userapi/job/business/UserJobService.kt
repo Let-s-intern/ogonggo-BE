@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.business
 
+import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -40,8 +41,8 @@ class UserJobService(
         )
     }
 
-    fun getPopularJobs(userId: Long?): List<UserJobSummary> =
-        toSummaries(userId, jobReader.readPopularRecruiting(POPULAR_JOB_LIMIT))
+    fun getPopularJobs(userId: Long?, employmentType: EmploymentType?): List<UserJobSummary> =
+        toSummaries(userId, jobReader.readPopularRecruiting(employmentType, POPULAR_JOB_LIMIT))
 
     /**
      * 희망 직무와 산업이 모두 맞는 공고부터 직무만, 산업만 맞는 공고 순으로 채운다.

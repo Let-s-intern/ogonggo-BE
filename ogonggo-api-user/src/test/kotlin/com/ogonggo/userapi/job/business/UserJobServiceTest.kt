@@ -138,11 +138,11 @@ class UserJobServiceTest {
             mapOf(1L to JobMetricDto(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
         )
 
-        Mockito.`when`(jobReader.readPopularRecruiting(UserJobService.POPULAR_JOB_LIMIT)).thenReturn(listOf(job))
+        Mockito.`when`(jobReader.readPopularRecruiting(null, UserJobService.POPULAR_JOB_LIMIT)).thenReturn(listOf(job))
 
         assertEquals(false, service.getJob(null, 1L).bookmarked)
         assertEquals(false, service.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 20).items.single().bookmarked)
-        assertEquals(false, service.getPopularJobs(null).single().bookmarked)
+        assertEquals(false, service.getPopularJobs(null, null).single().bookmarked)
 
         Mockito.verifyNoInteractions(jobBookmarkReader)
     }
@@ -152,7 +152,7 @@ class UserJobServiceTest {
         val popular = createJobMock()
         val other = createJobMock()
         Mockito.`when`(other.id).thenReturn(2L)
-        Mockito.`when`(jobReader.readPopularRecruiting(4)).thenReturn(listOf(popular, other))
+        Mockito.`when`(jobReader.readPopularRecruiting(EmploymentType.INTERN, 4)).thenReturn(listOf(popular, other))
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L, 2L))).thenReturn(setOf(2L))
         Mockito.`when`(jobMetricReader.readAll(listOf(1L, 2L))).thenReturn(
             mapOf(
@@ -161,13 +161,13 @@ class UserJobServiceTest {
             ),
         )
 
-        val result = service.getPopularJobs(USER_ID)
+        val result = service.getPopularJobs(USER_ID, EmploymentType.INTERN)
 
         assertEquals(listOf(1L, 2L), result.map { it.id })
         assertEquals(listOf(false, true), result.map { it.bookmarked })
         assertEquals(listOf(9L, 7L), result.map { it.viewCount })
         assertEquals(listOf(1L, 2L), result.map { it.bookmarkCount })
-        Mockito.verify(jobReader).readPopularRecruiting(4)
+        Mockito.verify(jobReader).readPopularRecruiting(EmploymentType.INTERN, 4)
     }
 
     @Test

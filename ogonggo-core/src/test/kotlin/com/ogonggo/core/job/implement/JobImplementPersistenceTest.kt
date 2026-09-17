@@ -312,7 +312,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         view(endsNow, times = 2)
         view(alwaysOpen, times = 1)
 
-        val jobs = jobReader.readPopularRecruiting(limit = 4, now = NOW)
+        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 4, now = NOW)
 
         assertEquals(listOf(endsNow.id, alwaysOpen.id), jobs.map { it.id })
     }
@@ -329,7 +329,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         view(tiedNewer, times = 2)
         view(least, times = 1)
 
-        val jobs = jobReader.readPopularRecruiting(limit = 3, now = NOW)
+        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 3, now = NOW)
 
         assertEquals(listOf(popular.id, tiedNewer.id, tiedOlder.id), jobs.map { it.id })
     }
@@ -341,15 +341,35 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(viewed, unviewed).forEach(jobManager::publish)
         view(viewed, times = 1)
 
-        val jobs = jobReader.readPopularRecruiting(limit = 4, now = NOW)
+        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 4, now = NOW)
 
         assertEquals(listOf(viewed.id), jobs.map { it.id })
     }
 
     @Test
+    fun `고용 형태를 지정하면 해당 고용 형태의 인기 공고만 반환한다`() {
+        // given
+        val fullTime = jobAppender.append(createCommand(employmentType = EmploymentType.FULL_TIME))
+        val intern = jobAppender.append(createCommand(employmentType = EmploymentType.INTERN))
+        val popularContract = jobAppender.append(createCommand(employmentType = EmploymentType.CONTRACT))
+        listOf(fullTime, intern, popularContract).forEach(jobManager::publish)
+        view(popularContract, times = 5)
+        view(fullTime, times = 2)
+        view(intern, times = 1)
+
+        // when
+        val fullTimeJobs = jobReader.readPopularRecruiting(EmploymentType.FULL_TIME, limit = 4, now = NOW)
+        val internJobs = jobReader.readPopularRecruiting(EmploymentType.INTERN, limit = 4, now = NOW)
+
+        // then
+        assertEquals(listOf(fullTime.id), fullTimeJobs.map { it.id })
+        assertEquals(listOf(intern.id), internJobs.map { it.id })
+    }
+
+    @Test
     fun `인기 공고 개수 범위를 검증한다`() {
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(limit = 0, now = NOW) }
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(limit = 101, now = NOW) }
+        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(employmentType = null, limit = 0, now = NOW) }
+        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(employmentType = null, limit = 101, now = NOW) }
     }
 
     @Test
