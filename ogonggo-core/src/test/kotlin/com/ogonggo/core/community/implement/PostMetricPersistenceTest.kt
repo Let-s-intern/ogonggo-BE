@@ -45,6 +45,20 @@ internal class PostMetricPersistenceTest @Autowired constructor(
         assertEquals(0, postMetricRepository.findByPostId(POST_ID)?.commentCount)
     }
 
+    @Test
+    fun `북마크 수는 지표 행에서 원자적으로 증가하고 0 미만으로 감소하지 않는다`() {
+        // given
+        val postId = POST_ID
+
+        // when
+        postMetricManager.increaseBookmarkCount(postId, NOW)
+        postMetricManager.increaseBookmarkCount(postId, NOW)
+        postMetricManager.decreaseBookmarkCount(postId, NOW)
+
+        // then
+        assertEquals(1, postMetricRepository.findByPostId(postId)?.bookmarkCount)
+    }
+
     companion object {
         private const val POST_ID = 12L
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 12, 0, 5)

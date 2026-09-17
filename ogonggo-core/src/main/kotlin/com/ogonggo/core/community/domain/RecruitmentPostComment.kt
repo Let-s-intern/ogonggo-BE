@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import java.time.LocalDateTime
 
 @Entity
 @Table(
@@ -51,9 +52,19 @@ class RecruitmentPostComment internal constructor(
     var content: String = content
         protected set
 
+    @Column(name = "deleted_at")
+    var deletedAt: LocalDateTime? = null
+        protected set
+
     fun belongsTo(postId: Long): Boolean = this.postId == postId
 
     fun isReply(): Boolean = parentId != null
+
+    fun delete(deletedAt: LocalDateTime) {
+        if (this.deletedAt == null) {
+            this.deletedAt = deletedAt
+        }
+    }
 
     companion object {
         const val CONTENT_MAX_LENGTH = 1000

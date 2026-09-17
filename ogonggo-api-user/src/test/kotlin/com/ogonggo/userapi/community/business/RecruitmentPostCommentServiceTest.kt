@@ -54,7 +54,7 @@ class RecruitmentPostCommentServiceTest {
         val command = command()
         val savedComment = Mockito.mock(RecruitmentPostComment::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
         Mockito.`when`(commentAppender.append(normalizedCommand())).thenReturn(savedComment)
         Mockito.`when`(savedComment.id).thenReturn(COMMENT_ID)
 
@@ -63,7 +63,7 @@ class RecruitmentPostCommentServiceTest {
 
         // then
         assertEquals(COMMENT_ID, commentId)
-        Mockito.verify(postReader).readPublished(POST_ID)
+        Mockito.verify(postReader).readPublishedForUpdate(POST_ID)
         Mockito.verify(commentAppender).append(normalizedCommand())
         Mockito.verify(postMetricManager).increaseCommentCount(POST_ID, LocalDateTime.now(clock))
     }
@@ -79,8 +79,8 @@ class RecruitmentPostCommentServiceTest {
         )
         val command = command(parentId = 101L)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
-        Mockito.`when`(commentReader.read(101L)).thenReturn(parent)
+        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(commentReader.readForUpdate(101L)).thenReturn(parent)
 
         // when
         val exception = assertThrows(BusinessException::class.java) {
@@ -93,20 +93,23 @@ class RecruitmentPostCommentServiceTest {
     }
 
     @Test
-    fun `작성자가 자신의 댓글을 삭제하면 물리 삭제를 위임한다`() {
+    fun `작성자가 자신의 댓글을 삭제하면 소프트 삭제를 위임한다`() {
         // given
         val comment = Mockito.mock(RecruitmentPostComment::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(commentReader.readInPost(POST_ID, COMMENT_ID)).thenReturn(comment)
+        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(commentReader.readInPostForUpdate(POST_ID, COMMENT_ID)).thenReturn(comment)
         Mockito.`when`(comment.userId).thenReturn(USER_ID)
-        Mockito.`when`(commentRemover.remove(comment)).thenReturn(1)
+        Mockito.`when`(commentRemover.remove(comment, NOW)).thenReturn(1)
 
         // when
         service.delete(USER_ID, POST_ID, COMMENT_ID)
 
         // then
-        Mockito.verify(commentRemover).remove(comment)
-        Mockito.verify(postMetricManager).decreaseCommentCount(POST_ID, 1, LocalDateTime.now(clock))
+        Mockito.verify(commentRemover).remove(comment, NOW)
+        Mockito.verify(postReader).readPublishedForUpdate(POST_ID)
+        Mockito.verify(commentReader).readInPostForUpdate(POST_ID, COMMENT_ID)
+        Mockito.verify(postMetricManager).decreaseCommentCount(POST_ID, 1, NOW)
     }
 
     @Test
@@ -114,7 +117,8 @@ class RecruitmentPostCommentServiceTest {
         // given
         val comment = Mockito.mock(RecruitmentPostComment::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(commentReader.readInPost(POST_ID, COMMENT_ID)).thenReturn(comment)
+        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(commentReader.readInPostForUpdate(POST_ID, COMMENT_ID)).thenReturn(comment)
         Mockito.`when`(comment.userId).thenReturn(999L)
 
         // when
@@ -185,5 +189,6 @@ class RecruitmentPostCommentServiceTest {
         private const val POST_ID = 12L
         private const val COMMENT_ID = 101L
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
+        private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 12, 9, 0)
     }
 }

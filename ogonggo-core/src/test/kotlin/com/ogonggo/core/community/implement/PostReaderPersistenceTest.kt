@@ -1,5 +1,6 @@
 package com.ogonggo.core.community.implement
 
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -26,12 +27,20 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(RecruitmentPostAppender::class, RecruitmentPostManager::class, RecruitmentPostReader::class, RecruitmentPostQueryRepository::class)
+@Import(
+    RecruitmentPostAppender::class,
+    RecruitmentPostManager::class,
+    RecruitmentPostReader::class,
+    RecruitmentPostQueryRepository::class,
+    PostMetricManager::class,
+    PostMetricRegistrar::class,
+)
 internal class PostReaderPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
     private val postManager: RecruitmentPostManager,
     private val postReader: RecruitmentPostReader,
     private val postRepository: RecruitmentPostJpaRepository,
+    private val postMetricManager: PostMetricManager,
 ) {
 
     @Test
@@ -187,6 +196,79 @@ internal class PostReaderPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `조회수순 목록은 조회수가 높은 모집글부터 중복 없이 반환한다`() {
+        // given
+        val zeroViewPost = postAppender.append(
+            createCommand(
+                title = "조회수 0",
+                recruitmentType = RecruitmentType.STUDY,
+                positions = listOf(RecruitmentPosition.BACKEND, RecruitmentPosition.DESIGN),
+            ),
+        )
+        val oneViewPost = postAppender.append(
+            createCommand(
+                title = "조회수 1",
+                recruitmentType = RecruitmentType.STUDY,
+                positions = listOf(RecruitmentPosition.BACKEND, RecruitmentPosition.DESIGN),
+            ),
+        )
+        val twoViewPost = postAppender.append(
+            createCommand(
+                title = "조회수 2",
+                recruitmentType = RecruitmentType.STUDY,
+                positions = listOf(RecruitmentPosition.BACKEND, RecruitmentPosition.DESIGN),
+            ),
+        )
+        val now = LocalDateTime.of(2026, 9, 17, 13, 0)
+        postMetricManager.initialize(checkNotNull(oneViewPost.id))
+        postMetricManager.initialize(checkNotNull(twoViewPost.id))
+        postMetricManager.increaseViewCount(checkNotNull(oneViewPost.id), now)
+        postMetricManager.increaseViewCount(checkNotNull(twoViewPost.id), now)
+        postMetricManager.increaseViewCount(checkNotNull(twoViewPost.id), now.plusSeconds(1))
+
+        // when
+        val result = postReader.readPublishedPage(
+            page = 0,
+            size = 10,
+            filter = RecruitmentPostListFilter(
+                positions = setOf(RecruitmentPosition.BACKEND, RecruitmentPosition.DESIGN),
+            ),
+            sortType = RecruitmentPostSortType.VIEW_COUNT,
+        )
+
+        // then
+        assertEquals(listOf("조회수 2", "조회수 1", "조회수 0"), result.posts.map(RecruitmentPost::title))
+        assertEquals(3, result.posts.map(RecruitmentPost::id).distinct().size)
+        assertEquals(checkNotNull(zeroViewPost.id), result.posts.last().id)
+    }
+
+    @Test
+    fun `댓글수순 목록은 댓글수가 높은 모집글부터 반환한다`() {
+        // given
+        val zeroCommentPost = postAppender.append(createCommand("댓글수 0", RecruitmentType.STUDY))
+        val oneCommentPost = postAppender.append(createCommand("댓글수 1", RecruitmentType.STUDY))
+        val twoCommentPost = postAppender.append(createCommand("댓글수 2", RecruitmentType.STUDY))
+        val now = LocalDateTime.of(2026, 9, 17, 13, 0)
+        postMetricManager.initialize(checkNotNull(oneCommentPost.id))
+        postMetricManager.initialize(checkNotNull(twoCommentPost.id))
+        postMetricManager.increaseCommentCount(checkNotNull(oneCommentPost.id), now)
+        postMetricManager.increaseCommentCount(checkNotNull(twoCommentPost.id), now)
+        postMetricManager.increaseCommentCount(checkNotNull(twoCommentPost.id), now.plusSeconds(1))
+
+        // when
+        val result = postReader.readPublishedPage(
+            page = 0,
+            size = 10,
+            filter = RecruitmentPostListFilter(),
+            sortType = RecruitmentPostSortType.COMMENT_COUNT,
+        )
+
+        // then
+        assertEquals(listOf("댓글수 2", "댓글수 1", "댓글수 0"), result.posts.map(RecruitmentPost::title))
+        assertEquals(checkNotNull(zeroCommentPost.id), result.posts.last().id)
+    }
+
+    @Test
     fun `페이지 번호가 음수면 거부한다`() {
         assertThrows(IllegalArgumentException::class.java) {
             postReader.readPublishedPage(
@@ -202,7 +284,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         title: String,
         recruitmentType: RecruitmentType,
         positions: List<RecruitmentPosition> = listOf(RecruitmentPosition.BACKEND),
-    ) = RecruitmentPostAppendCommand(
+    ) = RecruitmentPostAppendDto(
         authorUserId = 1L,
         title = title,
         recruitmentType = recruitmentType,

@@ -34,7 +34,9 @@ internal class RecruitmentPostQueryRepository(
         sortType: RecruitmentPostSortType,
     ): Page<RecruitmentPost> {
         val predicates = publishedPredicates(filter).filterNotNull()
-        val content = queryFactory.selectFrom(recruitmentPost)
+        val content = queryFactory
+            .select(recruitmentPost, VIEW_COUNT_OR_ZERO, COMMENT_COUNT_OR_ZERO)
+            .from(recruitmentPost)
             .leftJoin(postMetric).on(postMetric.postId.eq(recruitmentPost.id))
             .where(*predicates.toTypedArray())
             .distinct()
@@ -42,6 +44,7 @@ internal class RecruitmentPostQueryRepository(
             .offset(page.toLong() * size)
             .limit(size.toLong())
             .fetch()
+            .map { checkNotNull(it.get(recruitmentPost)) { "조회된 모집글이 없습니다." } }
         val total = queryFactory.select(recruitmentPost.count())
             .from(recruitmentPost)
             .where(*predicates.toTypedArray())

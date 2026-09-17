@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.implement.PostMetricDto
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
@@ -11,7 +12,6 @@ import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -23,10 +23,10 @@ class RecruitmentPostBookmarkService(
     private val postReader: RecruitmentPostReader,
     private val postBookmarkReader: RecruitmentPostBookmarkReader,
     private val postBookmarkManager: RecruitmentPostBookmarkManager,
+    private val postMetricManager: PostMetricManager,
     private val postMetricReader: PostMetricReader,
     private val clock: Clock,
     private val userProfileReader: UserProfileReader,
-    private val eventPublisher: ApplicationEventPublisher,
     private val applicationReader: RecruitmentPostApplicationReader,
 ) {
 
@@ -69,16 +69,20 @@ class RecruitmentPostBookmarkService(
     fun addBookmark(userId: Long, postId: Long) {
         verifyActiveUser(userId)
         postReader.readPublished(postId)
-        postBookmarkManager.append(userId, postId, LocalDateTime.now(clock))
-        eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
+        val now = LocalDateTime.now(clock)
+        if (postBookmarkManager.append(userId, postId, now)) {
+            postMetricManager.increaseBookmarkCount(postId, now)
+        }
     }
 
     @Transactional
     fun deleteBookmark(userId: Long, postId: Long) {
         verifyActiveUser(userId)
         postReader.readIncludingDeleted(postId)
-        postBookmarkManager.delete(userId, postId, LocalDateTime.now(clock))
-        eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
+        val now = LocalDateTime.now(clock)
+        if (postBookmarkManager.delete(userId, postId, now)) {
+            postMetricManager.decreaseBookmarkCount(postId, now)
+        }
     }
 
     private fun verifyActiveUser(userId: Long) {

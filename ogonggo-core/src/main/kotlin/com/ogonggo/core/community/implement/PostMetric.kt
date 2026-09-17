@@ -88,10 +88,13 @@ class PostMetricManager internal constructor(
     }
 
     @Transactional
-    fun syncBookmarkCount(postId: Long, now: LocalDateTime) {
-        ensureMetricExists(postId)
-        check(postMetricRepository.syncBookmarkCount(postId, now) > 0) {
-            "모집글 북마크 수를 갱신하지 못했습니다. postId=$postId"
+    fun increaseBookmarkCount(postId: Long, now: LocalDateTime) =
+        updateOrCreate(postId) { postMetricRepository.increaseBookmarkCount(postId, now) }
+
+    @Transactional
+    fun decreaseBookmarkCount(postId: Long, now: LocalDateTime) {
+        check(postMetricRepository.decreaseBookmarkCount(postId, now) > 0) {
+            "북마크 카운터가 실제 북마크 수보다 작습니다. postId=$postId"
         }
     }
 

@@ -1,6 +1,7 @@
 package com.ogonggo.core.community.implement
 
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -12,7 +13,7 @@ class RecruitmentPostManager internal constructor(
     private val postRepository: RecruitmentPostJpaRepository,
 ) {
 
-    fun update(post: RecruitmentPost, command: RecruitmentPostUpdateCommand) {
+    fun update(post: RecruitmentPost, command: RecruitmentPostUpdateDto, today: LocalDate) {
         post.update(
             title = command.title,
             recruitmentType = command.recruitmentType,
@@ -28,11 +29,12 @@ class RecruitmentPostManager internal constructor(
             positions = command.positions.orEmpty(),
             contactMethod = command.contactMethod,
             contactValue = command.contactValue,
+            today = today,
         )
         postRepository.save(post)
     }
 
-    fun updateDraft(post: RecruitmentPost, command: RecruitmentPostUpdateCommand) {
+    fun updateDraft(post: RecruitmentPost, command: RecruitmentPostUpdateDto) {
         post.updateDraft(
             title = command.title,
             recruitmentType = command.recruitmentType,

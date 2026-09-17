@@ -314,6 +314,7 @@ class RecruitmentPost internal constructor(
         positions: List<RecruitmentPosition>,
         contactMethod: ContactMethod?,
         contactValue: String?,
+        today: LocalDate,
     ) {
         checkNotDeleted()
         validatePublishedValues(
@@ -333,6 +334,11 @@ class RecruitmentPost internal constructor(
             contactValue = contactValue,
         )
 
+        val updatedRecruitmentEndDate = checkNotNull(recruitmentEndDate)
+        val shouldReopen = recruitmentStatus == RecruitmentStatus.CLOSED &&
+            this.recruitmentEndDate != updatedRecruitmentEndDate &&
+            updatedRecruitmentEndDate.isAfter(today)
+
         this.title = title
         this.recruitmentType = checkNotNull(recruitmentType)
         this.capacity = checkNotNull(capacity)
@@ -343,10 +349,13 @@ class RecruitmentPost internal constructor(
         this.content = checkNotNull(content)
         this.eligibilityAndSelectionProcess = eligibilityAndSelectionProcess
         this.recruitmentStartDate = checkNotNull(recruitmentStartDate)
-        this.recruitmentEndDate = checkNotNull(recruitmentEndDate)
+        this.recruitmentEndDate = updatedRecruitmentEndDate
         this.positions = positions.toMutableList()
         this.contactMethod = checkNotNull(contactMethod)
         this.contactValue = checkNotNull(contactValue)
+        if (shouldReopen) {
+            reopen()
+        }
     }
 
     private fun checkNotDeleted() {

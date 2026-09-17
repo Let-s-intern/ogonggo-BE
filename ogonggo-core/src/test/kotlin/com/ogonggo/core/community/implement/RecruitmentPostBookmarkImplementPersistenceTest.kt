@@ -1,5 +1,6 @@
 package com.ogonggo.core.community.implement
 
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -7,12 +8,13 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.community.persistence.RecruitmentPostBookmarkJpaRepository
-import com.ogonggo.core.community.persistence.PostMetricJpaRepository
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -28,8 +30,6 @@ import java.time.LocalDateTime
     RecruitmentPostAppender::class,
     RecruitmentPostBookmarkManager::class,
     RecruitmentPostBookmarkReader::class,
-    PostMetricManager::class,
-    PostMetricRegistrar::class,
 )
 internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
@@ -37,8 +37,6 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
     private val bookmarkReader: RecruitmentPostBookmarkReader,
     private val bookmarkRepository: RecruitmentPostBookmarkJpaRepository,
     private val userRepository: UserJpaRepository,
-    private val postMetricManager: PostMetricManager,
-    private val postMetricRepository: PostMetricJpaRepository,
 ) {
 
     @Test
@@ -83,22 +81,18 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
     }
 
     @Test
-    fun `북마크 수는 활성 북마크만 다시 세어 반영한다`() {
+    fun `북마크 등록과 해제는 실제 상태가 변경됐는지 반환한다`() {
         val postId = appendPost()
         val userId = appendUser()
         val now = LocalDateTime.of(2026, 9, 14, 10, 0)
 
-        bookmarkManager.append(userId = userId, postId = postId, now = now)
-        postMetricManager.syncBookmarkCount(postId, now)
-        assertEquals(1L, postMetricRepository.findByPostId(postId)?.bookmarkCount)
-
-        bookmarkManager.delete(userId = userId, postId = postId, now = now.plusMinutes(1))
-        postMetricManager.syncBookmarkCount(postId, now.plusMinutes(1))
-        assertEquals(0L, postMetricRepository.findByPostId(postId)?.bookmarkCount)
+        assertTrue(bookmarkManager.append(userId = userId, postId = postId, now = now))
+        assertTrue(bookmarkManager.delete(userId = userId, postId = postId, now = now.plusMinutes(1)))
+        assertFalse(bookmarkManager.delete(userId = userId, postId = postId, now = now.plusMinutes(2)))
     }
 
     private fun appendPost(): Long = checkNotNull(postAppender.append(
-        RecruitmentPostAppendCommand(
+        RecruitmentPostAppendDto(
             authorUserId = 1L,
             title = "사이드 프로젝트 팀원 모집",
             recruitmentType = RecruitmentType.SIDE_PROJECT,

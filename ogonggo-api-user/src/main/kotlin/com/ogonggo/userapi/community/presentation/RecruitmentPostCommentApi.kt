@@ -113,12 +113,13 @@ interface RecruitmentPostCommentApi {
         operationId = "deleteRecruitmentPostComment",
         summary = "사이드 프로젝트·스터디 모집글 댓글 삭제",
         description = """
-            댓글 작성자 본인의 댓글을 물리 삭제합니다. 부모 댓글 삭제 시 대댓글도 함께 삭제됩니다.
+            댓글 작성자 본인의 댓글을 소프트 삭제합니다. 부모 댓글 삭제 시 활성 대댓글도 함께 소프트 삭제됩니다.
 
             ### 추가사항
 
             - 댓글 작성자 본인만 삭제할 수 있습니다.
-            - 삭제된 댓글 수만큼 모집글의 `commentCount`가 감소합니다.
+            - 삭제된 댓글의 내용은 데이터베이스에 보존되며 일반 댓글 조회에서는 제외됩니다.
+            - 실제로 활성 상태에서 삭제된 댓글 수만큼 모집글의 `commentCount`가 감소합니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)

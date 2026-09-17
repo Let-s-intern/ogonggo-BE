@@ -1,5 +1,7 @@
 package com.ogonggo.core.community.implement
 
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
@@ -45,7 +47,7 @@ internal class PostImplementPersistenceTest @Autowired constructor(
 
         postManager.update(
             savedPost,
-            RecruitmentPostUpdateCommand(
+            RecruitmentPostUpdateDto(
                 title = "수정된 모집글",
                 recruitmentType = RecruitmentType.STUDY,
                 capacity = 6,
@@ -61,6 +63,7 @@ internal class PostImplementPersistenceTest @Autowired constructor(
                 contactMethod = ContactMethod.OPEN_KAKAO,
                 contactValue = "https://open.kakao.com/o/updated",
             ),
+            LocalDate.of(2026, 9, 11),
         )
         postRepository.flush()
         val reloadedPost = postRepository.findById(postId).orElseThrow()
@@ -111,7 +114,7 @@ internal class PostImplementPersistenceTest @Autowired constructor(
         assertEquals(null, reloadedNotExpiredPost.closedAt)
     }
 
-    private fun createCommand() = RecruitmentPostAppendCommand(
+    private fun createCommand() = RecruitmentPostAppendDto(
         authorUserId = 1L,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,

@@ -1,5 +1,6 @@
 package com.ogonggo.core.community.implement
 
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -11,6 +12,7 @@ import com.ogonggo.core.community.persistence.RecruitmentPostCommentReportJpaRep
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,6 +21,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import jakarta.persistence.EntityManager
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -151,7 +154,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
     }
 
     @Test
-    fun `부모 댓글을 물리 삭제하면 대댓글도 함께 삭제한다`() {
+    fun `부모 댓글을 소프트 삭제하면 활성 대댓글도 함께 소프트 삭제한다`() {
         // given
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
@@ -174,23 +177,25 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         val postId = checkNotNull(post.id)
         val parentId = checkNotNull(parent.id)
         val replyId = checkNotNull(reply.id)
+        val deletedAt = LocalDateTime.of(2026, 9, 17, 10, 0)
 
         // when
-        commentRemover.remove(parent)
+        val deletedCount = commentRemover.remove(parent, deletedAt)
         commentRepository.flush()
         entityManager.clear()
 
         // then
-        assertEquals(false, commentRepository.findById(parentId).isPresent)
-        assertEquals(false, commentRepository.findById(replyId).isPresent)
-        assertEquals(true, commentReader.readRootPage(postId, page = 0, size = 10).comments.isEmpty())
+        assertEquals(2, deletedCount)
+        assertEquals(deletedAt, commentRepository.findById(parentId).orElseThrow().deletedAt)
+        assertEquals(deletedAt, commentRepository.findById(replyId).orElseThrow().deletedAt)
+        assertEquals(0, commentReader.readRootPage(postId, page = 0, size = 10).totalElements)
         assertThrows(EntityNotFoundException::class.java) {
             commentReader.readInPost(postId, parentId)
         }
     }
 
     @Test
-    fun `대댓글을 물리 삭제해도 부모 댓글은 유지한다`() {
+    fun `대댓글을 소프트 삭제해도 부모 댓글은 유지한다`() {
         // given
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
@@ -209,18 +214,45 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
                 content = "대댓글입니다.",
             ),
         )
+        commentAppender.append(
+            RecruitmentPostCommentAppendCommand(
+                postId = checkNotNull(post.id),
+                parentId = checkNotNull(parent.id),
+                userId = 19L,
+                content = "남아 있는 대댓글입니다.",
+            ),
+        )
         commentRepository.flush()
         val parentId = checkNotNull(parent.id)
         val replyId = checkNotNull(reply.id)
+        val deletedAt = LocalDateTime.of(2026, 9, 17, 10, 0)
 
         // when
-        commentRemover.remove(reply)
+        val deletedCount = commentRemover.remove(reply, deletedAt)
         commentRepository.flush()
         entityManager.clear()
 
         // then
-        assertEquals(true, commentRepository.findById(parentId).isPresent)
-        assertEquals(false, commentRepository.findById(replyId).isPresent)
+        assertEquals(1, deletedCount)
+        assertNull(commentRepository.findById(parentId).orElseThrow().deletedAt)
+        assertEquals(deletedAt, commentRepository.findById(replyId).orElseThrow().deletedAt)
+        val previews = commentReader.readReplyPreviews(
+            postId = checkNotNull(parent.postId),
+            parentIds = listOf(parentId),
+            size = 5,
+        )
+        assertEquals(1, previews.getValue(parentId).comments.size)
+        assertEquals(1, previews.getValue(parentId).totalElements)
+        val replyPage = commentReader.readReplyPage(
+            postId = checkNotNull(parent.postId),
+            parentId = parentId,
+            page = 0,
+            size = 10,
+        )
+        assertEquals(1, replyPage.totalElements)
+        assertThrows(EntityNotFoundException::class.java) {
+            commentReader.readInPost(checkNotNull(parent.postId), replyId)
+        }
     }
 
     @Test
@@ -255,7 +287,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         assertEquals(2L, reportRepository.count())
     }
 
-    private fun postCommand() = RecruitmentPostAppendCommand(
+    private fun postCommand() = RecruitmentPostAppendDto(
         authorUserId = 1L,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,

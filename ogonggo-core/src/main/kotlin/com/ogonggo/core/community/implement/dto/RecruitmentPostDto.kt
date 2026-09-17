@@ -1,4 +1,4 @@
-package com.ogonggo.core.community.implement
+package com.ogonggo.core.community.implement.dto
 
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.PublicationStatus
@@ -8,7 +8,7 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
 import java.time.LocalDate
 
-data class RecruitmentPostAppendCommand(
+data class RecruitmentPostAppendDto(
     val authorUserId: Long,
     val title: String,
     val recruitmentType: RecruitmentType,
@@ -44,7 +44,7 @@ data class RecruitmentPostAppendCommand(
     )
 }
 
-data class RecruitmentPostDraftAppendCommand(
+data class RecruitmentPostDraftAppendDto(
     val authorUserId: Long,
     val title: String,
     val recruitmentType: RecruitmentType?,
@@ -81,17 +81,7 @@ data class RecruitmentPostDraftAppendCommand(
     )
 }
 
-sealed interface RecruitmentPostSaveCommand {
-    data class Draft(
-        val command: RecruitmentPostDraftAppendCommand,
-    ) : RecruitmentPostSaveCommand
-
-    data class Published(
-        val command: RecruitmentPostAppendCommand,
-    ) : RecruitmentPostSaveCommand
-}
-
-data class RecruitmentPostUpdateCommand(
+data class RecruitmentPostUpdateDto(
     val title: String,
     val recruitmentType: RecruitmentType?,
     val capacity: Int?,

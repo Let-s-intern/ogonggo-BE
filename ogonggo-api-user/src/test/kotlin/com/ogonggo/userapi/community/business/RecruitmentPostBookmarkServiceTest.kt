@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.community.business
 
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkManager
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -29,19 +29,19 @@ class RecruitmentPostBookmarkServiceTest {
     private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
     private val bookmarkReader = Mockito.mock(RecruitmentPostBookmarkReader::class.java)
     private val bookmarkManager = Mockito.mock(RecruitmentPostBookmarkManager::class.java)
+    private val postMetricManager = Mockito.mock(PostMetricManager::class.java)
     private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
-    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
     private val service = RecruitmentPostBookmarkService(
         userReader,
         postReader,
         bookmarkReader,
         bookmarkManager,
+        postMetricManager,
         postMetricReader,
         Clock.fixed(Instant.parse("2026-09-15T00:00:00Z"), ZONE),
         userProfileReader,
-        eventPublisher,
         applicationReader,
     )
 
@@ -55,6 +55,21 @@ class RecruitmentPostBookmarkServiceTest {
 
         assertEquals(UserErrorCode.USER_SUSPENDED, exception.errorCode)
         Mockito.verifyNoInteractions(postReader, bookmarkManager)
+    }
+
+    @Test
+    fun `북마크가 등록되면 같은 요청에서 북마크 수를 증가시킨다`() {
+        // given
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
+        Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(bookmarkManager.append(USER_ID, POST_ID, NOW)).thenReturn(true)
+
+        // when
+        service.addBookmark(USER_ID, POST_ID)
+
+        // then
+        Mockito.verify(bookmarkManager).append(USER_ID, POST_ID, NOW)
+        Mockito.verify(postMetricManager).increaseBookmarkCount(POST_ID, NOW)
     }
 
     @Test
@@ -73,11 +88,27 @@ class RecruitmentPostBookmarkServiceTest {
     fun `비공개 또는 삭제된 모집글도 북마크를 해제할 수 있다`() {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
         Mockito.`when`(postReader.readIncludingDeleted(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(bookmarkManager.delete(USER_ID, POST_ID, NOW)).thenReturn(true)
 
         service.deleteBookmark(USER_ID, POST_ID)
 
         Mockito.verify(postReader).readIncludingDeleted(POST_ID)
         Mockito.verify(bookmarkManager).delete(USER_ID, POST_ID, NOW)
+        Mockito.verify(postMetricManager).decreaseBookmarkCount(POST_ID, NOW)
+    }
+
+    @Test
+    fun `이미 해제된 북마크를 다시 해제해도 북마크 수는 감소하지 않는다`() {
+        // given
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
+        Mockito.`when`(postReader.readIncludingDeleted(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(bookmarkManager.delete(USER_ID, POST_ID, NOW)).thenReturn(false)
+
+        // when
+        service.deleteBookmark(USER_ID, POST_ID)
+
+        // then
+        Mockito.verifyNoInteractions(postMetricManager)
     }
 
     private fun user(status: UserStatus) = UserAccountDto(

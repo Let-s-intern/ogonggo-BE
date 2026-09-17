@@ -3,15 +3,15 @@ package com.ogonggo.userapi.community.business
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.RecruitmentPost
-import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostDraftAppendDto
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
@@ -22,10 +22,10 @@ import com.ogonggo.core.community.implement.PostMetricDto
 import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.community.implement.RecruitmentPostPage
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
-import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
-import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
@@ -35,6 +35,7 @@ import com.ogonggo.core.user.implement.dto.UserProfileDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
@@ -189,7 +190,7 @@ class RecruitmentPostServiceTest {
         val command = createCommand(authorUserId = USER_ID)
         val savedPost = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        val anyCommand = Mockito.any(RecruitmentPostAppendCommand::class.java) ?: command
+        val anyCommand = Mockito.any(RecruitmentPostAppendDto::class.java) ?: command
         Mockito.`when`(postAppender.append(anyCommand)).thenReturn(savedPost)
         Mockito.`when`(savedPost.id).thenReturn(12L)
 
@@ -206,7 +207,7 @@ class RecruitmentPostServiceTest {
     @Test
     fun `제목만 입력한 임시저장 모집글을 생성한다`() {
         // given
-        val command = RecruitmentPostDraftAppendCommand(
+        val command = RecruitmentPostDraftAppendDto(
             authorUserId = USER_ID,
             title = "작성 중인 모집글",
             recruitmentType = null,
@@ -239,7 +240,7 @@ class RecruitmentPostServiceTest {
 
     @Test
     fun `저장 명령이 임시저장 분기로 전달된다`() {
-        val command = RecruitmentPostDraftAppendCommand(
+        val command = RecruitmentPostDraftAppendDto(
             authorUserId = USER_ID,
             title = "작성 중인 모집글",
             recruitmentType = null,
@@ -302,6 +303,7 @@ class RecruitmentPostServiceTest {
         Mockito.verify(postManager).update(
             post,
             command.copy(content = EDITOR_STATE_JSON),
+            LocalDate.of(2026, 9, 11),
         )
         Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
     }
@@ -360,6 +362,8 @@ class RecruitmentPostServiceTest {
         val post = Mockito.mock(RecruitmentPost::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.recruitmentStatus).thenReturn(RecruitmentStatus.CLOSED)
+        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 30))
 
         // when
         service.reopen(USER_ID, 12L)
@@ -367,6 +371,41 @@ class RecruitmentPostServiceTest {
         // then
         Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).reopen(post)
+    }
+
+    @Test
+    fun `이미 모집 중인 글은 종료일이 지나도 재모집 요청에 성공한다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.recruitmentStatus).thenReturn(RecruitmentStatus.RECRUITING)
+        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 10))
+
+        // when
+        service.reopen(USER_ID, 12L)
+
+        // then
+        Mockito.verify(postManager).reopen(post)
+    }
+
+    @Test
+    fun `종료일이 현재보다 미래가 아니면 명시적으로 재모집할 수 없다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(post)
+        Mockito.`when`(post.recruitmentStatus).thenReturn(RecruitmentStatus.CLOSED)
+        Mockito.`when`(post.recruitmentEndDate).thenReturn(LocalDate.of(2026, 9, 11))
+
+        // when
+        val exception = assertThrows(ConflictException::class.java) {
+            service.reopen(USER_ID, 12L)
+        }
+
+        // then
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_REOPEN_END_DATE_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(postManager)
     }
 
     private fun activeUser(): UserAccountDto = UserAccountDto(
@@ -417,7 +456,7 @@ class RecruitmentPostServiceTest {
         wishCompany = null,
     )
 
-    private fun createCommand(authorUserId: Long): RecruitmentPostAppendCommand = RecruitmentPostAppendCommand(
+    private fun createCommand(authorUserId: Long): RecruitmentPostAppendDto = RecruitmentPostAppendDto(
         authorUserId = authorUserId,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -435,7 +474,7 @@ class RecruitmentPostServiceTest {
         contactValue = "team@example.com",
     )
 
-    private fun updateCommand() = RecruitmentPostUpdateCommand(
+    private fun updateCommand() = RecruitmentPostUpdateDto(
         title = "수정된 모집글",
         recruitmentType = RecruitmentType.STUDY,
         capacity = 6,

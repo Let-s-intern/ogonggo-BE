@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.community.business
 
-import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostDraftAppendDto
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
@@ -9,13 +9,13 @@ import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostReader
-import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
-import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.community.domain.PublicationStatus
-import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
+import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserStatus
@@ -26,6 +26,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Service
@@ -89,7 +90,7 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun create(userId: Long, command: RecruitmentPostAppendCommand): Long {
+    fun create(userId: Long, command: RecruitmentPostAppendDto): Long {
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
@@ -114,7 +115,7 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendCommand): Long {
+    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendDto): Long {
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
@@ -135,7 +136,7 @@ class RecruitmentPostService(
     fun update(
         userId: Long,
         postId: Long,
-        command: RecruitmentPostUpdateCommand,
+        command: RecruitmentPostUpdateDto,
         saveMode: RecruitmentPostSaveMode? = null,
     ) {
         verifyActiveUser(userId)
@@ -144,12 +145,13 @@ class RecruitmentPostService(
         val sanitizedCommand = command.copy(
             content = command.content?.let(contentValidator::validateAndSerialize),
         )
+        val now = LocalDateTime.now(clock)
         imageAssetManager.syncPostImages(
             ownerUserId = userId,
             postId = postId,
             previousContent = previousContent,
             currentContent = sanitizedCommand.content,
-            now = LocalDateTime.now(clock),
+            now = now,
         )
         if (post.publicationStatus == PublicationStatus.DRAFT) {
             postManager.updateDraft(post, sanitizedCommand)
@@ -164,7 +166,7 @@ class RecruitmentPostService(
                 }
             }
         } else {
-            postManager.update(post, sanitizedCommand)
+            postManager.update(post, sanitizedCommand, now.toLocalDate())
         }
     }
 
@@ -188,7 +190,13 @@ class RecruitmentPostService(
     @Transactional
     fun reopen(userId: Long, postId: Long) {
         verifyActiveUser(userId)
-        postManager.reopen(postReader.readOwnedForUpdate(userId, postId))
+        val post = postReader.readOwnedForUpdate(userId, postId)
+        if (post.recruitmentStatus == RecruitmentStatus.CLOSED &&
+            post.recruitmentEndDate?.isAfter(LocalDate.now(clock)) != true
+        ) {
+            throw ConflictException(RecruitmentPostErrorCode.RECRUITMENT_POST_REOPEN_END_DATE_REQUIRED)
+        }
+        postManager.reopen(post)
     }
 
     private fun verifyActiveUser(userId: Long) {
