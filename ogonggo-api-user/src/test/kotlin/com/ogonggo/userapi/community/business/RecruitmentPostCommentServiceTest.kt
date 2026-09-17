@@ -93,23 +93,23 @@ class RecruitmentPostCommentServiceTest {
     }
 
     @Test
-    fun `작성자가 자신의 댓글을 삭제하면 물리 삭제를 위임한다`() {
+    fun `작성자가 자신의 댓글을 삭제하면 소프트 삭제를 위임한다`() {
         // given
         val comment = Mockito.mock(RecruitmentPostComment::class.java)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
         Mockito.`when`(commentReader.readInPostForUpdate(POST_ID, COMMENT_ID)).thenReturn(comment)
         Mockito.`when`(comment.userId).thenReturn(USER_ID)
-        Mockito.`when`(commentRemover.remove(comment)).thenReturn(1)
+        Mockito.`when`(commentRemover.remove(comment, NOW)).thenReturn(1)
 
         // when
         service.delete(USER_ID, POST_ID, COMMENT_ID)
 
         // then
-        Mockito.verify(commentRemover).remove(comment)
+        Mockito.verify(commentRemover).remove(comment, NOW)
         Mockito.verify(postReader).readPublishedForUpdate(POST_ID)
         Mockito.verify(commentReader).readInPostForUpdate(POST_ID, COMMENT_ID)
-        Mockito.verify(postMetricManager).decreaseCommentCount(POST_ID, 1, LocalDateTime.now(clock))
+        Mockito.verify(postMetricManager).decreaseCommentCount(POST_ID, 1, NOW)
     }
 
     @Test
@@ -189,5 +189,6 @@ class RecruitmentPostCommentServiceTest {
         private const val POST_ID = 12L
         private const val COMMENT_ID = 101L
         private val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
+        private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 12, 9, 0)
     }
 }

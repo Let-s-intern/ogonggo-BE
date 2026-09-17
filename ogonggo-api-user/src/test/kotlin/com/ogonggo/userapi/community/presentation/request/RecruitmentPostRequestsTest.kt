@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
-import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
 import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.userapi.community.business.RecruitmentPostSaveMode
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

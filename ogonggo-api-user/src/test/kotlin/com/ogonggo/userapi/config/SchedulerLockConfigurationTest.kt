@@ -40,7 +40,7 @@ class SchedulerLockConfigurationTest {
         val firstProvider = configuration.schedulerLockProvider(dataSource)
         val secondProvider = configuration.schedulerLockProvider(dataSource)
         val lockConfiguration = LockConfiguration(
-            Instant.now(),
+            Instant.parse("2099-01-01T00:00:00Z"),
             "sharedScheduler",
             Duration.ofMinutes(1),
             Duration.ZERO,

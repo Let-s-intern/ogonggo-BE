@@ -5,7 +5,7 @@ import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.userapi.UserApiApplication
@@ -81,7 +81,7 @@ class RecruitmentPostBookmarkConcurrencyTest @Autowired constructor(
 
     private fun appendPost(): Long = checkNotNull(
         postAppender.append(
-            RecruitmentPostAppendCommand(
+            RecruitmentPostAppendDto(
                 authorUserId = 1L,
                 title = "동시성 검증용 모집글",
                 recruitmentType = RecruitmentType.SIDE_PROJECT,

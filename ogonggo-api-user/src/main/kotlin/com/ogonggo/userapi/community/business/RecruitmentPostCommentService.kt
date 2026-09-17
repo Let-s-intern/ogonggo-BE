@@ -102,8 +102,9 @@ class RecruitmentPostCommentService(
             throw ForbiddenException(RECRUITMENT_POST_COMMENT_PERMISSION_DENIED)
         }
 
-        val removedCount = commentRemover.remove(comment)
-        postMetricManager.decreaseCommentCount(postId, removedCount, LocalDateTime.now(clock))
+        val now = LocalDateTime.now(clock)
+        val deletedCount = commentRemover.remove(comment, now)
+        postMetricManager.decreaseCommentCount(postId, deletedCount, now)
     }
 
     @Transactional

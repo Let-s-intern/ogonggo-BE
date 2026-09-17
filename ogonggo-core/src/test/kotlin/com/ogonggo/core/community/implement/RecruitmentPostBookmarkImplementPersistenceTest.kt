@@ -1,5 +1,6 @@
 package com.ogonggo.core.community.implement
 
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -91,7 +92,7 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
     }
 
     private fun appendPost(): Long = checkNotNull(postAppender.append(
-        RecruitmentPostAppendCommand(
+        RecruitmentPostAppendDto(
             authorUserId = 1L,
             title = "사이드 프로젝트 팀원 모집",
             recruitmentType = RecruitmentType.SIDE_PROJECT,

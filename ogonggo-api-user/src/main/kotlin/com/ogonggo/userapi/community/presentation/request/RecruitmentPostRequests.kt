@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition
-import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
-import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostDraftAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
+import com.ogonggo.userapi.community.business.RecruitmentPostSaveCommand
+import com.ogonggo.userapi.community.business.RecruitmentPostSaveMode
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
@@ -42,11 +42,11 @@ data class CreateRecruitmentPostRequest(
     }
 
     /** 기존 호출부와의 호환을 위해 유지하며, 공개 저장용 명령을 반환합니다. */
-    fun toCommand(authorUserId: Long): RecruitmentPostAppendCommand = toPublishedCommand(authorUserId)
+    fun toCommand(authorUserId: Long): RecruitmentPostAppendDto = toPublishedCommand(authorUserId)
 
-    fun toDraftCommand(authorUserId: Long): RecruitmentPostDraftAppendCommand {
+    fun toDraftCommand(authorUserId: Long): RecruitmentPostDraftAppendDto {
         validateRelations()
-        return RecruitmentPostDraftAppendCommand(
+        return RecruitmentPostDraftAppendDto(
             authorUserId = authorUserId,
             title = title,
             recruitmentType = recruitmentType,
@@ -65,7 +65,7 @@ data class CreateRecruitmentPostRequest(
         )
     }
 
-    private fun toPublishedCommand(authorUserId: Long): RecruitmentPostAppendCommand {
+    private fun toPublishedCommand(authorUserId: Long): RecruitmentPostAppendDto {
         if (!agreedToPolicy) {
             invalid("agreedToPolicy", "모집글 등록에 필요한 정보 제공 및 운영 정책에 동의해야 합니다.")
         }
@@ -82,7 +82,7 @@ data class CreateRecruitmentPostRequest(
         val contactValue = requiredText(contactValue, "contactValue")
 
         validateRelations()
-        return RecruitmentPostAppendCommand(
+        return RecruitmentPostAppendDto(
             authorUserId = authorUserId,
             title = title,
             recruitmentType = recruitmentType,
@@ -156,12 +156,12 @@ data class UpdateRecruitmentPostRequest(
     val agreedToPolicy: Boolean = false,
     val saveMode: RecruitmentPostSaveMode? = null,
 ) {
-    fun toCommand(): RecruitmentPostUpdateCommand {
+    fun toCommand(): RecruitmentPostUpdateDto {
         validateRelations()
         if (saveMode == RecruitmentPostSaveMode.PUBLISH) {
             validatePublishFields()
         }
-        return RecruitmentPostUpdateCommand(
+        return RecruitmentPostUpdateDto(
             title = title,
             recruitmentType = recruitmentType,
             capacity = capacity,
@@ -244,9 +244,9 @@ data class CreateRecruitmentPostDraftRequest(
     val contactMethod: ContactMethod? = null,
     @field:Size(max = 2048) val contactValue: String? = null,
 ) {
-    fun toCommand(authorUserId: Long): RecruitmentPostDraftAppendCommand {
+    fun toCommand(authorUserId: Long): RecruitmentPostDraftAppendDto {
         validateRelations()
-        return RecruitmentPostDraftAppendCommand(
+        return RecruitmentPostDraftAppendDto(
             authorUserId = authorUserId,
             title = title,
             recruitmentType = recruitmentType,

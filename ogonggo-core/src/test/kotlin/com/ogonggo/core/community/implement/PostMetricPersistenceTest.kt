@@ -47,11 +47,16 @@ internal class PostMetricPersistenceTest @Autowired constructor(
 
     @Test
     fun `북마크 수는 지표 행에서 원자적으로 증가하고 0 미만으로 감소하지 않는다`() {
-        postMetricManager.increaseBookmarkCount(POST_ID, NOW)
-        postMetricManager.increaseBookmarkCount(POST_ID, NOW)
-        postMetricManager.decreaseBookmarkCount(POST_ID, NOW)
+        // given
+        val postId = POST_ID
 
-        assertEquals(1, postMetricRepository.findByPostId(POST_ID)?.bookmarkCount)
+        // when
+        postMetricManager.increaseBookmarkCount(postId, NOW)
+        postMetricManager.increaseBookmarkCount(postId, NOW)
+        postMetricManager.decreaseBookmarkCount(postId, NOW)
+
+        // then
+        assertEquals(1, postMetricRepository.findByPostId(postId)?.bookmarkCount)
     }
 
     companion object {

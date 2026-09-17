@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.community.business
 
-import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostDraftAppendDto
 import com.ogonggo.core.community.implement.RecruitmentPostAppender
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
@@ -9,10 +9,9 @@ import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.community.implement.PostMetricReader
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostReader
-import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
-import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.community.domain.PublicationStatus
-import com.ogonggo.core.community.domain.RecruitmentPostSaveMode
+import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
@@ -91,7 +90,7 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun create(userId: Long, command: RecruitmentPostAppendCommand): Long {
+    fun create(userId: Long, command: RecruitmentPostAppendDto): Long {
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
@@ -116,7 +115,7 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendCommand): Long {
+    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendDto): Long {
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
@@ -137,7 +136,7 @@ class RecruitmentPostService(
     fun update(
         userId: Long,
         postId: Long,
-        command: RecruitmentPostUpdateCommand,
+        command: RecruitmentPostUpdateDto,
         saveMode: RecruitmentPostSaveMode? = null,
     ) {
         verifyActiveUser(userId)
@@ -192,7 +191,9 @@ class RecruitmentPostService(
     fun reopen(userId: Long, postId: Long) {
         verifyActiveUser(userId)
         val post = postReader.readOwnedForUpdate(userId, postId)
-        if (post.recruitmentEndDate?.isAfter(LocalDate.now(clock)) != true) {
+        if (post.recruitmentStatus == RecruitmentStatus.CLOSED &&
+            post.recruitmentEndDate?.isAfter(LocalDate.now(clock)) != true
+        ) {
             throw ConflictException(RecruitmentPostErrorCode.RECRUITMENT_POST_REOPEN_END_DATE_REQUIRED)
         }
         postManager.reopen(post)

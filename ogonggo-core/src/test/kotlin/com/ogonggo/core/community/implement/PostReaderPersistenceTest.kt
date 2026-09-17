@@ -1,5 +1,6 @@
 package com.ogonggo.core.community.implement
 
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.ProgressMethod
@@ -283,7 +284,7 @@ internal class PostReaderPersistenceTest @Autowired constructor(
         title: String,
         recruitmentType: RecruitmentType,
         positions: List<RecruitmentPosition> = listOf(RecruitmentPosition.BACKEND),
-    ) = RecruitmentPostAppendCommand(
+    ) = RecruitmentPostAppendDto(
         authorUserId = 1L,
         title = title,
         recruitmentType = recruitmentType,

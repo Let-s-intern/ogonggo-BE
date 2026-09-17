@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
-import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import java.time.LocalDateTime
 
 @DisplayName("모집글 도메인")
@@ -343,7 +343,7 @@ class RecruitmentPostDomainTest {
     fun updatePost() {
         // given
         val post = createPostFixture()
-        val updateCommand = RecruitmentPostUpdateCommand(
+        val updateCommand = RecruitmentPostUpdateDto(
             title = "수정된 스터디 모집",
             recruitmentType = RecruitmentType.STUDY,
             capacity = 6,
@@ -422,7 +422,7 @@ class RecruitmentPostDomainTest {
 
     @Test
     @DisplayName("마감된 모집글의 종료일을 미래로 변경하면 재모집한다")
-    fun reopenClosedPostWhenEndDateMovesToFuture() {
+    fun `마감된 모집글은 종료일이 미래로 변경되면 재모집한다`() {
         // given
         val post = createPostFixture(recruitmentEndDate = LocalDate.of(2026, 9, 10))
         post.close(LocalDateTime.of(2026, 9, 11, 9, 0))
@@ -453,7 +453,7 @@ class RecruitmentPostDomainTest {
 
     @Test
     @DisplayName("마감일을 바꾸지 않은 마감 모집글은 수정해도 마감 상태를 유지한다")
-    fun keepClosedWhenEndDateDoesNotChange() {
+    fun `마감일을 바꾸지 않은 마감 모집글은 수정해도 마감 상태를 유지한다`() {
         // given
         val post = createPostFixture(recruitmentEndDate = LocalDate.of(2026, 9, 30))
         val closedAt = LocalDateTime.of(2026, 9, 11, 9, 0)

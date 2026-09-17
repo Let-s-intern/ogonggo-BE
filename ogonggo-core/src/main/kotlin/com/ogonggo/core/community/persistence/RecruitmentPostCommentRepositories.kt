@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import jakarta.persistence.LockModeType
+import java.time.LocalDateTime
 
 internal interface RecruitmentPostCommentJpaRepository : JpaRepository<RecruitmentPostComment, Long> {
 
@@ -19,6 +20,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId IS NULL
+          AND comment.deletedAt IS NULL
         ORDER BY comment.createdAt DESC, comment.id DESC
         """,
         countQuery = """
@@ -26,6 +28,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId IS NULL
+          AND comment.deletedAt IS NULL
         """,
     )
     fun findRootComments(
@@ -39,6 +42,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId = :parentId
+          AND comment.deletedAt IS NULL
         ORDER BY comment.createdAt ASC, comment.id ASC
         """,
         countQuery = """
@@ -46,6 +50,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId = :parentId
+          AND comment.deletedAt IS NULL
         """,
     )
     fun findReplies(
@@ -56,7 +61,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
 
     @Query(
         """
-        SELECT id, post_id, parent_id, user_id, content, created_at, updated_at
+        SELECT id, post_id, parent_id, user_id, content, created_at, updated_at, deleted_at
         FROM (
             SELECT comment.*, ROW_NUMBER() OVER (
                 PARTITION BY comment.parent_id
@@ -65,6 +70,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
             FROM recruitment_post_comments comment
             WHERE comment.post_id = :postId
               AND comment.parent_id IN (:parentIds)
+              AND comment.deleted_at IS NULL
         ) ranked_comments
         WHERE ranked_comments.reply_rank <= :limit
         ORDER BY parent_id ASC, created_at ASC, id ASC
@@ -86,6 +92,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId IN :parentIds
+          AND comment.deletedAt IS NULL
         GROUP BY comment.parentId
         """,
     )
@@ -95,15 +102,54 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
     ): List<RecruitmentPostCommentCountRow>
 
     @Modifying(flushAutomatically = true)
-    @Query("delete from RecruitmentPostComment comment where comment.parentId = :parentId")
-    fun deleteAllByParentId(@Param("parentId") parentId: Long): Int
+    @Query(
+        """
+        update RecruitmentPostComment comment
+        set comment.deletedAt = :deletedAt,
+            comment.updatedAt = :deletedAt
+        where comment.parentId = :parentId
+          and comment.deletedAt is null
+        """,
+    )
+    fun softDeleteActiveReplies(
+        @Param("parentId") parentId: Long,
+        @Param("deletedAt") deletedAt: LocalDateTime,
+    ): Int
 
-    fun findByIdAndPostIdAndParentIdIsNull(commentId: Long, postId: Long): RecruitmentPostComment?
+    @Query(
+        """
+        select comment
+        from RecruitmentPostComment comment
+        where comment.id = :commentId
+          and comment.postId = :postId
+          and comment.parentId is null
+          and comment.deletedAt is null
+        """,
+    )
+    fun findActiveRootByIdAndPostId(
+        @Param("commentId") commentId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPostComment?
 
-    fun findByIdAndPostId(commentId: Long, postId: Long): RecruitmentPostComment?
+    @Query(
+        """
+        select comment
+        from RecruitmentPostComment comment
+        where comment.id = :commentId
+          and comment.postId = :postId
+          and comment.deletedAt is null
+        """,
+    )
+    fun findActiveByIdAndPostId(
+        @Param("commentId") commentId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPostComment?
+
+    @Query("select comment from RecruitmentPostComment comment where comment.id = :commentId and comment.deletedAt is null")
+    fun findActiveById(@Param("commentId") commentId: Long): RecruitmentPostComment?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select comment from RecruitmentPostComment comment where comment.id = :commentId")
+    @Query("select comment from RecruitmentPostComment comment where comment.id = :commentId and comment.deletedAt is null")
     fun findByIdForUpdate(@Param("commentId") commentId: Long): RecruitmentPostComment?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -113,6 +159,7 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         from RecruitmentPostComment comment
         where comment.id = :commentId
           and comment.postId = :postId
+          and comment.deletedAt is null
         """,
     )
     fun findByIdAndPostIdForUpdate(

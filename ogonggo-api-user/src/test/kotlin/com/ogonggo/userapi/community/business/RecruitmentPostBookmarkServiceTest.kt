@@ -59,12 +59,15 @@ class RecruitmentPostBookmarkServiceTest {
 
     @Test
     fun `북마크가 등록되면 같은 요청에서 북마크 수를 증가시킨다`() {
+        // given
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
         Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
         Mockito.`when`(bookmarkManager.append(USER_ID, POST_ID, NOW)).thenReturn(true)
 
+        // when
         service.addBookmark(USER_ID, POST_ID)
 
+        // then
         Mockito.verify(bookmarkManager).append(USER_ID, POST_ID, NOW)
         Mockito.verify(postMetricManager).increaseBookmarkCount(POST_ID, NOW)
     }
@@ -96,12 +99,15 @@ class RecruitmentPostBookmarkServiceTest {
 
     @Test
     fun `이미 해제된 북마크를 다시 해제해도 북마크 수는 감소하지 않는다`() {
+        // given
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
         Mockito.`when`(postReader.readIncludingDeleted(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
         Mockito.`when`(bookmarkManager.delete(USER_ID, POST_ID, NOW)).thenReturn(false)
 
+        // when
         service.deleteBookmark(USER_ID, POST_ID)
 
+        // then
         Mockito.verifyNoInteractions(postMetricManager)
     }
 

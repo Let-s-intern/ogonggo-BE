@@ -143,7 +143,8 @@ interface RecruitmentPostApi {
 
             - 전체 수정 방식이므로 공개 모집글 수정 시 전체 필드를 전달해야 합니다.
             - `saveMode=PUBLISH`이면 임시저장 글을 수정한 뒤 같은 ID로 게시합니다.
-            - 모집 마감 글의 기간을 수정해도 자동으로 `RECRUITING` 상태가 되지 않습니다.
+            - 모집 마감 글의 종료일을 기존 값과 다르게 미래로 변경하면 `RECRUITING` 상태로 전환하고 마감 시각을 초기화합니다.
+            - 종료일을 바꾸지 않거나 오늘·과거 날짜로 변경하면 마감 상태를 유지합니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -219,14 +220,15 @@ interface RecruitmentPostApi {
         operationId = "reopenMyRecruitmentPost",
         summary = "내 사이드 프로젝트·스터디 모집글 재모집",
         description = """
-            작성자 본인의 마감된 모집글을 다시 모집 중 상태로 변경합니다.
+            작성자 본인의 모집글을 모집 중 상태로 설정합니다.
 
             ### 추가사항
 
-            - `CLOSED` 상태를 `RECRUITING` 상태로 변경합니다.
+            - `CLOSED` 글은 모집 종료일이 오늘보다 미래일 때 `RECRUITING` 상태로 변경합니다.
             - 모집 기간이나 게시글 내용은 변경하지 않습니다.
-            - 이미 모집 중인 글에 호출해도 성공 처리됩니다.
-            - 모집 기간 수정만으로 자동 재모집되지는 않습니다.
+            - 이미 모집 중인 글에 호출하면 성공 처리되며 상태를 변경하지 않습니다.
+            - 마감 글의 종료일이 오늘이거나 과거이면 409 오류를 반환합니다.
+            - 모집글 수정 시 종료일을 기존 값과 다르게 미래로 변경하면 자동으로 재모집됩니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)

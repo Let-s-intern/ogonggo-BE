@@ -5,7 +5,6 @@ import com.ogonggo.core.community.error.RecruitmentPostCommentErrorCode
 import com.ogonggo.core.community.persistence.RecruitmentPostCommentJpaRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 
 @Component
@@ -13,17 +12,17 @@ class RecruitmentPostCommentReader internal constructor(
     private val commentRepository: RecruitmentPostCommentJpaRepository,
 ) {
     fun read(commentId: Long): RecruitmentPostComment =
-        commentRepository.findByIdOrNull(commentId)
+        commentRepository.findActiveById(commentId)
             ?: throw EntityNotFoundException(
                 RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PARENT_NOT_FOUND,
             )
 
     fun readRoot(postId: Long, commentId: Long): RecruitmentPostComment =
-        commentRepository.findByIdAndPostIdAndParentIdIsNull(commentId, postId)
+        commentRepository.findActiveRootByIdAndPostId(commentId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
 
     fun readInPost(postId: Long, commentId: Long): RecruitmentPostComment =
-        commentRepository.findByIdAndPostId(commentId, postId)
+        commentRepository.findActiveByIdAndPostId(commentId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
 
     fun readForUpdate(commentId: Long): RecruitmentPostComment =

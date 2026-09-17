@@ -6,10 +6,9 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.community.implement.RecruitmentPostAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostDraftAppendCommand
-import com.ogonggo.core.community.implement.RecruitmentPostSaveCommand
-import com.ogonggo.core.community.implement.RecruitmentPostUpdateCommand
+import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostDraftAppendDto
+import com.ogonggo.core.community.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
@@ -19,6 +18,7 @@ import com.ogonggo.userapi.community.business.RecruitmentPostContactResult
 import com.ogonggo.userapi.community.business.RecruitmentPostDetailResult
 import com.ogonggo.userapi.community.business.RecruitmentPostListQuery
 import com.ogonggo.userapi.community.business.RecruitmentPostService
+import com.ogonggo.userapi.community.business.RecruitmentPostSaveCommand
 import com.ogonggo.userapi.community.business.RecruitmentPostPageResult
 import com.ogonggo.userapi.community.business.RecruitmentPostSummary
 import com.ogonggo.userapi.config.UserSecurityConfiguration
@@ -233,7 +233,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @Test
     fun `제목만 입력한 모집글은 생성 API에서 임시저장한다`() {
-        val command = RecruitmentPostDraftAppendCommand(
+        val command = RecruitmentPostDraftAppendDto(
             authorUserId = USER_ID,
             title = "작성 중인 모집글",
             recruitmentType = null,
@@ -409,7 +409,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         UsernamePasswordAuthenticationToken(USER_ID, null, emptyList()),
     )
 
-    private fun createCommand() = RecruitmentPostAppendCommand(
+    private fun createCommand() = RecruitmentPostAppendDto(
         authorUserId = USER_ID,
         title = "사이드 프로젝트 팀원 모집",
         recruitmentType = RecruitmentType.SIDE_PROJECT,
@@ -427,7 +427,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
         contactValue = "team@example.com",
     )
 
-    private fun updateCommand() = RecruitmentPostUpdateCommand(
+    private fun updateCommand() = RecruitmentPostUpdateDto(
         title = "수정된 모집글",
         recruitmentType = RecruitmentType.STUDY,
         capacity = 6,
