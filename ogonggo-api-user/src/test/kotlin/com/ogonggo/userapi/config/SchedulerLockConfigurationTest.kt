@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.config
 
 import net.javacrumbs.shedlock.core.LockConfiguration
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.io.ClassPathResource
@@ -13,7 +13,7 @@ import java.time.Instant
 class SchedulerLockConfigurationTest {
 
     @Test
-    fun `잠금 테이블이 없으면 LockProvider를 초기화하지 않는다`() {
+    fun `잠금 테이블이 없어도 LockProvider를 초기화한다`() {
         // given
         val dataSource = DriverManagerDataSource(
             "jdbc:h2:mem:scheduler-lock-missing;MODE=MySQL;DB_CLOSE_DELAY=-1",
@@ -21,10 +21,11 @@ class SchedulerLockConfigurationTest {
             "",
         )
 
-        // when & then
-        assertThrows(IllegalStateException::class.java) {
-            SchedulerLockConfiguration().schedulerLockProvider(dataSource)
-        }
+        // when
+        val provider = SchedulerLockConfiguration().schedulerLockProvider(dataSource)
+
+        // then
+        assertNotNull(provider)
     }
 
     @Test
