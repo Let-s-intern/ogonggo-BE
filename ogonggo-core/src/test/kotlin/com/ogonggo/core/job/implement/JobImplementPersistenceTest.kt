@@ -468,7 +468,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.append(USER_ID, checkNotNull(published.id), NOW)
         jobBookmarkManager.append(USER_ID, checkNotNull(draft.id), NOW)
 
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, page = 0, size = 10)
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10)
 
         assertEquals(listOf(published.id), result.jobs.map { it.id })
         assertEquals(1L, result.totalElements)
@@ -491,6 +491,52 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(
             listOf(internExperienced, fullTimeExperienced),
             readIds(JobSearchCondition(experienceType = ExperienceType.EXPERIENCED)),
+        )
+    }
+
+    @Test
+    fun `북마크 목록은 공개 목록과 같은 필터와 검색어로 좁히고 최근 북마크 순을 유지한다`() {
+        // given
+        val firstBookmarked = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = "백엔드"))
+        val lastBookmarked = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = "백엔드"))
+        val otherRole = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = "프론트엔드"))
+        val otherType = publishCommand(createCommand(employmentType = EmploymentType.FULL_TIME, jobRole = "백엔드"))
+        // 북마크하지 않은 공고는 조건에 맞아도 나오지 않는다.
+        publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = "백엔드"))
+        listOf(firstBookmarked, otherRole, otherType, lastBookmarked)
+            .forEach { jobBookmarkManager.append(USER_ID, it, NOW) }
+
+        // when
+        val page = jobBookmarkReader.readBookmarkedPublishedPage(
+            userId = USER_ID,
+            condition = JobSearchCondition(
+                employmentType = EmploymentType.INTERN,
+                jobRole = "백엔드",
+                keyword = "백엔드",
+            ),
+            page = 0,
+            size = 10,
+        )
+
+        // then
+        assertEquals(listOf(lastBookmarked, firstBookmarked), page.jobs.map { it.id })
+        assertEquals(2L, page.totalElements)
+    }
+
+    @Test
+    fun `직군과 직무 필터는 값이 정확히 같은 공고만 남기고 비어 있으면 적용하지 않는다`() {
+        // given
+        val backend = publishCommand(createCommand(jobField = "개발", jobRole = "백엔드"))
+        val frontend = publishCommand(createCommand(jobField = "개발", jobRole = "프론트엔드"))
+        val marketing = publishCommand(createCommand(jobField = "마케팅", jobRole = "퍼포먼스 마케터"))
+
+        // when & then
+        assertEquals(listOf(frontend, backend), readIds(JobSearchCondition(jobField = "개발")))
+        assertEquals(listOf(backend), readIds(JobSearchCondition(jobField = "개발", jobRole = "백엔드")))
+        assertEquals(emptyList<Long>(), readIds(JobSearchCondition(jobRole = "백엔")))
+        assertEquals(
+            listOf(marketing, frontend, backend),
+            readIds(JobSearchCondition(jobField = " ", jobRole = "")),
         )
     }
 
@@ -641,6 +687,12 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         return checkNotNull(job.id)
     }
 
+    private fun publishCommand(command: JobAppendDto): Long {
+        val job = jobAppender.append(command)
+        jobManager.publish(job)
+        return checkNotNull(job.id)
+    }
+
     private fun readIds(condition: JobSearchCondition): List<Long?> =
         readPage(page = 0, size = 10, condition = condition).jobs.map { it.id }
 
@@ -661,6 +713,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         companyName: String = "오공고",
         title: String = "백엔드 개발자",
         ownerUserId: Long? = null,
+        jobField: String? = null,
         jobRole: String? = null,
         industry: String? = null,
     ): JobAppendDto = JobAppendDto(
@@ -677,6 +730,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         recruitmentType = recruitmentType,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
+        jobField = jobField,
         jobRole = jobRole,
         industry = industry,
         responsibilities = "주요 업무",

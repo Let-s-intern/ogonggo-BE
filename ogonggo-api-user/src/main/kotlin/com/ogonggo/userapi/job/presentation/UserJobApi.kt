@@ -37,8 +37,9 @@ interface UserJobApi {
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
 
-            employmentType과 experienceType으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
-            보내지 않으면 해당 조건을 적용하지 않습니다. 두 필터와 정렬은 함께 사용할 수 있습니다.
+            employmentType, experienceType, jobField(직군), jobRole(직무)로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
+            보내지 않으면 해당 조건을 적용하지 않습니다. jobField와 jobRole은 공고의 값과 정확히 같은지로 거릅니다.
+            필터끼리, 그리고 정렬과 함께 사용할 수 있습니다.
 
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
@@ -57,6 +58,10 @@ interface UserJobApi {
         sortType: JobSortType,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
+        @Size(max = 100)
+        jobField: String?,
+        @Size(max = 100)
+        jobRole: String?,
         @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>

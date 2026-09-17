@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.config.UserSecurityConfiguration
@@ -41,13 +42,50 @@ class UserJobBookmarkControllerTest @Autowired constructor(
 
     @Test
     fun `내 북마크 목록을 1 기반 페이지로 조회한다`() {
-        Mockito.`when`(userJobBookmarkService.getBookmarks(USER_ID, 0, 10)).thenReturn(bookmarkPage())
+        Mockito.`when`(userJobBookmarkService.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10))
+            .thenReturn(bookmarkPage())
 
         mockMvc.perform(get("/api/v1/job-bookmarks").with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].id").value(JOB_ID))
             .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
+    }
+
+    @Test
+    fun `내 북마크 목록의 필터와 검색어는 조회 조건으로 전달된다`() {
+        // given
+        val condition = JobSearchCondition(
+            employmentType = EmploymentType.INTERN,
+            experienceType = ExperienceType.NEWCOMER,
+            jobField = "개발",
+            jobRole = "백엔드",
+            keyword = "오공고",
+        )
+        Mockito.`when`(userJobBookmarkService.getBookmarks(USER_ID, condition, 0, 10)).thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/job-bookmarks")
+                .param("employmentType", "INTERN")
+                .param("experienceType", "NEWCOMER")
+                .param("jobField", "개발")
+                .param("jobRole", "백엔드")
+                .param("keyword", "오공고")
+                .with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(userJobBookmarkService).getBookmarks(USER_ID, condition, 0, 10)
+    }
+
+    @Test
+    fun `내 북마크 목록의 검색어가 2자 미만이면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/job-bookmarks").param("keyword", "가").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(userJobBookmarkService)
     }
 
     @Test

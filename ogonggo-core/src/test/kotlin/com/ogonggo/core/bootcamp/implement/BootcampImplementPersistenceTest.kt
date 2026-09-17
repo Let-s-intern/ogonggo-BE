@@ -530,7 +530,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampBookmarkManager.append(USER_ID, newerId, NOW.plusMinutes(1))
         bootcampBookmarkManager.append(USER_ID, draftId, NOW.plusMinutes(2))
 
-        val page = bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10, NOW)
+        val page = bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW)
 
         // 게시되지 않은 부트캠프는 북마크가 있어도 목록에서 빠진다.
         assertEquals(listOf(newerId, olderId), page.bootcamps.map { it.id })
@@ -540,23 +540,57 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         assertEquals(
             listOf(olderId),
-            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10, NOW).bootcamps.map { it.id },
+            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW).bootcamps.map { it.id },
         )
+    }
+
+    @Test
+    fun `북마크 목록은 공개 목록과 같은 필터와 검색어로 좁히고 전체 건수에도 반영한다`() {
+        // given
+        val target = startedRecruitmentBootcampId(
+            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE),
+        )
+        val paid = startedRecruitmentBootcampId(
+            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.PAID),
+        )
+        val otherTitle = startedRecruitmentBootcampId(
+            createCommand(title = "디자인 부트캠프", tuitionType = TuitionType.FREE),
+        )
+        listOf(target, paid, otherTitle).forEach { bootcampBookmarkManager.append(USER_ID, it, NOW) }
+        // 북마크하지 않은 부트캠프는 조건에 맞아도 나오지 않는다.
+        startedRecruitmentBootcampId(createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE))
+
+        // when
+        val page = bootcampBookmarkReader.readBookmarkedPublicPage(
+            userId = USER_ID,
+            condition = BootcampSearchCondition(
+                tuitionType = TuitionType.FREE,
+                status = BootcampStatus.RECRUITING,
+                keyword = "spring",
+            ),
+            page = 0,
+            size = 10,
+            now = NOW,
+        )
+
+        // then
+        assertEquals(listOf(target), page.bootcamps.map { it.id })
+        assertEquals(1L, page.totalElements)
     }
 
     @Test
     fun `북마크 목록의 페이지 요청 범위를 검증한다`() {
         assertThrows(IllegalArgumentException::class.java) {
-            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, -1, 10)
+            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, -1, 10)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 0)
+            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 0)
         }
         assertEquals(emptySet<Long>(), bootcampBookmarkReader.readBookmarkedBootcampIds(USER_ID, emptyList()))
     }
 
-    private fun startedRecruitmentBootcampId(): Long {
-        val bootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
+    private fun startedRecruitmentBootcampId(command: BootcampAppendDto = createCommand()): Long {
+        val bootcampId = checkNotNull(bootcampAppender.append(command).id)
         bootcampManager.startRecruitment(bootcampReader.readForUpdate(bootcampId))
         return bootcampId
     }

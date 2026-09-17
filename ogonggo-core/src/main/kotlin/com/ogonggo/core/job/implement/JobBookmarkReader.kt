@@ -1,23 +1,29 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
-import com.ogonggo.core.job.persistence.JobJpaRepository
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 
 @Component
 class JobBookmarkReader internal constructor(
-    private val jobRepository: JobJpaRepository,
+    private val jobQueryRepository: JobQueryRepository,
     private val jobBookmarkRepository: JobBookmarkJpaRepository,
 ) {
 
-    fun readBookmarkedPublishedPage(userId: Long, page: Int, size: Int): JobPageDto {
+    /** 정렬은 조회 쿼리가 최근 북마크 순으로 정하므로 Pageable에는 페이지 범위만 넘긴다. */
+    fun readBookmarkedPublishedPage(
+        userId: Long,
+        condition: JobSearchCondition,
+        page: Int,
+        size: Int,
+    ): JobPageDto {
         validateBookmarkPageRequest(page, size)
-        val result = jobRepository.findBookmarkedJobs(
+        val result = jobQueryRepository.findBookmarkedPublishedPage(
             userId = userId,
-            publicationStatus = JobPublicationStatus.PUBLISHED,
+            condition = condition,
             pageable = PageRequest.of(page, size),
         )
         return JobPageDto(

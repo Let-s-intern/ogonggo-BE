@@ -29,33 +29,6 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     ): Job?
 
     @Query(
-        value = """
-            select job
-            from Job job
-            join JobBookmark bookmark on bookmark.jobId = job.id
-            where bookmark.userId = :userId
-              and bookmark.deletedAt is null
-              and job.publicationStatus = :publicationStatus
-              and job.deletedAt is null
-            order by bookmark.updatedAt desc, bookmark.id desc
-        """,
-        countQuery = """
-            select count(job)
-            from Job job
-            join JobBookmark bookmark on bookmark.jobId = job.id
-            where bookmark.userId = :userId
-              and bookmark.deletedAt is null
-              and job.publicationStatus = :publicationStatus
-              and job.deletedAt is null
-        """,
-    )
-    fun findBookmarkedJobs(
-        @Param("userId") userId: Long,
-        @Param("publicationStatus") publicationStatus: JobPublicationStatus,
-        pageable: Pageable,
-    ): Page<Job>
-
-    @Query(
         """
         select job
         from Job job

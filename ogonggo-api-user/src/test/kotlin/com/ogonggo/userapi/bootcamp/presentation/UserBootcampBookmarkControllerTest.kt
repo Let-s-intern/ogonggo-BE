@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
@@ -12,6 +13,7 @@ import com.ogonggo.userapi.bootcamp.business.UserBootcampPageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
+import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -42,13 +44,48 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
 
     @Test
     fun `내 북마크 목록을 1 기반 페이지로 조회한다`() {
-        Mockito.`when`(userBootcampBookmarkService.getBookmarks(USER_ID, 0, 10)).thenReturn(bookmarkPage())
+        Mockito.`when`(userBootcampBookmarkService.getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10))
+            .thenReturn(bookmarkPage())
 
         mockMvc.perform(get("/api/v1/bootcamp-bookmarks").with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].id").value(BOOTCAMP_ID))
             .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
+    }
+
+    @Test
+    fun `내 북마크 목록의 필터와 검색어는 조회 조건으로 전달된다`() {
+        // given
+        val condition = BootcampSearchCondition(
+            tuitionType = TuitionType.FREE,
+            status = BootcampStatus.RECRUITING,
+            keyword = "백엔드",
+        )
+        Mockito.`when`(userBootcampBookmarkService.getBookmarks(USER_ID, condition, 0, 10))
+            .thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/bootcamp-bookmarks")
+                .param("tuitionType", "FREE")
+                .param("status", "RECRUITING")
+                .param("keyword", "백엔드")
+                .with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(userBootcampBookmarkService).getBookmarks(USER_ID, condition, 0, 10)
+    }
+
+    @Test
+    fun `내 북마크 목록에서 고를 수 없는 모집 상태는 파라미터명이 포함된 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/bootcamp-bookmarks").param("status", "DRAFT").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message").value(startsWith("[status] ")))
+
+        Mockito.verifyNoInteractions(userBootcampBookmarkService)
     }
 
     @Test

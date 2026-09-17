@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.userapi.job.business.UserJobBookmarkService
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
@@ -27,8 +30,24 @@ class UserJobBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "jobField", required = false) jobField: String?,
+        @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
-        val result = userJobBookmarkService.getBookmarks(userId, page - 1, size)
+        val result = userJobBookmarkService.getBookmarks(
+            userId = userId,
+            condition = JobSearchCondition(
+                employmentType = employmentType,
+                experienceType = experienceType,
+                jobField = jobField,
+                jobRole = jobRole,
+                keyword = keyword,
+            ),
+            page = page - 1,
+            size = size,
+        )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
                 items = result.items.map(UserJobSummaryResponse::from),

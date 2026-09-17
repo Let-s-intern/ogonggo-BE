@@ -60,45 +60,6 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
 
     fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
 
-    /**
-     * 북마크한 부트캠프 중 지금 공개된 것만 최근 북마크 순으로 조회한다.
-     * 부트캠프와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
-     */
-    @Query(
-        value = """
-        select bootcamp
-        from Bootcamp bootcamp
-        join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
-        where bookmark.userId = :userId
-          and bookmark.deletedAt is null
-          and bootcamp.publicationStatus = :publicationStatus
-          and bootcamp.status in :statuses
-          and bootcamp.deletedAt is null
-          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
-          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
-        order by bookmark.updatedAt desc, bookmark.id desc
-        """,
-        countQuery = """
-        select count(bootcamp)
-        from Bootcamp bootcamp
-        join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
-        where bookmark.userId = :userId
-          and bookmark.deletedAt is null
-          and bootcamp.publicationStatus = :publicationStatus
-          and bootcamp.status in :statuses
-          and bootcamp.deletedAt is null
-          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
-          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
-        """,
-    )
-    fun findBookmarkedBootcamps(
-        @Param("userId") userId: Long,
-        @Param("statuses") statuses: Collection<BootcampStatus>,
-        @Param("publicationStatus") publicationStatus: BootcampPublicationStatus,
-        @Param("now") now: LocalDateTime,
-        pageable: Pageable,
-    ): Page<Bootcamp>
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         "select bootcamp from Bootcamp bootcamp " +

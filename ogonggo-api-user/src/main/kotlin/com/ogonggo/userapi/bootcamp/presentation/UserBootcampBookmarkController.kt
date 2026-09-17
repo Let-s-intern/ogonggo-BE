@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampBookmarkService
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
@@ -27,8 +30,21 @@ class UserBootcampBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
+        @RequestParam(name = "status", required = false) status: BootcampStatus?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
-        val result = userBootcampBookmarkService.getBookmarks(userId, page - 1, size)
+        validatePublicStatus(status)
+        val result = userBootcampBookmarkService.getBookmarks(
+            userId = userId,
+            condition = BootcampSearchCondition(
+                tuitionType = tuitionType,
+                status = status,
+                keyword = keyword,
+            ),
+            page = page - 1,
+            size = size,
+        )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
                 items = result.items.map(UserBootcampSummaryResponse::from),
