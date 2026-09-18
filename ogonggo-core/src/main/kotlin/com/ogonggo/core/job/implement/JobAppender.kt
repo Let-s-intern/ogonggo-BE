@@ -45,7 +45,6 @@ class JobAppender internal constructor(
                 inquiryEmail = command.inquiryEmail,
                 sourceUrl = command.sourceUrl,
                 publicationStatus = command.publicationStatus,
-                requiresReview = command.requiresReview,
             ),
         )
 }

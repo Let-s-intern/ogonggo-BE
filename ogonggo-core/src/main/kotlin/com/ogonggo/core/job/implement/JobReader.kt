@@ -163,7 +163,7 @@ class JobReader internal constructor(
         )
     }
 
-    /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 기업회원 공고와 크롤러가 보낸 수집 공고가 함께 나온다. */
+    /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 검수 상태는 기업회원 공고에만 있다. */
     fun readPendingReviews(): List<Job> =
         jobRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ReviewStatus.PENDING)
 
