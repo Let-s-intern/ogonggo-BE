@@ -90,6 +90,23 @@ class CrawlerJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `이메일 형식이 아니면 어느 칸이 틀렸는지 400으로 알린다`() {
+        mockMvc.perform(
+            post("/api/v1/internal/jobs")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        minimalRequestBody() + mapOf("applicationEmail" to "recruit@example.com", "inquiryEmail" to "인사팀"),
+                    ),
+                ),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message").value("[inquiryEmail] 채용 문의 이메일이 이메일 형식이 아닙니다."))
+    }
+
+    @Test
     fun `판단 값을 보내지 않으면 서버가 채우지 않고 400으로 응답한다`() {
         listOf("experienceType", "educationLevel", "recruitmentType").forEach { field ->
             mockMvc.perform(

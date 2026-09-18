@@ -36,6 +36,8 @@ data class CrawlerJobCommand(
     val hiringProcess: String?,
     val recruitmentNotice: String?,
     val applicationMethod: JobApplicationMethod?,
+    val applicationEmail: String?,
+    val inquiryEmail: String?,
     val sourceUrl: String,
 )
 

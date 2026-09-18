@@ -664,6 +664,19 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(false, jobManager.update(job, sameUpdateCommand().copy(title = "바뀐 제목")))
     }
 
+    @Test
+    fun `지원 접수 이메일과 문의 이메일을 따로 저장하고 바뀌면 알려 준다`() {
+        val job = jobAppender.append(createCommand())
+        val withEmails = sameUpdateCommand().copy(applicationEmail = "recruit@example.com", inquiryEmail = "hr@example.com")
+
+        assertEquals(true, jobManager.update(job, withEmails))
+        val saved = jobReader.read(checkNotNull(job.id))
+        assertEquals("recruit@example.com", saved.applicationEmail)
+        assertEquals("hr@example.com", saved.inquiryEmail)
+        assertEquals(false, jobManager.update(job, withEmails))
+        assertEquals(true, jobManager.update(job, withEmails.copy(inquiryEmail = null)))
+    }
+
     private fun view(job: Job, times: Int) {
         repeat(times) { jobMetricManager.increaseViewCount(checkNotNull(job.id), NOW) }
     }

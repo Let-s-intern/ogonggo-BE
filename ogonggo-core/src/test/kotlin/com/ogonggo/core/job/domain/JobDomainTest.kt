@@ -46,10 +46,14 @@ class JobDomainTest {
             hiringProcess = "변경된 채용 절차",
             recruitmentNotice = "변경된 채용 안내사항",
             applicationMethod = JobApplicationMethod.EMAIL,
+            applicationEmail = "recruit@example.com",
+            inquiryEmail = "hr@example.com",
             sourceUrl = "https://example.com/jobs/2",
         )
 
         assertEquals("변경 회사", job.companyName)
+        assertEquals("recruit@example.com", job.applicationEmail)
+        assertEquals("hr@example.com", job.inquiryEmail)
         assertEquals("변경 모회사", job.parentCompanyName)
         assertEquals("백엔드 인턴", job.title)
         assertEquals("개발", job.jobField)

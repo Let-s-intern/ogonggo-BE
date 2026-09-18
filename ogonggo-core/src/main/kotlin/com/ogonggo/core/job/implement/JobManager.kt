@@ -49,6 +49,8 @@ class JobManager internal constructor(
             hiringProcess = command.hiringProcess,
             recruitmentNotice = command.recruitmentNotice,
             applicationMethod = command.applicationMethod,
+            applicationEmail = command.applicationEmail,
+            inquiryEmail = command.inquiryEmail,
             sourceUrl = command.sourceUrl,
         )
         jobRepository.save(job)
@@ -119,5 +121,7 @@ private fun Job.toUpdateDto(): JobUpdateDto = JobUpdateDto(
     hiringProcess = hiringProcess,
     recruitmentNotice = recruitmentNotice,
     applicationMethod = applicationMethod,
+    applicationEmail = applicationEmail,
+    inquiryEmail = inquiryEmail,
     sourceUrl = sourceUrl,
 )

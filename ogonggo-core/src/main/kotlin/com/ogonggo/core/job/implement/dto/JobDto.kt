@@ -40,6 +40,8 @@ data class JobAppendDto(
     val hiringProcess: String? = null,
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
+    val applicationEmail: String? = null,
+    val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
     val publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     /** 소유자가 없는 수집 공고도 검수 대기로 시작하게 한다. 기업회원 공고는 이 값과 무관하게 검수를 거친다. */
@@ -74,6 +76,8 @@ data class JobUpdateDto(
     val hiringProcess: String? = null,
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
+    val applicationEmail: String? = null,
+    val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
 )
 

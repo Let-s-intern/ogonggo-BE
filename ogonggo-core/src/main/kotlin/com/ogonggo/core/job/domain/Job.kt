@@ -88,6 +88,8 @@ class Job internal constructor(
     hiringProcess: String? = null,
     recruitmentNotice: String? = null,
     applicationMethod: JobApplicationMethod? = null,
+    applicationEmail: String? = null,
+    inquiryEmail: String? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     /** 소유자가 없는 수집 공고도 사람이 확인한 뒤 노출할지 정한다. 기업회원 공고는 항상 검수를 거친다. */
@@ -107,6 +109,8 @@ class Job internal constructor(
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
+            applicationEmail = applicationEmail,
+            inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
             region = region,
@@ -247,6 +251,18 @@ class Job internal constructor(
     var applicationMethod: JobApplicationMethod? = applicationMethod /* 지원 방법 */
         protected set
 
+    /**
+     * 지원서를 받는 이메일과 채용 문의 이메일을 따로 둔다. 한 공고에 둘 다 적힐 수 있다.
+     * 한 주소로 지원과 문의를 함께 받으면 두 칸에 같은 값을 둔다.
+     */
+    @Column(name = "application_email", length = 320)
+    var applicationEmail: String? = applicationEmail /* 지원 접수 이메일 */
+        protected set
+
+    @Column(name = "inquiry_email", length = 320)
+    var inquiryEmail: String? = inquiryEmail /* 채용 문의 이메일 */
+        protected set
+
     @Column(name = "source_url", length = 2048)
     var sourceUrl: String? = sourceUrl /* 채용공고 원문 URL */
         protected set
@@ -303,6 +319,8 @@ class Job internal constructor(
         hiringProcess: String?,
         recruitmentNotice: String?,
         applicationMethod: JobApplicationMethod?,
+        applicationEmail: String?,
+        inquiryEmail: String?,
         sourceUrl: String?,
     ) {
         checkModifiable()
@@ -314,6 +332,8 @@ class Job internal constructor(
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
+            applicationEmail = applicationEmail,
+            inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
             region = region,
@@ -349,6 +369,8 @@ class Job internal constructor(
         this.hiringProcess = hiringProcess
         this.recruitmentNotice = recruitmentNotice
         this.applicationMethod = applicationMethod
+        this.applicationEmail = applicationEmail
+        this.inquiryEmail = inquiryEmail
         this.sourceUrl = sourceUrl
     }
 
@@ -477,6 +499,8 @@ private fun validateJobValues(
     jobRole: String?,
     industry: String?,
     coverImageUrl: String?,
+    applicationEmail: String?,
+    inquiryEmail: String?,
     recruitmentHeadcount: Int?,
     experienceMinYears: Int?,
     region: String?,
@@ -492,6 +516,8 @@ private fun validateJobValues(
     require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
     require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }
     require(coverImageUrl == null || coverImageUrl.isNotBlank()) { "공고 대표 이미지 주소는 비어 있을 수 없습니다." }
+    require(applicationEmail == null || applicationEmail.isNotBlank()) { "지원 접수 이메일은 비어 있을 수 없습니다." }
+    require(inquiryEmail == null || inquiryEmail.isNotBlank()) { "채용 문의 이메일은 비어 있을 수 없습니다." }
     require(recruitmentHeadcount == null || recruitmentHeadcount > 0) { "모집 인원은 1명 이상이어야 합니다." }
     require(experienceMinYears == null || experienceMinYears >= 0) { "최소 경력 연수는 음수일 수 없습니다." }
     require(recruitmentType != JobRecruitmentType.ALWAYS_OPEN || recruitmentEndAt == null) {

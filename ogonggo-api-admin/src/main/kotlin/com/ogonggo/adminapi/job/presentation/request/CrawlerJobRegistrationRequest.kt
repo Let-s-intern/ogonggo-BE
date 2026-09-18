@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
@@ -50,6 +51,8 @@ interface CrawlerJobWriteRequest {
     val hiringProcess: String?
     val recruitmentNotice: String?
     val applicationMethod: JobApplicationMethod?
+    val applicationEmail: String?
+    val inquiryEmail: String?
     val sourceUrl: String
 }
 
@@ -86,6 +89,8 @@ private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
         hiringProcess = hiringProcess,
         recruitmentNotice = recruitmentNotice,
         applicationMethod = applicationMethod,
+        applicationEmail = applicationEmail,
+        inquiryEmail = inquiryEmail,
         sourceUrl = sourceUrl,
     )
 }
@@ -179,6 +184,19 @@ data class CrawlerJobRegistrationRequest(
 
     override val applicationMethod: JobApplicationMethod? = null,
 
+    @field:Schema(
+        description = "지원서를 받는 이메일. 문의 이메일과 같은 주소면 두 칸에 같은 값을 보낸다",
+        example = "recruit@ogonggo.com",
+    )
+    @field:Size(max = 320, message = "지원 접수 이메일은 320자 이하여야 합니다.")
+    @field:Email(message = "지원 접수 이메일이 이메일 형식이 아닙니다.")
+    override val applicationEmail: String? = null,
+
+    @field:Schema(description = "채용 문의 이메일", example = "hr@ogonggo.com")
+    @field:Size(max = 320, message = "채용 문의 이메일은 320자 이하여야 합니다.")
+    @field:Email(message = "채용 문의 이메일이 이메일 형식이 아닙니다.")
+    override val inquiryEmail: String? = null,
+
     @field:Schema(description = "채용공고 원문 URL. 직무별로 나눈 공고는 #1, #2처럼 조각이 붙는다")
     @field:NotBlank(message = "원문 URL은 필수입니다.")
     @field:Size(max = 2048, message = "원문 URL은 2048자 이하여야 합니다.")
@@ -261,6 +279,14 @@ data class CrawlerJobReplaceRequest(
     override val recruitmentNotice: String? = null,
 
     override val applicationMethod: JobApplicationMethod? = null,
+
+    @field:Size(max = 320, message = "지원 접수 이메일은 320자 이하여야 합니다.")
+    @field:Email(message = "지원 접수 이메일이 이메일 형식이 아닙니다.")
+    override val applicationEmail: String? = null,
+
+    @field:Size(max = 320, message = "채용 문의 이메일은 320자 이하여야 합니다.")
+    @field:Email(message = "채용 문의 이메일이 이메일 형식이 아닙니다.")
+    override val inquiryEmail: String? = null,
 
     @field:NotBlank(message = "원문 URL은 필수입니다.")
     @field:Size(max = 2048, message = "원문 URL은 2048자 이하여야 합니다.")
