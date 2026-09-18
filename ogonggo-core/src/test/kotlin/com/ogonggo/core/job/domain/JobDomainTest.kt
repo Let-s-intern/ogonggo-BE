@@ -128,20 +128,6 @@ class JobDomainTest {
     }
 
     @Test
-    fun `크롤러가 검수를 요청한 수집 공고는 검수 대기로 시작하고 승인해야 게시된다`() {
-        val job = createJob(requiresReview = true)
-
-        assertEquals(ReviewStatus.PENDING, job.reviewStatus)
-        assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, assertThrows(ConflictException::class.java) { job.publish() }.errorCode)
-        assertThrows(IllegalArgumentException::class.java) {
-            createJob(requiresReview = true, publicationStatus = JobPublicationStatus.PUBLISHED)
-        }
-
-        job.approveReview()
-        assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
-    }
-
-    @Test
     fun `기업회원 공고는 승인 전에 게시할 수 없고 승인하면 곧바로 게시된다`() {
         val job = createJob(ownerUserId = 7L)
 
@@ -241,7 +227,6 @@ class JobDomainTest {
         publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
         companyName: String = "오공고",
         parentCompanyName: String? = null,
-        requiresReview: Boolean = false,
         jobField: String? = null,
         jobRole: String? = null,
         industry: String? = null,
@@ -258,7 +243,6 @@ class JobDomainTest {
         publicationStatus = publicationStatus,
         companyName = companyName,
         parentCompanyName = parentCompanyName,
-        requiresReview = requiresReview,
         title = "백엔드 개발자",
         jobField = jobField,
         jobRole = jobRole,

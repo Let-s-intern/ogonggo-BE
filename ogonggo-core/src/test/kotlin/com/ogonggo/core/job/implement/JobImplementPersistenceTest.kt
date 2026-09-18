@@ -22,11 +22,11 @@ import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
-import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -699,13 +699,15 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `크롤러는 수집 공고만 식별자와 원문 URL로 찾고 기업회원 공고는 찾지 못한다`() {
-        val collected = jobAppender.append(createCommand(sourceUrl = CRAWLED_URL, requiresReview = true))
+        val collected = jobAppender.append(
+            createCommand(sourceUrl = CRAWLED_URL, publicationStatus = JobPublicationStatus.PUBLISHED),
+        )
         val company = jobAppender.append(createCommand(sourceUrl = COMPANY_URL, ownerUserId = USER_ID))
         val collectedId = checkNotNull(collected.id)
         val companyId = checkNotNull(company.id)
 
-        assertEquals(ReviewStatus.PENDING, collected.reviewStatus)
-        assertEquals(JobPublicationStatus.DRAFT, collected.publicationStatus)
+        assertNull(collected.reviewStatus)
+        assertEquals(JobPublicationStatus.PUBLISHED, collected.publicationStatus)
         assertEquals(collectedId, jobReader.readCrawledForUpdate(collectedId).id)
         assertEquals(collectedId, jobReader.readCrawledBySourceUrl(CRAWLED_URL).id)
         assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledForUpdate(companyId) }
@@ -721,26 +723,14 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `수정은 값이 실제로 바뀌었는지 알려 준다`() {
-        val job = jobAppender.append(createCommand())
-
-        assertEquals(false, jobManager.update(job, sameUpdateCommand()))
-        assertEquals(true, jobManager.update(job, sameUpdateCommand().copy(title = "바뀐 제목")))
-        assertEquals("바뀐 제목", jobReader.read(checkNotNull(job.id)).title)
-        assertEquals(false, jobManager.update(job, sameUpdateCommand().copy(title = "바뀐 제목")))
-    }
-
-    @Test
-    fun `지원 접수 이메일과 문의 이메일을 따로 저장하고 바뀌면 알려 준다`() {
+    fun `지원 접수 이메일과 문의 이메일을 따로 저장한다`() {
         val job = jobAppender.append(createCommand())
         val withEmails = sameUpdateCommand().copy(applicationEmail = "recruit@example.com", inquiryEmail = "hr@example.com")
 
-        assertEquals(true, jobManager.update(job, withEmails))
+        jobManager.update(job, withEmails)
         val saved = jobReader.read(checkNotNull(job.id))
         assertEquals("recruit@example.com", saved.applicationEmail)
         assertEquals("hr@example.com", saved.inquiryEmail)
-        assertEquals(false, jobManager.update(job, withEmails))
-        assertEquals(true, jobManager.update(job, withEmails.copy(inquiryEmail = null)))
     }
 
     private fun view(job: Job, times: Int) {
@@ -784,7 +774,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobField: String? = null,
         jobRole: String? = null,
         industry: String? = null,
-        requiresReview: Boolean = false,
+        publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
         companyName = companyName,
@@ -802,10 +792,10 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobRole = jobRole,
         industry = industry,
         responsibilities = "주요 업무",
-        requiresReview = requiresReview,
+        publicationStatus = publicationStatus,
     )
 
-    /** `createCommand()` 기본값과 같은 값이다. 수정이 값의 변화를 알아채는지 볼 때 기준으로 쓴다. */
+    /** `createCommand()` 기본값과 같은 값이다. */
     private fun sameUpdateCommand(): JobUpdateDto = JobUpdateDto(
         companyName = "오공고",
         title = "백엔드 개발자",

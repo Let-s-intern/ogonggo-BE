@@ -96,14 +96,12 @@ class Job internal constructor(
     inquiryEmail: String? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
-    /** 소유자가 없는 수집 공고도 사람이 확인한 뒤 노출할지 정한다. 기업회원 공고는 항상 검수를 거친다. */
-    requiresReview: Boolean = false,
 ) : BaseTimeEntity() {
 
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
-        require((ownerUserId == null && !requiresReview) || publicationStatus != JobPublicationStatus.PUBLISHED) {
-            "검수를 거치는 공고는 승인 전에 게시할 수 없습니다."
+        require(ownerUserId == null || publicationStatus != JobPublicationStatus.PUBLISHED) {
+            "기업회원 공고는 검수 승인 전에 게시할 수 없습니다."
         }
         validateJobValues(
             companyName = companyName,
@@ -277,14 +275,12 @@ class Job internal constructor(
         protected set
 
     /**
-     * 기업회원 공고와 크롤러가 AI로 값을 채워 보낸 공고는 등록할 때 검수 대기로 시작한다.
-     * 크롤러는 원문에 없는 값도 유추해 채우므로 틀린 값이 그대로 노출되지 않게 사람이 확인한다.
-     * 검수를 거치지 않고 만든 수집 공고는 값이 없다.
+     * 기업회원이 올린 공고만 검수하므로 등록할 때 검수 대기로 시작한다.
+     * 수집한 공고는 우리가 고른 사이트에서 가져온 것이라 검수 대상이 아니어서 값이 없다.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", length = 20)
-    var reviewStatus: ReviewStatus? =
-        if (ownerUserId != null || requiresReview) ReviewStatus.PENDING else null /* 검수 상태 */
+    var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
         protected set
 
     @Column(name = "closed_at")
