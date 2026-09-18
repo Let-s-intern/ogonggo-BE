@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-08-28
+- 최종 변경일: 2026-09-14
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -121,6 +121,23 @@ DELETE /api/v1/bootcamp-bookmarks/{bootcampId}
 ```
 
 채용공고 북마크와 같은 규칙을 따릅니다. 등록은 지금 공개된 부트캠프만 허용하고, 중복 등록은 409 `BOOTCAMP_BOOKMARK_ALREADY_EXISTS`로 응답합니다.
+
+### 크롤러 채용공고
+
+```text
+POST   /api/v1/internal/jobs
+GET    /api/v1/internal/jobs?sourceUrl={원문 URL}
+PUT    /api/v1/internal/jobs/{jobId}
+DELETE /api/v1/internal/jobs/{jobId}
+```
+
+크롤러가 내부 API 키로 호출합니다. 소유자가 없는 수집 공고만 다루며, 기업회원 공고는 없는 공고와 같이 404로 응답합니다.
+
+- 등록은 201과 `data.jobId`를 반환합니다. 같은 원문 URL의 미삭제 공고가 있으면 409 `JOB_ALREADY_EXISTS`입니다.
+- 크롤러는 등록 응답의 식별자를 저장해 교체·삭제에 씁니다. 식별자를 잃었으면 `GET ?sourceUrl=`로 되찾습니다. 원문 URL을 경로 변수로 쓰지 않는 이유는 URL 안의 `/`·`#`이 경로와 섞이기 때문입니다.
+- 교체는 다시 수집·분류한 값으로 공고 전체를 바꾸므로 PUT이며 200과 `data: null`로 응답합니다. 같은 값을 반복해 보내도 결과가 같습니다. 태그는 등록할 때만 받고 교체하지 않습니다.
+- 삭제는 소프트 삭제이며 반복해도 200입니다. 직무별로 나뉘어 새 공고로 등록된 원래 공고를 지울 때 씁니다.
+- 검수 상태가 어떻게 바뀌는지는 [API 성공 응답의 검수와 노출](api-response.md#검수와-노출)을 따릅니다.
 
 ## 6. 현재 보류하는 항목
 

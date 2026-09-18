@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.openapi
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.adminapi.config.ADMIN_INTERNAL_API_KEY_SCHEME
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -69,6 +70,23 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1rejections~1{type}~1{id}/patch",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
+        }
+    }
+
+    @Test
+    fun `크롤러 내부 API는 내부 API 키 인증을 요구한다`() {
+        val document = openApiDocument()
+
+        listOf(
+            "/paths/~1api~1v1~1internal~1jobs/post",
+            "/paths/~1api~1v1~1internal~1jobs/get",
+            "/paths/~1api~1v1~1internal~1jobs~1{jobId}/put",
+            "/paths/~1api~1v1~1internal~1jobs~1{jobId}/delete",
+        ).forEach { pointer ->
+            assertTrue(
+                document.at("$pointer/security/0/$ADMIN_INTERNAL_API_KEY_SCHEME").isArray,
+                "내부 API 키 인증 명세가 없습니다: $pointer",
+            )
         }
     }
 

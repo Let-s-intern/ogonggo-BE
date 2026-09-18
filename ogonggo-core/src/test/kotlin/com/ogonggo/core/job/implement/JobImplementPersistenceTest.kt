@@ -15,12 +15,14 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
+import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -695,6 +697,52 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(NOW, jobReader.readIncludingDeleted(jobId).deletedAt)
     }
 
+    @Test
+    fun `크롤러는 수집 공고만 식별자와 원문 URL로 찾고 기업회원 공고는 찾지 못한다`() {
+        val collected = jobAppender.append(createCommand(sourceUrl = CRAWLED_URL, requiresReview = true))
+        val company = jobAppender.append(createCommand(sourceUrl = COMPANY_URL, ownerUserId = USER_ID))
+        val collectedId = checkNotNull(collected.id)
+        val companyId = checkNotNull(company.id)
+
+        assertEquals(ReviewStatus.PENDING, collected.reviewStatus)
+        assertEquals(JobPublicationStatus.DRAFT, collected.publicationStatus)
+        assertEquals(collectedId, jobReader.readCrawledForUpdate(collectedId).id)
+        assertEquals(collectedId, jobReader.readCrawledBySourceUrl(CRAWLED_URL).id)
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledForUpdate(companyId) }
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledForDelete(companyId) }
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledBySourceUrl(COMPANY_URL) }
+
+        jobManager.delete(jobReader.readCrawledForDelete(collectedId), NOW)
+        jobManager.delete(jobReader.readCrawledForDelete(collectedId), NOW.plusDays(1))
+
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledForUpdate(collectedId) }
+        assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledBySourceUrl(CRAWLED_URL) }
+        assertEquals(NOW, jobReader.readIncludingDeleted(collectedId).deletedAt)
+    }
+
+    @Test
+    fun `수정은 값이 실제로 바뀌었는지 알려 준다`() {
+        val job = jobAppender.append(createCommand())
+
+        assertEquals(false, jobManager.update(job, sameUpdateCommand()))
+        assertEquals(true, jobManager.update(job, sameUpdateCommand().copy(title = "바뀐 제목")))
+        assertEquals("바뀐 제목", jobReader.read(checkNotNull(job.id)).title)
+        assertEquals(false, jobManager.update(job, sameUpdateCommand().copy(title = "바뀐 제목")))
+    }
+
+    @Test
+    fun `지원 접수 이메일과 문의 이메일을 따로 저장하고 바뀌면 알려 준다`() {
+        val job = jobAppender.append(createCommand())
+        val withEmails = sameUpdateCommand().copy(applicationEmail = "recruit@example.com", inquiryEmail = "hr@example.com")
+
+        assertEquals(true, jobManager.update(job, withEmails))
+        val saved = jobReader.read(checkNotNull(job.id))
+        assertEquals("recruit@example.com", saved.applicationEmail)
+        assertEquals("hr@example.com", saved.inquiryEmail)
+        assertEquals(false, jobManager.update(job, withEmails))
+        assertEquals(true, jobManager.update(job, withEmails.copy(inquiryEmail = null)))
+    }
+
     private fun view(job: Job, times: Int) {
         repeat(times) { jobMetricManager.increaseViewCount(checkNotNull(job.id), NOW) }
     }
@@ -736,6 +784,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobField: String? = null,
         jobRole: String? = null,
         industry: String? = null,
+        requiresReview: Boolean = false,
     ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
         companyName = companyName,
@@ -744,7 +793,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = 1,
-        experienceMaxYears = 3,
         educationLevel = EducationLevel.ANY,
         region = "서울",
         recruitmentType = recruitmentType,
@@ -754,11 +802,28 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobRole = jobRole,
         industry = industry,
         responsibilities = "주요 업무",
+        requiresReview = requiresReview,
+    )
+
+    /** `createCommand()` 기본값과 같은 값이다. 수정이 값의 변화를 알아채는지 볼 때 기준으로 쓴다. */
+    private fun sameUpdateCommand(): JobUpdateDto = JobUpdateDto(
+        companyName = "오공고",
+        title = "백엔드 개발자",
+        sourceUrl = "https://example.com/jobs/1",
+        employmentType = EmploymentType.FULL_TIME,
+        experienceType = ExperienceType.EXPERIENCED,
+        experienceMinYears = 1,
+        educationLevel = EducationLevel.ANY,
+        region = "서울",
+        recruitmentType = JobRecruitmentType.PERIOD,
+        responsibilities = "주요 업무",
     )
 
     companion object {
         private const val USER_ID = 17L
         private const val OTHER_USER_ID = 18L
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private const val CRAWLED_URL = "https://example.com/jobs/crawled"
+        private const val COMPANY_URL = "https://example.com/jobs/company"
     }
 }

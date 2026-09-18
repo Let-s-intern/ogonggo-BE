@@ -133,7 +133,6 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 employmentType = EmploymentType.FULL_TIME,
                 experienceType = ExperienceType.EXPERIENCED,
                 experienceMinYears = 1,
-                experienceMaxYears = 3,
                 educationLevel = EducationLevel.ANY,
                 region = "서울",
                 recruitmentType = JobRecruitmentType.PERIOD,

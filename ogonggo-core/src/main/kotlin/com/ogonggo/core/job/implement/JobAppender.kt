@@ -16,7 +16,6 @@ class JobAppender internal constructor(
                 ownerUserId = command.ownerUserId,
                 companyName = command.companyName,
                 parentCompanyName = command.parentCompanyName,
-                companyLogoUrl = command.companyLogoUrl,
                 title = command.title,
                 jobField = command.jobField,
                 jobRole = command.jobRole,
@@ -25,7 +24,6 @@ class JobAppender internal constructor(
                 employmentType = command.employmentType,
                 experienceType = command.experienceType,
                 experienceMinYears = command.experienceMinYears,
-                experienceMaxYears = command.experienceMaxYears,
                 educationLevel = command.educationLevel,
                 region = command.region,
                 recruitmentType = command.recruitmentType,
@@ -43,8 +41,11 @@ class JobAppender internal constructor(
                 hiringProcess = command.hiringProcess,
                 recruitmentNotice = command.recruitmentNotice,
                 applicationMethod = command.applicationMethod,
+                applicationEmail = command.applicationEmail,
+                inquiryEmail = command.inquiryEmail,
                 sourceUrl = command.sourceUrl,
                 publicationStatus = command.publicationStatus,
+                requiresReview = command.requiresReview,
             ),
         )
 }

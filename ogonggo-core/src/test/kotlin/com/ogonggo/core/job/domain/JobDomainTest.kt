@@ -23,7 +23,6 @@ class JobDomainTest {
             title = "백엔드 인턴",
             employmentType = EmploymentType.INTERN,
             parentCompanyName = "변경 모회사",
-            companyLogoUrl = "https://example.com/logo2.png",
             jobField = "개발",
             jobRole = "서버 개발자",
             industry = "IT",
@@ -31,7 +30,6 @@ class JobDomainTest {
             recruitmentHeadcount = 5,
             experienceType = ExperienceType.NEWCOMER,
             experienceMinYears = 0,
-            experienceMaxYears = 1,
             educationLevel = EducationLevel.BACHELOR,
             region = "부산",
             recruitmentType = JobRecruitmentType.PERIOD,
@@ -48,12 +46,15 @@ class JobDomainTest {
             hiringProcess = "변경된 채용 절차",
             recruitmentNotice = "변경된 채용 안내사항",
             applicationMethod = JobApplicationMethod.EMAIL,
+            applicationEmail = "recruit@example.com",
+            inquiryEmail = "hr@example.com",
             sourceUrl = "https://example.com/jobs/2",
         )
 
         assertEquals("변경 회사", job.companyName)
+        assertEquals("recruit@example.com", job.applicationEmail)
+        assertEquals("hr@example.com", job.inquiryEmail)
         assertEquals("변경 모회사", job.parentCompanyName)
-        assertEquals("https://example.com/logo2.png", job.companyLogoUrl)
         assertEquals("백엔드 인턴", job.title)
         assertEquals("개발", job.jobField)
         assertEquals("서버 개발자", job.jobRole)
@@ -81,16 +82,12 @@ class JobDomainTest {
         assertThrows(IllegalArgumentException::class.java) { createJob(companyName = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(parentCompanyName = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(region = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(companyLogoUrl = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(jobField = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(jobRole = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(industry = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(coverImageUrl = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(recruitmentHeadcount = 0) }
         assertThrows(IllegalArgumentException::class.java) { createJob(experienceMinYears = -1) }
-        assertThrows(IllegalArgumentException::class.java) {
-            createJob(experienceMinYears = 5, experienceMaxYears = 3)
-        }
         assertThrows(IllegalArgumentException::class.java) {
             createJob(
                 recruitmentStartAt = LocalDateTime.of(2026, 9, 2, 0, 0),
@@ -128,6 +125,20 @@ class JobDomainTest {
         assertThrows(IllegalArgumentException::class.java) {
             createJob(ownerUserId = 7L, publicationStatus = JobPublicationStatus.PUBLISHED)
         }
+    }
+
+    @Test
+    fun `크롤러가 검수를 요청한 수집 공고는 검수 대기로 시작하고 승인해야 게시된다`() {
+        val job = createJob(requiresReview = true)
+
+        assertEquals(ReviewStatus.PENDING, job.reviewStatus)
+        assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, assertThrows(ConflictException::class.java) { job.publish() }.errorCode)
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(requiresReview = true, publicationStatus = JobPublicationStatus.PUBLISHED)
+        }
+
+        job.approveReview()
+        assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
     }
 
     @Test
@@ -230,7 +241,7 @@ class JobDomainTest {
         publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
         companyName: String = "오공고",
         parentCompanyName: String? = null,
-        companyLogoUrl: String? = null,
+        requiresReview: Boolean = false,
         jobField: String? = null,
         jobRole: String? = null,
         industry: String? = null,
@@ -238,7 +249,6 @@ class JobDomainTest {
         recruitmentHeadcount: Int? = null,
         region: String? = "서울",
         experienceMinYears: Int? = 1,
-        experienceMaxYears: Int? = 3,
         recruitmentStartAt: LocalDateTime? = LocalDateTime.of(2026, 8, 1, 0, 0),
         // 상시 채용은 종료 일시를 둘 수 없으므로 기본값도 모집 유형을 따른다.
         recruitmentEndAt: LocalDateTime? =
@@ -248,7 +258,7 @@ class JobDomainTest {
         publicationStatus = publicationStatus,
         companyName = companyName,
         parentCompanyName = parentCompanyName,
-        companyLogoUrl = companyLogoUrl,
+        requiresReview = requiresReview,
         title = "백엔드 개발자",
         jobField = jobField,
         jobRole = jobRole,
@@ -257,7 +267,6 @@ class JobDomainTest {
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = experienceMinYears,
-        experienceMaxYears = experienceMaxYears,
         educationLevel = EducationLevel.ANY,
         region = region,
         recruitmentType = recruitmentType,

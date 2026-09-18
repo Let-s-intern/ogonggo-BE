@@ -15,7 +15,6 @@ data class JobAppendDto(
     val ownerUserId: Long? = null,
     val companyName: String,
     val parentCompanyName: String? = null,
-    val companyLogoUrl: String? = null,
     val title: String,
     val jobField: String? = null,
     val jobRole: String? = null,
@@ -24,7 +23,6 @@ data class JobAppendDto(
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int? = null,
-    val experienceMaxYears: Int? = null,
     val educationLevel: EducationLevel = EducationLevel.ANY,
     val region: String? = null,
     val recruitmentType: JobRecruitmentType,
@@ -42,14 +40,17 @@ data class JobAppendDto(
     val hiringProcess: String? = null,
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
+    val applicationEmail: String? = null,
+    val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
     val publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
+    /** 소유자가 없는 수집 공고도 검수 대기로 시작하게 한다. 기업회원 공고는 이 값과 무관하게 검수를 거친다. */
+    val requiresReview: Boolean = false,
 )
 
 data class JobUpdateDto(
     val companyName: String,
     val parentCompanyName: String? = null,
-    val companyLogoUrl: String? = null,
     val title: String,
     val jobField: String? = null,
     val jobRole: String? = null,
@@ -58,7 +59,6 @@ data class JobUpdateDto(
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int? = null,
-    val experienceMaxYears: Int? = null,
     val educationLevel: EducationLevel = EducationLevel.ANY,
     val region: String? = null,
     val recruitmentType: JobRecruitmentType,
@@ -76,6 +76,8 @@ data class JobUpdateDto(
     val hiringProcess: String? = null,
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
+    val applicationEmail: String? = null,
+    val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
 )
 

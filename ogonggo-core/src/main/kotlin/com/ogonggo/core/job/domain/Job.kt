@@ -67,7 +67,6 @@ class Job internal constructor(
     ownerUserId: Long? = null,
     companyName: String,
     parentCompanyName: String? = null,
-    companyLogoUrl: String? = null,
     title: String,
     jobField: String? = null,
     jobRole: String? = null,
@@ -76,7 +75,6 @@ class Job internal constructor(
     employmentType: EmploymentType,
     experienceType: ExperienceType,
     experienceMinYears: Int? = null,
-    experienceMaxYears: Int? = null,
     educationLevel: EducationLevel = EducationLevel.ANY,
     region: String? = null,
     recruitmentType: JobRecruitmentType,
@@ -94,27 +92,31 @@ class Job internal constructor(
     hiringProcess: String? = null,
     recruitmentNotice: String? = null,
     applicationMethod: JobApplicationMethod? = null,
+    applicationEmail: String? = null,
+    inquiryEmail: String? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
+    /** 소유자가 없는 수집 공고도 사람이 확인한 뒤 노출할지 정한다. 기업회원 공고는 항상 검수를 거친다. */
+    requiresReview: Boolean = false,
 ) : BaseTimeEntity() {
 
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
-        require(ownerUserId == null || publicationStatus != JobPublicationStatus.PUBLISHED) {
-            "기업회원 공고는 검수 승인 전에 게시할 수 없습니다."
+        require((ownerUserId == null && !requiresReview) || publicationStatus != JobPublicationStatus.PUBLISHED) {
+            "검수를 거치는 공고는 승인 전에 게시할 수 없습니다."
         }
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
-            companyLogoUrl = companyLogoUrl,
             title = title,
             jobField = jobField,
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
+            applicationEmail = applicationEmail,
+            inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
-            experienceMaxYears = experienceMaxYears,
             region = region,
             recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
@@ -138,10 +140,6 @@ class Job internal constructor(
 
     @Column(name = "parent_company_name", length = 150)
     var parentCompanyName: String? = parentCompanyName /* 모회사명. 모회사가 없으면 null */
-        protected set
-
-    @Column(name = "company_logo_url", length = 2048)
-    var companyLogoUrl: String? = companyLogoUrl /* 기업 로고 이미지 주소 */
         protected set
 
     @Column(nullable = false, length = 255)
@@ -182,10 +180,6 @@ class Job internal constructor(
 
     @Column(name = "experience_min_years")
     var experienceMinYears: Int? = experienceMinYears /* 최소 요구 경력 연수 */
-        protected set
-
-    @Column(name = "experience_max_years")
-    var experienceMaxYears: Int? = experienceMaxYears /* 최대 요구 경력 연수 */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -261,6 +255,18 @@ class Job internal constructor(
     var applicationMethod: JobApplicationMethod? = applicationMethod /* 지원 방법 */
         protected set
 
+    /**
+     * 지원서를 받는 이메일과 채용 문의 이메일을 따로 둔다. 한 공고에 둘 다 적힐 수 있다.
+     * 한 주소로 지원과 문의를 함께 받으면 두 칸에 같은 값을 둔다.
+     */
+    @Column(name = "application_email", length = 320)
+    var applicationEmail: String? = applicationEmail /* 지원 접수 이메일 */
+        protected set
+
+    @Column(name = "inquiry_email", length = 320)
+    var inquiryEmail: String? = inquiryEmail /* 채용 문의 이메일 */
+        protected set
+
     @Column(name = "source_url", length = 2048)
     var sourceUrl: String? = sourceUrl /* 채용공고 원문 URL */
         protected set
@@ -271,12 +277,14 @@ class Job internal constructor(
         protected set
 
     /**
-     * 기업회원이 올린 공고만 검수하므로 등록할 때 검수 대기로 시작한다.
-     * 수집한 공고는 우리가 고른 사이트에서 가져온 것이라 검수 대상이 아니어서 값이 없다.
+     * 기업회원 공고와 크롤러가 AI로 값을 채워 보낸 공고는 등록할 때 검수 대기로 시작한다.
+     * 크롤러는 원문에 없는 값도 유추해 채우므로 틀린 값이 그대로 노출되지 않게 사람이 확인한다.
+     * 검수를 거치지 않고 만든 수집 공고는 값이 없다.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", length = 20)
-    var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
+    var reviewStatus: ReviewStatus? =
+        if (ownerUserId != null || requiresReview) ReviewStatus.PENDING else null /* 검수 상태 */
         protected set
 
     @Column(name = "closed_at")
@@ -290,7 +298,6 @@ class Job internal constructor(
     fun update(
         companyName: String,
         parentCompanyName: String?,
-        companyLogoUrl: String?,
         title: String,
         jobField: String?,
         jobRole: String?,
@@ -299,7 +306,6 @@ class Job internal constructor(
         employmentType: EmploymentType,
         experienceType: ExperienceType,
         experienceMinYears: Int?,
-        experienceMaxYears: Int?,
         educationLevel: EducationLevel,
         region: String?,
         recruitmentType: JobRecruitmentType,
@@ -317,21 +323,23 @@ class Job internal constructor(
         hiringProcess: String?,
         recruitmentNotice: String?,
         applicationMethod: JobApplicationMethod?,
+        applicationEmail: String?,
+        inquiryEmail: String?,
         sourceUrl: String?,
     ) {
         checkModifiable()
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
-            companyLogoUrl = companyLogoUrl,
             title = title,
             jobField = jobField,
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
+            applicationEmail = applicationEmail,
+            inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
-            experienceMaxYears = experienceMaxYears,
             region = region,
             recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
@@ -340,7 +348,6 @@ class Job internal constructor(
 
         this.companyName = companyName
         this.parentCompanyName = parentCompanyName
-        this.companyLogoUrl = companyLogoUrl
         this.title = title
         this.jobField = jobField
         this.jobRole = jobRole
@@ -349,7 +356,6 @@ class Job internal constructor(
         this.employmentType = employmentType
         this.experienceType = experienceType
         this.experienceMinYears = experienceMinYears
-        this.experienceMaxYears = experienceMaxYears
         this.educationLevel = educationLevel
         this.region = region
         this.recruitmentType = recruitmentType
@@ -367,6 +373,8 @@ class Job internal constructor(
         this.hiringProcess = hiringProcess
         this.recruitmentNotice = recruitmentNotice
         this.applicationMethod = applicationMethod
+        this.applicationEmail = applicationEmail
+        this.inquiryEmail = inquiryEmail
         this.sourceUrl = sourceUrl
     }
 
@@ -490,15 +498,15 @@ class Job internal constructor(
 private fun validateJobValues(
     companyName: String,
     parentCompanyName: String?,
-    companyLogoUrl: String?,
     title: String,
     jobField: String?,
     jobRole: String?,
     industry: String?,
     coverImageUrl: String?,
+    applicationEmail: String?,
+    inquiryEmail: String?,
     recruitmentHeadcount: Int?,
     experienceMinYears: Int?,
-    experienceMaxYears: Int?,
     region: String?,
     recruitmentType: JobRecruitmentType,
     recruitmentStartAt: LocalDateTime?,
@@ -508,17 +516,14 @@ private fun validateJobValues(
     require(parentCompanyName == null || parentCompanyName.isNotBlank()) { "모회사명은 비어 있을 수 없습니다." }
     require(title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
     require(region == null || region.isNotBlank()) { "근무 지역은 비어 있을 수 없습니다." }
-    require(companyLogoUrl == null || companyLogoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }
     require(jobField == null || jobField.isNotBlank()) { "직군은 비어 있을 수 없습니다." }
     require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
     require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }
     require(coverImageUrl == null || coverImageUrl.isNotBlank()) { "공고 대표 이미지 주소는 비어 있을 수 없습니다." }
+    require(applicationEmail == null || applicationEmail.isNotBlank()) { "지원 접수 이메일은 비어 있을 수 없습니다." }
+    require(inquiryEmail == null || inquiryEmail.isNotBlank()) { "채용 문의 이메일은 비어 있을 수 없습니다." }
     require(recruitmentHeadcount == null || recruitmentHeadcount > 0) { "모집 인원은 1명 이상이어야 합니다." }
     require(experienceMinYears == null || experienceMinYears >= 0) { "최소 경력 연수는 음수일 수 없습니다." }
-    require(experienceMaxYears == null || experienceMaxYears >= 0) { "최대 경력 연수는 음수일 수 없습니다." }
-    require(experienceMinYears == null || experienceMaxYears == null || experienceMinYears <= experienceMaxYears) {
-        "최소 경력 연수는 최대 경력 연수보다 클 수 없습니다."
-    }
     require(recruitmentType != JobRecruitmentType.ALWAYS_OPEN || recruitmentEndAt == null) {
         "상시 채용에는 모집 종료 일시를 둘 수 없습니다."
     }

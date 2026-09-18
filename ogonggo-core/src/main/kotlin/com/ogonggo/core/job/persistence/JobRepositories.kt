@@ -23,6 +23,18 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
 
     fun existsBySourceUrlAndDeletedAtIsNull(sourceUrl: String): Boolean
 
+    /** 원문 URL은 등록 시점에만 중복을 막고 DB 제약이 없으므로, 겹친 행이 있어도 가장 먼저 등록된 행을 고른다. */
+    fun findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String): Job?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select job from Job job where job.id = :jobId and job.ownerUserId is null and job.deletedAt is null")
+    fun findCrawledByIdForUpdate(@Param("jobId") jobId: Long): Job?
+
+    /** 크롤러 삭제는 멱등해야 하므로 이미 삭제된 수집 공고도 찾는다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select job from Job job where job.id = :jobId and job.ownerUserId is null")
+    fun findCrawledByIdForDelete(@Param("jobId") jobId: Long): Job?
+
     fun findByIdAndPublicationStatusAndDeletedAtIsNull(
         id: Long,
         publicationStatus: JobPublicationStatus,
