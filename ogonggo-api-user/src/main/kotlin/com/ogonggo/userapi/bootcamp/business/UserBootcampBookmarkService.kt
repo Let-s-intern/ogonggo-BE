@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.bootcamp.business
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkManager
@@ -28,9 +29,9 @@ class UserBootcampBookmarkService(
         condition: BootcampSearchCondition,
         page: Int,
         size: Int,
-        applicationStatus: ApplicationStatus? = null,
+        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
     ): UserBootcampPageResult {
-        val result = bootcampBookmarkReader.readBookmarkedPublicPage(userId, condition, page, size, applicationStatus)
+        val result = bootcampBookmarkReader.readBookmarkedPublicPage(userId, condition, page, size, bookmarkCondition)
         val bootcampIds = result.bootcamps.map(Bootcamp::requiredId)
         return UserBootcampPageResult.from(
             result = result,

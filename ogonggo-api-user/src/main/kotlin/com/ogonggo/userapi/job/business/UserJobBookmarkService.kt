@@ -1,7 +1,9 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
@@ -28,9 +30,18 @@ class UserJobBookmarkService(
         condition: JobSearchCondition,
         page: Int,
         size: Int,
-        applicationStatus: ApplicationStatus? = null,
+        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
+        recruitmentStatus: JobRecruitmentStatus? = null,
     ): UserJobPageResult {
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(userId, condition, page, size, applicationStatus)
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(
+            userId = userId,
+            condition = condition,
+            page = page,
+            size = size,
+            now = LocalDateTime.now(clock),
+            bookmarkCondition = bookmarkCondition,
+            recruitmentStatus = recruitmentStatus,
+        )
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,

@@ -1,8 +1,11 @@
 package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.userapi.job.business.UserJobBookmarkService
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
@@ -31,12 +34,14 @@ class UserJobBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
         @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: String?,
         @RequestParam(name = "jobRole", required = false) jobRole: String?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "applicationStatus", required = false) applicationStatus: ApplicationStatus?,
+        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobBookmarkService.getBookmarks(
             userId = userId,
@@ -49,7 +54,8 @@ class UserJobBookmarkController(
             ),
             page = page - 1,
             size = size,
-            applicationStatus = applicationStatus,
+            bookmarkCondition = BookmarkListCondition(applicationStatus = applicationStatus, sortType = sortType),
+            recruitmentStatus = recruitmentStatus,
         )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(

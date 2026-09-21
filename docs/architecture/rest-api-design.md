@@ -125,11 +125,11 @@ DELETE /api/v1/bootcamp-bookmarks/{bootcampId}
 ### 지원·신청 관리 단계
 
 ```text
-GET  /api/v1/job-bookmarks?applicationStatus={단계}
+GET  /api/v1/job-bookmarks?applicationStatus={단계}&recruitmentStatus={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
 POST /api/v1/job-bookmarks/{jobId}/prepare
 POST /api/v1/job-bookmarks/{jobId}/cancel-preparation
 
-GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}
+GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&status={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
 POST /api/v1/bootcamp-bookmarks/{bootcampId}/prepare
 POST /api/v1/bootcamp-bookmarks/{bootcampId}/cancel-preparation
 ```
@@ -137,6 +137,9 @@ POST /api/v1/bootcamp-bookmarks/{bootcampId}/cancel-preparation
 - 결정일: 2026-09-21 / 리뷰 상태: 팀 리뷰 필요
 - 마이페이지 지원·신청 관리 화면은 북마크를 스크랩(`SCRAPPED`), 지원 준비 중(`PREPARING`), 지원 완료(`APPLIED`), 면접(`INTERVIEWING`), 합격(`PASSED`), 불합격(`FAILED`) 단계로 나눠 보여 줍니다. 단계는 북마크 행이 가지며, 등록하거나 해제 후 다시 등록하면 스크랩에서 시작합니다.
 - 각 단계 목록은 북마크 목록에 `applicationStatus`를 주어 조회하고, 단계별 건수는 그 응답의 전체 건수를 씁니다.
+- 단계로 나눈 칸 외에 한 단계만 모아 보는 필터도 같은 `applicationStatus`를 씁니다.
+- 마감 상태는 채용공고 `recruitmentStatus`, 부트캠프 `status`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
+- 정렬은 `sort`로 고르며 지금은 최근 저장순(`RECENTLY_SAVED`)만 있고 기본값입니다. 등록·재등록하거나 단계를 옮긴 시각이 최근인 순서입니다. 다른 정렬은 필요할 때 값을 추가합니다.
 - 지금은 스크랩과 지원 준비 중 사이만 오갈 수 있어 4절 원칙대로 이동마다 명령 경로를 둡니다. 이미 목표 단계에 있으면 아무것도 바꾸지 않고 200으로 응답합니다. 활성 북마크가 없으면 404 `JOB_BOOKMARK_NOT_FOUND`·`BOOTCAMP_BOOKMARK_NOT_FOUND`, 허용되지 않는 이동은 409 `INVALID_JOB_APPLICATION_STATUS_TRANSITION`·`INVALID_BOOTCAMP_APPLICATION_STATUS_TRANSITION`입니다.
 - 이동한 북마크는 수정 일시가 갱신되어 해당 단계 목록의 맨 앞에 옵니다.
 - 지원 완료·면접·합격·불합격으로 옮기는 흐름과 그 단계에서 되돌리는 흐름은 **미정**입니다.

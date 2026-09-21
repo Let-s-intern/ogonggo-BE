@@ -1,8 +1,10 @@
 package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.ErrorResponse
@@ -30,7 +32,7 @@ interface UserJobBookmarkApi {
         operationId = "listMyJobBookmarks",
         summary = "채용공고 북마크 목록 조회",
         description = """
-            북마크한 공고 중 게시 중인 공고만 최근 북마크 순으로 반환합니다.
+            북마크한 공고 중 게시 중인 공고만 반환합니다.
 
             채용공고 목록과 같은 필터를 사용할 수 있습니다.
             employmentType, experienceType, jobField(직군), jobRole(직무)로 목록을 좁히며 각각 하나씩 고를 수 있고,
@@ -42,6 +44,12 @@ interface UserJobBookmarkApi {
             applicationStatus는 지원·신청 관리 단계로 SCRAPPED(스크랩), PREPARING(지원 준비 중), APPLIED(지원 완료),
             INTERVIEWING(면접), PASSED(합격), FAILED(불합격) 중 하나입니다.
             보내면 그 단계의 북마크만 반환하고, 보내지 않으면 모든 단계를 반환합니다.
+
+            recruitmentStatus는 RECRUITING(모집 중), CLOSED(모집 마감) 중 하나입니다.
+            마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING이며 상시 채용은 마감 처리 전까지 RECRUITING입니다.
+
+            sort로 정렬을 고릅니다. 지금은 RECENTLY_SAVED(최근 저장순)만 있으며 보내지 않으면 RECENTLY_SAVED입니다.
+            북마크를 등록·재등록하거나 지원 단계를 옮긴 시각이 최근인 순서입니다.
         """,
     )
     fun getBookmarks(
@@ -52,6 +60,7 @@ interface UserJobBookmarkApi {
         @Min(1)
         @Max(100)
         size: Int,
+        sortType: BookmarkSortType,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
         @Size(max = 100)
@@ -61,6 +70,7 @@ interface UserJobBookmarkApi {
         @Size(min = 2, max = 100)
         keyword: String?,
         applicationStatus: ApplicationStatus?,
+        recruitmentStatus: JobRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(operationId = "createJobBookmark", summary = "채용공고 북마크 등록")

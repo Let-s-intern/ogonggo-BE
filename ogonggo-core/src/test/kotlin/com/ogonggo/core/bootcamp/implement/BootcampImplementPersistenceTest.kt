@@ -1,6 +1,7 @@
 package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
@@ -580,13 +581,13 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampBookmarkManager.changeApplicationStatus(USER_ID, first, ApplicationStatus.PREPARING, NOW.plusMinutes(4))
 
         // then
-        val preparing = bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW, ApplicationStatus.PREPARING)
+        val preparing = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
         assertEquals(listOf(first, second), preparing.bootcamps.map { it.id })
         assertEquals(2L, preparing.totalElements)
-        val scrappedPage = bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW, ApplicationStatus.SCRAPPED)
+        val scrappedPage = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.SCRAPPED))
         assertEquals(listOf(scrapped), scrappedPage.bootcamps.map { it.id })
         assertEquals(1L, scrappedPage.totalElements)
-        assertEquals(3L, bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW, null).totalElements)
+        assertEquals(3L, readBookmarks(BookmarkListCondition.NONE).totalElements)
     }
 
     @Test
@@ -668,6 +669,16 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         }
         assertEquals(emptySet<Long>(), bootcampBookmarkReader.readBookmarkedBootcampIds(USER_ID, emptyList()))
     }
+
+    private fun readBookmarks(bookmarkCondition: BookmarkListCondition): BootcampPageDto =
+        bootcampBookmarkReader.readBookmarkedPublicPage(
+            userId = USER_ID,
+            condition = BootcampSearchCondition.NONE,
+            page = 0,
+            size = 10,
+            now = NOW,
+            bookmarkCondition = bookmarkCondition,
+        )
 
     private fun startedRecruitmentBootcampId(command: BootcampAppendDto = createCommand()): Long {
         val bootcampId = checkNotNull(bootcampAppender.append(command).id)

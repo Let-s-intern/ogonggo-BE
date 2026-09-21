@@ -1,6 +1,7 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -9,6 +10,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -276,13 +278,40 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.changeApplicationStatus(USER_ID, first, ApplicationStatus.PREPARING, NOW.plusMinutes(4))
 
         // then
-        val preparing = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, ApplicationStatus.PREPARING)
+        val preparing = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
         assertEquals(listOf(first, second), preparing.jobs.map { it.id })
         assertEquals(2L, preparing.totalElements)
-        val scrappedPage = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, ApplicationStatus.SCRAPPED)
+        val scrappedPage = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.SCRAPPED))
         assertEquals(listOf(scrapped), scrappedPage.jobs.map { it.id })
         assertEquals(1L, scrappedPage.totalElements)
-        assertEquals(3L, jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, null).totalElements)
+        assertEquals(3L, readBookmarks(BookmarkListCondition.NONE).totalElements)
+    }
+
+    @Test
+    fun `북마크 목록은 모집 상태로 좁히며 마감 처리했거나 종료 일시가 지난 공고를 마감으로 본다`() {
+        // given
+        val recruiting = publishCommand(
+            createCommand(recruitmentStartAt = NOW.minusDays(10), recruitmentEndAt = NOW.plusDays(1)),
+        )
+        val always = publishCommand(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        val expired = publishCommand(
+            createCommand(recruitmentStartAt = NOW.minusDays(10), recruitmentEndAt = NOW.minusDays(1)),
+        )
+        val closedJob = jobAppender.append(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        jobManager.publish(closedJob)
+        jobManager.close(closedJob, NOW.minusHours(1))
+        val closed = checkNotNull(closedJob.id)
+        listOf(recruiting, always, expired, closed).forEach { jobBookmarkManager.append(USER_ID, it, NOW) }
+
+        // when
+        val recruitingPage = readBookmarks(recruitmentStatus = JobRecruitmentStatus.RECRUITING)
+        val closedPage = readBookmarks(recruitmentStatus = JobRecruitmentStatus.CLOSED)
+
+        // then
+        assertEquals(setOf(recruiting, always), recruitingPage.jobs.map { it.id }.toSet())
+        assertEquals(2L, recruitingPage.totalElements)
+        assertEquals(setOf(expired, closed), closedPage.jobs.map { it.id }.toSet())
+        assertEquals(2L, closedPage.totalElements)
     }
 
     @Test
@@ -570,7 +599,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.append(USER_ID, checkNotNull(published.id), NOW)
         jobBookmarkManager.append(USER_ID, checkNotNull(draft.id), NOW)
 
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10)
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10, now = NOW)
 
         assertEquals(listOf(published.id), result.jobs.map { it.id })
         assertEquals(1L, result.totalElements)
@@ -618,6 +647,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             ),
             page = 0,
             size = 10,
+            now = NOW,
         )
 
         // then
@@ -834,6 +864,19 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobManager.publish(job)
         return checkNotNull(job.id)
     }
+
+    private fun readBookmarks(
+        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
+        recruitmentStatus: JobRecruitmentStatus? = null,
+    ): JobPageDto = jobBookmarkReader.readBookmarkedPublishedPage(
+        userId = USER_ID,
+        condition = JobSearchCondition.NONE,
+        page = 0,
+        size = 10,
+        bookmarkCondition = bookmarkCondition,
+        recruitmentStatus = recruitmentStatus,
+        now = NOW,
+    )
 
     private fun publishCommand(command: JobAppendDto): Long {
         val job = jobAppender.append(command)

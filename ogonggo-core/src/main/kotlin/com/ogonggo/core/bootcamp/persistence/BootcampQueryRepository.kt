@@ -1,6 +1,7 @@
 package com.ogonggo.core.bootcamp.persistence
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
@@ -12,6 +13,7 @@ import com.ogonggo.core.bootcamp.domain.QBootcampBookmark.bootcampBookmark
 import com.ogonggo.core.bootcamp.domain.QBootcampMetric.bootcampMetric
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.review.domain.ContentSource
+import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
@@ -42,13 +44,13 @@ internal class BootcampQueryRepository(
     ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable)
 
     /**
-     * 북마크한 부트캠프 중 지금 공개된 것만 최근 북마크 순으로 읽는다. 선택 필터는 공개 목록과 같다.
+     * 북마크한 부트캠프 중 지금 공개된 것만 읽는다. 선택 필터는 공개 목록과 같고, 지원 단계로 더 좁힐 수 있다.
      * 부트캠프와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
      */
     fun findBookmarkedPublicPage(
         userId: Long,
         condition: BootcampSearchCondition,
-        applicationStatus: ApplicationStatus?,
+        bookmarkCondition: BookmarkListCondition,
         publicStatuses: Collection<BootcampStatus>,
         now: LocalDateTime,
         pageable: Pageable,
@@ -56,14 +58,14 @@ internal class BootcampQueryRepository(
         val predicates = arrayOf(
             bootcampBookmark.userId.eq(userId),
             bootcampBookmark.deletedAt.isNull,
-            applicationStatus?.let { bootcampBookmark.applicationStatus.eq(it) },
+            bookmarkCondition.applicationStatus?.let { bootcampBookmark.applicationStatus.eq(it) },
             *publicPredicates(condition, publicStatuses, now),
         )
         val content = queryFactory.select(bootcamp)
             .from(bootcamp)
             .join(bootcampBookmark).on(bootcampBookmark.bootcampId.eq(bootcamp.id))
             .where(*predicates)
-            .orderBy(bootcampBookmark.updatedAt.desc(), bootcampBookmark.id.desc())
+            .orderBy(*bookmarkOrders(bookmarkCondition.sortType))
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
             .fetch()
@@ -75,6 +77,10 @@ internal class BootcampQueryRepository(
             .fetchOne() ?: 0L
 
         return PageImpl(content, pageable, total)
+    }
+
+    private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {
+        BookmarkSortType.RECENTLY_SAVED -> arrayOf(bootcampBookmark.updatedAt.desc(), bootcampBookmark.id.desc())
     }
 
     /** 관리 목록은 공개 조건을 고정하지 않는다. 관리자만 쓰는 목록이라 필터용 인덱스를 따로 두지 않는다. */

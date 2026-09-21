@@ -288,7 +288,7 @@ class UserOpenApiContractTest @Autowired constructor(
         val jobBookmarks = document.at("/paths/~1api~1v1~1job-bookmarks/get")
         assertTrue(jobBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(jobBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
-        listOf("employmentType", "experienceType", "jobField", "jobRole", "keyword", "applicationStatus")
+        listOf("employmentType", "experienceType", "jobField", "jobRole", "keyword", "applicationStatus", "recruitmentStatus", "sort")
             .forEach { name -> assertTrue(jobBookmarks.parameter(name).isObject) }
         val addBookmark = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/post")
         assertTrue(addBookmark.at("/responses/201/content/application~1json/schema").isObject)
@@ -303,6 +303,8 @@ class UserOpenApiContractTest @Autowired constructor(
 
         val bootcampBookmarks = document.at("/paths/~1api~1v1~1bootcamp-bookmarks/get")
         assertTrue(bootcampBookmarks.at("/security/0/BearerAuth").isArray)
+        listOf("status", "keyword", "applicationStatus", "sort")
+            .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }
         assertPageParameter(bootcampBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
         listOf("tuitionType", "status", "keyword")
             .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }

@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
@@ -130,7 +131,7 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
     fun `지원 단계를 고르면 그 단계만 조회하도록 전달된다`() {
         // given
         Mockito.`when`(
-            userBootcampBookmarkService.getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10, ApplicationStatus.PREPARING),
+            userBootcampBookmarkService.getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10, BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING)),
         ).thenReturn(bookmarkPage())
 
         // when
@@ -139,7 +140,7 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
         ).andExpect(status().isOk)
 
         // then
-        Mockito.verify(userBootcampBookmarkService).getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10, ApplicationStatus.PREPARING)
+        Mockito.verify(userBootcampBookmarkService).getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10, BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
     }
 
     @Test

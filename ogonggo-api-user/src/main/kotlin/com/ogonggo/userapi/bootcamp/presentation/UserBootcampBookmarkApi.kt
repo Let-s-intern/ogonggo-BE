@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
@@ -30,7 +31,7 @@ interface UserBootcampBookmarkApi {
         operationId = "listMyBootcampBookmarks",
         summary = "부트캠프 북마크 목록 조회",
         description = """
-            북마크한 부트캠프 중 지금 공개된 부트캠프만 최근 북마크 순으로 반환합니다.
+            북마크한 부트캠프 중 지금 공개된 부트캠프만 반환합니다.
 
             부트캠프 목록과 같은 필터를 사용할 수 있습니다.
             tuitionType과 status로 목록을 좁히며 각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않습니다.
@@ -42,6 +43,9 @@ interface UserBootcampBookmarkApi {
             applicationStatus는 지원·신청 관리 단계로 SCRAPPED(스크랩), PREPARING(지원 준비 중), APPLIED(지원 완료),
             INTERVIEWING(면접), PASSED(합격), FAILED(불합격) 중 하나입니다.
             보내면 그 단계의 북마크만 반환하고, 보내지 않으면 모든 단계를 반환합니다.
+
+            sort로 정렬을 고릅니다. 지금은 RECENTLY_SAVED(최근 저장순)만 있으며 보내지 않으면 RECENTLY_SAVED입니다.
+            북마크를 등록·재등록하거나 지원 단계를 옮긴 시각이 최근인 순서입니다.
         """,
     )
     @ApiResponses(
@@ -62,6 +66,7 @@ interface UserBootcampBookmarkApi {
         @Min(1)
         @Max(100)
         size: Int,
+        sortType: BookmarkSortType,
         tuitionType: TuitionType?,
         status: BootcampStatus?,
         @Size(min = 2, max = 100)

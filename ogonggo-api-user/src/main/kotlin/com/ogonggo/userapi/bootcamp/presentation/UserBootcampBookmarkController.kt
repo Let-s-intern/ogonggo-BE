@@ -1,6 +1,8 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.TuitionType
@@ -31,6 +33,7 @@ class UserBootcampBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
         @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
         @RequestParam(name = "status", required = false) status: BootcampStatus?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
@@ -46,7 +49,7 @@ class UserBootcampBookmarkController(
             ),
             page = page - 1,
             size = size,
-            applicationStatus = applicationStatus,
+            bookmarkCondition = BookmarkListCondition(applicationStatus = applicationStatus, sortType = sortType),
         )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(

@@ -1,6 +1,7 @@
 package com.ogonggo.core.job.persistence
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
@@ -13,6 +14,7 @@ import com.ogonggo.core.job.domain.QJob.job
 import com.ogonggo.core.job.domain.QJobBookmark.jobBookmark
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.review.domain.ContentSource
+import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
@@ -41,26 +43,29 @@ internal class JobQueryRepository(
     ): Page<Job> = findPage(publishedPredicates(condition), sortType, pageable)
 
     /**
-     * 북마크한 공고 중 게시된 것만 최근 북마크 순으로 읽는다. 선택 필터는 공개 목록과 같다.
+     * 북마크한 공고 중 게시된 것만 읽는다. 선택 필터는 공개 목록과 같고, 지원 단계와 모집 상태로 더 좁힐 수 있다.
      * 공고와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
      */
     fun findBookmarkedPublishedPage(
         userId: Long,
         condition: JobSearchCondition,
-        applicationStatus: ApplicationStatus?,
+        bookmarkCondition: BookmarkListCondition,
+        recruitmentStatus: JobRecruitmentStatus?,
+        now: LocalDateTime,
         pageable: Pageable,
     ): Page<Job> {
         val predicates = arrayOf(
             jobBookmark.userId.eq(userId),
             jobBookmark.deletedAt.isNull,
-            applicationStatus?.let { jobBookmark.applicationStatus.eq(it) },
+            bookmarkCondition.applicationStatus?.let { jobBookmark.applicationStatus.eq(it) },
+            recruitmentStatusEq(recruitmentStatus, now),
             *publishedPredicates(condition),
         )
         val content = queryFactory.select(job)
             .from(job)
             .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
             .where(*predicates)
-            .orderBy(jobBookmark.updatedAt.desc(), jobBookmark.id.desc())
+            .orderBy(*bookmarkOrders(bookmarkCondition.sortType))
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
             .fetch()
@@ -72,6 +77,10 @@ internal class JobQueryRepository(
             .fetchOne() ?: 0L
 
         return PageImpl(content, pageable, total)
+    }
+
+    private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {
+        BookmarkSortType.RECENTLY_SAVED -> arrayOf(jobBookmark.updatedAt.desc(), jobBookmark.id.desc())
     }
 
     /**

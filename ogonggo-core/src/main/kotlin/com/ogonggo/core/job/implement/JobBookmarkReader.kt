@@ -1,12 +1,14 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 @Component
 class JobBookmarkReader internal constructor(
@@ -15,21 +17,25 @@ class JobBookmarkReader internal constructor(
 ) {
 
     /**
-     * 정렬은 조회 쿼리가 최근 북마크 순으로 정하므로 Pageable에는 페이지 범위만 넘긴다.
-     * 지원·신청 관리 단계를 주면 그 단계의 북마크만 읽고, 주지 않으면 모든 단계를 읽는다.
+     * 정렬은 조회 쿼리가 북마크 정렬 기준으로 정하므로 Pageable에는 페이지 범위만 넘긴다.
+     * 모집 상태는 저장하지 않고 마감 처리 일시와 모집 종료 일시로 계산하므로 기준 시각이 필요하다.
      */
     fun readBookmarkedPublishedPage(
         userId: Long,
         condition: JobSearchCondition,
         page: Int,
         size: Int,
-        applicationStatus: ApplicationStatus? = null,
+        now: LocalDateTime,
+        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
+        recruitmentStatus: JobRecruitmentStatus? = null,
     ): JobPageDto {
         validateBookmarkPageRequest(page, size)
         val result = jobQueryRepository.findBookmarkedPublishedPage(
             userId = userId,
             condition = condition,
-            applicationStatus = applicationStatus,
+            bookmarkCondition = bookmarkCondition,
+            recruitmentStatus = recruitmentStatus,
+            now = now,
             pageable = PageRequest.of(page, size),
         )
         return JobPageDto(

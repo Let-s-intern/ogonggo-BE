@@ -1,11 +1,14 @@
 package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.error.JobErrorCode
@@ -130,7 +133,7 @@ class UserJobBookmarkControllerTest @Autowired constructor(
     fun `지원 단계를 고르면 그 단계만 조회하도록 전달된다`() {
         // given
         Mockito.`when`(
-            userJobBookmarkService.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, ApplicationStatus.PREPARING),
+            userJobBookmarkService.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING)),
         ).thenReturn(bookmarkPage())
 
         // when
@@ -139,7 +142,46 @@ class UserJobBookmarkControllerTest @Autowired constructor(
         ).andExpect(status().isOk)
 
         // then
-        Mockito.verify(userJobBookmarkService).getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, ApplicationStatus.PREPARING)
+        Mockito.verify(userJobBookmarkService).getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
+    }
+
+    @Test
+    fun `모집 상태와 정렬은 조회 조건으로 전달되고 정렬 기본값은 최근 저장순이다`() {
+        // given
+        Mockito.`when`(
+            userJobBookmarkService.getBookmarks(
+                USER_ID,
+                JobSearchCondition.NONE,
+                0,
+                10,
+                BookmarkListCondition(sortType = BookmarkSortType.RECENTLY_SAVED),
+                JobRecruitmentStatus.CLOSED,
+            ),
+        ).thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/job-bookmarks").param("recruitmentStatus", "CLOSED").with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(userJobBookmarkService).getBookmarks(
+            USER_ID,
+            JobSearchCondition.NONE,
+            0,
+            10,
+            BookmarkListCondition(sortType = BookmarkSortType.RECENTLY_SAVED),
+            JobRecruitmentStatus.CLOSED,
+        )
+    }
+
+    @Test
+    fun `없는 정렬 기준이면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/job-bookmarks").param("sort", "DEADLINE").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(userJobBookmarkService)
     }
 
     @Test
