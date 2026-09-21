@@ -36,4 +36,12 @@ internal class CompanyProfile(
     @Column(name = "manager_name", nullable = false, length = 100)
     var managerName: String = managerName
         protected set
+
+    fun replace(organizationName: String, managerName: String) {
+        require(organizationName.isNotBlank()) { "기관명은 비어 있을 수 없습니다." }
+        require(managerName.isNotBlank()) { "담당자 이름은 비어 있을 수 없습니다." }
+
+        this.organizationName = organizationName
+        this.managerName = managerName
+    }
 }

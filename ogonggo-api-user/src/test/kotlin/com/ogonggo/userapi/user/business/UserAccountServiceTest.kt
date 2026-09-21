@@ -1,9 +1,13 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.dto.CompanyProfileDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
 import com.ogonggo.core.user.implement.CompanyProfileReader
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
@@ -13,6 +17,7 @@ import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
@@ -26,12 +31,14 @@ class UserAccountServiceTest {
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val companyProfileReader = Mockito.mock(CompanyProfileReader::class.java)
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
+    private val companyProfileManager = Mockito.mock(CompanyProfileManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = UserAccountService(
         userReader,
         userProfileReader,
         companyProfileReader,
         userProfileManager,
+        companyProfileManager,
         clock,
     )
 
@@ -129,7 +136,53 @@ class UserAccountServiceTest {
         Mockito.verify(userProfileManager).replaceJobInfo(USER_ID, command, NOW)
     }
 
+    @Test
+    fun `기업 회원은 기업 정보를 교체한다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        // when
+        service.replaceMyCompanyProfile(USER_ID, COMPANY_PROFILE_COMMAND)
+
+        // then
+        Mockito.verify(companyProfileManager).replace(USER_ID, COMPANY_PROFILE_COMMAND)
+    }
+
+    @Test
+    fun `일반 회원이 기업 정보를 고치면 COMPANY_ROLE_REQUIRED로 막고 저장하지 않는다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+
+        // when
+        val exception = assertThrows(ForbiddenException::class.java) {
+            service.replaceMyCompanyProfile(USER_ID, COMPANY_PROFILE_COMMAND)
+        }
+
+        // then
+        assertEquals(UserErrorCode.COMPANY_ROLE_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(companyProfileManager)
+    }
+
+    @Test
+    fun `정지된 기업 회원은 기업 정보를 고칠 수 없다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com", status = UserStatus.SUSPENDED)
+
+        // when
+        val exception = assertThrows(ForbiddenException::class.java) {
+            service.replaceMyCompanyProfile(USER_ID, COMPANY_PROFILE_COMMAND)
+        }
+
+        // then
+        assertEquals(UserErrorCode.USER_SUSPENDED, exception.errorCode)
+        Mockito.verifyNoInteractions(companyProfileManager)
+    }
+
     companion object {
+        private val COMPANY_PROFILE_COMMAND = CompanyProfileUpdateDto(
+            organizationName = "오공고",
+            managerName = "이담당",
+        )
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)

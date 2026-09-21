@@ -1,6 +1,12 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.CompanyProfileReader
+import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.UserProfileReader
@@ -16,6 +22,7 @@ class UserAccountService(
     private val userProfileReader: UserProfileReader,
     private val companyProfileReader: CompanyProfileReader,
     private val userProfileManager: UserProfileManager,
+    private val companyProfileManager: CompanyProfileManager,
     private val clock: Clock,
 ) {
 
@@ -40,5 +47,27 @@ class UserAccountService(
     @Transactional
     fun replaceMyProfile(userId: Long, command: UserProfileJobInfoDto) {
         userProfileManager.replaceJobInfo(userId, command, LocalDateTime.now(clock))
+    }
+
+    /**
+     * 기관명과 담당자 이름을 함께 교체한다.
+     * 다른 기업 회원 기능과 같이 정지·탈퇴한 계정과 일반 회원은 막는다.
+     */
+    @Transactional
+    fun replaceMyCompanyProfile(userId: Long, command: CompanyProfileUpdateDto) {
+        verifyCompany(userId)
+        companyProfileManager.replace(userId, command)
+    }
+
+    private fun verifyCompany(userId: Long) {
+        val account = userReader.read(userId)
+        when (account.status) {
+            UserStatus.ACTIVE -> Unit
+            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
+            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
+        }
+        if (account.role != UserRole.COMPANY) {
+            throw ForbiddenException(UserErrorCode.COMPANY_ROLE_REQUIRED)
+        }
     }
 }
