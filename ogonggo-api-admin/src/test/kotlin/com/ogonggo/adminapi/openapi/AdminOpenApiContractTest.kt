@@ -82,12 +82,25 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1internal~1jobs/get",
             "/paths/~1api~1v1~1internal~1jobs~1{jobId}/put",
             "/paths/~1api~1v1~1internal~1jobs~1{jobId}/delete",
+            "/paths/~1api~1v1~1internal~1bootcamps/post",
+            "/paths/~1api~1v1~1internal~1bootcamps/get",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/put",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete",
         ).forEach { pointer ->
             assertTrue(
                 document.at("$pointer/security/0/$ADMIN_INTERNAL_API_KEY_SCHEME").isArray,
                 "내부 API 키 인증 명세가 없습니다: $pointer",
             )
         }
+    }
+
+    @Test
+    fun `크롤러 부트캠프 등록은 중복 원문을 409 BOOTCAMP_ALREADY_EXISTS로 명시한다`() {
+        val document = openApiDocument()
+
+        val conflict = document.at("/paths/~1api~1v1~1internal~1bootcamps/post/responses/409/description").asText()
+        assertTrue(conflict.startsWith("BOOTCAMP_ALREADY_EXISTS"), "409 명세가 없습니다: $conflict")
+        assertTrue(document.at("/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete/responses/404").isObject)
     }
 
     private fun openApiDocument() = objectMapper.readTree(

@@ -393,6 +393,38 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         assertThrows(EntityNotFoundException::class.java) { bootcampReader.readForUpdate(bootcampId) }
     }
 
+    @Test
+    fun `크롤러는 원문 URL이 있는 수집 부트캠프만 찾고 기업회원이나 원문 없는 부트캠프는 찾지 못한다`() {
+        val crawled = checkNotNull(bootcampAppender.append(createCommand(sourceUrl = CRAWLED_URL)).id)
+        val company = checkNotNull(
+            bootcampAppender.append(
+                createCommand(
+                    ownerUserId = USER_ID,
+                    sourceUrl = COMPANY_URL,
+                    publicationStatus = BootcampPublicationStatus.DRAFT,
+                ),
+            ).id,
+        )
+        val withoutSource = checkNotNull(bootcampAppender.append(createCommand()).id)
+
+        assertEquals(true, bootcampReader.existsBySourceUrl(CRAWLED_URL))
+        assertEquals(crawled, bootcampReader.readCrawledForUpdate(crawled).id)
+        assertEquals(crawled, bootcampReader.readCrawledBySourceUrl(CRAWLED_URL).id)
+        listOf(company, withoutSource).forEach { bootcampId ->
+            assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledForUpdate(bootcampId) }
+            assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledForDelete(bootcampId) }
+        }
+        assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledBySourceUrl(COMPANY_URL) }
+
+        bootcampManager.delete(bootcampReader.readCrawledForDelete(crawled), NOW)
+        bootcampManager.delete(bootcampReader.readCrawledForDelete(crawled), NOW.plusDays(1))
+
+        assertEquals(false, bootcampReader.existsBySourceUrl(CRAWLED_URL))
+        assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledForUpdate(crawled) }
+        assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledBySourceUrl(CRAWLED_URL) }
+        assertEquals(NOW, bootcampReader.readIncludingDeleted(crawled).deletedAt)
+    }
+
     private fun createCommand(
         publicationStartAt: LocalDateTime? = null,
         publicationEndAt: LocalDateTime? = null,
@@ -403,7 +435,11 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         tuitionType: TuitionType = TuitionType.FREE,
         publicationStatus: BootcampPublicationStatus =
             BootcampPublicationStatus.PUBLISHED,
+        ownerUserId: Long? = null,
+        sourceUrl: String? = null,
     ): BootcampAppendDto = BootcampAppendDto(
+        ownerUserId = ownerUserId,
+        sourceUrl = sourceUrl,
         companyName = companyName,
         title = title,
         programType = "개발",
@@ -713,5 +749,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         private const val USER_ID = 17L
         private const val OTHER_USER_ID = 23L
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private const val CRAWLED_URL = "https://example.com/bootcamps/crawled"
+        private const val COMPANY_URL = "https://example.com/bootcamps/company"
     }
 }
