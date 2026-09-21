@@ -15,7 +15,6 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobTagAppender
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
-import com.ogonggo.core.review.domain.ReviewStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -49,8 +48,6 @@ class CrawlerJobServiceTest {
         null
     })
 
-    /** 수정이 값을 바꿨는지는 core가 판단하므로 여기서는 결과를 정해 두고 뒤따르는 호출만 본다. */
-    private var updateChanges = true
     private var updatedCommand: JobUpdateDto? = null
     private val managerCalls = mutableListOf<String>()
     private val jobManager = Mockito.mock(JobManager::class.java, Answer { invocation ->
@@ -58,7 +55,7 @@ class CrawlerJobServiceTest {
         when (invocation.method.name) {
             "update" -> {
                 updatedCommand = invocation.arguments[1] as JobUpdateDto
-                updateChanges
+                null
             }
             else -> null
         }
@@ -68,15 +65,14 @@ class CrawlerJobServiceTest {
     private val service = CrawlerJobService(jobReader, jobAppender, jobManager, jobTagAppender, clock)
 
     @Test
-    fun `수집한 공고를 초안 검수 대기로 저장하고 보낸 값을 그대로 옮긴다`() {
+    fun `수집한 공고를 검수 없이 게시 상태로 저장하고 보낸 값을 그대로 옮긴다`() {
         Mockito.`when`(jobReader.existsBySourceUrl(SOURCE_URL)).thenReturn(false)
 
         val jobId = service.register(CrawlerJobRegistrationCommand(job = command(), tags = listOf("백엔드", "스프링")))
 
         assertEquals(JOB_ID, jobId)
         val appended = checkNotNull(appendedCommand)
-        assertEquals(JobPublicationStatus.DRAFT, appended.publicationStatus)
-        assertEquals(true, appended.requiresReview)
+        assertEquals(JobPublicationStatus.PUBLISHED, appended.publicationStatus)
         assertEquals("오공고", appended.companyName)
         assertEquals("렛츠커리어", appended.parentCompanyName)
         assertEquals("IT·개발", appended.jobField)
@@ -112,46 +108,18 @@ class CrawlerJobServiceTest {
     }
 
     @Test
-    fun `승인된 공고의 값이 바뀌면 다시 검수 대기로 돌린다`() {
-        stubCrawledJob(ReviewStatus.APPROVED)
+    fun `교체는 값만 바꾸고 검수나 게시 상태는 건드리지 않는다`() {
+        stubCrawledJob()
 
         service.replace(JOB_ID, command(title = "바뀐 제목"))
 
         assertEquals("바뀐 제목", updatedCommand?.title)
-        assertEquals(listOf("update", "requestReview"), managerCalls)
-    }
-
-    @Test
-    fun `반려된 공고의 값이 바뀌면 다시 검수 대기로 돌린다`() {
-        stubCrawledJob(ReviewStatus.REJECTED)
-
-        service.replace(JOB_ID, command())
-
-        assertEquals(listOf("update", "requestReview"), managerCalls)
-    }
-
-    @Test
-    fun `같은 값을 다시 보내면 검수 상태를 건드리지 않는다`() {
-        stubCrawledJob(ReviewStatus.APPROVED)
-        updateChanges = false
-
-        service.replace(JOB_ID, command())
-
-        assertEquals(listOf("update"), managerCalls)
-    }
-
-    @Test
-    fun `검수 대기 중인 공고는 값이 바뀌어도 그대로 검수 대기다`() {
-        stubCrawledJob(ReviewStatus.PENDING)
-
-        service.replace(JOB_ID, command())
-
         assertEquals(listOf("update"), managerCalls)
     }
 
     @Test
     fun `다른 공고가 쓰는 원문 URL로 바꾸려 하면 충돌로 알린다`() {
-        stubCrawledJob(ReviewStatus.PENDING)
+        stubCrawledJob()
         val otherUrl = "https://example.com/jobs/2"
         Mockito.`when`(jobReader.existsBySourceUrl(otherUrl)).thenReturn(true)
 
@@ -178,10 +146,9 @@ class CrawlerJobServiceTest {
         assertEquals(JOB_ID, service.getJobId(SOURCE_URL))
     }
 
-    private fun stubCrawledJob(reviewStatus: ReviewStatus) {
+    private fun stubCrawledJob() {
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(job.sourceUrl).thenReturn(SOURCE_URL)
-        Mockito.`when`(job.reviewStatus).thenReturn(reviewStatus)
         Mockito.`when`(jobReader.readCrawledForUpdate(JOB_ID)).thenReturn(job)
     }
 
