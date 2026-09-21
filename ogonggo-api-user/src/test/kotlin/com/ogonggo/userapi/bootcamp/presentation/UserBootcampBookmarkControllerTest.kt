@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
@@ -7,6 +9,7 @@ import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampBookmarkService
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPageResult
@@ -122,6 +125,46 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
         mockMvc.perform(post("/api/v1/bootcamp-bookmarks/0").with(authenticatedUser()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+    }
+
+    @Test
+    fun `신청 단계를 고르면 그 단계만 조회하도록 전달된다`() {
+        // given
+        Mockito.`when`(
+            userBootcampBookmarkService.getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10, BootcampBookmarkSearchCondition(applicationStatus = BootcampApplicationStatus.PREPARING)),
+        ).thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/bootcamp-bookmarks").param("applicationStatus", "PREPARING").with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(userBootcampBookmarkService).getBookmarks(USER_ID, BootcampSearchCondition.NONE, 0, 10, BootcampBookmarkSearchCondition(applicationStatus = BootcampApplicationStatus.PREPARING))
+    }
+
+    @Test
+    fun `북마크를 신청 전으로 옮기고 스크랩으로 되돌린다`() {
+        mockMvc.perform(post("/api/v1/bootcamp-bookmarks/{id}/prepare", BOOTCAMP_ID).with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        mockMvc.perform(post("/api/v1/bootcamp-bookmarks/{id}/cancel-preparation", BOOTCAMP_ID).with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(userBootcampBookmarkService).prepare(USER_ID, BOOTCAMP_ID)
+        Mockito.verify(userBootcampBookmarkService).cancelPreparation(USER_ID, BOOTCAMP_ID)
+    }
+
+    @Test
+    fun `북마크하지 않은 대상의 단계를 옮기면 404로 응답한다`() {
+        Mockito.doThrow(EntityNotFoundException(BootcampErrorCode.BOOTCAMP_BOOKMARK_NOT_FOUND))
+            .`when`(userBootcampBookmarkService).prepare(USER_ID, BOOTCAMP_ID)
+
+        mockMvc.perform(post("/api/v1/bootcamp-bookmarks/{id}/prepare", BOOTCAMP_ID).with(authenticatedUser()))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("BOOTCAMP_BOOKMARK_NOT_FOUND"))
     }
 
     private fun bookmarkPage(): UserBootcampPageResult = UserBootcampPageResult(

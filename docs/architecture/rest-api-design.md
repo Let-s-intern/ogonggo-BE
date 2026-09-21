@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-14
+- 최종 변경일: 2026-09-21
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -121,6 +121,44 @@ DELETE /api/v1/bootcamp-bookmarks/{bootcampId}
 ```
 
 채용공고 북마크와 같은 규칙을 따릅니다. 등록은 지금 공개된 부트캠프만 허용하고, 중복 등록은 409 `BOOTCAMP_BOOKMARK_ALREADY_EXISTS`로 응답합니다.
+
+### 지원·신청 관리 단계
+
+```text
+GET  /api/v1/job-bookmarks?applicationStatus={단계}&recruitmentStatus={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
+POST /api/v1/job-bookmarks/{jobId}/prepare
+POST /api/v1/job-bookmarks/{jobId}/cancel-preparation
+
+GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&status={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
+POST /api/v1/bootcamp-bookmarks/{bootcampId}/prepare
+POST /api/v1/bootcamp-bookmarks/{bootcampId}/cancel-preparation
+
+GET  /api/v1/recruitment-post-bookmarks?recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}&sort=RECENTLY_SAVED
+GET  /api/v1/me/recruitment-applications?applicationStatus={단계}&recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}
+POST /api/v1/recruitment-post-bookmarks/{postId}/prepare
+POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
+```
+
+- 결정일: 2026-09-21 / 리뷰 상태: 팀 리뷰 필요
+- 마이페이지 지원·신청 관리 화면은 탭마다 단계가 다릅니다.
+
+| 탭 | 단계 | 저장 위치 |
+| --- | --- | --- |
+| 채용공고 | 스크랩(`SCRAPPED`), 지원 준비 중(`PREPARING`), 지원 완료(`APPLIED`), 면접(`INTERVIEWING`), 합격(`PASSED`), 불합격(`FAILED`) | 북마크 행의 `application_status` |
+| 교육·부트캠프 | 스크랩(`SCRAPPED`), 신청 전(`PREPARING`), 신청 완료(`APPLIED`), 활동 중(`IN_PROGRESS`), 활동 완료(`COMPLETED`) | 북마크 행의 `application_status` |
+| 사이드·스터디 | 스크랩, 지원 준비 중(`PREPARING`), 지원 완료(`COMPLETED`), 활동 중(`IN_PROGRESS`), 활동 완료(`ENDED`) | 스크랩은 북마크, 나머지는 지원 이력 |
+
+- 채용공고·부트캠프는 단계를 북마크 행이 가지며, 등록하거나 해제 후 다시 등록하면 스크랩에서 시작합니다. 각 단계 목록은 북마크 목록에 `applicationStatus`를 주어 조회하고, 단계별 건수는 그 응답의 전체 건수를 씁니다. 한 단계만 모아 보는 필터도 같은 `applicationStatus`를 씁니다.
+- 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/me/recruitment-applications/{postId}`를 씁니다.
+- 마감 상태는 채용공고 `recruitmentStatus`, 부트캠프 `status`, 사이드·스터디 `recruitmentStatus`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
+- 북마크 목록 정렬은 `sort`로 고르며 지금은 최근 저장순(`RECENTLY_SAVED`)만 있고 기본값입니다. 등록·재등록하거나 단계를 옮긴 시각이 최근인 순서입니다. 다른 정렬은 필요할 때 값을 추가합니다.
+- 지금은 스크랩과 지원 준비 중(부트캠프는 신청 전) 사이만 옮길 수 있어 4절 원칙대로 이동마다 명령 경로를 둡니다. 이미 목표 칸에 있으면 아무것도 바꾸지 않고 200으로 응답합니다.
+  - 활성 북마크가 없으면 404 `JOB_BOOKMARK_NOT_FOUND`·`BOOTCAMP_BOOKMARK_NOT_FOUND`·`RECRUITMENT_POST_BOOKMARK_NOT_FOUND`입니다.
+  - 허용되지 않는 이동은 409 `INVALID_JOB_APPLICATION_STATUS_TRANSITION`·`INVALID_BOOTCAMP_APPLICATION_STATUS_TRANSITION`·`INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION`입니다.
+- 사이드·스터디의 스크랩 → 지원 준비 중은 북마크를 해제하고 지원 준비 중 지원 이력을 만듭니다. 되돌리기는 지원 이력을 지우고 북마크가 없으면 다시 북마크합니다. 연락처를 열지 않고 만든 지원 이력은 옮긴 시각을 최초 접근 시각으로 기록합니다.
+- 채용공고·부트캠프에서 이동한 북마크는 수정 일시가 갱신되어 해당 단계 목록의 맨 앞에 옵니다.
+- 채용공고·부트캠프의 지원(신청) 완료 이후 단계로 옮기는 흐름과 그 단계에서 되돌리는 흐름은 **미정**입니다.
+- 사이드·스터디에서 북마크한 모집글의 연락처를 열면 스크랩 칸과 지원 준비 중 칸에 함께 보입니다. 이때 한쪽을 정리할지는 **확인 필요**입니다.
 
 ### 크롤러 채용공고
 

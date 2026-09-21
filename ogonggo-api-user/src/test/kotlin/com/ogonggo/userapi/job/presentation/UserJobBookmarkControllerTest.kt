@@ -1,9 +1,14 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.error.JobErrorCode
@@ -122,6 +127,89 @@ class UserJobBookmarkControllerTest @Autowired constructor(
         mockMvc.perform(post("/api/v1/job-bookmarks/0").with(authenticatedUser()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+    }
+
+    @Test
+    fun `지원 단계를 고르면 그 단계만 조회하도록 전달된다`() {
+        // given
+        Mockito.`when`(
+            userJobBookmarkService.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.PREPARING)),
+        ).thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/job-bookmarks").param("applicationStatus", "PREPARING").with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(userJobBookmarkService).getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.PREPARING))
+    }
+
+    @Test
+    fun `모집 상태와 정렬은 조회 조건으로 전달되고 정렬 기본값은 최근 저장순이다`() {
+        // given
+        Mockito.`when`(
+            userJobBookmarkService.getBookmarks(
+                USER_ID,
+                JobSearchCondition.NONE,
+                0,
+                10,
+                JobBookmarkSearchCondition(
+                    recruitmentStatus = JobRecruitmentStatus.CLOSED,
+                    sortType = BookmarkSortType.RECENTLY_SAVED,
+                ),
+            ),
+        ).thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/job-bookmarks").param("recruitmentStatus", "CLOSED").with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(userJobBookmarkService).getBookmarks(
+            USER_ID,
+            JobSearchCondition.NONE,
+            0,
+            10,
+            JobBookmarkSearchCondition(
+                recruitmentStatus = JobRecruitmentStatus.CLOSED,
+                sortType = BookmarkSortType.RECENTLY_SAVED,
+            ),
+        )
+    }
+
+    @Test
+    fun `없는 정렬 기준이면 400을 반환한다`() {
+        mockMvc.perform(get("/api/v1/job-bookmarks").param("sort", "DEADLINE").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(userJobBookmarkService)
+    }
+
+    @Test
+    fun `북마크를 지원 준비 중으로 옮기고 스크랩으로 되돌린다`() {
+        mockMvc.perform(post("/api/v1/job-bookmarks/{id}/prepare", JOB_ID).with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        mockMvc.perform(post("/api/v1/job-bookmarks/{id}/cancel-preparation", JOB_ID).with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(userJobBookmarkService).prepare(USER_ID, JOB_ID)
+        Mockito.verify(userJobBookmarkService).cancelPreparation(USER_ID, JOB_ID)
+    }
+
+    @Test
+    fun `북마크하지 않은 대상의 단계를 옮기면 404로 응답한다`() {
+        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_BOOKMARK_NOT_FOUND))
+            .`when`(userJobBookmarkService).prepare(USER_ID, JOB_ID)
+
+        mockMvc.perform(post("/api/v1/job-bookmarks/{id}/prepare", JOB_ID).with(authenticatedUser()))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("JOB_BOOKMARK_NOT_FOUND"))
     }
 
     private fun bookmarkPage(): UserJobPageResult = UserJobPageResult(

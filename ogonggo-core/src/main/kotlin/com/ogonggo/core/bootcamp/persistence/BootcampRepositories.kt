@@ -1,6 +1,7 @@
 package com.ogonggo.core.bootcamp.persistence
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
@@ -132,7 +133,7 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
     fun findByBootcampIdAndUserId(bootcampId: Long, userId: Long): BootcampBookmark?
 
     /**
-     * 해제된 북마크를 다시 활성으로 되돌린다.
+     * 해제된 북마크를 다시 활성으로 되돌리고 지원·신청 관리 단계는 스크랩부터 다시 시작한다.
      * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.
      * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
      */
@@ -141,6 +142,7 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         """
         update BootcampBookmark bookmark
         set bookmark.deletedAt = null,
+            bookmark.applicationStatus = com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus.SCRAPPED,
             bookmark.updatedAt = :now
         where bookmark.bootcampId = :bootcampId
           and bookmark.userId = :userId
@@ -152,6 +154,45 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         @Param("userId") userId: Long,
         @Param("now") now: LocalDateTime,
     ): Int
+
+    /**
+     * 활성 북마크의 지원·신청 관리 단계를 옮긴다.
+     * 조회한 단계로 분기하지 않고 출발 단계를 UPDATE 조건에 넣어, 동시에 들어온 다른 이동과 순서가 뒤집히지 않게 한다.
+     * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update BootcampBookmark bookmark
+        set bookmark.applicationStatus = :target,
+            bookmark.updatedAt = :now
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+          and bookmark.applicationStatus in :sources
+        """,
+    )
+    fun changeApplicationStatus(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("userId") userId: Long,
+        @Param("sources") sources: Collection<BootcampApplicationStatus>,
+        @Param("target") target: BootcampApplicationStatus,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Query(
+        """
+        select bookmark.applicationStatus
+        from BootcampBookmark bookmark
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun findActiveApplicationStatus(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("userId") userId: Long,
+    ): BootcampApplicationStatus?
 
     /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

@@ -1,8 +1,11 @@
 package com.ogonggo.userapi.community.presentation
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.community.domain.ProgressMethod
+import com.ogonggo.core.community.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.core.community.error.RecruitmentPostApplicationErrorCode
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -24,6 +27,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -103,6 +107,53 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
         mockMvc.perform(put("/api/v1/recruitment-posts/{postId}/bookmarks/me", POST_ID).with(authenticatedUser()))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("RECRUITMENT_POST_NOT_FOUND"))
+    }
+
+    @Test
+    fun `북마크 목록의 모집 상태와 유형과 검색어는 조회 조건으로 전달된다`() {
+        // given
+        val condition = RecruitmentPostBookmarkSearchCondition(
+            recruitmentStatus = RecruitmentStatus.RECRUITING,
+            recruitmentType = RecruitmentType.STUDY,
+            keyword = "코틀린",
+            sortType = BookmarkSortType.RECENTLY_SAVED,
+        )
+        Mockito.`when`(bookmarkService.getBookmarks(USER_ID, 0, 10, condition)).thenReturn(bookmarkPage())
+
+        // when
+        mockMvc.perform(
+            get("/api/v1/recruitment-post-bookmarks")
+                .param("recruitmentStatus", "RECRUITING")
+                .param("recruitmentType", "STUDY")
+                .param("keyword", " 코틀린 ")
+                .with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        // then
+        Mockito.verify(bookmarkService).getBookmarks(USER_ID, 0, 10, condition)
+    }
+
+    @Test
+    fun `스크랩과 지원 준비 중 사이를 옮긴다`() {
+        mockMvc.perform(post("/api/v1/recruitment-post-bookmarks/{postId}/prepare", POST_ID).with(authenticatedUser()))
+            .andExpect(status().isOk)
+        mockMvc.perform(
+            post("/api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation", POST_ID).with(authenticatedUser()),
+        ).andExpect(status().isOk)
+
+        Mockito.verify(bookmarkService).prepare(USER_ID, POST_ID)
+        Mockito.verify(bookmarkService).cancelPreparation(USER_ID, POST_ID)
+    }
+
+    @Test
+    fun `지원 완료 이후 단계에서 옮기면 409로 응답한다`() {
+        Mockito.doThrow(
+            ConflictException(RecruitmentPostApplicationErrorCode.INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION),
+        ).`when`(bookmarkService).prepare(USER_ID, POST_ID)
+
+        mockMvc.perform(post("/api/v1/recruitment-post-bookmarks/{postId}/prepare", POST_ID).with(authenticatedUser()))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION"))
     }
 
     private fun authenticatedUser() = authentication(

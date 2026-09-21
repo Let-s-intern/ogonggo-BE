@@ -7,7 +7,10 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -203,6 +206,112 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         // 북마크 목록이 수정 일시로 정렬하므로 복구는 벌크 갱신에서도 수정 일시를 남겨야 한다.
         assertEquals(NOW.plusMinutes(3), restored?.updatedAt)
         assertEquals(1L, jobBookmarkRepository.count())
+    }
+
+    @Test
+    fun `지원 단계는 스크랩과 지원 준비 중 사이를 오가고 같은 단계로 다시 옮겨도 결과가 같다`() {
+        // given
+        val jobId = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+
+        // when
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
+
+        // then
+        val prepared = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
+        assertEquals(JobApplicationStatus.PREPARING, prepared?.applicationStatus)
+        // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
+        assertEquals(NOW.plusMinutes(1), prepared?.updatedAt)
+
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
+        assertEquals(JobApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+    }
+
+    @Test
+    fun `북마크가 없거나 해제되었으면 지원 단계를 옮기지 못한다`() {
+        // given
+        val jobId = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+        jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(1))
+
+        // when
+        val deleted = assertThrows(EntityNotFoundException::class.java) {
+            jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        }
+        val otherUser = assertThrows(EntityNotFoundException::class.java) {
+            jobBookmarkManager.changeApplicationStatus(OTHER_USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        }
+
+        // then
+        assertEquals(JobErrorCode.JOB_BOOKMARK_NOT_FOUND, deleted.errorCode)
+        assertEquals(JobErrorCode.JOB_BOOKMARK_NOT_FOUND, otherUser.errorCode)
+    }
+
+    @Test
+    fun `해제 후 다시 등록한 북마크는 스크랩 단계에서 시작한다`() {
+        // given
+        val jobId = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(2))
+
+        // when
+        jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(3))
+
+        // then
+        assertEquals(JobApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+    }
+
+    @Test
+    fun `북마크 목록은 지원 단계로 좁히고 옮긴 북마크를 그 단계의 맨 앞에 둔다`() {
+        // given
+        val first = publishCommand(createCommand())
+        val second = publishCommand(createCommand())
+        val scrapped = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, first, NOW)
+        jobBookmarkManager.append(USER_ID, second, NOW.plusMinutes(1))
+        jobBookmarkManager.append(USER_ID, scrapped, NOW.plusMinutes(2))
+
+        // when
+        jobBookmarkManager.changeApplicationStatus(USER_ID, second, JobApplicationStatus.PREPARING, NOW.plusMinutes(3))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, first, JobApplicationStatus.PREPARING, NOW.plusMinutes(4))
+
+        // then
+        val preparing = readBookmarks(JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.PREPARING))
+        assertEquals(listOf(first, second), preparing.jobs.map { it.id })
+        assertEquals(2L, preparing.totalElements)
+        val scrappedPage = readBookmarks(JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.SCRAPPED))
+        assertEquals(listOf(scrapped), scrappedPage.jobs.map { it.id })
+        assertEquals(1L, scrappedPage.totalElements)
+        assertEquals(3L, readBookmarks(JobBookmarkSearchCondition.NONE).totalElements)
+    }
+
+    @Test
+    fun `북마크 목록은 모집 상태로 좁히며 마감 처리했거나 종료 일시가 지난 공고를 마감으로 본다`() {
+        // given
+        val recruiting = publishCommand(
+            createCommand(recruitmentStartAt = NOW.minusDays(10), recruitmentEndAt = NOW.plusDays(1)),
+        )
+        val always = publishCommand(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        val expired = publishCommand(
+            createCommand(recruitmentStartAt = NOW.minusDays(10), recruitmentEndAt = NOW.minusDays(1)),
+        )
+        val closedJob = jobAppender.append(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        jobManager.publish(closedJob)
+        jobManager.close(closedJob, NOW.minusHours(1))
+        val closed = checkNotNull(closedJob.id)
+        listOf(recruiting, always, expired, closed).forEach { jobBookmarkManager.append(USER_ID, it, NOW) }
+
+        // when
+        val recruitingPage = readBookmarks(JobBookmarkSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING))
+        val closedPage = readBookmarks(JobBookmarkSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED))
+
+        // then
+        assertEquals(setOf(recruiting, always), recruitingPage.jobs.map { it.id }.toSet())
+        assertEquals(2L, recruitingPage.totalElements)
+        assertEquals(setOf(expired, closed), closedPage.jobs.map { it.id }.toSet())
+        assertEquals(2L, closedPage.totalElements)
     }
 
     @Test
@@ -490,7 +599,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.append(USER_ID, checkNotNull(published.id), NOW)
         jobBookmarkManager.append(USER_ID, checkNotNull(draft.id), NOW)
 
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10)
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10, now = NOW)
 
         assertEquals(listOf(published.id), result.jobs.map { it.id })
         assertEquals(1L, result.totalElements)
@@ -538,6 +647,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             ),
             page = 0,
             size = 10,
+            now = NOW,
         )
 
         // then
@@ -744,6 +854,17 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobManager.publish(job)
         return checkNotNull(job.id)
     }
+
+    private fun readBookmarks(
+        bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
+    ): JobPageDto = jobBookmarkReader.readBookmarkedPublishedPage(
+        userId = USER_ID,
+        condition = JobSearchCondition.NONE,
+        page = 0,
+        size = 10,
+        bookmarkCondition = bookmarkCondition,
+        now = NOW,
+    )
 
     private fun publishCommand(command: JobAppendDto): Long {
         val job = jobAppender.append(command)

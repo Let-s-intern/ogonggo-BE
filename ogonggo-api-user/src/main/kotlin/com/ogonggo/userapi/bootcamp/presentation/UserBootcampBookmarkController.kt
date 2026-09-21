@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.TuitionType
@@ -30,9 +33,11 @@ class UserBootcampBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
         @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
         @RequestParam(name = "status", required = false) status: BootcampStatus?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "applicationStatus", required = false) applicationStatus: BootcampApplicationStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
         validatePublicStatus(status)
         val result = userBootcampBookmarkService.getBookmarks(
@@ -44,6 +49,7 @@ class UserBootcampBookmarkController(
             ),
             page = page - 1,
             size = size,
+            bookmarkCondition = BootcampBookmarkSearchCondition(applicationStatus = applicationStatus, sortType = sortType),
         )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
@@ -71,6 +77,24 @@ class UserBootcampBookmarkController(
         @PathVariable("bootcampId") bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         userBootcampBookmarkService.deleteBookmark(userId, bootcampId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/{bootcampId}/prepare")
+    override fun prepare(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("bootcampId") bootcampId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userBootcampBookmarkService.prepare(userId, bootcampId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/{bootcampId}/cancel-preparation")
+    override fun cancelPreparation(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("bootcampId") bootcampId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userBootcampBookmarkService.cancelPreparation(userId, bootcampId)
         return SuccessResponse.ok()
     }
 }

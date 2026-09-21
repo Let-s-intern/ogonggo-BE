@@ -1,5 +1,9 @@
 package com.ogonggo.userapi.community.presentation
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
+import com.ogonggo.core.community.domain.RecruitmentPostBookmarkSearchCondition
+import com.ogonggo.core.community.domain.RecruitmentStatus
+import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.userapi.community.business.RecruitmentPostBookmarkService
 import com.ogonggo.userapi.community.presentation.response.RecruitmentPostSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
@@ -10,6 +14,7 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -27,8 +32,22 @@ class RecruitmentPostBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: RecruitmentStatus?,
+        @RequestParam(name = "recruitmentType", required = false) recruitmentType: RecruitmentType?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
     ): ResponseEntity<SuccessResponse<PageResponse<RecruitmentPostSummaryResponse>>> {
-        val result = bookmarkService.getBookmarks(userId, page - 1, size)
+        val result = bookmarkService.getBookmarks(
+            userId = userId,
+            page = page - 1,
+            size = size,
+            condition = RecruitmentPostBookmarkSearchCondition(
+                recruitmentStatus = recruitmentStatus,
+                recruitmentType = recruitmentType,
+                keyword = normalizeRecruitmentPostKeyword(keyword),
+                sortType = sortType,
+            ),
+        )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
                 items = result.items.map(RecruitmentPostSummaryResponse::from),
@@ -55,6 +74,24 @@ class RecruitmentPostBookmarkController(
         @PathVariable("postId") postId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         bookmarkService.deleteBookmark(userId, postId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/recruitment-post-bookmarks/{postId}/prepare")
+    override fun prepare(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("postId") postId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        bookmarkService.prepare(userId, postId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/recruitment-post-bookmarks/{postId}/cancel-preparation")
+    override fun cancelPreparation(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("postId") postId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        bookmarkService.cancelPreparation(userId, postId)
         return SuccessResponse.ok()
     }
 }

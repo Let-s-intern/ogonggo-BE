@@ -3,6 +3,7 @@ package com.ogonggo.core.community.implement
 import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.core.community.persistence.RecruitmentPostApplicationJpaRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostApplicationQueryRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostApplicationRow
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,7 +18,10 @@ import java.time.LocalDateTime
 class RecruitmentPostApplicationReaderTest {
 
     private val applicationQueryRepository = Mockito.mock(RecruitmentPostApplicationQueryRepository::class.java)
-    private val reader = RecruitmentPostApplicationReader(applicationQueryRepository)
+    private val reader = RecruitmentPostApplicationReader(
+        applicationQueryRepository,
+        Mockito.mock(RecruitmentPostApplicationJpaRepository::class.java),
+    )
 
     @Test
     fun `페이지 번호와 크기를 검증한다`() {
