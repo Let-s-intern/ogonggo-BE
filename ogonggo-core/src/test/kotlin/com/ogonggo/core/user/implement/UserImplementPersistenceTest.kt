@@ -9,6 +9,7 @@ import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
@@ -34,6 +35,7 @@ import org.springframework.test.context.ContextConfiguration
     UserProfileReader::class,
     CompanyProfileAppender::class,
     CompanyProfileReader::class,
+    CompanyProfileManager::class,
 )
 internal class UserImplementPersistenceTest @Autowired constructor(
     private val userReader: UserReader,
@@ -42,6 +44,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
     private val companyProfileReader: CompanyProfileReader,
+    private val companyProfileManager: CompanyProfileManager,
     private val userProfileRepository: UserProfileJpaRepository,
     private val companyProfileRepository: CompanyProfileJpaRepository,
 ) {
@@ -138,6 +141,37 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         assertEquals("김담당", companyProfileReader.read(companyAccount.userId)?.managerName)
         // 기업 회원에게는 렛츠커리어 프로필이 없다.
         assertNull(userProfileReader.read(companyAccount.userId))
+    }
+
+    @Test
+    fun `기업 정보는 기존 행의 기관명과 담당자 이름을 함께 교체한다`() {
+        // given
+        val companyAccount = userAppender.appendCompany(
+            CompanyAccountAppendDto(
+                email = "company@example.com",
+                encodedPassword = "encoded-password",
+                joinedAt = NOW,
+            ),
+        )
+        companyProfileAppender.append(
+            CompanyProfileAppendDto(
+                userId = companyAccount.userId,
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+            ),
+        )
+
+        // when
+        companyProfileManager.replace(
+            companyAccount.userId,
+            CompanyProfileUpdateDto(organizationName = "오공고", managerName = "이담당"),
+        )
+
+        // then
+        val replaced = companyProfileReader.read(companyAccount.userId)
+        assertEquals("오공고", replaced?.organizationName)
+        assertEquals("이담당", replaced?.managerName)
+        assertEquals(1L, companyProfileRepository.count())
     }
 
     @Test

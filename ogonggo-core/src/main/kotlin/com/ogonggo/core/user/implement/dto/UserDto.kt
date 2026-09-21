@@ -35,6 +35,12 @@ data class CompanyProfileAppendDto(
     val managerName: String,
 )
 
+/** 기업 회원이 가입 후 고치는 기업 정보다. 두 값을 함께 교체한다. */
+data class CompanyProfileUpdateDto(
+    val organizationName: String,
+    val managerName: String,
+)
+
 /**
  * 사용자가 오공고에서 직접 입력하는 학력과 희망 조건이다.
  * 렛츠커리어에서 복제하는 `UserProfileSyncDto`와 소유자가 달라 명령을 나눈다.

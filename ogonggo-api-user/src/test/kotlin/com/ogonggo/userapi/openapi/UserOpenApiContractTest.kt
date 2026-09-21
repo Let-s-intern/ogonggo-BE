@@ -355,6 +355,16 @@ class UserOpenApiContractTest @Autowired constructor(
             "wishField", "wishJob", "wishIndustry", "wishEmploymentType", "wishCompany",
         ).forEach { field -> assertTrue(profileProperties.has(field)) }
 
+        // 기업 정보도 조회는 내 정보에 담고 수정만 따로 연다.
+        val replaceCompanyProfile = document.at("/paths/~1api~1v1~1users~1me~1company-profile/put")
+        assertTrue(replaceCompanyProfile.at("/security/0/BearerAuth").isArray)
+        assertTrue(
+            replaceCompanyProfile.at("/responses/403/description").asText().startsWith("COMPANY_ROLE_REQUIRED"),
+        )
+        val companyProfileRequest = document.at("/components/schemas/ReplaceMyCompanyProfileRequest")
+        assertEquals(150, companyProfileRequest.at("/properties/organizationName/maxLength").asInt())
+        assertEquals(100, companyProfileRequest.at("/properties/managerName/maxLength").asInt())
+
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
         assertFalse(jobCalendar.has("security"))
         assertEquals("date", jobCalendar.parameter("from").at("/schema/format").asText())
