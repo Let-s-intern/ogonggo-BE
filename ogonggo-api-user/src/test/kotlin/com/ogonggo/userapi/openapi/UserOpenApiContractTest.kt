@@ -288,13 +288,18 @@ class UserOpenApiContractTest @Autowired constructor(
         val jobBookmarks = document.at("/paths/~1api~1v1~1job-bookmarks/get")
         assertTrue(jobBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(jobBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
-        listOf("employmentType", "experienceType", "jobField", "jobRole", "keyword")
+        listOf("employmentType", "experienceType", "jobField", "jobRole", "keyword", "applicationStatus")
             .forEach { name -> assertTrue(jobBookmarks.parameter(name).isObject) }
         val addBookmark = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/post")
         assertTrue(addBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(addBookmark.at("/responses/409/description").asText().startsWith("JOB_BOOKMARK_ALREADY_EXISTS"))
         val deleteBookmark = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/delete")
         assertTrue(deleteBookmark.at("/responses/200/content/application~1json/schema").isObject)
+        listOf("prepare", "cancel-preparation").forEach { command ->
+            val move = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}~1$command/post")
+            assertTrue(move.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(move.at("/responses/404/description").asText().startsWith("JOB_BOOKMARK_NOT_FOUND"))
+        }
 
         val bootcampBookmarks = document.at("/paths/~1api~1v1~1bootcamp-bookmarks/get")
         assertTrue(bootcampBookmarks.at("/security/0/BearerAuth").isArray)
@@ -310,6 +315,11 @@ class UserOpenApiContractTest @Autowired constructor(
         )
         val deleteBootcampBookmark = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/delete")
         assertTrue(deleteBootcampBookmark.at("/responses/200/content/application~1json/schema").isObject)
+        listOf("prepare", "cancel-preparation").forEach { command ->
+            val move = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}~1$command/post")
+            assertTrue(move.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(move.at("/responses/404/description").asText().startsWith("BOOTCAMP_BOOKMARK_NOT_FOUND"))
+        }
 
         // 역할은 토큰에 없으므로 내 정보 조회는 인증이 필수다.
         val myAccount = document.at("/paths/~1api~1v1~1users~1me/get")

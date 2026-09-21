@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobSearchCondition
@@ -35,6 +36,7 @@ class UserJobBookmarkController(
         @RequestParam(name = "jobField", required = false) jobField: String?,
         @RequestParam(name = "jobRole", required = false) jobRole: String?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "applicationStatus", required = false) applicationStatus: ApplicationStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobBookmarkService.getBookmarks(
             userId = userId,
@@ -47,6 +49,7 @@ class UserJobBookmarkController(
             ),
             page = page - 1,
             size = size,
+            applicationStatus = applicationStatus,
         )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
@@ -74,6 +77,24 @@ class UserJobBookmarkController(
         @PathVariable("jobId") jobId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         userJobBookmarkService.deleteBookmark(userId, jobId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/{jobId}/prepare")
+    override fun prepare(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("jobId") jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userJobBookmarkService.prepare(userId, jobId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/{jobId}/cancel-preparation")
+    override fun cancelPreparation(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("jobId") jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userJobBookmarkService.cancelPreparation(userId, jobId)
         return SuccessResponse.ok()
     }
 }

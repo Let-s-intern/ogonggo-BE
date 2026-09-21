@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.persistence
 
+import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
@@ -47,6 +48,7 @@ internal class BootcampQueryRepository(
     fun findBookmarkedPublicPage(
         userId: Long,
         condition: BootcampSearchCondition,
+        applicationStatus: ApplicationStatus?,
         publicStatuses: Collection<BootcampStatus>,
         now: LocalDateTime,
         pageable: Pageable,
@@ -54,6 +56,7 @@ internal class BootcampQueryRepository(
         val predicates = arrayOf(
             bootcampBookmark.userId.eq(userId),
             bootcampBookmark.deletedAt.isNull,
+            applicationStatus?.let { bootcampBookmark.applicationStatus.eq(it) },
             *publicPredicates(condition, publicStatuses, now),
         )
         val content = queryFactory.select(bootcamp)

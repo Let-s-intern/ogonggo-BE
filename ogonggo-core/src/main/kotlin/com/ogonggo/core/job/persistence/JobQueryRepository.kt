@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.persistence
 
+import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
@@ -46,11 +47,13 @@ internal class JobQueryRepository(
     fun findBookmarkedPublishedPage(
         userId: Long,
         condition: JobSearchCondition,
+        applicationStatus: ApplicationStatus?,
         pageable: Pageable,
     ): Page<Job> {
         val predicates = arrayOf(
             jobBookmark.userId.eq(userId),
             jobBookmark.deletedAt.isNull,
+            applicationStatus?.let { jobBookmark.applicationStatus.eq(it) },
             *publishedPredicates(condition),
         )
         val content = queryFactory.select(job)

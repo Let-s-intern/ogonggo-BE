@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
@@ -21,7 +22,15 @@ class BootcampBookmarkReader internal constructor(
         condition: BootcampSearchCondition,
         page: Int,
         size: Int,
-    ): BootcampPageDto = readBookmarkedPublicPage(userId, condition, page, size, LocalDateTime.now(clock))
+        applicationStatus: ApplicationStatus? = null,
+    ): BootcampPageDto = readBookmarkedPublicPage(
+        userId = userId,
+        condition = condition,
+        page = page,
+        size = size,
+        now = LocalDateTime.now(clock),
+        applicationStatus = applicationStatus,
+    )
 
     fun readBookmarkedPublicPage(
         userId: Long,
@@ -29,12 +38,15 @@ class BootcampBookmarkReader internal constructor(
         page: Int,
         size: Int,
         now: LocalDateTime,
+        applicationStatus: ApplicationStatus? = null,
     ): BootcampPageDto {
         validateBookmarkPageRequest(page, size)
+        // 지원·신청 관리 단계를 주면 그 단계의 북마크만 읽고, 주지 않으면 모든 단계를 읽는다.
         // 정렬은 조회 쿼리가 최근 북마크 순으로 정하므로 Pageable에 정렬을 넘기지 않는다.
         val result = bootcampQueryRepository.findBookmarkedPublicPage(
             userId = userId,
             condition = condition,
+            applicationStatus = applicationStatus,
             publicStatuses = PUBLIC_STATUSES,
             now = now,
             pageable = PageRequest.of(page, size),

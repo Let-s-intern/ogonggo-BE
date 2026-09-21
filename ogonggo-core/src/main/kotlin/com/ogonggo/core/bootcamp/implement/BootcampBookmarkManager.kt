@@ -1,9 +1,11 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -35,5 +37,24 @@ class BootcampBookmarkManager internal constructor(
     /** 활성 북마크가 없으면 갱신 대상이 없어 그대로 끝나므로 여러 번 해제해도 결과가 같다. */
     fun delete(userId: Long, bootcampId: Long, now: LocalDateTime) {
         bootcampBookmarkRepository.softDelete(bootcampId = bootcampId, userId = userId, now = now)
+    }
+
+    /**
+     * 활성 북마크를 지원·신청 관리의 다른 단계로 옮긴다. 이미 그 단계에 있으면 그대로 끝나므로 여러 번 옮겨도 결과가 같다.
+     * 옮기지 못했을 때만 현재 단계를 읽어 없는 북마크와 허용되지 않는 이동을 구분한다.
+     */
+    fun changeApplicationStatus(userId: Long, bootcampId: Long, target: ApplicationStatus, now: LocalDateTime) {
+        val sources = target.movableFrom()
+        if (sources.isNotEmpty() &&
+            bootcampBookmarkRepository.changeApplicationStatus(bootcampId, userId, sources, target, now) > 0
+        ) {
+            return
+        }
+
+        val current = bootcampBookmarkRepository.findActiveApplicationStatus(bootcampId, userId)
+            ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_BOOKMARK_NOT_FOUND)
+        if (current != target) {
+            throw ConflictException(BootcampErrorCode.INVALID_BOOTCAMP_APPLICATION_STATUS_TRANSITION)
+        }
     }
 }

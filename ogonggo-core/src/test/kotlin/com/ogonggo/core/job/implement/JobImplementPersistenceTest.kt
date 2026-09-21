@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -203,6 +204,85 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         // 북마크 목록이 수정 일시로 정렬하므로 복구는 벌크 갱신에서도 수정 일시를 남겨야 한다.
         assertEquals(NOW.plusMinutes(3), restored?.updatedAt)
         assertEquals(1L, jobBookmarkRepository.count())
+    }
+
+    @Test
+    fun `지원 단계는 스크랩과 지원 준비 중 사이를 오가고 같은 단계로 다시 옮겨도 결과가 같다`() {
+        // given
+        val jobId = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+
+        // when
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+
+        // then
+        val prepared = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
+        assertEquals(ApplicationStatus.PREPARING, prepared?.applicationStatus)
+        // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
+        assertEquals(NOW.plusMinutes(1), prepared?.updatedAt)
+
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
+        assertEquals(ApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+    }
+
+    @Test
+    fun `북마크가 없거나 해제되었으면 지원 단계를 옮기지 못한다`() {
+        // given
+        val jobId = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+        jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(1))
+
+        // when
+        val deleted = assertThrows(EntityNotFoundException::class.java) {
+            jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        }
+        val otherUser = assertThrows(EntityNotFoundException::class.java) {
+            jobBookmarkManager.changeApplicationStatus(OTHER_USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        }
+
+        // then
+        assertEquals(JobErrorCode.JOB_BOOKMARK_NOT_FOUND, deleted.errorCode)
+        assertEquals(JobErrorCode.JOB_BOOKMARK_NOT_FOUND, otherUser.errorCode)
+    }
+
+    @Test
+    fun `해제 후 다시 등록한 북마크는 스크랩 단계에서 시작한다`() {
+        // given
+        val jobId = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, jobId, NOW)
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(2))
+
+        // when
+        jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(3))
+
+        // then
+        assertEquals(ApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+    }
+
+    @Test
+    fun `북마크 목록은 지원 단계로 좁히고 옮긴 북마크를 그 단계의 맨 앞에 둔다`() {
+        // given
+        val first = publishCommand(createCommand())
+        val second = publishCommand(createCommand())
+        val scrapped = publishCommand(createCommand())
+        jobBookmarkManager.append(USER_ID, first, NOW)
+        jobBookmarkManager.append(USER_ID, second, NOW.plusMinutes(1))
+        jobBookmarkManager.append(USER_ID, scrapped, NOW.plusMinutes(2))
+
+        // when
+        jobBookmarkManager.changeApplicationStatus(USER_ID, second, ApplicationStatus.PREPARING, NOW.plusMinutes(3))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, first, ApplicationStatus.PREPARING, NOW.plusMinutes(4))
+
+        // then
+        val preparing = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, ApplicationStatus.PREPARING)
+        assertEquals(listOf(first, second), preparing.jobs.map { it.id })
+        assertEquals(2L, preparing.totalElements)
+        val scrappedPage = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, ApplicationStatus.SCRAPPED)
+        assertEquals(listOf(scrapped), scrappedPage.jobs.map { it.id })
+        assertEquals(1L, scrappedPage.totalElements)
+        assertEquals(3L, jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, null).totalElements)
     }
 
     @Test
