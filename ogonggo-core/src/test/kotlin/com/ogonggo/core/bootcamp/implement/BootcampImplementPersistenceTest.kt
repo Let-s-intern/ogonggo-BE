@@ -1,8 +1,8 @@
 package com.ogonggo.core.bootcamp.implement
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
@@ -512,27 +512,27 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `지원 단계는 스크랩과 지원 준비 중 사이를 오가고 같은 단계로 다시 옮겨도 결과가 같다`() {
+    fun `신청 단계는 스크랩과 신청 전 사이를 오가고 같은 단계로 다시 옮겨도 결과가 같다`() {
         // given
         val bootcampId = startedRecruitmentBootcampId()
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
 
         // when
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, ApplicationStatus.PREPARING, NOW.plusMinutes(1))
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(2))
 
         // then
         val prepared = bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)
-        assertEquals(ApplicationStatus.PREPARING, prepared?.applicationStatus)
+        assertEquals(BootcampApplicationStatus.PREPARING, prepared?.applicationStatus)
         // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
         assertEquals(NOW.plusMinutes(1), prepared?.updatedAt)
 
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, ApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
-        assertEquals(ApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
+        assertEquals(BootcampApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
     }
 
     @Test
-    fun `북마크가 없거나 해제되었으면 지원 단계를 옮기지 못한다`() {
+    fun `북마크가 없거나 해제되었으면 신청 단계를 옮기지 못한다`() {
         // given
         val bootcampId = startedRecruitmentBootcampId()
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
@@ -540,10 +540,10 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         // when
         val deleted = assertThrows(EntityNotFoundException::class.java) {
-            bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+            bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(2))
         }
         val otherUser = assertThrows(EntityNotFoundException::class.java) {
-            bootcampBookmarkManager.changeApplicationStatus(OTHER_USER_ID, bootcampId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+            bootcampBookmarkManager.changeApplicationStatus(OTHER_USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(2))
         }
 
         // then
@@ -556,18 +556,18 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         // given
         val bootcampId = startedRecruitmentBootcampId()
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, ApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(1))
         bootcampBookmarkManager.delete(USER_ID, bootcampId, NOW.plusMinutes(2))
 
         // when
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW.plusMinutes(3))
 
         // then
-        assertEquals(ApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
+        assertEquals(BootcampApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
     }
 
     @Test
-    fun `북마크 목록은 지원 단계로 좁히고 옮긴 북마크를 그 단계의 맨 앞에 둔다`() {
+    fun `북마크 목록은 신청 단계로 좁히고 옮긴 북마크를 그 단계의 맨 앞에 둔다`() {
         // given
         val first = startedRecruitmentBootcampId()
         val second = startedRecruitmentBootcampId()
@@ -577,17 +577,17 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampBookmarkManager.append(USER_ID, scrapped, NOW.plusMinutes(2))
 
         // when
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, second, ApplicationStatus.PREPARING, NOW.plusMinutes(3))
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, first, ApplicationStatus.PREPARING, NOW.plusMinutes(4))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, second, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(3))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, first, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(4))
 
         // then
-        val preparing = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
+        val preparing = readBookmarks(BootcampBookmarkSearchCondition(applicationStatus = BootcampApplicationStatus.PREPARING))
         assertEquals(listOf(first, second), preparing.bootcamps.map { it.id })
         assertEquals(2L, preparing.totalElements)
-        val scrappedPage = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.SCRAPPED))
+        val scrappedPage = readBookmarks(BootcampBookmarkSearchCondition(applicationStatus = BootcampApplicationStatus.SCRAPPED))
         assertEquals(listOf(scrapped), scrappedPage.bootcamps.map { it.id })
         assertEquals(1L, scrappedPage.totalElements)
-        assertEquals(3L, readBookmarks(BookmarkListCondition.NONE).totalElements)
+        assertEquals(3L, readBookmarks(BootcampBookmarkSearchCondition.NONE).totalElements)
     }
 
     @Test
@@ -670,7 +670,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         assertEquals(emptySet<Long>(), bootcampBookmarkReader.readBookmarkedBootcampIds(USER_ID, emptyList()))
     }
 
-    private fun readBookmarks(bookmarkCondition: BookmarkListCondition): BootcampPageDto =
+    private fun readBookmarks(bookmarkCondition: BootcampBookmarkSearchCondition): BootcampPageDto =
         bootcampBookmarkReader.readBookmarkedPublicPage(
             userId = USER_ID,
             condition = BootcampSearchCondition.NONE,

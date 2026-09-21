@@ -4,10 +4,16 @@ import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
+import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPosition
+import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.domain.RecruitmentPostBookmarkSearchCondition
+import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.community.persistence.RecruitmentPostBookmarkJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
+import com.ogonggo.core.community.persistence.RecruitmentPostQueryRepository
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.persistence.UserJpaRepository
@@ -30,12 +36,14 @@ import java.time.LocalDateTime
     RecruitmentPostAppender::class,
     RecruitmentPostBookmarkManager::class,
     RecruitmentPostBookmarkReader::class,
+    RecruitmentPostQueryRepository::class,
 )
 internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
     private val bookmarkManager: RecruitmentPostBookmarkManager,
     private val bookmarkReader: RecruitmentPostBookmarkReader,
     private val bookmarkRepository: RecruitmentPostBookmarkJpaRepository,
+    private val postRepository: RecruitmentPostJpaRepository,
     private val userRepository: UserJpaRepository,
 ) {
 
@@ -90,6 +98,66 @@ internal class RecruitmentPostBookmarkImplementPersistenceTest @Autowired constr
         assertTrue(bookmarkManager.delete(userId = userId, postId = postId, now = now.plusMinutes(1)))
         assertFalse(bookmarkManager.delete(userId = userId, postId = postId, now = now.plusMinutes(2)))
     }
+
+    @Test
+    fun `북마크 목록은 모집 상태와 유형과 검색어로 좁히고 최근 저장순을 유지한다`() {
+        // given
+        val userId = appendUser()
+        val first = appendPublishedPost("Kotlin 스터디", RecruitmentType.STUDY, RecruitmentStatus.RECRUITING)
+        val last = appendPublishedPost("kotlin 코루틴 스터디", RecruitmentType.STUDY, RecruitmentStatus.RECRUITING)
+        val closed = appendPublishedPost("Kotlin 마감 스터디", RecruitmentType.STUDY, RecruitmentStatus.CLOSED)
+        val side = appendPublishedPost("Kotlin 사이드", RecruitmentType.SIDE_PROJECT, RecruitmentStatus.RECRUITING)
+        val otherTitle = appendPublishedPost("Java 스터디", RecruitmentType.STUDY, RecruitmentStatus.RECRUITING)
+        val now = LocalDateTime.of(2026, 9, 14, 10, 0)
+        listOf(first, closed, side, otherTitle, last).forEachIndexed { index, postId ->
+            bookmarkManager.append(userId = userId, postId = postId, now = now.plusMinutes(index.toLong()))
+        }
+
+        // when
+        val page = bookmarkReader.readBookmarkedPublishedPage(
+            userId = userId,
+            page = 0,
+            size = 10,
+            condition = RecruitmentPostBookmarkSearchCondition(
+                recruitmentStatus = RecruitmentStatus.RECRUITING,
+                recruitmentType = RecruitmentType.STUDY,
+                keyword = "KOTLIN",
+            ),
+        )
+
+        // then
+        assertEquals(listOf(last, first), page.items.map { checkNotNull(it.post.id) })
+        assertEquals(2L, page.totalElements)
+    }
+
+    private fun appendPublishedPost(
+        title: String,
+        recruitmentType: RecruitmentType,
+        recruitmentStatus: RecruitmentStatus,
+    ): Long = checkNotNull(
+        postRepository.saveAndFlush(
+            RecruitmentPost(
+                authorUserId = 1L,
+                title = title,
+                recruitmentType = recruitmentType,
+                capacity = 4,
+                progressMethod = ProgressMethod.ONLINE,
+                activityDurationMonths = 3,
+                technologyStacks = listOf("Kotlin"),
+                summary = "함께 서비스를 만들어 볼 팀원을 모집합니다.",
+                content = "{\"root\":{\"children\":[]}}",
+                eligibilityAndSelectionProcess = null,
+                recruitmentStartDate = LocalDate.of(2026, 9, 1),
+                recruitmentEndDate = LocalDate.of(2026, 9, 30),
+                positions = listOf(RecruitmentPosition.BACKEND),
+                contactMethod = ContactMethod.EMAIL,
+                contactValue = "team@example.com",
+                publicationStatus = PublicationStatus.PUBLISHED,
+                recruitmentStatus = recruitmentStatus,
+                closedAt = if (recruitmentStatus == RecruitmentStatus.CLOSED) LocalDateTime.of(2026, 9, 10, 0, 0) else null,
+            ),
+        ).id,
+    )
 
     private fun appendPost(): Long = checkNotNull(postAppender.append(
         RecruitmentPostAppendDto(

@@ -1,7 +1,7 @@
 package com.ogonggo.core.job.persistence
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -156,7 +156,7 @@ internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
         """
         update JobBookmark bookmark
         set bookmark.deletedAt = null,
-            bookmark.applicationStatus = com.ogonggo.core.bookmark.domain.ApplicationStatus.SCRAPPED,
+            bookmark.applicationStatus = com.ogonggo.core.job.domain.JobApplicationStatus.SCRAPPED,
             bookmark.updatedAt = :now
         where bookmark.jobId = :jobId
           and bookmark.userId = :userId
@@ -189,8 +189,8 @@ internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     fun changeApplicationStatus(
         @Param("jobId") jobId: Long,
         @Param("userId") userId: Long,
-        @Param("sources") sources: Collection<ApplicationStatus>,
-        @Param("target") target: ApplicationStatus,
+        @Param("sources") sources: Collection<JobApplicationStatus>,
+        @Param("target") target: JobApplicationStatus,
         @Param("now") now: LocalDateTime,
     ): Int
 
@@ -206,7 +206,7 @@ internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     fun findActiveApplicationStatus(
         @Param("jobId") jobId: Long,
         @Param("userId") userId: Long,
-    ): ApplicationStatus?
+    ): JobApplicationStatus?
 
     /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

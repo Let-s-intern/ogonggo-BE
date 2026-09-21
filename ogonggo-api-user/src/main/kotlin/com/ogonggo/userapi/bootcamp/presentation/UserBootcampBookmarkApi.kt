@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
@@ -40,12 +40,12 @@ interface UserBootcampBookmarkApi {
             keyword는 운영 회사명 또는 프로그램명에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
 
-            applicationStatus는 지원·신청 관리 단계로 SCRAPPED(스크랩), PREPARING(지원 준비 중), APPLIED(지원 완료),
-            INTERVIEWING(면접), PASSED(합격), FAILED(불합격) 중 하나입니다.
+            applicationStatus는 지원·신청 관리 단계로 SCRAPPED(스크랩), PREPARING(신청 전), APPLIED(신청 완료),
+            IN_PROGRESS(활동 중), COMPLETED(활동 완료) 중 하나입니다.
             보내면 그 단계의 북마크만 반환하고, 보내지 않으면 모든 단계를 반환합니다.
 
             sort로 정렬을 고릅니다. 지금은 RECENTLY_SAVED(최근 저장순)만 있으며 보내지 않으면 RECENTLY_SAVED입니다.
-            북마크를 등록·재등록하거나 지원 단계를 옮긴 시각이 최근인 순서입니다.
+            북마크를 등록·재등록하거나 신청 단계를 옮긴 시각이 최근인 순서입니다.
         """,
     )
     @ApiResponses(
@@ -71,7 +71,7 @@ interface UserBootcampBookmarkApi {
         status: BootcampStatus?,
         @Size(min = 2, max = 100)
         keyword: String?,
-        applicationStatus: ApplicationStatus?,
+        applicationStatus: BootcampApplicationStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(operationId = "createBootcampBookmark", summary = "부트캠프 북마크 등록")
@@ -117,10 +117,10 @@ interface UserBootcampBookmarkApi {
 
     @Operation(
         operationId = "prepareMyBootcampBookmark",
-        summary = "부트캠프 북마크를 지원 준비 중으로 이동",
+        summary = "부트캠프 북마크를 신청 전으로 이동",
         description = """
-            스크랩 단계의 북마크를 지원 준비 중으로 옮깁니다.
-            이미 지원 준비 중이면 아무것도 바꾸지 않고 200으로 응답합니다.
+            스크랩 단계의 북마크를 신청 전으로 옮깁니다.
+            이미 신청 전이면 아무것도 바꾸지 않고 200으로 응답합니다.
             옮긴 북마크는 해당 단계 목록의 맨 앞에 옵니다.
         """,
     )
@@ -150,7 +150,7 @@ interface UserBootcampBookmarkApi {
         operationId = "cancelMyBootcampBookmarkPreparation",
         summary = "부트캠프 북마크를 스크랩으로 되돌리기",
         description = """
-            지원 준비 중인 북마크를 스크랩 단계로 되돌립니다.
+            신청 전인 북마크를 스크랩 단계로 되돌립니다.
             이미 스크랩 단계면 아무것도 바꾸지 않고 200으로 응답합니다.
             옮긴 북마크는 해당 단계 목록의 맨 앞에 옵니다.
         """,

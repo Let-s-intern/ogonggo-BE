@@ -1,9 +1,9 @@
 package com.ogonggo.userapi.job.presentation
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
@@ -69,7 +69,7 @@ interface UserJobBookmarkApi {
         jobRole: String?,
         @Size(min = 2, max = 100)
         keyword: String?,
-        applicationStatus: ApplicationStatus?,
+        applicationStatus: JobApplicationStatus?,
         recruitmentStatus: JobRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 

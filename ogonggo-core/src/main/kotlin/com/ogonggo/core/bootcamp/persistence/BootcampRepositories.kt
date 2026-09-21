@@ -1,7 +1,7 @@
 package com.ogonggo.core.bootcamp.persistence
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
@@ -142,7 +142,7 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         """
         update BootcampBookmark bookmark
         set bookmark.deletedAt = null,
-            bookmark.applicationStatus = com.ogonggo.core.bookmark.domain.ApplicationStatus.SCRAPPED,
+            bookmark.applicationStatus = com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus.SCRAPPED,
             bookmark.updatedAt = :now
         where bookmark.bootcampId = :bootcampId
           and bookmark.userId = :userId
@@ -175,8 +175,8 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
     fun changeApplicationStatus(
         @Param("bootcampId") bootcampId: Long,
         @Param("userId") userId: Long,
-        @Param("sources") sources: Collection<ApplicationStatus>,
-        @Param("target") target: ApplicationStatus,
+        @Param("sources") sources: Collection<BootcampApplicationStatus>,
+        @Param("target") target: BootcampApplicationStatus,
         @Param("now") now: LocalDateTime,
     ): Int
 
@@ -192,7 +192,7 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
     fun findActiveApplicationStatus(
         @Param("bootcampId") bootcampId: Long,
         @Param("userId") userId: Long,
-    ): ApplicationStatus?
+    ): BootcampApplicationStatus?
 
     /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

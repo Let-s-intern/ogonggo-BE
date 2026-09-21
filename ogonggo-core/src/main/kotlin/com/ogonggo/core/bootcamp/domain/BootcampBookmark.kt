@@ -1,6 +1,6 @@
 package com.ogonggo.core.bootcamp.domain
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.common.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -44,7 +44,7 @@ internal class BootcampBookmark(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "application_status", nullable = false, length = 30)
-    var applicationStatus: ApplicationStatus = ApplicationStatus.SCRAPPED /* 지원·신청 관리 단계 */
+    var applicationStatus: BootcampApplicationStatus = BootcampApplicationStatus.SCRAPPED /* 지원·신청 관리 단계 */
         protected set
 
     val isActive: Boolean
@@ -52,7 +52,7 @@ internal class BootcampBookmark(
 
     fun restore() {
         deletedAt = null
-        applicationStatus = ApplicationStatus.SCRAPPED
+        applicationStatus = BootcampApplicationStatus.SCRAPPED
     }
 
     fun delete(now: LocalDateTime) {

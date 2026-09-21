@@ -152,6 +152,16 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(recruitmentPostBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(recruitmentPostBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(recruitmentPostBookmarks, "size", defaultValue = "10", minimum = 1, maximum = 100)
+        listOf("recruitmentStatus", "recruitmentType", "keyword", "sort")
+            .forEach { name -> assertTrue(recruitmentPostBookmarks.parameter(name).isObject) }
+        listOf("prepare", "cancel-preparation").forEach { command ->
+            val move = document.at("/paths/~1api~1v1~1recruitment-post-bookmarks~1{postId}~1$command/post")
+            assertTrue(move.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(
+                move.at("/responses/409/description").asText()
+                    .startsWith("INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION"),
+            )
+        }
         val addRecruitmentPostBookmark =
             document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}~1bookmarks~1me/put")
         assertTrue(addRecruitmentPostBookmark.isObject)

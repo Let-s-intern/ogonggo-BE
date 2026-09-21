@@ -1,8 +1,8 @@
 package com.ogonggo.core.bootcamp.persistence
 
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
@@ -44,13 +44,13 @@ internal class BootcampQueryRepository(
     ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable)
 
     /**
-     * 북마크한 부트캠프 중 지금 공개된 것만 읽는다. 선택 필터는 공개 목록과 같고, 지원 단계로 더 좁힐 수 있다.
+     * 북마크한 부트캠프 중 지금 공개된 것만 읽는다. 선택 필터는 공개 목록과 같고, 신청 단계로 더 좁힐 수 있다.
      * 부트캠프와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
      */
     fun findBookmarkedPublicPage(
         userId: Long,
         condition: BootcampSearchCondition,
-        bookmarkCondition: BookmarkListCondition,
+        bookmarkCondition: BootcampBookmarkSearchCondition,
         publicStatuses: Collection<BootcampStatus>,
         now: LocalDateTime,
         pageable: Pageable,

@@ -190,6 +190,41 @@ internal class RecruitmentPostApplicationImplementPersistenceTest @Autowired con
         assertEquals(1L, recruitingCounts[RecruitmentType.STUDY])
     }
 
+    @Test
+    fun `스크랩에서 옮기면 옮긴 시각으로 지원 준비 중 이력을 만든다`() {
+        // given
+        val userId = appendUser()
+        val postId = checkNotNull(appendPost(userId).id)
+
+        // when
+        applicationManager.startPreparation(postId, userId, CLICKED_AT)
+
+        // then
+        val application = applicationRepository.findByPostIdAndUserIdAndDeletedAtIsNull(postId, userId)
+        assertEquals(RecruitmentApplicationProgressStatus.PREPARING, application?.applicationStatus)
+        assertEquals(CLICKED_AT, application?.firstClickedAt)
+        assertEquals(RecruitmentApplicationProgressStatus.PREPARING, applicationReader.readActiveStatus(postId, userId))
+    }
+
+    @Test
+    fun `지운 지원 이력을 스크랩에서 다시 옮기면 한 행을 되살려 지원 준비 중부터 시작한다`() {
+        // given
+        val userId = appendUser()
+        val postId = checkNotNull(appendPost(userId).id)
+        applicationManager.recordClick(postId, userId, CLICKED_AT)
+        applicationManager.changeStatus(postId, userId, RecruitmentApplicationProgressStatus.IN_PROGRESS)
+        applicationManager.delete(postId, userId, CLICKED_AT.plusMinutes(1))
+        assertEquals(null, applicationReader.readActiveStatus(postId, userId))
+
+        // when
+        applicationManager.startPreparation(postId, userId, CLICKED_AT.plusMinutes(2))
+        applicationRepository.flush()
+
+        // then
+        assertEquals(1L, applicationRepository.count())
+        assertEquals(RecruitmentApplicationProgressStatus.PREPARING, applicationReader.readActiveStatus(postId, userId))
+    }
+
     private fun appendUser(): Long = checkNotNull(
         userRepository.saveAndFlush(
             User.ofLetsCareer(

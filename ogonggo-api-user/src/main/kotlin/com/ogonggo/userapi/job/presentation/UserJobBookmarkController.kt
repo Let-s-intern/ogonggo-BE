@@ -1,10 +1,10 @@
 package com.ogonggo.userapi.job.presentation
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.userapi.job.business.UserJobBookmarkService
@@ -40,7 +40,7 @@ class UserJobBookmarkController(
         @RequestParam(name = "jobField", required = false) jobField: String?,
         @RequestParam(name = "jobRole", required = false) jobRole: String?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
-        @RequestParam(name = "applicationStatus", required = false) applicationStatus: ApplicationStatus?,
+        @RequestParam(name = "applicationStatus", required = false) applicationStatus: JobApplicationStatus?,
         @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobBookmarkService.getBookmarks(
@@ -54,8 +54,11 @@ class UserJobBookmarkController(
             ),
             page = page - 1,
             size = size,
-            bookmarkCondition = BookmarkListCondition(applicationStatus = applicationStatus, sortType = sortType),
-            recruitmentStatus = recruitmentStatus,
+            bookmarkCondition = JobBookmarkSearchCondition(
+                applicationStatus = applicationStatus,
+                recruitmentStatus = recruitmentStatus,
+                sortType = sortType,
+            ),
         )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(

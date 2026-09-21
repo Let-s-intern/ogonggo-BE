@@ -1,6 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
@@ -22,7 +22,7 @@ class BootcampBookmarkReader internal constructor(
         condition: BootcampSearchCondition,
         page: Int,
         size: Int,
-        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
+        bookmarkCondition: BootcampBookmarkSearchCondition = BootcampBookmarkSearchCondition.NONE,
     ): BootcampPageDto = readBookmarkedPublicPage(
         userId = userId,
         condition = condition,
@@ -38,7 +38,7 @@ class BootcampBookmarkReader internal constructor(
         page: Int,
         size: Int,
         now: LocalDateTime,
-        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
+        bookmarkCondition: BootcampBookmarkSearchCondition = BootcampBookmarkSearchCondition.NONE,
     ): BootcampPageDto {
         validateBookmarkPageRequest(page, size)
         // 정렬은 조회 쿼리가 북마크 정렬 기준으로 정하므로 Pageable에 정렬을 넘기지 않는다.

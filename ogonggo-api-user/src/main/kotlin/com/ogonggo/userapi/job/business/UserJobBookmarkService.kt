@@ -1,9 +1,8 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.job.domain.Job
-import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
@@ -30,8 +29,7 @@ class UserJobBookmarkService(
         condition: JobSearchCondition,
         page: Int,
         size: Int,
-        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
-        recruitmentStatus: JobRecruitmentStatus? = null,
+        bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
     ): UserJobPageResult {
         val result = jobBookmarkReader.readBookmarkedPublishedPage(
             userId = userId,
@@ -40,7 +38,6 @@ class UserJobBookmarkService(
             size = size,
             now = LocalDateTime.now(clock),
             bookmarkCondition = bookmarkCondition,
-            recruitmentStatus = recruitmentStatus,
         )
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
@@ -67,12 +64,12 @@ class UserJobBookmarkService(
     /** 스크랩한 북마크를 지원 준비 중으로 옮긴다. */
     @Transactional
     fun prepare(userId: Long, jobId: Long) {
-        jobBookmarkManager.changeApplicationStatus(userId, jobId, ApplicationStatus.PREPARING, LocalDateTime.now(clock))
+        jobBookmarkManager.changeApplicationStatus(userId, jobId, JobApplicationStatus.PREPARING, LocalDateTime.now(clock))
     }
 
     /** 지원 준비 중인 북마크를 스크랩으로 되돌린다. */
     @Transactional
     fun cancelPreparation(userId: Long, jobId: Long) {
-        jobBookmarkManager.changeApplicationStatus(userId, jobId, ApplicationStatus.SCRAPPED, LocalDateTime.now(clock))
+        jobBookmarkManager.changeApplicationStatus(userId, jobId, JobApplicationStatus.SCRAPPED, LocalDateTime.now(clock))
     }
 }

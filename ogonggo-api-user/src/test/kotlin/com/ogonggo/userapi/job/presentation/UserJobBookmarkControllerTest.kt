@@ -1,13 +1,13 @@
 package com.ogonggo.userapi.job.presentation
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
@@ -133,7 +133,7 @@ class UserJobBookmarkControllerTest @Autowired constructor(
     fun `지원 단계를 고르면 그 단계만 조회하도록 전달된다`() {
         // given
         Mockito.`when`(
-            userJobBookmarkService.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING)),
+            userJobBookmarkService.getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.PREPARING)),
         ).thenReturn(bookmarkPage())
 
         // when
@@ -142,7 +142,7 @@ class UserJobBookmarkControllerTest @Autowired constructor(
         ).andExpect(status().isOk)
 
         // then
-        Mockito.verify(userJobBookmarkService).getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
+        Mockito.verify(userJobBookmarkService).getBookmarks(USER_ID, JobSearchCondition.NONE, 0, 10, JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.PREPARING))
     }
 
     @Test
@@ -154,8 +154,10 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 JobSearchCondition.NONE,
                 0,
                 10,
-                BookmarkListCondition(sortType = BookmarkSortType.RECENTLY_SAVED),
-                JobRecruitmentStatus.CLOSED,
+                JobBookmarkSearchCondition(
+                    recruitmentStatus = JobRecruitmentStatus.CLOSED,
+                    sortType = BookmarkSortType.RECENTLY_SAVED,
+                ),
             ),
         ).thenReturn(bookmarkPage())
 
@@ -170,8 +172,10 @@ class UserJobBookmarkControllerTest @Autowired constructor(
             JobSearchCondition.NONE,
             0,
             10,
-            BookmarkListCondition(sortType = BookmarkSortType.RECENTLY_SAVED),
-            JobRecruitmentStatus.CLOSED,
+            JobBookmarkSearchCondition(
+                recruitmentStatus = JobRecruitmentStatus.CLOSED,
+                sortType = BookmarkSortType.RECENTLY_SAVED,
+            ),
         )
     }
 

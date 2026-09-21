@@ -1,7 +1,5 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -9,6 +7,8 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -215,17 +215,17 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.append(USER_ID, jobId, NOW)
 
         // when
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(1))
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
 
         // then
         val prepared = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
-        assertEquals(ApplicationStatus.PREPARING, prepared?.applicationStatus)
+        assertEquals(JobApplicationStatus.PREPARING, prepared?.applicationStatus)
         // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
         assertEquals(NOW.plusMinutes(1), prepared?.updatedAt)
 
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
-        assertEquals(ApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
+        assertEquals(JobApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
     }
 
     @Test
@@ -237,10 +237,10 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
         // when
         val deleted = assertThrows(EntityNotFoundException::class.java) {
-            jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+            jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
         }
         val otherUser = assertThrows(EntityNotFoundException::class.java) {
-            jobBookmarkManager.changeApplicationStatus(OTHER_USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(2))
+            jobBookmarkManager.changeApplicationStatus(OTHER_USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
         }
 
         // then
@@ -253,14 +253,14 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         // given
         val jobId = publishCommand(createCommand())
         jobBookmarkManager.append(USER_ID, jobId, NOW)
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, ApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(1))
         jobBookmarkManager.delete(USER_ID, jobId, NOW.plusMinutes(2))
 
         // when
         jobBookmarkManager.append(USER_ID, jobId, NOW.plusMinutes(3))
 
         // then
-        assertEquals(ApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+        assertEquals(JobApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
     }
 
     @Test
@@ -274,17 +274,17 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.append(USER_ID, scrapped, NOW.plusMinutes(2))
 
         // when
-        jobBookmarkManager.changeApplicationStatus(USER_ID, second, ApplicationStatus.PREPARING, NOW.plusMinutes(3))
-        jobBookmarkManager.changeApplicationStatus(USER_ID, first, ApplicationStatus.PREPARING, NOW.plusMinutes(4))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, second, JobApplicationStatus.PREPARING, NOW.plusMinutes(3))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, first, JobApplicationStatus.PREPARING, NOW.plusMinutes(4))
 
         // then
-        val preparing = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.PREPARING))
+        val preparing = readBookmarks(JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.PREPARING))
         assertEquals(listOf(first, second), preparing.jobs.map { it.id })
         assertEquals(2L, preparing.totalElements)
-        val scrappedPage = readBookmarks(BookmarkListCondition(applicationStatus = ApplicationStatus.SCRAPPED))
+        val scrappedPage = readBookmarks(JobBookmarkSearchCondition(applicationStatus = JobApplicationStatus.SCRAPPED))
         assertEquals(listOf(scrapped), scrappedPage.jobs.map { it.id })
         assertEquals(1L, scrappedPage.totalElements)
-        assertEquals(3L, readBookmarks(BookmarkListCondition.NONE).totalElements)
+        assertEquals(3L, readBookmarks(JobBookmarkSearchCondition.NONE).totalElements)
     }
 
     @Test
@@ -304,8 +304,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(recruiting, always, expired, closed).forEach { jobBookmarkManager.append(USER_ID, it, NOW) }
 
         // when
-        val recruitingPage = readBookmarks(recruitmentStatus = JobRecruitmentStatus.RECRUITING)
-        val closedPage = readBookmarks(recruitmentStatus = JobRecruitmentStatus.CLOSED)
+        val recruitingPage = readBookmarks(JobBookmarkSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING))
+        val closedPage = readBookmarks(JobBookmarkSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED))
 
         // then
         assertEquals(setOf(recruiting, always), recruitingPage.jobs.map { it.id }.toSet())
@@ -866,15 +866,13 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     private fun readBookmarks(
-        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
-        recruitmentStatus: JobRecruitmentStatus? = null,
+        bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
     ): JobPageDto = jobBookmarkReader.readBookmarkedPublishedPage(
         userId = USER_ID,
         condition = JobSearchCondition.NONE,
         page = 0,
         size = 10,
         bookmarkCondition = bookmarkCondition,
-        recruitmentStatus = recruitmentStatus,
         now = NOW,
     )
 

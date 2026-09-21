@@ -1,7 +1,6 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.bookmark.domain.BookmarkListCondition
-import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
@@ -26,15 +25,13 @@ class JobBookmarkReader internal constructor(
         page: Int,
         size: Int,
         now: LocalDateTime,
-        bookmarkCondition: BookmarkListCondition = BookmarkListCondition.NONE,
-        recruitmentStatus: JobRecruitmentStatus? = null,
+        bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
     ): JobPageDto {
         validateBookmarkPageRequest(page, size)
         val result = jobQueryRepository.findBookmarkedPublishedPage(
             userId = userId,
             condition = condition,
             bookmarkCondition = bookmarkCondition,
-            recruitmentStatus = recruitmentStatus,
             now = now,
             pageable = PageRequest.of(page, size),
         )

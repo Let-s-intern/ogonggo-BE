@@ -1,7 +1,7 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.bookmark.domain.ApplicationStatus
 import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.job.domain.JobApplicationStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -44,6 +44,6 @@ internal class JobBookmark(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "application_status", nullable = false, length = 30)
-    var applicationStatus: ApplicationStatus = ApplicationStatus.SCRAPPED /* 지원·신청 관리 단계 */
+    var applicationStatus: JobApplicationStatus = JobApplicationStatus.SCRAPPED /* 지원·신청 관리 단계 */
         protected set
 }
