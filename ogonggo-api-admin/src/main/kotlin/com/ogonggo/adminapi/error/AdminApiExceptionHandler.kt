@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.error
 
+import com.ogonggo.core.editor.lexical.LexicalEditorStateException
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.adminapi.response.ErrorResponse
 import jakarta.validation.ConstraintViolationException
@@ -54,6 +55,14 @@ class AdminApiExceptionHandler {
     fun handleInvalidRequestField(exception: InvalidRequestFieldException): ResponseEntity<ErrorResponse> {
         log.error("handle: InvalidRequestFieldException", exception)
         return badRequest(validationMessage(listOf(exception.fieldName to exception.reason)))
+    }
+
+    @ExceptionHandler(LexicalEditorStateException::class)
+    fun handleInvalidLexicalEditorState(
+        exception: LexicalEditorStateException,
+    ): ResponseEntity<ErrorResponse> {
+        log.error("handle: LexicalEditorStateException", exception)
+        return badRequest(validationMessage(listOf("content" to exception.reason)))
     }
 
     @ExceptionHandler(ConstraintViolationException::class)

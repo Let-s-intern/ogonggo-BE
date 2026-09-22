@@ -272,6 +272,14 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(similarJobs.at("/responses/401/description").asText().startsWith("UNAUTHORIZED"))
         assertTrue(similarJobs.at("/responses/200/content/application~1json/schema").isObject)
 
+        // 공지는 토큰으로 달라지는 값이 없어 인증 요구를 노출하지 않는다.
+        val noticeList = document.at("/paths/~1api~1v1~1notices/get")
+        assertTrue(noticeList.isObject)
+        assertTrue(noticeList.at("/security").isMissingNode)
+        assertTrue(document.at("/paths/~1api~1v1~1notices~1{noticeId}/get/security").isMissingNode)
+        assertPageParameter(noticeList, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(noticeList, "size", defaultValue = "10", minimum = 1, maximum = 100)
+
         // 부트캠프 목록·상세도 토큰을 보내면 북마크 여부가 채워지므로 공고와 같은 선택적 인증을 노출한다.
         val bootcampList = document.at("/paths/~1api~1v1~1bootcamps/get")
         assertTrue(bootcampList.at("/security/0/BearerAuth").isArray)

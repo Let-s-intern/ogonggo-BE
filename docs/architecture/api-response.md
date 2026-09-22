@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-17
+- 최종 변경일: 2026-09-22
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -79,6 +79,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 | `GET /api/v1/job-bookmarks` | `GET /api/v1/jobs`와 같음 | `GET /api/v1/jobs`와 같음 |
 | `GET /api/v1/bootcamps` | `tuitionType`, `status` | `keyword` — 운영 회사명 또는 프로그램명 |
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
+| `GET /api/v1/notices` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
 
 검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 아직 고정된 값 집합이 없는 자유 문자열이라 공고의 값과 정확히 같은지로 거르며, 100자 이하이고 빈 값은 보내지 않은 것과 같습니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
@@ -187,6 +188,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/jobs` | `visibility`, `source`, `reviewStatus`, `recruitmentStatus` | 제목, 회사명 |
 | `GET /api/v1/admin/bootcamps` | `visibility`, `source`, `reviewStatus`, `status`(`RECRUITING`·`CLOSED`) | 과정명, 운영사 |
 | `GET /api/v1/admin/rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
+| `GET /api/v1/admin/notices` | `visibility`, `pinned` | 제목 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - `source`는 저장하지 않고 `owner_user_id` 유무로 계산합니다(`COMPANY`·`CRAWLER`). 등록 경로는 바꿀 수 없어 수정 요청으로 받지 않습니다.
@@ -194,6 +196,19 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 목록에는 본문 칸을 싣지 않고 상세에서만 줍니다.
 - 검수 대기(`GET /api/v1/admin/review-queue`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
 - 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다.
+- 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.
+
+### 공지사항
+
+공지는 운영자가 관리자 콘솔(`/api/v1/admin/notices`)에서만 작성·수정·삭제하고, 사용자 API(`/api/v1/notices`)는 로그인 없이 목록과 상세를 읽기만 합니다.
+
+- 본문 `content`는 커뮤니티 모집글과 같은 Lexical EditorState JSON 문자열이며 200,000자 이하입니다. JSON이 아니면 400 `BAD_REQUEST`이고 메시지는 `[content]`로 시작합니다.
+- 노출 여부는 콘솔의 `visibility`(`VISIBLE`·`HIDDEN`)로 다룹니다. 채용공고와 달리 검수·게시 상태 네 값이 없고 노출·비노출 둘뿐입니다.
+- 상단 고정(`pinned`)은 노출과 별개입니다. 비노출 공지도 고정해 둘 수 있고 다시 노출하면 고정된 채로 나옵니다.
+- 사용자 목록은 노출 중인 미삭제 공지만 고정 공지를 먼저 두고 최신순으로 줍니다. 목록에는 본문을 싣지 않습니다. 고정 공지도 정렬로 앞에 오는 것이라 2쪽부터는 반복되지 않습니다.
+- 사용자 상세는 비노출·삭제 공지를 없는 공지와 같이 404 `NOTICE_NOT_FOUND`로 응답합니다. 조회 수는 세지 않습니다.
+- 콘솔 등록은 201과 등록한 공지 전체를, 수정(`PATCH`)은 수정된 공지 전체를 `data`로 돌려줍니다. 삭제는 소프트 삭제이며 반복해도 200입니다.
+- 공지 본문에는 이미지를 넣지 않습니다. 그래서 커뮤니티 모집글과 달리 이미지 자산과 연결하지 않고, 관리자 API에도 이미지 업로드를 두지 않습니다.
 
 ### 검수와 노출
 

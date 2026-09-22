@@ -192,6 +192,24 @@ DELETE /api/v1/internal/bootcamps/{bootcampId}
 - 삭제는 소프트 삭제이며 반복해도 200입니다.
 - 부트캠프 모집 상태는 저장된 값이라 모집 종료 일시가 지나도 저절로 `CLOSED`가 되지 않습니다. 자동 마감 처리는 **미정**입니다.
 
+### 공지사항
+
+```text
+GET    /api/v1/notices                        사용자 API, 로그인 없이 조회
+GET    /api/v1/notices/{noticeId}
+
+GET    /api/v1/admin/notices                  관리자 콘솔
+POST   /api/v1/admin/notices
+GET    /api/v1/admin/notices/{noticeId}
+PATCH  /api/v1/admin/notices/{noticeId}
+DELETE /api/v1/admin/notices/{noticeId}
+```
+
+- 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요
+- 공지는 관리자만 작성하므로 쓰기 경로는 관리자 API에만 둡니다. 사용자 API에는 GET만 열고 나머지 메서드는 거부합니다.
+- 노출·상단 고정도 콘솔의 다른 콘텐츠처럼 `PATCH`로 내용과 함께 부분 수정합니다. 1절의 관리자 콘솔 예외와 같은 이유입니다.
+- 응답 계약은 [API 성공 응답의 공지사항](api-response.md#공지사항)을 따릅니다.
+
 ## 6. 현재 보류하는 항목
 
 다음은 실제 기능과 클라이언트 요구가 생길 때 결정합니다.

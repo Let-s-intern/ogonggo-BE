@@ -102,6 +102,8 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/source-url-clicks").authenticated()
                 it.requestMatchers("/api/v1/job-bookmarks", "/api/v1/job-bookmarks/**").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/bootcamps", "/api/v1/bootcamps/**").permitAll()
+                // 공지는 관리자 API에서만 작성하고 사용자는 로그인 없이 읽기만 한다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/*").permitAll()
                 // 지원 페이지 이동 기록은 부트캠프 하위의 유일한 쓰기 경로이므로 메서드와 경로를 좁혀 허용한다.
                 // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/bootcamps/*/application-url-clicks").authenticated()

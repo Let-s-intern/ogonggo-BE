@@ -68,6 +68,11 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1review-queue~1{type}~1{id}~1undo/patch",
             "/paths/~1api~1v1~1admin~1rejections/get",
             "/paths/~1api~1v1~1admin~1rejections~1{type}~1{id}/patch",
+            "/paths/~1api~1v1~1admin~1notices/get",
+            "/paths/~1api~1v1~1admin~1notices/post",
+            "/paths/~1api~1v1~1admin~1notices~1{noticeId}/get",
+            "/paths/~1api~1v1~1admin~1notices~1{noticeId}/patch",
+            "/paths/~1api~1v1~1admin~1notices~1{noticeId}/delete",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
