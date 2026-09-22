@@ -77,6 +77,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.items[0].id").value(1))
+            .andExpect(jsonPath("$.data.items[0].coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data.items[0].viewCount").value(12))
             .andExpect(jsonPath("$.data.items[0].bookmarkCount").value(3))
@@ -94,6 +95,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.title").value("백엔드 개발자"))
+            .andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
             .andExpect(jsonPath("$.data.qualifications").value("자격 요건"))
             .andExpect(jsonPath("$.data.bookmarked").value(true))
@@ -691,6 +693,7 @@ class UserReadControllerTest @Autowired constructor(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
+        coverImageUrl = "https://example.com/cover.png",
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
@@ -710,6 +713,7 @@ class UserReadControllerTest @Autowired constructor(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
+        coverImageUrl = "https://example.com/cover.png",
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
