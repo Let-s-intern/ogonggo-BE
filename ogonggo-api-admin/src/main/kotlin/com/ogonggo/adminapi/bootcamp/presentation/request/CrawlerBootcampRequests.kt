@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampCurriculumCommand
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import io.swagger.v3.oas.annotations.media.Schema
@@ -107,6 +108,13 @@ data class CrawlerBootcampRequest(
     @field:URL(message = "원문 URL이 URL 형식이 아닙니다.")
     val sourceUrl: String,
 
+    @field:Schema(
+        description = "모집 상태. RECRUITING(모집 중) 또는 CLOSED(모집 마감)만 보낼 수 있다. " +
+            "등록할 때 보내지 않으면 RECRUITING이고, 교체할 때 보내지 않으면 모집 상태를 바꾸지 않는다",
+        allowableValues = ["RECRUITING", "CLOSED"],
+    )
+    val status: BootcampStatus? = null,
+
     @field:Schema(description = "커리큘럼. 보낸 순서대로 노출한다. 교체하면 기존 커리큘럼을 지우고 이 목록으로 바꾼다")
     @field:Valid
     @field:Size(max = 100, message = "커리큘럼은 100개 이하여야 합니다.")
@@ -137,11 +145,16 @@ data class CrawlerBootcampRequest(
             managerEmail = managerEmail,
             inquiryUrl = inquiryUrl,
             sourceUrl = sourceUrl,
+            status = status,
             curriculums = curriculums.map(CrawlerBootcampCurriculumRequest::toCommand),
         )
     }
 
     private fun validateRelations() {
+        // 임시저장은 크롤러가 만들 상태가 아니다. 모집 마감 과정도 게시해 두므로 두 값만 받는다.
+        if (status == BootcampStatus.DRAFT) {
+            invalid("status", "RECRUITING 또는 CLOSED만 보낼 수 있습니다.")
+        }
         val recruitmentStart = recruitmentStartAt
         val recruitmentEnd = recruitmentEndAt
         if (recruitmentType == BootcampRecruitmentType.PERIOD && recruitmentStart == null) {

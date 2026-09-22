@@ -103,6 +103,25 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete/responses/404").isObject)
     }
 
+    @Test
+    fun `크롤러 부트캠프 요청의 모집 상태는 선택 칸이며 모집 중과 모집 마감만 받는다`() {
+        val document = openApiDocument()
+
+        val schema = document.at("/components/schemas/CrawlerBootcampRequest")
+        val statusSchema = schema.at("/properties/status")
+        assertEquals(listOf("RECRUITING", "CLOSED"), statusSchema.at("/enum").map { it.asText() })
+        // 값 설명 표도 받는 값만 싣는다.
+        assertFalse(statusSchema.at("/description").asText().contains("`DRAFT`"), "받지 않는 값이 설명에 있습니다.")
+        assertTrue(statusSchema.at("/description").asText().contains("`CLOSED`"), "값 설명 표가 없습니다.")
+        assertFalse(schema.at("/required").any { it.asText() == "status" }, "모집 상태가 필수로 잡혀 있습니다.")
+        listOf(
+            "/paths/~1api~1v1~1internal~1bootcamps/post/description",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/put/description",
+        ).forEach { pointer ->
+            assertTrue(document.at(pointer).asText().contains("status"), "모집 상태 설명이 없습니다: $pointer")
+        }
+    }
+
     private fun openApiDocument() = objectMapper.readTree(
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)

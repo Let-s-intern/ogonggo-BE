@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampCurriculumCommand
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -58,6 +59,16 @@ class CrawlerBootcampRequestTest {
     }
 
     @Test
+    fun `모집 상태는 모집 중과 모집 마감만 받고 보내지 않으면 비워 둔다`() {
+        assertEquals(null, request().toCommand().status)
+        assertEquals(BootcampStatus.RECRUITING, request(status = BootcampStatus.RECRUITING).toCommand().status)
+        assertEquals(BootcampStatus.CLOSED, request(status = BootcampStatus.CLOSED).toCommand().status)
+
+        val exception = assertThrows<InvalidRequestFieldException> { request(status = BootcampStatus.DRAFT).toCommand() }
+        assertEquals("status", exception.fieldName)
+    }
+
+    @Test
     fun `이메일 지원에는 지원 페이지 주소를 받지 않는다`() {
         val exception = assertThrows<InvalidRequestFieldException> {
             request(applicationMethod = ApplicationMethod.EMAIL, applicationUrl = "https://example.com/apply").toCommand()
@@ -74,6 +85,7 @@ class CrawlerBootcampRequestTest {
         applicationMethod: ApplicationMethod = ApplicationMethod.EXTERNAL_PAGE,
         applicationUrl: String? = "https://example.com/apply",
         managerEmail: String? = null,
+        status: BootcampStatus? = null,
         curriculums: List<CrawlerBootcampCurriculumRequest> = emptyList(),
     ) = CrawlerBootcampRequest(
         companyName = "오공고 교육사",
@@ -94,6 +106,7 @@ class CrawlerBootcampRequestTest {
         applicationUrl = applicationUrl,
         managerEmail = managerEmail,
         sourceUrl = "https://example.com/bootcamps/1",
+        status = status,
         curriculums = curriculums,
     )
 }

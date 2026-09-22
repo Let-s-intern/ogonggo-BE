@@ -7,6 +7,7 @@ import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampService
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -68,6 +69,51 @@ class CrawlerBootcampControllerTest @Autowired constructor(
         assertEquals(LocalDateTime.of(2026, 9, 30, 23, 59, 59), command.recruitmentEndAt)
         assertEquals(LocalDate.of(2026, 10, 6), command.programStartDate)
         assertEquals(listOf("자바 기초", "스프링"), command.curriculums.map { it.subtitle })
+        // 모집 상태를 보내지 않으면 비워 넘기고, 모집 중으로 둘지는 서비스가 정한다.
+        assertEquals(null, command.status)
+    }
+
+    @Test
+    fun `모집 마감 상태를 받아 등록에 넘긴다`() {
+        var registered: CrawlerBootcampCommand? = null
+        Mockito.`when`(crawlerBootcampService.register(anyCommand())).thenAnswer { invocation ->
+            registered = invocation.arguments[0] as CrawlerBootcampCommand
+            11L
+        }
+
+        mockMvc.perform(
+            post("/api/v1/internal/bootcamps")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestBody() + mapOf("status" to "CLOSED"))),
+        )
+            .andExpect(status().isCreated)
+
+        assertEquals(BootcampStatus.CLOSED, checkNotNull(registered).status)
+    }
+
+    @Test
+    fun `모집 상태가 모집 중이나 모집 마감이 아니면 400으로 응답한다`() {
+        mockMvc.perform(
+            post("/api/v1/internal/bootcamps")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestBody() + mapOf("status" to "DRAFT"))),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message").value("[status] RECRUITING 또는 CLOSED만 보낼 수 있습니다."))
+
+        mockMvc.perform(
+            put("/api/v1/internal/bootcamps/11")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestBody() + mapOf("status" to "OPEN"))),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(crawlerBootcampService)
     }
 
     @Test
@@ -175,17 +221,26 @@ class CrawlerBootcampControllerTest @Autowired constructor(
 
     @Test
     fun `부트캠프를 교체하고 데이터 없이 200으로 응답한다`() {
-        mockMvc.perform(
-            put("/api/v1/internal/bootcamps/11")
-                .header(INTERNAL_API_KEY_HEADER, API_KEY)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestBody())),
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data").doesNotExist())
+        val replaced = mutableListOf<CrawlerBootcampCommand>()
+        Mockito.doAnswer { invocation ->
+            replaced += invocation.arguments[1] as CrawlerBootcampCommand
+            null
+        }.`when`(crawlerBootcampService).replace(Mockito.eq(11L), anyCommand())
 
-        Mockito.verify(crawlerBootcampService).replace(Mockito.eq(11L), anyCommand())
+        listOf(requestBody(), requestBody() + mapOf("status" to "RECRUITING")).forEach { body ->
+            mockMvc.perform(
+                put("/api/v1/internal/bootcamps/11")
+                    .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(body)),
+            )
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").doesNotExist())
+        }
+
+        // 모집 상태를 보내지 않으면 비워 넘겨 교체가 모집 상태를 건드리지 않게 한다.
+        assertEquals(listOf(null, BootcampStatus.RECRUITING), replaced.map { it.status })
     }
 
     @Test

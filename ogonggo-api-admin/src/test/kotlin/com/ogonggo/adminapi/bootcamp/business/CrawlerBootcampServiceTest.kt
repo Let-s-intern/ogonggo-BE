@@ -49,12 +49,14 @@ class CrawlerBootcampServiceTest {
 
     private var updatedCommand: BootcampUpdateDto? = null
     private var deletedAt: LocalDateTime? = null
+    private var closedAt: LocalDateTime? = null
     private val managerCalls = mutableListOf<String>()
     private val bootcampManager = Mockito.mock(BootcampManager::class.java, Answer { invocation ->
         managerCalls += invocation.method.name
         when (invocation.method.name) {
             "update" -> updatedCommand = invocation.arguments[1] as BootcampUpdateDto
             "delete" -> deletedAt = invocation.arguments[1] as LocalDateTime
+            "close" -> closedAt = invocation.arguments[1] as LocalDateTime
         }
         null
     })
@@ -85,6 +87,33 @@ class CrawlerBootcampServiceTest {
             ),
             appended.curriculums,
         )
+        // 모집 상태를 보내지 않으면 모집 중 그대로 두고 따로 바꾸지 않는다.
+        assertEquals(emptyList<String>(), managerCalls)
+    }
+
+    @Test
+    fun `모집 마감으로 보내면 모집 중으로 저장한 뒤 현재 시각으로 마감하고 게시한다`() {
+        Mockito.`when`(bootcampReader.existsBySourceUrl(SOURCE_URL)).thenReturn(false)
+
+        val bootcampId = service.register(command(status = BootcampStatus.CLOSED))
+
+        assertEquals(BOOTCAMP_ID, bootcampId)
+        val appended = checkNotNull(appendedCommand)
+        assertEquals(BootcampStatus.RECRUITING, appended.status)
+        assertNull(appended.closedAt)
+        assertEquals(BootcampPublicationStatus.PUBLISHED, appended.publicationStatus)
+        assertEquals(listOf("close"), managerCalls)
+        assertEquals(NOW, closedAt)
+    }
+
+    @Test
+    fun `모집 중으로 보내면 따로 상태를 바꾸지 않는다`() {
+        Mockito.`when`(bootcampReader.existsBySourceUrl(SOURCE_URL)).thenReturn(false)
+
+        service.register(command(status = BootcampStatus.RECRUITING))
+
+        assertEquals(BootcampStatus.RECRUITING, checkNotNull(appendedCommand).status)
+        assertEquals(emptyList<String>(), managerCalls)
     }
 
     @Test
@@ -118,6 +147,41 @@ class CrawlerBootcampServiceTest {
     }
 
     @Test
+    fun `교체에 모집 마감을 보내면 모집 중이던 부트캠프를 현재 시각으로 마감한다`() {
+        val bootcamp = stubCrawledBootcamp()
+        Mockito.`when`(bootcamp.status).thenReturn(BootcampStatus.RECRUITING)
+
+        service.replace(BOOTCAMP_ID, command(status = BootcampStatus.CLOSED))
+
+        assertEquals(listOf("update", "close"), managerCalls)
+        assertEquals(NOW, closedAt)
+    }
+
+    @Test
+    fun `교체에 모집 중을 보내면 마감된 부트캠프를 다시 모집 중으로 바꾼다`() {
+        val bootcamp = stubCrawledBootcamp()
+        Mockito.`when`(bootcamp.status).thenReturn(BootcampStatus.CLOSED)
+
+        service.replace(BOOTCAMP_ID, command(status = BootcampStatus.RECRUITING))
+
+        assertEquals(listOf("update", "startRecruitment"), managerCalls)
+    }
+
+    @Test
+    fun `교체에 지금과 같은 모집 상태를 보내면 상태를 바꾸지 않는다`() {
+        listOf(BootcampStatus.RECRUITING, BootcampStatus.CLOSED).forEach { status ->
+            managerCalls.clear()
+            val bootcamp = stubCrawledBootcamp()
+            Mockito.`when`(bootcamp.status).thenReturn(status)
+
+            service.replace(BOOTCAMP_ID, command(status = status))
+
+            assertEquals(listOf("update"), managerCalls, "$status")
+        }
+        assertNull(closedAt)
+    }
+
+    @Test
     fun `다른 부트캠프가 쓰는 원문 URL로 바꾸려 하면 충돌로 알린다`() {
         stubCrawledBootcamp()
         val otherUrl = "https://example.com/bootcamps/2"
@@ -136,7 +200,7 @@ class CrawlerBootcampServiceTest {
         service.delete(BOOTCAMP_ID)
 
         assertEquals(listOf("delete"), managerCalls)
-        assertEquals(LocalDateTime.of(2026, 9, 22, 12, 0), deletedAt)
+        assertEquals(NOW, deletedAt)
     }
 
     @Test
@@ -159,6 +223,7 @@ class CrawlerBootcampServiceTest {
     private fun command(
         title: String = "백엔드 부트캠프",
         sourceUrl: String = SOURCE_URL,
+        status: BootcampStatus? = null,
         curriculums: List<CrawlerBootcampCurriculumCommand> = listOf(curriculum(1, 4, "자바 기초"), curriculum(5, 8, "스프링")),
     ): CrawlerBootcampCommand = CrawlerBootcampCommand(
         companyName = "오공고 교육사",
@@ -182,11 +247,13 @@ class CrawlerBootcampServiceTest {
         managerEmail = "edu@example.com",
         inquiryUrl = null,
         sourceUrl = sourceUrl,
+        status = status,
         curriculums = curriculums,
     )
 
     companion object {
         private const val BOOTCAMP_ID = 11L
         private const val SOURCE_URL = "https://example.com/bootcamps/1"
+        private val NOW = LocalDateTime.of(2026, 9, 22, 12, 0)
     }
 }

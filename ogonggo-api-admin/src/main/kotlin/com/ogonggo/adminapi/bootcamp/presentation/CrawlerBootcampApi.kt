@@ -20,7 +20,8 @@ import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 
 private const val BAD_REQUEST_DESCRIPTION =
-    "BAD_REQUEST: 요청 값이 올바르지 않거나 모집 기간·교육 기간·지원 방법 칸이 서로 맞지 않습니다."
+    "BAD_REQUEST: 요청 값이 올바르지 않거나 모집 기간·교육 기간·지원 방법 칸이 서로 맞지 않습니다. " +
+        "모집 상태에 RECRUITING·CLOSED 밖의 값을 보내도 400입니다."
 private const val UNAUTHORIZED_DESCRIPTION = "UNAUTHORIZED: 내부 API 키가 없거나 올바르지 않습니다."
 private const val CRAWLED_BOOTCAMP_NOT_FOUND_DESCRIPTION =
     "BOOTCAMP_NOT_FOUND: 수집 부트캠프가 없습니다. 기업회원 부트캠프와 원문 URL이 없는 부트캠프는 찾지 않습니다."
@@ -33,7 +34,10 @@ interface CrawlerBootcampApi {
         operationId = "createCrawlerBootcamp",
         summary = "크롤러 부트캠프 등록",
         description = """
-            크롤러가 수집한 부트캠프를 모집 중·게시 상태로 등록합니다. 검수는 기업회원이 올린 부트캠프만 거칩니다.
+            크롤러가 수집한 부트캠프를 게시 상태로 등록합니다. 검수는 기업회원이 올린 부트캠프만 거칩니다.
+
+            모집 상태(status)는 RECRUITING(모집 중) 또는 CLOSED(모집 마감)만 받고, 보내지 않으면 RECRUITING으로 등록합니다.
+            CLOSED로 보내면 모집 마감 상태로 게시하며 마감 일시는 등록 시각입니다.
 
             기간 모집은 모집 시작·종료 일시가 모두 필요하고, 상시 모집에는 모집 종료 일시를 보낼 수 없습니다.
             외부 페이지 지원은 지원 페이지 주소가 필요하고, 이메일 지원에는 보낼 수 없습니다.
@@ -97,7 +101,11 @@ interface CrawlerBootcampApi {
         summary = "크롤러 부트캠프 교체",
         description = """
             다시 수집한 값으로 수집 부트캠프 전체를 바꾸고, 커리큘럼은 기존 것을 지운 뒤 보낸 목록으로 바꿉니다.
-            운영자가 관리자 콘솔에서 고친 내용도 이 값으로 덮어씁니다. 게시 상태와 모집 상태는 바꾸지 않습니다.
+            운영자가 관리자 콘솔에서 고친 내용도 이 값으로 덮어씁니다. 게시 상태는 바꾸지 않습니다.
+
+            모집 상태(status)를 보내면 그 값으로 맞춥니다. RECRUITING에서 CLOSED로 바뀌면 교체 시각으로 마감하고,
+            CLOSED에서 RECRUITING으로 바뀌면 마감 일시를 지우고 다시 모집 중으로 둡니다. 지금과 같으면 그대로 둡니다.
+            보내지 않으면 모집 상태를 바꾸지 않습니다.
         """,
     )
     @ApiResponses(
