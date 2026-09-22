@@ -9,18 +9,33 @@ import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import java.time.LocalDateTime
 
+/** 달력 칸과 날짜별 목록 카드를 함께 그리는 데 필요한 값만 담는다. 지표와 본문은 상세 조회로 본다. */
 data class UserJobCalendarItem(
     val id: Long,
     val companyName: String,
+    val title: String,
+    val coverImageUrl: String?,
+    val employmentType: EmploymentType,
+    val experienceType: ExperienceType,
+    val jobField: String?,
+    val jobRole: String?,
     val recruitmentStartAt: LocalDateTime,
     val recruitmentEndAt: LocalDateTime,
+    val bookmarked: Boolean,
 ) {
     companion object {
-        internal fun from(job: Job): UserJobCalendarItem = UserJobCalendarItem(
+        internal fun from(job: Job, bookmarked: Boolean): UserJobCalendarItem = UserJobCalendarItem(
             id = job.requiredId(),
             companyName = job.companyName,
+            title = job.title,
+            coverImageUrl = job.coverImageUrl,
+            employmentType = job.employmentType,
+            experienceType = job.experienceType,
+            jobField = job.jobField,
+            jobRole = job.jobRole,
             recruitmentStartAt = checkNotNull(job.recruitmentStartAt) { "달력 공고의 모집 시작 일시가 없습니다." },
             recruitmentEndAt = checkNotNull(job.recruitmentEndAt) { "달력 공고의 모집 종료 일시가 없습니다." },
+            bookmarked = bookmarked,
         )
     }
 }

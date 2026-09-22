@@ -366,13 +366,21 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(100, companyProfileRequest.at("/properties/managerName/maxLength").asInt())
 
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
-        assertFalse(jobCalendar.has("security"))
+        // 스크랩 공고만 거를 때 토큰이 필요하므로 Swagger UI에서 토큰을 보낼 수 있어야 한다.
+        assertTrue(jobCalendar.at("/security/0/BearerAuth").isArray)
         assertEquals("date", jobCalendar.parameter("from").at("/schema/format").asText())
         assertEquals("date", jobCalendar.parameter("to").at("/schema/format").asText())
+        assertEquals(2, jobCalendar.parameter("keyword").at("/schema/minLength").asInt())
+        assertEquals(100, jobCalendar.parameter("jobRole").at("/schema/maxLength").asInt())
+        assertFalse(jobCalendar.parameter("employmentType")["required"]?.asBoolean() ?: false)
 
         val calendarBadRequest = document.at("/paths/~1api~1v1~1jobs~1calendar/get/responses/400")
         assertTrue(calendarBadRequest["description"].asText().startsWith("BAD_REQUEST"))
         assertTrue(calendarBadRequest.at("/content/application~1json/schema").isObject)
+        assertTrue(
+            document.at("/paths/~1api~1v1~1jobs~1calendar/get/responses/401/description").asText()
+                .startsWith("UNAUTHORIZED"),
+        )
 
         val jobNotFound = document.at("/paths/~1api~1v1~1jobs~1{jobId}/get/responses/404")
         assertTrue(jobNotFound["description"].asText().startsWith("JOB_NOT_FOUND"))

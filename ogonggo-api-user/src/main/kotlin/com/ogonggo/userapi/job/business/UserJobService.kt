@@ -2,6 +2,7 @@ package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
@@ -74,12 +75,29 @@ class UserJobService(
         return toSummaries(userId, jobs)
     }
 
-    /** 조회 기간의 유효성은 Presentation이 검증하고, 여기서는 날짜를 일시 경계로 옮기기만 한다. */
-    fun getJobCalendar(from: LocalDate, to: LocalDate): List<UserJobCalendarItem> =
-        jobReader.readPublishedCalendar(
+    /**
+     * 조회 기간의 유효성은 Presentation이 검증하고, 여기서는 날짜를 일시 경계로 옮기기만 한다.
+     * 목록처럼 로그인하지 않았으면 북마크가 하나도 없는 것으로 본다.
+     */
+    fun getJobCalendar(
+        userId: Long?,
+        condition: JobSearchCondition,
+        calendarCondition: JobCalendarSearchCondition,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<UserJobCalendarItem> {
+        val jobs = jobReader.readPublishedCalendar(
+            condition = condition,
+            calendarCondition = calendarCondition,
             rangeStart = from.atStartOfDay(),
             rangeEndExclusive = to.plusDays(1).atStartOfDay(),
-        ).map(UserJobCalendarItem::from)
+        )
+        if (jobs.isEmpty()) {
+            return emptyList()
+        }
+        val bookmarkedJobIds = readBookmarkedJobIds(userId, jobs.map(Job::requiredId))
+        return jobs.map { job -> UserJobCalendarItem.from(job, job.requiredId() in bookmarkedJobIds) }
+    }
 
     /**
      * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.

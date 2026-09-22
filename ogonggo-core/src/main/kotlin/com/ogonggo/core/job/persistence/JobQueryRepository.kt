@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
@@ -18,6 +19,7 @@ import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
+import com.querydsl.jpa.JPAExpressions
 import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
 import java.time.LocalDateTime
@@ -77,6 +79,46 @@ internal class JobQueryRepository(
 
         return PageImpl(content, pageable, total)
     }
+
+    /**
+     * 모집 기간이 조회 범위와 겹치는 게시 공고를 종료 일시순으로 읽는다. 기간이 없는 공고는 달력에 놓을 수 없어 뺀다.
+     * 마감일 기준이면 겹치는 공고가 아니라 모집 종료 일시가 범위 안에 있는 공고만 읽는다.
+     * 선택 필터와 검색어는 공개 목록과 같다.
+     * 북마크는 공고당 사용자별로 한 행뿐이므로 조인 대신 존재 여부로 걸러 행이 늘지 않게 한다.
+     */
+    fun findPublishedCalendar(
+        condition: JobSearchCondition,
+        calendarCondition: JobCalendarSearchCondition,
+        rangeStart: LocalDateTime,
+        rangeEndExclusive: LocalDateTime,
+        now: LocalDateTime,
+    ): List<Job> =
+        queryFactory.selectFrom(job)
+            .where(
+                *publishedPredicates(condition),
+                job.recruitmentStartAt.isNotNull,
+                job.recruitmentEndAt.isNotNull,
+                job.recruitmentEndAt.goe(rangeStart),
+                if (calendarCondition.deadlineOnly) {
+                    job.recruitmentEndAt.lt(rangeEndExclusive)
+                } else {
+                    job.recruitmentStartAt.lt(rangeEndExclusive)
+                },
+                recruiting(now).takeIf { calendarCondition.excludeClosed },
+                calendarCondition.bookmarkedUserId?.let(::bookmarkedBy),
+            )
+            .orderBy(job.recruitmentEndAt.asc(), job.id.asc())
+            .fetch()
+
+    private fun bookmarkedBy(userId: Long): BooleanExpression =
+        JPAExpressions.selectOne()
+            .from(jobBookmark)
+            .where(
+                jobBookmark.jobId.eq(job.id),
+                jobBookmark.userId.eq(userId),
+                jobBookmark.deletedAt.isNull,
+            )
+            .exists()
 
     private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {
         BookmarkSortType.RECENTLY_SAVED -> arrayOf(jobBookmark.updatedAt.desc(), jobBookmark.id.desc())

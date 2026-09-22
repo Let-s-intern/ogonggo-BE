@@ -173,7 +173,20 @@ interface UserJobApi {
             모집 기간이 없는 ALWAYS_OPEN 공고는 제외합니다.
             시작·종료 일시가 모두 있는 공고만 대상이며 종료 일시, 식별자 오름차순으로 정렬합니다.
 
+            employmentType, experienceType, jobField(직군), jobRole(직무), keyword는 채용공고 목록 조회와 같습니다.
+            각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않으며 서로 함께 사용할 수 있습니다.
+            keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않고 2자 이상 100자 이하여야 합니다.
+
+            excludeClosed=true면 마감 처리됐거나 모집 종료 일시가 지난 공고를 뺍니다.
+            deadlineOnly=true(마감일 기준)면 기간이 겹치는 공고 대신 모집 종료 일시가 from~to 안에 있는 공고만 반환합니다.
+            bookmarkedOnly=true면 내가 북마크한 공고만 반환하며, 이때만 로그인이 필요하고 토큰이 없으면 401입니다.
+            세 값은 기본이 false이며 다른 필터와 함께 사용할 수 있습니다.
+
+            로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
+            보내지 않으면 항상 false입니다.
+
             응답에 페이지네이션이 없어 조회 기간이 곧 응답 크기가 되므로 from부터 to까지 최대 92일만 허용합니다.
+            날짜별 목록의 더보기는 받은 목록을 클라이언트가 나눠 보여 줍니다.
         """,
     )
     @ApiResponses(
@@ -185,14 +198,33 @@ interface UserJobApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 시작일이 종료일보다 늦거나 조회 기간이 92일을 넘습니다.",
+                description = "BAD_REQUEST: 시작일이 종료일보다 늦거나 조회 기간이 92일을 넘거나 필터 값이 올바르지 않습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "UNAUTHORIZED: bookmarkedOnly=true인데 로그인하지 않았습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
     )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     fun getJobCalendar(
+        @Parameter(hidden = true)
+        userId: Long?,
         from: LocalDate,
         to: LocalDate,
+        employmentType: EmploymentType?,
+        experienceType: ExperienceType?,
+        @Size(max = 100)
+        jobField: String?,
+        @Size(max = 100)
+        jobRole: String?,
+        @Size(min = 2, max = 100)
+        keyword: String?,
+        excludeClosed: Boolean,
+        bookmarkedOnly: Boolean,
+        deadlineOnly: Boolean,
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>>
 
     @Operation(

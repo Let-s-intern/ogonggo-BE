@@ -41,25 +41,6 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
         publicationStatus: JobPublicationStatus,
     ): Job?
 
-    @Query(
-        """
-        select job
-        from Job job
-        where job.publicationStatus = :publicationStatus
-          and job.deletedAt is null
-          and job.recruitmentStartAt is not null
-          and job.recruitmentEndAt is not null
-          and job.recruitmentStartAt < :rangeEndExclusive
-          and job.recruitmentEndAt >= :rangeStart
-        order by job.recruitmentEndAt asc, job.id asc
-        """,
-    )
-    fun findPublishedCalendarJobs(
-        @Param("publicationStatus") publicationStatus: JobPublicationStatus,
-        @Param("rangeStart") rangeStart: LocalDateTime,
-        @Param("rangeEndExclusive") rangeEndExclusive: LocalDateTime,
-    ): List<Job>
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select job from Job job where job.id = :jobId and job.deletedAt is null")
     fun findByIdForUpdate(@Param("jobId") jobId: Long): Job?

@@ -7,20 +7,37 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobSummary
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
 data class UserJobCalendarItemResponse(
     val id: Long,
     val companyName: String,
+    val title: String,
+    @field:Schema(description = "공고 대표 이미지 주소. 달력 칸과 카드의 로고 자리에 쓴다. 없으면 null")
+    val coverImageUrl: String?,
+    val employmentType: EmploymentType,
+    val experienceType: ExperienceType,
+    val jobField: String?,
+    val jobRole: String?,
     val recruitmentStartAt: LocalDateTime,
     val recruitmentEndAt: LocalDateTime,
+    @field:Schema(description = "로그인한 사용자의 북마크 여부. 토큰이 없으면 항상 false")
+    val bookmarked: Boolean,
 ) {
     companion object {
         internal fun from(result: UserJobCalendarItem): UserJobCalendarItemResponse = UserJobCalendarItemResponse(
             id = result.id,
             companyName = result.companyName,
+            title = result.title,
+            coverImageUrl = result.coverImageUrl,
+            employmentType = result.employmentType,
+            experienceType = result.experienceType,
+            jobField = result.jobField,
+            jobRole = result.jobRole,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
+            bookmarked = result.bookmarked,
         )
     }
 }
