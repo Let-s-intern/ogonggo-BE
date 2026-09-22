@@ -103,9 +103,13 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 채용공고 달력
 
-`GET /api/v1/jobs/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`는 요청 날짜 범위와 모집 기간이 겹치는 게시 공고를 반환합니다. 달력 항목은 `id`, `companyName`, `recruitmentStartAt`, `recruitmentEndAt`만 포함하며 마감 임박 일수와 원문 URL은 포함하지 않습니다.
+`GET /api/v1/jobs/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`는 요청 날짜 범위와 모집 기간이 겹치는 게시 공고를 반환합니다. 달력 항목은 달력 칸과 날짜별 목록 카드를 그리는 데 필요한 `id`, `companyName`, `title`, `coverImageUrl`, `employmentType`, `experienceType`, `jobField`, `jobRole`, `recruitmentStartAt`, `recruitmentEndAt`, `bookmarked`만 포함하며 마감 임박 일수, 원문 URL, 지표는 포함하지 않습니다. 공고에는 회사 로고가 따로 없으므로 로고 자리에는 `coverImageUrl`을 씁니다. 날짜별 목록의 더보기는 받은 목록을 클라이언트가 나눠 보여 줍니다.
 
 시작·종료 일시가 모두 있는 미삭제 `PUBLISHED` 공고만 대상으로 하고 종료 일시, 식별자 오름차순으로 정렬합니다. `ALWAYS_OPEN` 등 기간이 없는 공고는 제외합니다. D-day 문구는 클라이언트가 `recruitmentEndAt`으로 계산합니다.
+
+달력은 채용공고 목록과 같은 선택 필터 `employmentType`, `experienceType`, `jobField`, `jobRole`과 검색어 `keyword`를 받습니다. 의미와 검증 범위는 목록과 같고, 보내지 않은 조건은 적용하지 않습니다.
+
+달력 전용 조건 `excludeClosed`, `deadlineOnly`, `bookmarkedOnly`는 모두 기본값이 `false`입니다. `excludeClosed=true`는 마감 처리됐거나 모집 종료 일시가 조회 시각보다 이전인 공고를 뺍니다. `deadlineOnly=true`(마감일 기준)는 기간이 겹치는 공고 대신 모집 종료 일시가 조회 범위 안에 있는 공고만 반환합니다. `bookmarkedOnly=true`는 로그인한 사용자가 북마크한 공고만 반환하며, 토큰이 없으면 401 `UNAUTHORIZED`로 응답합니다.
 
 달력 응답에는 페이지네이션이 없어 조회 기간이 곧 응답 크기가 되므로 **`from`부터 `to`까지 최대 92일**만 허용합니다. 시작일이 종료일보다 늦거나 기간이 92일을 넘으면 400 `BAD_REQUEST`로 응답하며, 메시지는 `[from]` 또는 `[to]`로 문제가 된 파라미터를 알립니다. 더 넓은 기간이 필요하면 클라이언트가 구간을 나눠 요청합니다.
 
@@ -115,7 +119,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 지표
 
-채용공고와 부트캠프의 목록·상세 응답은 `viewCount`, `bookmarkCount`, `commentCount`를 포함합니다. 세 값은 `job_metrics`, `bootcamp_metrics`가 소유하며 지표 행이 아직 없으면 `0`으로 응답합니다. 댓글 기능은 아직 없어 `commentCount`는 항상 `0`입니다. 달력 응답은 최소 필드 계약을 유지하므로 지표를 추가하지 않습니다.
+채용공고와 부트캠프의 목록·상세 응답은 `viewCount`, `bookmarkCount`, `commentCount`를 포함합니다. 세 값은 `job_metrics`, `bootcamp_metrics`가 소유하며 지표 행이 아직 없으면 `0`으로 응답합니다. 댓글 기능은 아직 없어 `commentCount`는 항상 `0`입니다. 달력 응답은 카드에 필요한 필드만 두므로 지표를 추가하지 않습니다.
 
 목록 조회는 공고·부트캠프 식별자 목록으로 지표를 한 번에 읽어 N+1을 만들지 않습니다.
 
@@ -143,7 +147,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 채용공고 북마크
 
-일반 채용공고 목록과 상세 응답은 현재 사용자의 상태를 나타내는 `bookmarked`를 포함합니다. `GET /api/v1/job-bookmarks`는 게시 중인 미삭제 북마크 공고만 최근 북마크 순으로 반환하며 일반 목록과 같은 페이지 응답과 선택 필터·검색어를 사용합니다. 달력 응답은 최소 필드 계약을 유지하므로 `bookmarked`를 추가하지 않습니다.
+일반 채용공고 목록과 상세 응답은 현재 사용자의 상태를 나타내는 `bookmarked`를 포함합니다. `GET /api/v1/job-bookmarks`는 게시 중인 미삭제 북마크 공고만 최근 북마크 순으로 반환하며 일반 목록과 같은 페이지 응답과 선택 필터·검색어를 사용합니다. 달력 응답도 날짜별 목록 카드에 북마크 표시가 있어 같은 방식으로 `bookmarked`를 채웁니다.
 
 ### 부트캠프 북마크
 

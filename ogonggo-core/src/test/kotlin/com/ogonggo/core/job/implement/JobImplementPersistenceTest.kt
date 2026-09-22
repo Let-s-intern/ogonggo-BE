@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -155,12 +156,157 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobManager.delete(deleted, LocalDateTime.of(2026, 8, 27, 12, 0))
 
         val result = jobReader.readPublishedCalendar(
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition.NONE,
             rangeStart = LocalDateTime.of(2026, 8, 1, 0, 0),
             rangeEndExclusive = LocalDateTime.of(2026, 9, 1, 0, 0),
         )
 
         assertEquals(listOf(inside.id, spanning.id), result.map { it.id })
         assertEquals(JobPublicationStatus.DRAFT, draft.publicationStatus)
+    }
+
+    @Test
+    fun `공고 달력은 목록과 같은 필터와 검색어로 좁힌다`() {
+        // given
+        fun appendInRange(
+            employmentType: EmploymentType = EmploymentType.INTERN,
+            experienceType: ExperienceType = ExperienceType.NEWCOMER,
+            jobField: String? = "개발",
+            jobRole: String? = "백엔드",
+            companyName: String = "오공고",
+            title: String = "Backend 인턴",
+        ): Long = publishCommand(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 8, 10, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 8, 20, 23, 59),
+                employmentType = employmentType,
+                experienceType = experienceType,
+                jobField = jobField,
+                jobRole = jobRole,
+                companyName = companyName,
+                title = title,
+            ),
+        )
+        val matched = appendInRange()
+        appendInRange(employmentType = EmploymentType.FULL_TIME)
+        appendInRange(experienceType = ExperienceType.EXPERIENCED)
+        appendInRange(jobField = "디자인")
+        appendInRange(jobRole = "프론트엔드")
+        appendInRange(title = "데이터 인턴")
+
+        // when
+        val result = jobReader.readPublishedCalendar(
+            condition = JobSearchCondition(
+                employmentType = EmploymentType.INTERN,
+                experienceType = ExperienceType.NEWCOMER,
+                jobField = "개발",
+                jobRole = "백엔드",
+                keyword = "backend",
+            ),
+            calendarCondition = JobCalendarSearchCondition.NONE,
+            rangeStart = LocalDateTime.of(2026, 8, 1, 0, 0),
+            rangeEndExclusive = LocalDateTime.of(2026, 9, 1, 0, 0),
+        )
+
+        // then
+        assertEquals(listOf(matched), result.map { it.id })
+    }
+
+    @Test
+    fun `마감일 기준 달력은 모집 종료 일시가 조회 범위 안에 있는 공고만 반환한다`() {
+        // given
+        val endsInside = publishCommand(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 7, 20, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 8, 31, 23, 59),
+            ),
+        )
+        publishCommand(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 8, 10, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 9, 1, 0, 0),
+            ),
+        )
+
+        // when
+        val result = jobReader.readPublishedCalendar(
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition(deadlineOnly = true),
+            rangeStart = LocalDateTime.of(2026, 8, 1, 0, 0),
+            rangeEndExclusive = LocalDateTime.of(2026, 9, 1, 0, 0),
+        )
+
+        // then
+        assertEquals(listOf(endsInside), result.map { it.id })
+    }
+
+    @Test
+    fun `마감 공고를 제외한 달력은 조회 시각에 모집 중인 공고만 반환한다`() {
+        // given
+        val now = LocalDateTime.of(2026, 8, 15, 12, 0)
+        val recruiting = publishCommand(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
+                recruitmentEndAt = now,
+            ),
+        )
+        publishCommand(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
+                recruitmentEndAt = now.minusSeconds(1),
+            ),
+        )
+        val closedEarly = jobAppender.append(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 8, 31, 23, 59),
+            ),
+        )
+        jobManager.publish(closedEarly)
+        jobManager.close(closedEarly, now.minusDays(1))
+
+        // when
+        val result = jobReader.readPublishedCalendar(
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition(excludeClosed = true),
+            rangeStart = LocalDateTime.of(2026, 8, 1, 0, 0),
+            rangeEndExclusive = LocalDateTime.of(2026, 9, 1, 0, 0),
+            now = now,
+        )
+
+        // then
+        assertEquals(listOf(recruiting), result.map { it.id })
+    }
+
+    @Test
+    fun `스크랩 공고만 보는 달력은 그 사용자의 활성 북마크 공고만 반환한다`() {
+        // given
+        fun appendInRange(): Long = publishCommand(
+            createCommand(
+                recruitmentStartAt = LocalDateTime.of(2026, 8, 10, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 8, 20, 23, 59),
+            ),
+        )
+        val bookmarked = appendInRange()
+        val unbookmarked = appendInRange()
+        val otherUsers = appendInRange()
+        appendInRange()
+        jobBookmarkManager.append(USER_ID, bookmarked, NOW)
+        jobBookmarkManager.append(USER_ID, unbookmarked, NOW)
+        jobBookmarkManager.delete(USER_ID, unbookmarked, NOW.plusMinutes(1))
+        jobBookmarkManager.append(OTHER_USER_ID, otherUsers, NOW)
+
+        // when
+        val result = jobReader.readPublishedCalendar(
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition(bookmarkedUserId = USER_ID),
+            rangeStart = LocalDateTime.of(2026, 8, 1, 0, 0),
+            rangeEndExclusive = LocalDateTime.of(2026, 9, 1, 0, 0),
+        )
+
+        // then
+        assertEquals(listOf(bookmarked), result.map { it.id })
     }
 
     @Test

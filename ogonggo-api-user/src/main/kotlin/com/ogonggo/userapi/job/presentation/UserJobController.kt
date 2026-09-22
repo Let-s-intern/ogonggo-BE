@@ -1,10 +1,13 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.userapi.error.InvalidRequestParameterException
+import com.ogonggo.userapi.error.UserApiErrorCode
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
@@ -98,12 +101,33 @@ class UserJobController(
 
     @GetMapping("/calendar")
     override fun getJobCalendar(
+        @AuthenticationPrincipal userId: Long?,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
+        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "jobField", required = false) jobField: String?,
+        @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "excludeClosed", defaultValue = "false") excludeClosed: Boolean,
+        @RequestParam(name = "bookmarkedOnly", defaultValue = "false") bookmarkedOnly: Boolean,
+        @RequestParam(name = "deadlineOnly", defaultValue = "false") deadlineOnly: Boolean,
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>> {
         validateCalendarRange(from, to)
+        val calendarCondition = JobCalendarSearchCondition(
+            bookmarkedUserId = if (bookmarkedOnly) requireLogin(userId) else null,
+            excludeClosed = excludeClosed,
+            deadlineOnly = deadlineOnly,
+        )
+        val condition = JobSearchCondition(
+            employmentType = employmentType,
+            experienceType = experienceType,
+            jobField = jobField,
+            jobRole = jobRole,
+            keyword = keyword,
+        )
         return SuccessResponse.ok(
-            userJobService.getJobCalendar(from, to).map(UserJobCalendarItemResponse::from),
+            userJobService.getJobCalendar(userId, condition, calendarCondition, from, to).map(UserJobCalendarItemResponse::from),
         )
     }
 
@@ -123,6 +147,10 @@ class UserJobController(
             )
         }
     }
+
+    /** 달력은 로그인 없이 열려 있지만, 내 북마크로 거르려면 누구인지 알아야 한다. */
+    private fun requireLogin(userId: Long?): Long =
+        userId ?: throw UnauthorizedException(UserApiErrorCode.UNAUTHORIZED)
 
     companion object {
         private const val MAX_CALENDAR_RANGE_DAYS = 92L

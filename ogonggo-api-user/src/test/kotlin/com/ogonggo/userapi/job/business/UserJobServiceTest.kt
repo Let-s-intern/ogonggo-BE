@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.dto.JobPageDto
@@ -250,28 +251,72 @@ class UserJobServiceTest {
     }
 
     @Test
-    fun `달력 조회 기간을 일시 경계로 변환하고 필요한 필드만 반환한다`() {
+    fun `달력 조회 기간을 일시 경계로 변환하고 카드에 필요한 필드와 북마크 여부를 반환한다`() {
+        // given
         val job = createJobMock()
         val startAt = LocalDateTime.of(2026, 8, 10, 9, 0)
         val endAt = LocalDateTime.of(2026, 8, 31, 23, 59)
         Mockito.`when`(job.recruitmentStartAt).thenReturn(startAt)
         Mockito.`when`(job.recruitmentEndAt).thenReturn(endAt)
+        Mockito.`when`(job.jobRole).thenReturn("마케팅")
         Mockito.`when`(
             jobReader.readPublishedCalendar(
+                JobSearchCondition.NONE,
+                JobCalendarSearchCondition.NONE,
+                LocalDateTime.of(2026, 8, 1, 0, 0),
+                LocalDateTime.of(2026, 9, 1, 0, 0),
+            ),
+        ).thenReturn(listOf(job))
+        Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L))).thenReturn(setOf(1L))
+
+        // when
+        val result = service.getJobCalendar(
+            userId = USER_ID,
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition.NONE,
+            from = LocalDate.of(2026, 8, 1),
+            to = LocalDate.of(2026, 8, 31),
+        ).single()
+
+        // then
+        assertEquals(1L, result.id)
+        assertEquals("오공고", result.companyName)
+        assertEquals("백엔드 개발자", result.title)
+        assertEquals(EmploymentType.FULL_TIME, result.employmentType)
+        assertEquals(ExperienceType.EXPERIENCED, result.experienceType)
+        assertEquals("마케팅", result.jobRole)
+        assertEquals(startAt, result.recruitmentStartAt)
+        assertEquals(endAt, result.recruitmentEndAt)
+        assertEquals(true, result.bookmarked)
+    }
+
+    @Test
+    fun `비로그인 달력 조회는 북마크를 조회하지 않고 모두 북마크하지 않은 것으로 반환한다`() {
+        // given
+        val job = createJobMock()
+        Mockito.`when`(job.recruitmentStartAt).thenReturn(LocalDateTime.of(2026, 8, 10, 9, 0))
+        Mockito.`when`(job.recruitmentEndAt).thenReturn(LocalDateTime.of(2026, 8, 31, 23, 59))
+        Mockito.`when`(
+            jobReader.readPublishedCalendar(
+                JobSearchCondition.NONE,
+                JobCalendarSearchCondition.NONE,
                 LocalDateTime.of(2026, 8, 1, 0, 0),
                 LocalDateTime.of(2026, 9, 1, 0, 0),
             ),
         ).thenReturn(listOf(job))
 
+        // when
         val result = service.getJobCalendar(
+            userId = null,
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition.NONE,
             from = LocalDate.of(2026, 8, 1),
             to = LocalDate.of(2026, 8, 31),
         )
 
-        assertEquals(1L, result.single().id)
-        assertEquals("오공고", result.single().companyName)
-        assertEquals(startAt, result.single().recruitmentStartAt)
-        assertEquals(endAt, result.single().recruitmentEndAt)
+        // then
+        assertEquals(false, result.single().bookmarked)
+        Mockito.verifyNoInteractions(jobBookmarkReader)
     }
 
     private fun givenProfile(wishJob: String?, wishIndustry: String?) {

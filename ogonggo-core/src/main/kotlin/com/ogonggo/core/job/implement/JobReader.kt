@@ -3,6 +3,7 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
@@ -111,15 +112,23 @@ class JobReader internal constructor(
     }
 
     fun readPublishedCalendar(
+        condition: JobSearchCondition,
+        calendarCondition: JobCalendarSearchCondition,
         rangeStart: LocalDateTime,
         rangeEndExclusive: LocalDateTime,
+    ): List<Job> =
+        readPublishedCalendar(condition, calendarCondition, rangeStart, rangeEndExclusive, LocalDateTime.now(clock))
+
+    /** 마감 공고 제외는 저장된 상태가 아니라 기준 시각으로 판단한다. */
+    fun readPublishedCalendar(
+        condition: JobSearchCondition,
+        calendarCondition: JobCalendarSearchCondition,
+        rangeStart: LocalDateTime,
+        rangeEndExclusive: LocalDateTime,
+        now: LocalDateTime,
     ): List<Job> {
         require(rangeStart.isBefore(rangeEndExclusive)) { "달력 조회 시작 일시는 종료 일시보다 빨라야 합니다." }
-        return jobRepository.findPublishedCalendarJobs(
-            publicationStatus = JobPublicationStatus.PUBLISHED,
-            rangeStart = rangeStart,
-            rangeEndExclusive = rangeEndExclusive,
-        )
+        return jobQueryRepository.findPublishedCalendar(condition, calendarCondition, rangeStart, rangeEndExclusive, now)
     }
 
     fun readForUpdate(jobId: Long): Job =
