@@ -170,8 +170,8 @@ internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     ): Int
 
     /**
-     * 활성 북마크의 지원·신청 관리 단계를 옮긴다.
-     * 조회한 단계로 분기하지 않고 출발 단계를 UPDATE 조건에 넣어, 동시에 들어온 다른 이동과 순서가 뒤집히지 않게 한다.
+     * 활성 북마크의 지원·신청 관리 단계를 옮긴다. 단계 사이에 선후 관계가 없어 출발 단계를 가리지 않는다.
+     * 이미 목표 단계면 갱신하지 않아, 같은 이동을 반복해도 목록 순서가 바뀌지 않는다.
      * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -183,13 +183,12 @@ internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
         where bookmark.jobId = :jobId
           and bookmark.userId = :userId
           and bookmark.deletedAt is null
-          and bookmark.applicationStatus in :sources
+          and bookmark.applicationStatus <> :target
         """,
     )
     fun changeApplicationStatus(
         @Param("jobId") jobId: Long,
         @Param("userId") userId: Long,
-        @Param("sources") sources: Collection<JobApplicationStatus>,
         @Param("target") target: JobApplicationStatus,
         @Param("now") now: LocalDateTime,
     ): Int

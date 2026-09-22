@@ -12,5 +12,4 @@ enum class BootcampErrorCode(
     INVALID_BOOTCAMP_STATUS_TRANSITION(HttpStatus.CONFLICT, "허용되지 않는 부트캠프 상태 변경입니다."),
     BOOTCAMP_BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 부트캠프입니다."),
     BOOTCAMP_BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크하지 않은 부트캠프입니다."),
-    INVALID_BOOTCAMP_APPLICATION_STATUS_TRANSITION(HttpStatus.CONFLICT, "허용되지 않는 신청 단계 변경입니다."),
 }

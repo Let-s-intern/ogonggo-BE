@@ -23,12 +23,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -144,25 +146,46 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `북마크를 신청 전으로 옮기고 스크랩으로 되돌린다`() {
-        mockMvc.perform(post("/api/v1/bootcamp-bookmarks/{id}/prepare", BOOTCAMP_ID).with(authenticatedUser()))
+    fun `북마크를 요청한 단계로 옮긴다`() {
+        mockMvc.perform(
+            put("/api/v1/bootcamp-bookmarks/{id}/application-status", BOOTCAMP_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"applicationStatus":"IN_PROGRESS"}""")
+                .with(authenticatedUser()),
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
 
-        mockMvc.perform(post("/api/v1/bootcamp-bookmarks/{id}/cancel-preparation", BOOTCAMP_ID).with(authenticatedUser()))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value(200))
+        Mockito.verify(userBootcampBookmarkService).changeApplicationStatus(USER_ID, BOOTCAMP_ID, BootcampApplicationStatus.IN_PROGRESS)
+    }
 
-        Mockito.verify(userBootcampBookmarkService).prepare(USER_ID, BOOTCAMP_ID)
-        Mockito.verify(userBootcampBookmarkService).cancelPreparation(USER_ID, BOOTCAMP_ID)
+    @Test
+    fun `단계가 없거나 정의되지 않은 값이면 400으로 응답한다`() {
+        listOf("{}", """{"applicationStatus":"UNKNOWN"}""").forEach { body ->
+            mockMvc.perform(
+                put("/api/v1/bootcamp-bookmarks/{id}/application-status", BOOTCAMP_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body)
+                    .with(authenticatedUser()),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(userBootcampBookmarkService)
     }
 
     @Test
     fun `북마크하지 않은 대상의 단계를 옮기면 404로 응답한다`() {
         Mockito.doThrow(EntityNotFoundException(BootcampErrorCode.BOOTCAMP_BOOKMARK_NOT_FOUND))
-            .`when`(userBootcampBookmarkService).prepare(USER_ID, BOOTCAMP_ID)
+            .`when`(userBootcampBookmarkService).changeApplicationStatus(USER_ID, BOOTCAMP_ID, BootcampApplicationStatus.IN_PROGRESS)
 
-        mockMvc.perform(post("/api/v1/bootcamp-bookmarks/{id}/prepare", BOOTCAMP_ID).with(authenticatedUser()))
+        mockMvc.perform(
+            put("/api/v1/bootcamp-bookmarks/{id}/application-status", BOOTCAMP_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"applicationStatus":"IN_PROGRESS"}""")
+                .with(authenticatedUser()),
+        )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("BOOTCAMP_BOOKMARK_NOT_FOUND"))
     }
