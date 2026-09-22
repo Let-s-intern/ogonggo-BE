@@ -241,6 +241,7 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 id = JOB_ID,
                 companyName = "오공고",
                 title = "백엔드 개발자",
+                coverImageUrl = null,
                 employmentType = EmploymentType.FULL_TIME,
                 experienceType = ExperienceType.EXPERIENCED,
                 experienceMinYears = 1,
