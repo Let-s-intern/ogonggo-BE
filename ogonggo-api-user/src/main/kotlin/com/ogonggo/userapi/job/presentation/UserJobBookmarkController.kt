@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.userapi.job.business.UserJobBookmarkService
+import com.ogonggo.userapi.job.presentation.request.UpdateJobApplicationStatusRequest
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -89,21 +92,13 @@ class UserJobBookmarkController(
         return SuccessResponse.ok()
     }
 
-    @PostMapping("/{jobId}/prepare")
-    override fun prepare(
+    @PutMapping("/{jobId}/application-status")
+    override fun updateApplicationStatus(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("jobId") jobId: Long,
+        @RequestBody request: UpdateJobApplicationStatusRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        userJobBookmarkService.prepare(userId, jobId)
-        return SuccessResponse.ok()
-    }
-
-    @PostMapping("/{jobId}/cancel-preparation")
-    override fun cancelPreparation(
-        @AuthenticationPrincipal userId: Long,
-        @PathVariable("jobId") jobId: Long,
-    ): ResponseEntity<SuccessResponse<Unit>> {
-        userJobBookmarkService.cancelPreparation(userId, jobId)
+        userJobBookmarkService.changeApplicationStatus(userId, jobId, checkNotNull(request.applicationStatus))
         return SuccessResponse.ok()
     }
 }

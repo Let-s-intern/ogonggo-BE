@@ -54,15 +54,9 @@ class UserBootcampBookmarkService(
         eventPublisher.publishEvent(BootcampBookmarkChangedEvent(bootcampId))
     }
 
-    /** 스크랩한 북마크를 신청 전으로 옮긴다. */
+    /** 단계 사이에 선후 관계가 없어 어느 단계로든 옮긴다. */
     @Transactional
-    fun prepare(userId: Long, bootcampId: Long) {
-        bootcampBookmarkManager.changeApplicationStatus(userId, bootcampId, BootcampApplicationStatus.PREPARING, LocalDateTime.now(clock))
-    }
-
-    /** 신청 전인 북마크를 스크랩으로 되돌린다. */
-    @Transactional
-    fun cancelPreparation(userId: Long, bootcampId: Long) {
-        bootcampBookmarkManager.changeApplicationStatus(userId, bootcampId, BootcampApplicationStatus.SCRAPPED, LocalDateTime.now(clock))
+    fun changeApplicationStatus(userId: Long, bootcampId: Long, status: BootcampApplicationStatus) {
+        bootcampBookmarkManager.changeApplicationStatus(userId, bootcampId, status, LocalDateTime.now(clock))
     }
 }

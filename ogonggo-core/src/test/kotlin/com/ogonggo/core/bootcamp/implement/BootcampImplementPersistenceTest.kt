@@ -548,22 +548,24 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `신청 단계는 스크랩과 신청 전 사이를 오가고 같은 단계로 다시 옮겨도 결과가 같다`() {
+    fun `신청 단계는 선후 관계 없이 어느 단계로든 옮기고 같은 단계로 다시 옮겨도 결과가 같다`() {
         // given
         val bootcampId = startedRecruitmentBootcampId()
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
 
         // when
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(1))
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.COMPLETED, NOW.plusMinutes(1))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.COMPLETED, NOW.plusMinutes(2))
 
         // then
-        val prepared = bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)
-        assertEquals(BootcampApplicationStatus.PREPARING, prepared?.applicationStatus)
+        val completed = bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)
+        assertEquals(BootcampApplicationStatus.COMPLETED, completed?.applicationStatus)
         // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
-        assertEquals(NOW.plusMinutes(1), prepared?.updatedAt)
+        assertEquals(NOW.plusMinutes(1), completed?.updatedAt)
 
-        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.APPLIED, NOW.plusMinutes(3))
+        assertEquals(BootcampApplicationStatus.APPLIED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.SCRAPPED, NOW.plusMinutes(4))
         assertEquals(BootcampApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
     }
 

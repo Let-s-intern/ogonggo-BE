@@ -6,6 +6,7 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
+import com.ogonggo.userapi.job.presentation.request.UpdateJobApplicationStatusRequest
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.ErrorResponse
 import com.ogonggo.userapi.response.PageResponse
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
@@ -115,11 +117,12 @@ interface UserJobBookmarkApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
-        operationId = "prepareMyJobBookmark",
-        summary = "채용공고 북마크를 지원 준비 중으로 이동",
+        operationId = "replaceMyJobBookmarkApplicationStatus",
+        summary = "채용공고 북마크의 지원·신청 관리 단계 변경",
         description = """
-            스크랩 단계의 북마크를 지원 준비 중으로 옮깁니다.
-            이미 지원 준비 중이면 아무것도 바꾸지 않고 200으로 응답합니다.
+            북마크를 applicationStatus 단계로 옮깁니다. 단계는 스크랩, 지원 준비 중, 지원 완료, 면접, 합격, 불합격입니다.
+            단계 사이에 선후 관계가 없어 어느 단계에서든 다른 어느 단계로든 옮길 수 있습니다.
+            이미 그 단계면 아무것도 바꾸지 않고 200으로 응답합니다.
             옮긴 북마크는 해당 단계 목록의 맨 앞에 옵니다.
         """,
     )
@@ -127,52 +130,23 @@ interface UserJobBookmarkApi {
         value = [
             ApiResponse(responseCode = "200", description = "이동 성공", useReturnTypeSchema = true),
             ApiResponse(
-                responseCode = "404",
-                description = "JOB_BOOKMARK_NOT_FOUND: 북마크하지 않은 일자리 공고입니다.",
+                responseCode = "400",
+                description = "BAD_REQUEST: applicationStatus가 없거나 정의되지 않은 단계입니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
-            ApiResponse(
-                responseCode = "409",
-                description = "INVALID_JOB_APPLICATION_STATUS_TRANSITION: 허용되지 않는 지원 단계 변경입니다.",
-                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-            ),
-        ],
-    )
-    fun prepare(
-        @Parameter(hidden = true)
-        userId: Long,
-        @Positive
-        jobId: Long,
-    ): ResponseEntity<SuccessResponse<Unit>>
-
-    @Operation(
-        operationId = "cancelMyJobBookmarkPreparation",
-        summary = "채용공고 북마크를 스크랩으로 되돌리기",
-        description = """
-            지원 준비 중인 북마크를 스크랩 단계로 되돌립니다.
-            이미 스크랩 단계면 아무것도 바꾸지 않고 200으로 응답합니다.
-            옮긴 북마크는 해당 단계 목록의 맨 앞에 옵니다.
-        """,
-    )
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "이동 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "404",
                 description = "JOB_BOOKMARK_NOT_FOUND: 북마크하지 않은 일자리 공고입니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
-            ApiResponse(
-                responseCode = "409",
-                description = "INVALID_JOB_APPLICATION_STATUS_TRANSITION: 허용되지 않는 지원 단계 변경입니다.",
-                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-            ),
         ],
     )
-    fun cancelPreparation(
+    fun updateApplicationStatus(
         @Parameter(hidden = true)
         userId: Long,
         @Positive
         jobId: Long,
+        @Valid
+        request: UpdateJobApplicationStatusRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 }

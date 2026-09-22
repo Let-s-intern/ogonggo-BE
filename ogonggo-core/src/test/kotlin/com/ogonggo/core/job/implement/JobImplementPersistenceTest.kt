@@ -355,22 +355,24 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `지원 단계는 스크랩과 지원 준비 중 사이를 오가고 같은 단계로 다시 옮겨도 결과가 같다`() {
+    fun `지원 단계는 선후 관계 없이 어느 단계로든 옮기고 같은 단계로 다시 옮겨도 결과가 같다`() {
         // given
         val jobId = publishCommand(createCommand())
         jobBookmarkManager.append(USER_ID, jobId, NOW)
 
         // when
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(1))
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PASSED, NOW.plusMinutes(1))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.PASSED, NOW.plusMinutes(2))
 
         // then
-        val prepared = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
-        assertEquals(JobApplicationStatus.PREPARING, prepared?.applicationStatus)
+        val passed = jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)
+        assertEquals(JobApplicationStatus.PASSED, passed?.applicationStatus)
         // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
-        assertEquals(NOW.plusMinutes(1), prepared?.updatedAt)
+        assertEquals(NOW.plusMinutes(1), passed?.updatedAt)
 
-        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.SCRAPPED, NOW.plusMinutes(3))
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.APPLIED, NOW.plusMinutes(3))
+        assertEquals(JobApplicationStatus.APPLIED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
+        jobBookmarkManager.changeApplicationStatus(USER_ID, jobId, JobApplicationStatus.SCRAPPED, NOW.plusMinutes(4))
         assertEquals(JobApplicationStatus.SCRAPPED, jobBookmarkRepository.findByJobIdAndUserId(jobId, USER_ID)?.applicationStatus)
     }
 

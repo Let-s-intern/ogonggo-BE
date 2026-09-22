@@ -39,20 +39,13 @@ class JobBookmarkManager internal constructor(
 
     /**
      * 활성 북마크를 지원·신청 관리의 다른 단계로 옮긴다. 이미 그 단계에 있으면 그대로 끝나므로 여러 번 옮겨도 결과가 같다.
-     * 옮기지 못했을 때만 현재 단계를 읽어 없는 북마크와 허용되지 않는 이동을 구분한다.
+     * 옮기지 못했을 때만 북마크가 있는지 읽어, 없는 북마크와 이미 목표 단계인 북마크를 구분한다.
      */
     fun changeApplicationStatus(userId: Long, jobId: Long, target: JobApplicationStatus, now: LocalDateTime) {
-        val sources = target.movableFrom()
-        if (sources.isNotEmpty() &&
-            jobBookmarkRepository.changeApplicationStatus(jobId, userId, sources, target, now) > 0
-        ) {
+        if (jobBookmarkRepository.changeApplicationStatus(jobId, userId, target, now) > 0) {
             return
         }
-
-        val current = jobBookmarkRepository.findActiveApplicationStatus(jobId, userId)
+        jobBookmarkRepository.findActiveApplicationStatus(jobId, userId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_BOOKMARK_NOT_FOUND)
-        if (current != target) {
-            throw ConflictException(JobErrorCode.INVALID_JOB_APPLICATION_STATUS_TRANSITION)
-        }
     }
 }

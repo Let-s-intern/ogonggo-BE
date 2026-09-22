@@ -24,12 +24,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -189,25 +191,46 @@ class UserJobBookmarkControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `북마크를 지원 준비 중으로 옮기고 스크랩으로 되돌린다`() {
-        mockMvc.perform(post("/api/v1/job-bookmarks/{id}/prepare", JOB_ID).with(authenticatedUser()))
+    fun `북마크를 요청한 단계로 옮긴다`() {
+        mockMvc.perform(
+            put("/api/v1/job-bookmarks/{id}/application-status", JOB_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"applicationStatus":"INTERVIEWING"}""")
+                .with(authenticatedUser()),
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
 
-        mockMvc.perform(post("/api/v1/job-bookmarks/{id}/cancel-preparation", JOB_ID).with(authenticatedUser()))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value(200))
+        Mockito.verify(userJobBookmarkService).changeApplicationStatus(USER_ID, JOB_ID, JobApplicationStatus.INTERVIEWING)
+    }
 
-        Mockito.verify(userJobBookmarkService).prepare(USER_ID, JOB_ID)
-        Mockito.verify(userJobBookmarkService).cancelPreparation(USER_ID, JOB_ID)
+    @Test
+    fun `단계가 없거나 정의되지 않은 값이면 400으로 응답한다`() {
+        listOf("{}", """{"applicationStatus":"UNKNOWN"}""").forEach { body ->
+            mockMvc.perform(
+                put("/api/v1/job-bookmarks/{id}/application-status", JOB_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body)
+                    .with(authenticatedUser()),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(userJobBookmarkService)
     }
 
     @Test
     fun `북마크하지 않은 대상의 단계를 옮기면 404로 응답한다`() {
         Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_BOOKMARK_NOT_FOUND))
-            .`when`(userJobBookmarkService).prepare(USER_ID, JOB_ID)
+            .`when`(userJobBookmarkService).changeApplicationStatus(USER_ID, JOB_ID, JobApplicationStatus.INTERVIEWING)
 
-        mockMvc.perform(post("/api/v1/job-bookmarks/{id}/prepare", JOB_ID).with(authenticatedUser()))
+        mockMvc.perform(
+            put("/api/v1/job-bookmarks/{id}/application-status", JOB_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"applicationStatus":"INTERVIEWING"}""")
+                .with(authenticatedUser()),
+        )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("JOB_BOOKMARK_NOT_FOUND"))
     }
