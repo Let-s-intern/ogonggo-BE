@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-21
+- 최종 변경일: 2026-09-22
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -38,7 +38,7 @@
 - 필터·정렬·페이지 조건은 Query Parameter로 전달합니다.
 - 요청 본문이 필요한 복잡한 검색만 `POST /search`를 허용하며 실제 요구가 생길 때 정의합니다.
 - `/health`는 배포 환경용 운영 엔드포인트이므로 버전 경로와 성공 응답 포맷을 적용하지 않습니다.
-- 사람이 아닌 내부 클라이언트 전용 경로는 `/api/v1/internal` 아래에 둡니다: `/api/v1/internal/jobs`.
+- 사람이 아닌 내부 클라이언트 전용 경로는 `/api/v1/internal` 아래에 둡니다: `/api/v1/internal/jobs`, `/api/v1/internal/bootcamps`.
 
 ## 3. HTTP 메서드와 상태
 
@@ -173,6 +173,25 @@ DELETE /api/v1/internal/jobs/{jobId}
 - 교체는 다시 수집·분류한 값으로 공고 전체를 바꾸므로 PUT이며 200과 `data: null`로 응답합니다. 같은 값을 반복해 보내도 결과가 같습니다. 태그는 등록할 때만 받고 교체하지 않습니다.
 - 삭제는 소프트 삭제이며 반복해도 200입니다. 직무별로 나뉘어 새 공고로 등록된 원래 공고를 지울 때 씁니다.
 - 크롤러 공고는 검수를 거치지 않고 등록하면 곧바로 게시합니다. 교체는 게시 상태를 바꾸지 않습니다. [API 성공 응답의 검수와 노출](api-response.md#검수와-노출) 참고.
+
+### 크롤러 부트캠프
+
+```text
+POST   /api/v1/internal/bootcamps
+GET    /api/v1/internal/bootcamps?sourceUrl={원문 URL}
+PUT    /api/v1/internal/bootcamps/{bootcampId}
+DELETE /api/v1/internal/bootcamps/{bootcampId}
+```
+
+크롤러 채용공고와 같은 계약입니다. 소유자가 없고 원문 URL이 있는 수집 부트캠프만 다루며, 기업회원 부트캠프와 원문 URL이 없는 부트캠프는 없는 부트캠프와 같이 404 `BOOTCAMP_NOT_FOUND`로 응답합니다.
+
+- 등록은 201과 `data.bootcampId`를 반환합니다. 같은 원문 URL의 미삭제 부트캠프가 있으면 409 `BOOTCAMP_ALREADY_EXISTS`입니다.
+- 요청 본문의 선택 칸 `status`는 모집 상태이며 `RECRUITING` 또는 `CLOSED`만 받습니다. `DRAFT` 등 다른 값은 400 `BAD_REQUEST`입니다. 새싹처럼 운영 중이거나 과정이 끝난 과정도 모집 마감으로 보내 게시해 둡니다.
+- 등록하면 게시(`PUBLISHED`) 상태로 곧바로 노출하며 검수는 거치지 않습니다. `status`가 없으면 모집 중(`RECRUITING`)이고, `CLOSED`면 모집 중으로 저장한 뒤 등록 시각으로 마감합니다(`closedAt` = 등록 시각).
+- 교체는 PUT이며 200과 `data: null`로 응답합니다. 커리큘럼은 기존 것을 소프트 삭제하고 보낸 목록으로 바꾸며, 배열 순서가 노출 순서입니다. 게시 상태와 크롤러가 보내지 않는 공개 기간·파트너사는 그대로 둡니다.
+- 교체에 `status`를 보내면 모집 상태를 그 값으로 맞춥니다. `RECRUITING`→`CLOSED`는 교체 시각으로 마감하고, `CLOSED`→`RECRUITING`은 마감 일시를 지우고 다시 모집 중으로 둡니다. 같으면 그대로이며, `status`가 없으면 모집 상태를 바꾸지 않습니다.
+- 삭제는 소프트 삭제이며 반복해도 200입니다.
+- 부트캠프 모집 상태는 저장된 값이라 모집 종료 일시가 지나도 저절로 `CLOSED`가 되지 않습니다. 자동 마감 처리는 **미정**입니다.
 
 ## 6. 현재 보류하는 항목
 

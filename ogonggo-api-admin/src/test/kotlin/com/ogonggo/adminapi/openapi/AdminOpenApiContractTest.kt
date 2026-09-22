@@ -82,11 +82,43 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1internal~1jobs/get",
             "/paths/~1api~1v1~1internal~1jobs~1{jobId}/put",
             "/paths/~1api~1v1~1internal~1jobs~1{jobId}/delete",
+            "/paths/~1api~1v1~1internal~1bootcamps/post",
+            "/paths/~1api~1v1~1internal~1bootcamps/get",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/put",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete",
         ).forEach { pointer ->
             assertTrue(
                 document.at("$pointer/security/0/$ADMIN_INTERNAL_API_KEY_SCHEME").isArray,
                 "내부 API 키 인증 명세가 없습니다: $pointer",
             )
+        }
+    }
+
+    @Test
+    fun `크롤러 부트캠프 등록은 중복 원문을 409 BOOTCAMP_ALREADY_EXISTS로 명시한다`() {
+        val document = openApiDocument()
+
+        val conflict = document.at("/paths/~1api~1v1~1internal~1bootcamps/post/responses/409/description").asText()
+        assertTrue(conflict.startsWith("BOOTCAMP_ALREADY_EXISTS"), "409 명세가 없습니다: $conflict")
+        assertTrue(document.at("/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete/responses/404").isObject)
+    }
+
+    @Test
+    fun `크롤러 부트캠프 요청의 모집 상태는 선택 칸이며 모집 중과 모집 마감만 받는다`() {
+        val document = openApiDocument()
+
+        val schema = document.at("/components/schemas/CrawlerBootcampRequest")
+        val statusSchema = schema.at("/properties/status")
+        assertEquals(listOf("RECRUITING", "CLOSED"), statusSchema.at("/enum").map { it.asText() })
+        // 값 설명 표도 받는 값만 싣는다.
+        assertFalse(statusSchema.at("/description").asText().contains("`DRAFT`"), "받지 않는 값이 설명에 있습니다.")
+        assertTrue(statusSchema.at("/description").asText().contains("`CLOSED`"), "값 설명 표가 없습니다.")
+        assertFalse(schema.at("/required").any { it.asText() == "status" }, "모집 상태가 필수로 잡혀 있습니다.")
+        listOf(
+            "/paths/~1api~1v1~1internal~1bootcamps/post/description",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/put/description",
+        ).forEach { pointer ->
+            assertTrue(document.at(pointer).asText().contains("status"), "모집 상태 설명이 없습니다: $pointer")
         }
     }
 

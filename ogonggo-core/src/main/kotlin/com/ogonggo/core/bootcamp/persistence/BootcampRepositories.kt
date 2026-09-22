@@ -25,6 +25,27 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
 
     fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Bootcamp?
 
+    fun existsBySourceUrlAndDeletedAtIsNull(sourceUrl: String): Boolean
+
+    /** 원문 URL은 등록 시점에만 중복을 막고 DB 제약이 없으므로, 겹친 행이 있어도 가장 먼저 등록된 행을 고른다. */
+    fun findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String): Bootcamp?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        "select bootcamp from Bootcamp bootcamp " +
+            "where bootcamp.id = :bootcampId and bootcamp.ownerUserId is null " +
+            "and bootcamp.sourceUrl is not null and bootcamp.deletedAt is null",
+    )
+    fun findCrawledByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
+    /** 크롤러 삭제는 멱등해야 하므로 이미 삭제된 수집 부트캠프도 찾는다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        "select bootcamp from Bootcamp bootcamp " +
+            "where bootcamp.id = :bootcampId and bootcamp.ownerUserId is null and bootcamp.sourceUrl is not null",
+    )
+    fun findCrawledByIdForDelete(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
     @Query(
         """
         select bootcamp
