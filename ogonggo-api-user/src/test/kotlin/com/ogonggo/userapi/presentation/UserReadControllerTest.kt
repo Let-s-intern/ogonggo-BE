@@ -98,6 +98,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
             .andExpect(jsonPath("$.data.qualifications").value("자격 요건"))
+            .andExpect(jsonPath("$.data.applyEmail").value("recruit@example.com"))
             .andExpect(jsonPath("$.data.bookmarked").value(true))
             .andExpect(jsonPath("$.data.viewCount").value(12))
             .andExpect(jsonPath("$.data.bookmarkCount").value(3))
@@ -714,6 +715,7 @@ class UserReadControllerTest @Autowired constructor(
         companyName = "오공고",
         title = "백엔드 개발자",
         coverImageUrl = "https://example.com/cover.png",
+        logoUrl = null,
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
@@ -730,6 +732,7 @@ class UserReadControllerTest @Autowired constructor(
         benefits = "복지 및 혜택",
         hiringProcess = "채용 절차",
         sourceUrl = null,
+        applyEmail = "recruit@example.com",
         closedAt = null,
         bookmarked = bookmarked,
         viewCount = 12,
@@ -792,6 +795,10 @@ class UserReadControllerTest @Autowired constructor(
         shortDescription = "백엔드 개발자로 성장하는 12주",
         content = "부트캠프 상세 내용",
         eligibilityAndSelectionProcess = null,
+        logoUrl = null,
+        instructorInfo = null,
+        programFeatures = null,
+        completionRequirements = null,
         applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
         managerEmail = null,

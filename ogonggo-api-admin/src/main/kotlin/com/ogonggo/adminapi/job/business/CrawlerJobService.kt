@@ -93,7 +93,7 @@ private fun CrawlerJobCommand.toAppendDto(): JobAppendDto = JobAppendDto(
     hiringProcess = hiringProcess,
     recruitmentNotice = recruitmentNotice,
     applicationMethod = applicationMethod,
-    applicationEmail = applicationEmail,
+    applyEmail = applyEmail,
     inquiryEmail = inquiryEmail,
     sourceUrl = sourceUrl,
     publicationStatus = JobPublicationStatus.PUBLISHED,
@@ -127,7 +127,7 @@ private fun CrawlerJobCommand.toUpdateDto(): JobUpdateDto = JobUpdateDto(
     hiringProcess = hiringProcess,
     recruitmentNotice = recruitmentNotice,
     applicationMethod = applicationMethod,
-    applicationEmail = applicationEmail,
+    applyEmail = applyEmail,
     inquiryEmail = inquiryEmail,
     sourceUrl = sourceUrl,
 )

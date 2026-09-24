@@ -24,6 +24,7 @@ class JobManager internal constructor(
             jobRole = command.jobRole,
             industry = command.industry,
             coverImageUrl = command.coverImageUrl,
+            logoUrl = command.logoUrl,
             employmentType = command.employmentType,
             experienceType = command.experienceType,
             experienceMinYears = command.experienceMinYears,
@@ -44,7 +45,7 @@ class JobManager internal constructor(
             hiringProcess = command.hiringProcess,
             recruitmentNotice = command.recruitmentNotice,
             applicationMethod = command.applicationMethod,
-            applicationEmail = command.applicationEmail,
+            applyEmail = command.applyEmail,
             inquiryEmail = command.inquiryEmail,
             sourceUrl = command.sourceUrl,
         )

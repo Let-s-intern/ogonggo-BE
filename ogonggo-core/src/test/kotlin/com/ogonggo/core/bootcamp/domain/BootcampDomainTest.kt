@@ -35,6 +35,10 @@ class BootcampDomainTest {
             shortDescription = "데이터 분석가로 성장하는 12주",
             content = "변경된 부트캠프 상세 내용",
             eligibilityAndSelectionProcess = "서류 검토 후 인터뷰를 진행합니다.",
+            logoUrl = "https://example.com/images/logo.png",
+            instructorInfo = "현업 데이터 분석가가 강의합니다.",
+            programFeatures = "매주 실데이터 프로젝트를 진행합니다.",
+            completionRequirements = "출석률 80% 이상",
             applicationMethod = ApplicationMethod.EMAIL,
             applicationUrl = null,
             managerEmail = "manager@example.com",
@@ -52,6 +56,10 @@ class BootcampDomainTest {
         assertEquals(1_000_000, bootcamp.tuitionAmount)
         assertEquals("데이터 분석가로 성장하는 12주", bootcamp.shortDescription)
         assertEquals(ApplicationMethod.EMAIL, bootcamp.applicationMethod)
+        assertEquals("https://example.com/images/logo.png", bootcamp.logoUrl)
+        assertEquals("현업 데이터 분석가가 강의합니다.", bootcamp.instructorInfo)
+        assertEquals("매주 실데이터 프로젝트를 진행합니다.", bootcamp.programFeatures)
+        assertEquals("출석률 80% 이상", bootcamp.completionRequirements)
         assertEquals(publicationStartAt, bootcamp.publicationStartAt)
     }
 

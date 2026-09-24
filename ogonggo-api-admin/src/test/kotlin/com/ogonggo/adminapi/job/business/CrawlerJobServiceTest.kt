@@ -89,7 +89,7 @@ class CrawlerJobServiceTest {
         assertEquals(true, appended.autoCloseEnabled)
         assertEquals("제출 서류는 반환하지 않습니다.", appended.recruitmentNotice)
         assertEquals(JobApplicationMethod.EXTERNAL_PAGE, appended.applicationMethod)
-        assertEquals("recruit@example.com", appended.applicationEmail)
+        assertEquals("recruit@example.com", appended.applyEmail)
         assertEquals("hr@example.com", appended.inquiryEmail)
         assertEquals(listOf(JOB_ID to listOf("백엔드", "스프링")), appendedTags)
     }
@@ -183,7 +183,7 @@ class CrawlerJobServiceTest {
         hiringProcess = null,
         recruitmentNotice = "제출 서류는 반환하지 않습니다.",
         applicationMethod = JobApplicationMethod.EXTERNAL_PAGE,
-        applicationEmail = "recruit@example.com",
+        applyEmail = "recruit@example.com",
         inquiryEmail = "hr@example.com",
         sourceUrl = sourceUrl,
     )
