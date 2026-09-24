@@ -46,7 +46,7 @@ data class AdminReviewItem(
                         recruitmentEndAt = job.recruitmentEndAt,
                     ),
                 ),
-                job.applicationEmail?.let { AdminReviewMeta("지원 이메일", it) },
+                job.applyEmail?.let { AdminReviewMeta("지원 이메일", it) },
                 job.inquiryEmail?.let { AdminReviewMeta("문의 이메일", it) },
             ),
             sections = JobContentField.entries.mapNotNull { field ->

@@ -97,7 +97,7 @@ class CrawlerJobControllerTest @Autowired constructor(
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        minimalRequestBody() + mapOf("applicationEmail" to "recruit@example.com", "inquiryEmail" to "인사팀"),
+                        minimalRequestBody() + mapOf("applyEmail" to "recruit@example.com", "inquiryEmail" to "인사팀"),
                     ),
                 ),
         )

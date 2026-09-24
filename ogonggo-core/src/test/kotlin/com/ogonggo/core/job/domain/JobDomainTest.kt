@@ -27,6 +27,7 @@ class JobDomainTest {
             jobRole = "서버 개발자",
             industry = "IT",
             coverImageUrl = "https://example.com/cover2.png",
+            logoUrl = "https://example.com/logo2.png",
             recruitmentHeadcount = 5,
             experienceType = ExperienceType.NEWCOMER,
             experienceMinYears = 0,
@@ -46,13 +47,13 @@ class JobDomainTest {
             hiringProcess = "변경된 채용 절차",
             recruitmentNotice = "변경된 채용 안내사항",
             applicationMethod = JobApplicationMethod.EMAIL,
-            applicationEmail = "recruit@example.com",
+            applyEmail = "recruit@example.com",
             inquiryEmail = "hr@example.com",
             sourceUrl = "https://example.com/jobs/2",
         )
 
         assertEquals("변경 회사", job.companyName)
-        assertEquals("recruit@example.com", job.applicationEmail)
+        assertEquals("recruit@example.com", job.applyEmail)
         assertEquals("hr@example.com", job.inquiryEmail)
         assertEquals("변경 모회사", job.parentCompanyName)
         assertEquals("백엔드 인턴", job.title)
@@ -60,6 +61,7 @@ class JobDomainTest {
         assertEquals("서버 개발자", job.jobRole)
         assertEquals("IT", job.industry)
         assertEquals("https://example.com/cover2.png", job.coverImageUrl)
+        assertEquals("https://example.com/logo2.png", job.logoUrl)
         assertEquals(5, job.recruitmentHeadcount)
         assertEquals(EmploymentType.INTERN, job.employmentType)
         assertEquals(startAt, job.recruitmentStartAt)

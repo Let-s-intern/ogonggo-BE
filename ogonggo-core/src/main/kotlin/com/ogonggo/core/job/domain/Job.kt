@@ -72,6 +72,7 @@ class Job internal constructor(
     jobRole: String? = null,
     industry: String? = null,
     coverImageUrl: String? = null,
+    logoUrl: String? = null,
     employmentType: EmploymentType,
     experienceType: ExperienceType,
     experienceMinYears: Int? = null,
@@ -92,7 +93,7 @@ class Job internal constructor(
     hiringProcess: String? = null,
     recruitmentNotice: String? = null,
     applicationMethod: JobApplicationMethod? = null,
-    applicationEmail: String? = null,
+    applyEmail: String? = null,
     inquiryEmail: String? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
@@ -111,7 +112,8 @@ class Job internal constructor(
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
-            applicationEmail = applicationEmail,
+            logoUrl = logoUrl,
+            applyEmail = applyEmail,
             inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
@@ -164,6 +166,11 @@ class Job internal constructor(
 
     @Column(name = "cover_image_url", length = 2048)
     var coverImageUrl: String? = coverImageUrl /* 공고 대표 이미지 주소 */
+        protected set
+
+    /** 기업회원이 대표 이미지와 따로 올리는 로고다. 수집한 공고는 로고를 대표 이미지로 받으므로 값이 없다. */
+    @Column(name = "logo_url", length = 2048)
+    var logoUrl: String? = logoUrl /* 기업 로고 이미지 주소 */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -257,8 +264,8 @@ class Job internal constructor(
      * 지원서를 받는 이메일과 채용 문의 이메일을 따로 둔다. 한 공고에 둘 다 적힐 수 있다.
      * 한 주소로 지원과 문의를 함께 받으면 두 칸에 같은 값을 둔다.
      */
-    @Column(name = "application_email", length = 320)
-    var applicationEmail: String? = applicationEmail /* 지원 접수 이메일 */
+    @Column(name = "apply_email", length = 320)
+    var applyEmail: String? = applyEmail /* 지원 접수 이메일 */
         protected set
 
     @Column(name = "inquiry_email", length = 320)
@@ -299,6 +306,7 @@ class Job internal constructor(
         jobRole: String?,
         industry: String?,
         coverImageUrl: String?,
+        logoUrl: String?,
         employmentType: EmploymentType,
         experienceType: ExperienceType,
         experienceMinYears: Int?,
@@ -319,7 +327,7 @@ class Job internal constructor(
         hiringProcess: String?,
         recruitmentNotice: String?,
         applicationMethod: JobApplicationMethod?,
-        applicationEmail: String?,
+        applyEmail: String?,
         inquiryEmail: String?,
         sourceUrl: String?,
     ) {
@@ -332,7 +340,8 @@ class Job internal constructor(
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
-            applicationEmail = applicationEmail,
+            logoUrl = logoUrl,
+            applyEmail = applyEmail,
             inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
@@ -349,6 +358,7 @@ class Job internal constructor(
         this.jobRole = jobRole
         this.industry = industry
         this.coverImageUrl = coverImageUrl
+        this.logoUrl = logoUrl
         this.employmentType = employmentType
         this.experienceType = experienceType
         this.experienceMinYears = experienceMinYears
@@ -369,7 +379,7 @@ class Job internal constructor(
         this.hiringProcess = hiringProcess
         this.recruitmentNotice = recruitmentNotice
         this.applicationMethod = applicationMethod
-        this.applicationEmail = applicationEmail
+        this.applyEmail = applyEmail
         this.inquiryEmail = inquiryEmail
         this.sourceUrl = sourceUrl
     }
@@ -499,7 +509,8 @@ private fun validateJobValues(
     jobRole: String?,
     industry: String?,
     coverImageUrl: String?,
-    applicationEmail: String?,
+    logoUrl: String?,
+    applyEmail: String?,
     inquiryEmail: String?,
     recruitmentHeadcount: Int?,
     experienceMinYears: Int?,
@@ -516,7 +527,8 @@ private fun validateJobValues(
     require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
     require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }
     require(coverImageUrl == null || coverImageUrl.isNotBlank()) { "공고 대표 이미지 주소는 비어 있을 수 없습니다." }
-    require(applicationEmail == null || applicationEmail.isNotBlank()) { "지원 접수 이메일은 비어 있을 수 없습니다." }
+    require(logoUrl == null || logoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }
+    require(applyEmail == null || applyEmail.isNotBlank()) { "지원 접수 이메일은 비어 있을 수 없습니다." }
     require(inquiryEmail == null || inquiryEmail.isNotBlank()) { "채용 문의 이메일은 비어 있을 수 없습니다." }
     require(recruitmentHeadcount == null || recruitmentHeadcount > 0) { "모집 인원은 1명 이상이어야 합니다." }
     require(experienceMinYears == null || experienceMinYears >= 0) { "최소 경력 연수는 음수일 수 없습니다." }

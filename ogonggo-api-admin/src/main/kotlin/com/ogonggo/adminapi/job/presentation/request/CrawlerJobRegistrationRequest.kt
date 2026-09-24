@@ -51,7 +51,7 @@ interface CrawlerJobWriteRequest {
     val hiringProcess: String?
     val recruitmentNotice: String?
     val applicationMethod: JobApplicationMethod?
-    val applicationEmail: String?
+    val applyEmail: String?
     val inquiryEmail: String?
     val sourceUrl: String
 }
@@ -89,7 +89,7 @@ private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
         hiringProcess = hiringProcess,
         recruitmentNotice = recruitmentNotice,
         applicationMethod = applicationMethod,
-        applicationEmail = applicationEmail,
+        applyEmail = applyEmail,
         inquiryEmail = inquiryEmail,
         sourceUrl = sourceUrl,
     )
@@ -190,7 +190,7 @@ data class CrawlerJobRegistrationRequest(
     )
     @field:Size(max = 320, message = "지원 접수 이메일은 320자 이하여야 합니다.")
     @field:Email(message = "지원 접수 이메일이 이메일 형식이 아닙니다.")
-    override val applicationEmail: String? = null,
+    override val applyEmail: String? = null,
 
     @field:Schema(description = "채용 문의 이메일", example = "hr@ogonggo.com")
     @field:Size(max = 320, message = "채용 문의 이메일은 320자 이하여야 합니다.")
@@ -282,7 +282,7 @@ data class CrawlerJobReplaceRequest(
 
     @field:Size(max = 320, message = "지원 접수 이메일은 320자 이하여야 합니다.")
     @field:Email(message = "지원 접수 이메일이 이메일 형식이 아닙니다.")
-    override val applicationEmail: String? = null,
+    override val applyEmail: String? = null,
 
     @field:Size(max = 320, message = "채용 문의 이메일은 320자 이하여야 합니다.")
     @field:Email(message = "채용 문의 이메일이 이메일 형식이 아닙니다.")

@@ -983,11 +983,11 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     @Test
     fun `지원 접수 이메일과 문의 이메일을 따로 저장한다`() {
         val job = jobAppender.append(createCommand())
-        val withEmails = sameUpdateCommand().copy(applicationEmail = "recruit@example.com", inquiryEmail = "hr@example.com")
+        val withEmails = sameUpdateCommand().copy(applyEmail = "recruit@example.com", inquiryEmail = "hr@example.com")
 
         jobManager.update(job, withEmails)
         val saved = jobReader.read(checkNotNull(job.id))
-        assertEquals("recruit@example.com", saved.applicationEmail)
+        assertEquals("recruit@example.com", saved.applyEmail)
         assertEquals("hr@example.com", saved.inquiryEmail)
     }
 

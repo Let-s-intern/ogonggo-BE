@@ -49,12 +49,12 @@ class CrawlerJobRegistrationRequestTest {
     @Test
     fun `지원 접수 이메일과 문의 이메일을 따로 옮긴다`() {
         // 한 공고에 둘 다 적힐 수 있다. 어느 한쪽만 있으면 다른 칸은 비워 둔다.
-        val both = request(applicationEmail = "recruit@example.com", inquiryEmail = "hr@example.com").toCommand().job
+        val both = request(applyEmail = "recruit@example.com", inquiryEmail = "hr@example.com").toCommand().job
         val inquiryOnly = request(inquiryEmail = "hr@example.com").toCommand().job
 
-        assertEquals("recruit@example.com", both.applicationEmail)
+        assertEquals("recruit@example.com", both.applyEmail)
         assertEquals("hr@example.com", both.inquiryEmail)
-        assertEquals(null, inquiryOnly.applicationEmail)
+        assertEquals(null, inquiryOnly.applyEmail)
         assertEquals("hr@example.com", inquiryOnly.inquiryEmail)
     }
 
@@ -77,7 +77,7 @@ class CrawlerJobRegistrationRequestTest {
             educationLevel = EducationLevel.ANY,
             recruitmentType = JobRecruitmentType.PERIOD,
             recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
-            applicationEmail = "recruit@example.com",
+            applyEmail = "recruit@example.com",
             inquiryEmail = "hr@example.com",
             sourceUrl = "https://example.com/jobs/1#2",
         ).toCommand()
@@ -85,7 +85,7 @@ class CrawlerJobRegistrationRequestTest {
         assertEquals(EmploymentType.CONTRACT, replace.employmentType)
         assertEquals(ExperienceType.BOTH, replace.experienceType)
         assertEquals(LocalDateTime.of(2026, 9, 30, 23, 59, 59), replace.recruitmentEndAt)
-        assertEquals("recruit@example.com", replace.applicationEmail)
+        assertEquals("recruit@example.com", replace.applyEmail)
         assertEquals("hr@example.com", replace.inquiryEmail)
         assertEquals("https://example.com/jobs/1#2", replace.sourceUrl)
     }
@@ -97,7 +97,7 @@ class CrawlerJobRegistrationRequestTest {
         recruitmentEndAt: LocalDateTime? = null,
         recruitmentHeadcount: Int? = null,
         recruitmentNotice: String? = null,
-        applicationEmail: String? = null,
+        applyEmail: String? = null,
         inquiryEmail: String? = null,
     ) = CrawlerJobRegistrationRequest(
         companyName = "오공고",
@@ -113,7 +113,7 @@ class CrawlerJobRegistrationRequestTest {
         autoCloseEnabled = false,
         recruitmentNotice = recruitmentNotice,
         applicationMethod = JobApplicationMethod.EMAIL,
-        applicationEmail = applicationEmail,
+        applyEmail = applyEmail,
         inquiryEmail = inquiryEmail,
         sourceUrl = "https://example.com/jobs/1",
         tags = listOf("백엔드"),
