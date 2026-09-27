@@ -4,7 +4,6 @@ import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
@@ -16,9 +15,9 @@ class RecruitmentPostAutoCloseScheduler(
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
-    @Scheduled(fixedDelayString = "\${ogonggo.community.recruitment-post.auto-close.fixed-delay-ms:3600000}")
+    /** 실행 주기와 켜짐 여부는 `scheduled_jobs`가 정한다. `UserScheduledJobConfiguration` 참고. */
     @SchedulerLock(
-        name = "communityRecruitmentPostAutoClose",
+        name = SCHEDULER_NAME,
         lockAtLeastFor = "\${ogonggo.community.recruitment-post.auto-close.lock-at-least-for:PT55M}",
         lockAtMostFor = "\${ogonggo.community.recruitment-post.auto-close.lock-at-most-for:PT2H}",
     )
@@ -34,7 +33,7 @@ class RecruitmentPostAutoCloseScheduler(
     }
 
     companion object {
-        private const val SCHEDULER_NAME = "communityRecruitmentPostAutoClose"
+        const val SCHEDULER_NAME = "communityRecruitmentPostAutoClose"
         private val log = LoggerFactory.getLogger(RecruitmentPostAutoCloseScheduler::class.java)
     }
 }

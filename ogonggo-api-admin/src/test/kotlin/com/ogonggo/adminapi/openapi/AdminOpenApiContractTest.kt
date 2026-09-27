@@ -2,6 +2,8 @@ package com.ogonggo.adminapi.openapi
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.adminapi.config.ADMIN_INTERNAL_API_KEY_SCHEME
+import com.ogonggo.adminapi.work24.presentation.pathName
+import com.ogonggo.core.work24.domain.Work24Api
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -73,6 +75,7 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1notices~1{noticeId}/get",
             "/paths/~1api~1v1~1admin~1notices~1{noticeId}/patch",
             "/paths/~1api~1v1~1admin~1notices~1{noticeId}/delete",
+            "/paths/~1api~1v1~1admin~1work24~1{apiName}/get",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -125,6 +128,18 @@ class AdminOpenApiContractTest @Autowired constructor(
         ).forEach { pointer ->
             assertTrue(document.at(pointer).asText().contains("status"), "모집 상태 설명이 없습니다: $pointer")
         }
+    }
+
+    @Test
+    fun `고용24 조회의 apiName 목록은 지원하는 고용24 API와 같다`() {
+        val document = openApiDocument()
+
+        val apiName = document.at("/paths/~1api~1v1~1admin~1work24~1{apiName}/get/parameters")
+            .first { it.at("/name").asText() == "apiName" }
+        assertEquals(
+            Work24Api.entries.map { it.pathName },
+            apiName.at("/schema/enum").map { it.asText() },
+        )
     }
 
     private fun openApiDocument() = objectMapper.readTree(

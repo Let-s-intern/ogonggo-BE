@@ -81,6 +81,31 @@ Before deploying the admin console changes to an existing database, apply `docs/
 
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
+## Work24 (고용24) Open API
+
+관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.
+
+```yaml
+ogonggo:
+  work24:
+    recruitment-auth-key:              # 채용정보
+    tomorrow-learning-card-auth-key:   # 국민내일배움카드 훈련과정
+    work-study-auth-key:               # 일학습병행 훈련과정
+    government-job-auth-key:           # 정부지원일자리정보
+    job-seeker-program-auth-key:       # 구직자취업역량 강화프로그램
+    occupation-auth-key:               # 직업정보
+    duty-auth-key:                     # 직무정보
+    small-giant-company-auth-key:      # 강소기업
+```
+
+키 이름은 배포 로그 마스킹이 가리도록 모두 `-auth-key`로 끝냅니다. 응답 계약은 [API 성공 응답](docs/architecture/api-response.md#고용24-open-api-조회)을 읽습니다.
+
+관리자 API는 매일 04:00(Asia/Seoul)에 고용24 목록을 받아 `work24_items`에 새 항목만 저장합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 관리자 API를 배포하기 전에 `docs/schema/2026-09-27-work24-items.sql`을 적용합니다. 수집 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
+
+## Scheduled jobs
+
+스케줄 작업의 실행 주기(cron)와 켜짐 여부는 DB `scheduled_jobs` 테이블에서 SQL로 바꿉니다. 바꾼 cron은 1분 안에 반영되고, 행은 애플리케이션이 기동할 때 없는 작업만 기본값으로 만들어집니다. 두 API를 배포하기 전에 `docs/schema/2026-09-27-scheduled-jobs.sql`을 적용합니다. 규칙과 작업 목록은 [스케줄 작업](docs/architecture/scheduling.md)을 읽습니다.
+
 ## Docker
 
 이미지는 미리 빌드된 jar를 복사만 합니다. 컨테이너 안에서 Gradle을 돌리지 않으므로 jar를 먼저 만들어야 합니다.
