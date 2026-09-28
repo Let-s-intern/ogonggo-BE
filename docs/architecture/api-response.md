@@ -214,6 +214,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
 | `GET /api/v1/admin/notices` | `visibility`, `pinned` | 제목 |
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
+| `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`. `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
+| `GET /api/v1/admin/company-members` | `GET /api/v1/admin/general-members`와 같음 | 회사명, 담당자 이름 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - `source`는 저장하지 않고 `owner_user_id` 유무로 계산합니다(`COMPANY`·`CRAWLER`). 등록 경로는 바꿀 수 없어 수정 요청으로 받지 않습니다.
@@ -222,6 +224,19 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 검수 대기(`GET /api/v1/admin/review-queue`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
 - 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다.
 - 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.
+
+### 관리자 회원 조회
+
+관리자 콘솔은 일반 회원과 비즈니스(기업) 회원을 따로 조회합니다.
+
+- 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
+- 일반 회원 목록은 `role = USER`, 비즈니스 회원 목록은 `role = COMPANY`만 줍니다. `ADMIN` 계정은 어느 쪽에도 나오지 않습니다.
+- 탈퇴·정지 회원도 운영자가 확인해야 하므로 기본 목록에 포함하고 `status`(`ACTIVE`·`SUSPENDED`·`WITHDRAWN`)로 거릅니다.
+- 가입 기간은 `joinedFrom`·`joinedTo`(`YYYY-MM-DD`)로 받고 두 날짜를 모두 포함합니다. 화면의 "최근 7일" 같은 선택지는 클라이언트가 날짜로 바꿔 보냅니다. 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[joinedFrom]`으로 시작합니다.
+- 정렬은 고를 수 없고 최근 가입 순(`id DESC`)입니다.
+- 목록 항목이 회원 정보 전체를 담으므로 상세 조회 API는 두지 않습니다. 일반 회원은 계정(`userId`, `letsCareerUserId`, `status`, `joinedAt`, `withdrawnAt`)과 프로필(`name`, `nickname`, `email`, `profileImageUrl`, 학력, 희망 조건)을, 비즈니스 회원은 계정(`userId`, 로그인 `email`, `status`, `joinedAt`, `withdrawnAt`)과 기업 정보(`organizationName`, `managerName`, `managerPhone`, `notificationEmail`, `logoUrl`)를 펼쳐서 줍니다. 프로필·기업 정보 행이 없는 회원은 해당 칸이 `null`입니다.
+- 일반 회원의 이메일 검색은 렛츠커리어에서 받은 프로필 이메일(`user_profiles.email`)을 봅니다. 일반 회원은 로그인 이메일(`users.email`)이 없습니다.
+- 등록한 공고·부트캠프 수처럼 다른 도메인에서 모아야 하는 값은 싣지 않았습니다. 화면에 필요해지면 추가를 검토합니다(**확인 필요**).
 
 ### 공지사항
 
