@@ -2,8 +2,8 @@ package com.ogonggo.adminapi.openapi
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.adminapi.config.ADMIN_INTERNAL_API_KEY_SCHEME
-import com.ogonggo.adminapi.work24.presentation.pathName
-import com.ogonggo.core.work24.domain.Work24Api
+import com.ogonggo.adminapi.ingestion.work24.implement.Work24Api
+import com.ogonggo.adminapi.ingestion.work24.presentation.pathName
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

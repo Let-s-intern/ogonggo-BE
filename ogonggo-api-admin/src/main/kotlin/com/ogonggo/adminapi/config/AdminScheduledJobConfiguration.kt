@@ -1,6 +1,6 @@
 package com.ogonggo.adminapi.config
 
-import com.ogonggo.adminapi.work24.implement.Work24CollectionScheduler
+import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionScheduler
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -18,7 +18,7 @@ class AdminScheduledJobConfiguration {
     fun work24DailyCollectionJob(scheduler: Work24CollectionScheduler) = ScheduledJobDefinition(
         name = Work24CollectionScheduler.SCHEDULER_NAME,
         defaultCron = "0 0 4 * * *",
-        description = "고용24 목록 일일 수집 (매일 04:00)",
+        description = "고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 (매일 04:00)",
         action = scheduler::collect,
     )
 }
