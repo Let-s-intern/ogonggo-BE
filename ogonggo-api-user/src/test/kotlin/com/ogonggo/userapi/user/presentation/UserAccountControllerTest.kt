@@ -88,7 +88,13 @@ class UserAccountControllerTest @Autowired constructor(
                 email = "company@example.com",
                 joinedAt = JOINED_AT,
                 profile = null,
-                companyProfile = MyCompanyProfileResult("렛츠커리어", "김담당"),
+                companyProfile = MyCompanyProfileResult(
+                    organizationName = "렛츠커리어",
+                    managerName = "김담당",
+                    logoUrl = "https://cdn.example.com/logo.png",
+                    managerPhone = "010-1234-5678",
+                    notificationEmail = null,
+                ),
             ),
         )
 
@@ -97,6 +103,9 @@ class UserAccountControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.role").value("COMPANY"))
             .andExpect(jsonPath("$.data.companyProfile.organizationName").value("렛츠커리어"))
             .andExpect(jsonPath("$.data.companyProfile.managerName").value("김담당"))
+            .andExpect(jsonPath("$.data.companyProfile.logoUrl").value("https://cdn.example.com/logo.png"))
+            .andExpect(jsonPath("$.data.companyProfile.managerPhone").value("010-1234-5678"))
+            .andExpect(jsonPath("$.data.companyProfile.notificationEmail").isEmpty)
             .andExpect(jsonPath("$.data.profile").isEmpty)
     }
 

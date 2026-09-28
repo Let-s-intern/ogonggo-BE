@@ -21,6 +21,9 @@ class CompanyProfileManager internal constructor(
         profile.replace(
             organizationName = command.organizationName,
             managerName = command.managerName,
+            logoUrl = command.logoUrl,
+            managerPhone = command.managerPhone,
+            notificationEmail = command.notificationEmail,
         )
         companyProfileRepository.save(profile)
     }

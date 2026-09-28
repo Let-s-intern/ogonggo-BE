@@ -34,26 +34,56 @@ class CompanyProfileControllerTest @Autowired constructor(
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
 
     @Test
-    fun `기관명과 담당자 이름을 함께 받아 교체한다`() {
+    fun `기업 정보 전체를 함께 받아 교체한다`() {
         mockMvc.perform(
             put(PATH).with(authenticatedUser())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"organizationName":"오공고","managerName":"이담당"}"""),
+                .content(
+                    """
+                    {"organizationName":"오공고","managerName":"이담당",
+                     "logoUrl":"https://cdn.example.com/logo.png",
+                     "managerPhone":"010-1234-5678","notificationEmail":"hr@example.com"}
+                    """.trimIndent(),
+                ),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data").isEmpty)
 
         Mockito.verify(userAccountService).replaceMyCompanyProfile(
             USER_ID,
-            CompanyProfileUpdateDto(organizationName = "오공고", managerName = "이담당"),
+            CompanyProfileUpdateDto(
+                organizationName = "오공고",
+                managerName = "이담당",
+                logoUrl = "https://cdn.example.com/logo.png",
+                managerPhone = "010-1234-5678",
+                notificationEmail = "hr@example.com",
+            ),
         )
     }
 
     @Test
-    fun `한 값이라도 빠지거나 비어 있으면 400으로 막고 교체하지 않는다`() {
+    fun `로고·연락처·수신 이메일을 빼면 비우는 값으로 교체한다`() {
+        mockMvc.perform(
+            put(PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"organizationName":"오공고","managerName":"이담당"}"""),
+        )
+            .andExpect(status().isOk)
+
+        Mockito.verify(userAccountService).replaceMyCompanyProfile(USER_ID, COMMAND_WITHOUT_OPTIONALS)
+    }
+
+    @Test
+    fun `필수 값이 빠지거나 형식에 맞지 않으면 400으로 막고 교체하지 않는다`() {
         listOf(
             """{"organizationName":"오공고"}""",
             """{"organizationName":"오공고","managerName":" "}""",
+            """{"organizationName":"오공고","managerName":"이담당","logoUrl":"not-a-url"}""",
+            """{"organizationName":"오공고","managerName":"이담당","logoUrl":""}""",
+            """{"organizationName":"오공고","managerName":"이담당","managerPhone":"010-abcd"}""",
+            """{"organizationName":"오공고","managerName":"이담당","managerPhone":""}""",
+            """{"organizationName":"오공고","managerName":"이담당","notificationEmail":"hr"}""",
+            """{"organizationName":"오공고","managerName":"이담당","notificationEmail":""}""",
         ).forEach { body ->
             mockMvc.perform(
                 put(PATH).with(authenticatedUser())
@@ -70,10 +100,7 @@ class CompanyProfileControllerTest @Autowired constructor(
     @Test
     fun `기업 회원이 아니면 403 COMPANY_ROLE_REQUIRED로 응답한다`() {
         Mockito.`when`(
-            userAccountService.replaceMyCompanyProfile(
-                USER_ID,
-                CompanyProfileUpdateDto(organizationName = "오공고", managerName = "이담당"),
-            ),
+            userAccountService.replaceMyCompanyProfile(USER_ID, COMMAND_WITHOUT_OPTIONALS),
         ).thenThrow(ForbiddenException(UserErrorCode.COMPANY_ROLE_REQUIRED))
 
         mockMvc.perform(
@@ -103,5 +130,12 @@ class CompanyProfileControllerTest @Autowired constructor(
     companion object {
         private const val PATH = "/api/v1/users/me/company-profile"
         private const val USER_ID = 17L
+        private val COMMAND_WITHOUT_OPTIONALS = CompanyProfileUpdateDto(
+            organizationName = "오공고",
+            managerName = "이담당",
+            logoUrl = null,
+            managerPhone = null,
+            notificationEmail = null,
+        )
     }
 }
