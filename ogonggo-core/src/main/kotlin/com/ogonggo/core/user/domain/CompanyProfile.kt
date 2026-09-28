@@ -16,12 +16,14 @@ internal class CompanyProfile(
 
     organizationName: String,
     managerName: String,
+    logoUrl: String? = null,
+    managerPhone: String? = null,
+    notificationEmail: String? = null,
 ) : BaseTimeEntity() {
 
     init {
         require(userId > 0) { "사용자 식별자는 양수여야 합니다." }
-        require(organizationName.isNotBlank()) { "기관명은 비어 있을 수 없습니다." }
-        require(managerName.isNotBlank()) { "담당자 이름은 비어 있을 수 없습니다." }
+        validate(organizationName, managerName, logoUrl, managerPhone, notificationEmail)
     }
 
     @Id
@@ -37,11 +39,45 @@ internal class CompanyProfile(
     var managerName: String = managerName
         protected set
 
-    fun replace(organizationName: String, managerName: String) {
-        require(organizationName.isNotBlank()) { "기관명은 비어 있을 수 없습니다." }
-        require(managerName.isNotBlank()) { "담당자 이름은 비어 있을 수 없습니다." }
+    @Column(name = "logo_url", length = 2048)
+    var logoUrl: String? = logoUrl /* 기업 로고 이미지 주소 */
+        protected set
+
+    @Column(name = "manager_phone", length = 20)
+    var managerPhone: String? = managerPhone /* 담당자 연락처 */
+        protected set
+
+    @Column(name = "notification_email", length = 320)
+    var notificationEmail: String? = notificationEmail /* 로그인 이메일과 따로 받는 정보 수신용 이메일 */
+        protected set
+
+    fun replace(
+        organizationName: String,
+        managerName: String,
+        logoUrl: String?,
+        managerPhone: String?,
+        notificationEmail: String?,
+    ) {
+        validate(organizationName, managerName, logoUrl, managerPhone, notificationEmail)
 
         this.organizationName = organizationName
         this.managerName = managerName
+        this.logoUrl = logoUrl
+        this.managerPhone = managerPhone
+        this.notificationEmail = notificationEmail
     }
+}
+
+private fun validate(
+    organizationName: String,
+    managerName: String,
+    logoUrl: String?,
+    managerPhone: String?,
+    notificationEmail: String?,
+) {
+    require(organizationName.isNotBlank()) { "기관명은 비어 있을 수 없습니다." }
+    require(managerName.isNotBlank()) { "담당자 이름은 비어 있을 수 없습니다." }
+    require(logoUrl == null || logoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }
+    require(managerPhone == null || managerPhone.isNotBlank()) { "담당자 연락처는 비어 있을 수 없습니다." }
+    require(notificationEmail == null || notificationEmail.isNotBlank()) { "정보 수신용 이메일은 비어 있을 수 없습니다." }
 }
