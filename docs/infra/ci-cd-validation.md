@@ -67,7 +67,7 @@ ECS를 건드리지도 않습니다.
 
 러너는 VPC 안의 RDS·ElastiCache에 닿을 수 없으므로, 기동 검증은 CI가 띄운 MySQL·Redis
 컨테이너를 보게 하고 접속 정보만 환경변수로 덮어씁니다. `ddl-auto`도 `update`로 덮어씁니다.
-운영이 `validate`여도 빈 CI DB에는 스키마가 없기 때문입니다. 덕분에 JPA 매핑으로 스키마를
+운영은 `none`이라 빈 CI DB에는 스키마가 만들어지지 않기 때문입니다. 덕분에 JPA 매핑으로 스키마를
 만들 수 있는지까지 함께 확인됩니다.
 
 ShedLock 테이블은 JPA 엔티티가 아니므로 `ddl-auto`가 생성하지 않습니다. 운영 DB에는 배포 전에
@@ -158,8 +158,10 @@ python3 .github/scripts/test_mask_application_secrets.py
   같은지는 확인하지 않습니다.
 - **ECS 태스크 정의의 CPU·메모리·네트워크 설정.** 배포는 이미지만 교체하므로 이 값들은
   콘솔에서 관리합니다.
-- **두 서비스가 공유하는 스키마의 정합성.** `deploy-main.yml`이 user → admin 순서로
-  배포해 동시 스키마 갱신을 피하는 것이 현재의 대응입니다.
+- **두 서비스가 공유하는 스키마의 정합성.** `deploy-main.yml`은 user와 admin을 병렬로 배포합니다.
+  두 서비스의 운영 `ddl-auto`가 `none`이라 동시에 스키마를 바꾸지 않는다는 전제입니다. 시크릿의
+  `ddl-auto` 값은 검사하지 않으므로, 한쪽을 `update`로 바꾸면 동시 스키마 갱신이 다시 생길 수 있습니다.
+  운영 DB 스키마가 새 엔티티와 맞는지도 확인하지 않습니다. `docs/schema`의 SQL을 배포 전에 적용해야 합니다.
 
 ## 검증을 끄는 방법
 
