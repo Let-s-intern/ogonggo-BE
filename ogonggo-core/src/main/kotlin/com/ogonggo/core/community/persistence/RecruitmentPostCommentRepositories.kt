@@ -6,11 +6,9 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
-import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import jakarta.persistence.LockModeType
-import java.time.LocalDateTime
 
 internal interface RecruitmentPostCommentJpaRepository : JpaRepository<RecruitmentPostComment, Long> {
 
@@ -20,7 +18,6 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId IS NULL
-          AND comment.deletedAt IS NULL
         ORDER BY comment.createdAt DESC, comment.id DESC
         """,
         countQuery = """
@@ -28,7 +25,6 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         FROM RecruitmentPostComment comment
         WHERE comment.postId = :postId
           AND comment.parentId IS NULL
-          AND comment.deletedAt IS NULL
         """,
     )
     fun findRootComments(
@@ -101,21 +97,6 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         @Param("parentIds") parentIds: Collection<Long>,
     ): List<RecruitmentPostCommentCountRow>
 
-    @Modifying(flushAutomatically = true)
-    @Query(
-        """
-        update RecruitmentPostComment comment
-        set comment.deletedAt = :deletedAt,
-            comment.updatedAt = :deletedAt
-        where comment.parentId = :parentId
-          and comment.deletedAt is null
-        """,
-    )
-    fun softDeleteActiveReplies(
-        @Param("parentId") parentId: Long,
-        @Param("deletedAt") deletedAt: LocalDateTime,
-    ): Int
-
     @Query(
         """
         select comment
@@ -123,10 +104,9 @@ internal interface RecruitmentPostCommentJpaRepository : JpaRepository<Recruitme
         where comment.id = :commentId
           and comment.postId = :postId
           and comment.parentId is null
-          and comment.deletedAt is null
         """,
     )
-    fun findActiveRootByIdAndPostId(
+    fun findRootByIdAndPostId(
         @Param("commentId") commentId: Long,
         @Param("postId") postId: Long,
     ): RecruitmentPostComment?

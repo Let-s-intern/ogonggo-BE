@@ -11,11 +11,9 @@ class RecruitmentPostCommentRemover internal constructor(
 ) {
 
     fun remove(comment: RecruitmentPostComment, deletedAt: LocalDateTime): Int {
-        val commentId = checkNotNull(comment.id) { "삭제할 댓글 식별자가 없습니다." }
-
-        val replyCount = commentRepository.softDeleteActiveReplies(commentId, deletedAt)
+        checkNotNull(comment.id) { "삭제할 댓글 식별자가 없습니다." }
         comment.delete(deletedAt)
         commentRepository.save(comment)
-        return replyCount + 1
+        return 1
     }
 }
