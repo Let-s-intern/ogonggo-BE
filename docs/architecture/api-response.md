@@ -238,6 +238,24 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 일반 회원의 이메일 검색은 렛츠커리어에서 받은 프로필 이메일(`user_profiles.email`)을 봅니다. 일반 회원은 로그인 이메일(`users.email`)이 없습니다.
 - 등록한 공고·부트캠프 수처럼 다른 도메인에서 모아야 하는 값은 싣지 않았습니다. 화면에 필요해지면 추가를 검토합니다(**확인 필요**).
 
+### enum 선택지
+
+`GET /api/v1/enums`는 사용자 API의 요청·응답에 나오는 업무 enum을 enum 이름별로 묶어 반환합니다. 로그인 없이 호출할 수 있으며 값은 선언 순서를 따릅니다.
+
+```json
+{
+  "EmploymentType": [
+    { "name": "FULL_TIME", "desc": "정규직" }
+  ]
+}
+```
+
+- `name`은 요청과 응답에 쓰는 값이고, `desc`는 화면 라벨입니다. `EnumField.code`는 업무 메타데이터이므로 싣지 않아 클라이언트가 코드 번호로 요청하지 않게 합니다.
+- 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
+- 어떤 enum을 내보낼지는 사용자 API가 정하며 `UserEnumService`가 목록을 관리합니다. 값을 선택지로 바꾸는 `EnumOption`만 core가 제공합니다.
+- 사용자 API 요청·응답에 새 업무 enum을 쓰면 이 목록에도 추가합니다. presentation의 요청·응답 필드와 Controller 파라미터에 쓰인 `EnumField` enum이 목록에 없으면 테스트가 실패합니다.
+- 관리자 API에는 아직 두지 않습니다. 관리자 콘솔에 필요해지면 두 API의 독립 배포 경계를 지키도록 관리자 API가 자기 목록을 따로 제공합니다.
+
 ### 공지사항
 
 공지는 운영자가 관리자 콘솔(`/api/v1/admin/notices`)에서만 작성·수정·삭제하고, 사용자 API(`/api/v1/notices`)는 로그인 없이 목록과 상세를 읽기만 합니다.
