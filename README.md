@@ -12,7 +12,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 - QueryDSL 5.0.0
 - MySQL
 - Redis (사용자 리프레시 토큰)
-- Hibernate `ddl-auto=update`
+- Hibernate `ddl-auto=none` in production (schema changes are applied with `docs/schema` SQL)
 - No Flyway or Liquibase
 
 ## Modules
@@ -122,7 +122,7 @@ CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_F
 
 ## Deployment
 
-`main` 브랜치에 푸시하면 `ogonggo-api-user` → `ogonggo-api-admin` 순서로 ECS에 배포합니다.
+`main` 브랜치에 푸시하면 `ogonggo-api-user`와 `ogonggo-api-admin`을 ECS에 병렬로 배포합니다. 두 서비스 모두 운영 `ddl-auto`가 `none`이라 기동하면서 공유 DB의 스키마를 바꾸지 않기 때문입니다.
 
 운영 설정은 저장소에 없고 GitHub 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)의 내용을 그대로 `application.yml`로 씁니다. 잘못된 시크릿이 운영 서비스를 죽이지 못하도록, 배포 워크플로는 이미지를 ECR에 올리기 전에 시크릿·AWS 리소스를 확인하고 운영 설정으로 컨테이너를 띄워 `/health` 200을 확인합니다. 그래도 배포가 실패하면 직전 태스크 정의로 되돌립니다.
 
@@ -132,15 +132,15 @@ CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_F
 
 ## Schema management
 
-The project intentionally follows the current LetsCareer approach and does not include a migration tool. Configure schema behavior with `DDL_AUTO`:
+The project intentionally follows the current LetsCareer approach and does not include a migration tool.
 
-```text
-DDL_AUTO=update
-```
+운영의 두 API는 모두 `spring.jpa.hibernate.ddl-auto=none`으로 띄웁니다. 두 서비스가 하나의 DB를 공유하므로, 어느 한쪽이라도 `update`로 뜨면 병렬 배포 중 동시에 스키마를 바꿀 수 있습니다. 운영 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)에 `none` 외의 값을 넣지 않습니다.
 
-When both ECS services share one database, avoid concurrent schema updates during deployment. Assign schema changes to one deployment step or switch production services to `DDL_AUTO=validate` after the schema is prepared.
+엔티티를 바꿔 스키마가 달라지면 `docs/schema`에 날짜별 SQL을 추가하고, 두 API를 배포하기 전에 운영 DB에 한 번 적용합니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
 
-Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 `docs/schema`의 날짜별 SQL을 검토하고 백업 후 한 번만 실행합니다. 신규 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환 SQL을 실행하지 않습니다.
+로컬과 테스트는 빈 DB에서 시작하므로 `update`나 `create-drop`을 씁니다.
+
+Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 `docs/schema`의 날짜별 SQL을 검토하고 백업 후 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환 SQL을 실행하지 않습니다.
 
 ## Study domain
 
