@@ -96,12 +96,12 @@ ogonggo:
     occupation-auth-key:               # 직업정보
     duty-auth-key:                     # 직무정보
     small-giant-company-auth-key:      # 강소기업
-    bootcamp-image-url:                # 훈련과정을 부트캠프로 등록할 때 쓰는 대표 이미지
+    bootcamp-image-url:                # 로고 없는 훈련기관의 과정에 쓰는 대체 대표 이미지(선택)
 ```
 
 키 이름은 배포 로그 마스킹이 가리도록 모두 `-auth-key`로 끝냅니다. 응답 계약은 [API 성공 응답](docs/architecture/api-response.md#고용24-open-api-조회)을 읽습니다.
 
-관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보를 채용공고로, 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 훈련과정은 고용24가 이미지를 주지 않아 `ogonggo.work24.bootcamp-image-url`에 공통 대표 이미지를 넣어야 수집합니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
+관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보를 채용공고로, 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 훈련과정은 고용24가 과정 이미지를 주지 않아 훈련기관 로고를 대표 이미지로 쓰고, 로고가 없는 기관만 `ogonggo.work24.bootcamp-image-url`을 씁니다. 이 값이 없으면 로고 없는 과정은 등록하지 않습니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
 
 ## Scheduled jobs
 

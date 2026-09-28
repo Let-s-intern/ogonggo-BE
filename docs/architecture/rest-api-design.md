@@ -218,8 +218,8 @@ GET /api/v1/admin/work24/{apiName}?{고용24 요청 파라미터}
 
 - 결정일: 2026-09-27 / 리뷰 상태: 팀 리뷰 필요
 - 운영자가 관리자 콘솔이나 Swagger에서 고용24 데이터를 확인하는 조회입니다. 서버가 인증키를 붙여 고용24를 대신 호출하고 저장하지 않습니다.
-- `apiName`은 호출할 고용24 API로, core의 `Work24Api` 이름을 kebab-case 소문자로 씁니다(`tomorrow-learning-card-courses`). 정의되지 않은 값은 `[apiName]` 400 `BAD_REQUEST`입니다.
-- API가 23개이고 파라미터가 모두 달라 API마다 경로와 `@RequestParam`을 두지 않고, 경로 하나가 query 전체를 받아 이름 그대로 넘깁니다. [OpenAPI 명세](openapi.md)의 파라미터 이름 명시 원칙과 다른 예외이며, 파라미터 설명은 고용24 개발명세를 따릅니다. 수집·저장처럼 특정 API를 실제로 쓰게 되면 그 API는 이름 있는 파라미터와 전용 경로로 옮깁니다.
+- `apiName`은 호출할 고용24 API로, 관리자 API의 `Work24Api` 이름을 kebab-case 소문자로 씁니다(`tomorrow-learning-card-courses`). 정의되지 않은 값은 `[apiName]` 400 `BAD_REQUEST`입니다.
+- API가 24개이고 파라미터가 모두 달라 API마다 경로와 `@RequestParam`을 두지 않고, 경로 하나가 query 전체를 받아 이름 그대로 넘깁니다. [OpenAPI 명세](openapi.md)의 파라미터 이름 명시 원칙과 다른 예외이며, 파라미터 설명은 고용24 개발명세를 따릅니다. 수집·저장처럼 특정 API를 실제로 쓰게 되면 그 API는 이름 있는 파라미터와 전용 경로로 옮깁니다.
 - 인증키(`authKey`), 응답 형식(`returnType`), 명세가 값을 고정한 파라미터는 서버가 채우므로 보내도 무시합니다. 값이 빈 파라미터는 보내지 않은 것으로 봅니다.
 - 응답 계약은 [API 성공 응답의 고용24 Open API 조회](api-response.md#고용24-open-api-조회)를 따릅니다.
 

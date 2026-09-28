@@ -12,8 +12,6 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.work24.domain.Work24Api
-import com.ogonggo.core.work24.domain.Work24Service
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -35,8 +33,6 @@ class EnumFieldTest {
             TuitionType.entries,
             UserStatus.entries,
             UserRole.entries,
-            Work24Service.entries,
-            Work24Api.entries,
         )
 
         enumTypes.forEach { values ->
