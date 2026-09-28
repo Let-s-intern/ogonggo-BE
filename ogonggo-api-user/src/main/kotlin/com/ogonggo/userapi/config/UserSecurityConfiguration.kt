@@ -67,7 +67,7 @@ class UserSecurityConfiguration {
                 // 광고 문의는 오공고 계정이 없는 기업 담당자가 소개 페이지에서 남긴다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-inquiries").permitAll()
                 // 개선 의견은 로그인 없이도 남긴다. 토큰이 있으면 작성자를 함께 기록한다.
-                it.requestMatchers(HttpMethod.POST, "/api/v1/feedbacks").permitAll()
+                it.requestMatchers(HttpMethod.POST, "/api/v1/service-feedbacks").permitAll()
                 // 역할은 토큰에 없으므로 클라이언트는 이 경로로 자기 역할과 프로필을 읽는다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()

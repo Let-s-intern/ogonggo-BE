@@ -107,7 +107,7 @@ PUT /api/v1/users/me/company-profile
 
 `/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`, `/users/me/profile`이 그 하위에 있습니다. 프로필은 사용자마다 하나뿐인 단일 리소스여서 목록이 아니므로 단수 명사를 사용합니다. 복수 명사 규칙은 여러 항목을 담는 컬렉션에 적용합니다.
 
-조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기업 정보(기관명·담당자 이름·로고·담당자 연락처·정보 수신용 이메일)도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile`로 엽니다. 화면이 모든 값을 한 폼으로 함께 보내므로 PATCH가 아니라 PUT으로 전체를 교체하며(선택 값을 빼면 비움), 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
+조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기관명·담당자 이름도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile`로 엽니다. 화면이 두 값을 한 폼으로 함께 보내므로 PATCH가 아니라 PUT으로 전체를 교체하며, 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
 
 ### 부트캠프 북마크
 
@@ -166,11 +166,11 @@ GET /api/v1/recommended-challenges
 - 오공고 리소스가 아니라 렛츠커리어가 이 사용자에게 추천한 챌린지 모음이므로, `/challenges`가 아닌 `recommended-challenges`로 이름에 추천임을 드러냅니다. 오공고가 챌린지 목록·상세를 따로 열 계획은 없습니다.
 - 응답 계약은 [API 성공 응답의 추천 렛츠커리어 챌린지](api-response.md#추천-렛츠커리어-챌린지)를 따릅니다.
 
-### 개선 의견
+### 서비스 개선 의견
 
 ```text
-POST /api/v1/feedbacks                사용자 API, 로그인 선택
-GET  /api/v1/admin/feedbacks          관리자 콘솔
+POST /api/v1/service-feedbacks                사용자 API, 로그인 선택
+GET  /api/v1/admin/service-feedbacks          관리자 콘솔
 ```
 
 - 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
@@ -178,7 +178,7 @@ GET  /api/v1/admin/feedbacks          관리자 콘솔
 - 로그인 없이도 남길 수 있어 채용공고 조회처럼 토큰이 선택입니다. 토큰을 보내면 작성자(`user_id`)를 함께 기록하고, 토큰이 없거나 유효하지 않으면 작성자 없이 저장합니다.
 - 한 사용자가 여러 번 남길 수 있어 유니크 제약을 두지 않고 409도 쓰지 않습니다.
 - 수정·삭제 경로는 두지 않습니다. 운영자는 관리자 콘솔에서 목록을 읽기만 합니다.
-- 응답 계약은 [API 성공 응답의 개선 의견](api-response.md#개선-의견)을 따릅니다.
+- 응답 계약은 [API 성공 응답의 서비스 개선 의견](api-response.md#서비스-개선-의견)을 따릅니다.
 
 ### 크롤러 채용공고
 

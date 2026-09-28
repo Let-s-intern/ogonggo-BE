@@ -185,16 +185,16 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 **확인 필요:** 외부 알림 연동(슬랙·메일 등)의 배치, 실패 처리, 동기·비동기 선택, 메일 본문과 발신 주소 관리는 아직 팀 규칙으로 문서화되어 있지 않습니다. 위 내용은 이 엔드포인트의 응답 계약을 설명한 것이며 팀 규칙으로 확정된 것이 아닙니다. 현재 SMTP는 렛츠커리어와 같은 SES 계정과 발신 주소(`official@letscareer.co.kr`)를 함께 쓰고 있어, 오공고 전용 발신 도메인이 필요한지도 함께 확인이 필요합니다.
 
-### 개선 의견
+### 서비스 개선 의견
 
-`POST /api/v1/feedbacks`는 사용자의 서비스 개선 의견을 `feedbacks`에 저장합니다.
+`POST /api/v1/service-feedbacks`는 사용자의 서비스 개선 의견을 `service_feedbacks`에 저장합니다.
 
 - 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
 - 두 문항 `satisfaction`, `improvement`는 모두 선택이지만 하나 이상은 채워야 합니다. 공백만 있는 문항은 비운 것으로 보고 `null`로 저장합니다. 두 문항이 모두 비면 400 `BAD_REQUEST`이며 메시지는 `[satisfaction]`으로 시작합니다.
 - 각 문항은 1000자 이하이며 넘으면 해당 필드명으로 400 `BAD_REQUEST`입니다.
 - 제출한 의견은 고치거나 지우는 기능이 없어 소프트 삭제 칼럼을 두지 않습니다.
-- 관리자 목록 `GET /api/v1/admin/feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름 등 사용자 정보를 함께 보여줄지는 **확인 필요**입니다.
-- 기존 DB에는 `docs/schema/2026-09-28-feedbacks.sql`을 배포 전에 적용합니다.
+- 관리자 목록 `GET /api/v1/admin/service-feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름 등 사용자 정보를 함께 보여줄지는 **확인 필요**입니다.
+- 기존 DB에는 `docs/schema/2026-09-28-service-feedbacks.sql`을 배포 전에 적용합니다.
 
 ### 관리자 콘솔 목록
 
@@ -213,7 +213,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/bootcamps` | `visibility`, `source`, `reviewStatus`, `status`(`RECRUITING`·`CLOSED`) | 과정명, 운영사 |
 | `GET /api/v1/admin/rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
 | `GET /api/v1/admin/notices` | `visibility`, `pinned` | 제목 |
-| `GET /api/v1/admin/feedbacks` | 없음. `sort`도 받지 않습니다([개선 의견](#개선-의견) 참고) | 없음 |
+| `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - `source`는 저장하지 않고 `owner_user_id` 유무로 계산합니다(`COMPANY`·`CRAWLER`). 등록 경로는 바꿀 수 없어 수정 요청으로 받지 않습니다.

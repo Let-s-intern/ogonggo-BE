@@ -286,10 +286,10 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(recommendedChallenges.at("/security/0/BearerAuth").isArray)
 
         // 개선 의견도 로그인 없이 남기고, 토큰을 보내면 작성자를 기록하는 선택적 인증이다.
-        val createFeedback = document.at("/paths/~1api~1v1~1feedbacks/post")
-        assertTrue(createFeedback.at("/security/0/BearerAuth").isArray)
-        assertTrue(createFeedback.at("/responses/201/content/application~1json/schema").isObject)
-        assertTrue(createFeedback.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        val createServiceFeedback = document.at("/paths/~1api~1v1~1service-feedbacks/post")
+        assertTrue(createServiceFeedback.at("/security/0/BearerAuth").isArray)
+        assertTrue(createServiceFeedback.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(createServiceFeedback.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
 
         // 부트캠프 목록·상세도 토큰을 보내면 북마크 여부가 채워지므로 공고와 같은 선택적 인증을 노출한다.
         val bootcampList = document.at("/paths/~1api~1v1~1bootcamps/get")
@@ -383,12 +383,6 @@ class UserOpenApiContractTest @Autowired constructor(
         val companyProfileRequest = document.at("/components/schemas/ReplaceMyCompanyProfileRequest")
         assertEquals(150, companyProfileRequest.at("/properties/organizationName/maxLength").asInt())
         assertEquals(100, companyProfileRequest.at("/properties/managerName/maxLength").asInt())
-        assertEquals(2048, companyProfileRequest.at("/properties/logoUrl/maxLength").asInt())
-        assertEquals(20, companyProfileRequest.at("/properties/managerPhone/maxLength").asInt())
-        assertEquals(320, companyProfileRequest.at("/properties/notificationEmail/maxLength").asInt())
-        val companyProfileProperties = document.at("/components/schemas/MyCompanyProfileResponse/properties")
-        listOf("organizationName", "managerName", "logoUrl", "managerPhone", "notificationEmail")
-            .forEach { field -> assertTrue(companyProfileProperties.has(field)) }
 
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
         // 스크랩 공고만 거를 때 토큰이 필요하므로 Swagger UI에서 토큰을 보낼 수 있어야 한다.
