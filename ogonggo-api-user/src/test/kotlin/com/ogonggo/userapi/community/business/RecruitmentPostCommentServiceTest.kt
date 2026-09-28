@@ -6,6 +6,7 @@ import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppender
 import com.ogonggo.core.community.implement.RecruitmentPostCommentAppendCommand
+import com.ogonggo.core.community.implement.RecruitmentPostCommentPage
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReader
 import com.ogonggo.core.community.implement.RecruitmentPostCommentRemover
 import com.ogonggo.core.community.implement.RecruitmentPostCommentReportAppender
@@ -18,6 +19,7 @@ import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
@@ -47,6 +49,40 @@ class RecruitmentPostCommentServiceTest {
         reportAppender,
         clock,
     )
+
+    @Test
+    @DisplayName("삭제된 부모 댓글은 삭제 문구로 변환한다")
+    fun `삭제된 부모 댓글은 삭제 문구로 변환한다`() {
+        // given
+        val deletedParent = Mockito.mock(RecruitmentPostComment::class.java)
+        Mockito.`when`(deletedParent.id).thenReturn(COMMENT_ID)
+        Mockito.`when`(deletedParent.parentId).thenReturn(null)
+        Mockito.`when`(deletedParent.userId).thenReturn(USER_ID)
+        Mockito.`when`(deletedParent.content).thenReturn("삭제 전 부모 댓글입니다.")
+        Mockito.`when`(deletedParent.deletedAt).thenReturn(NOW)
+        Mockito.`when`(deletedParent.createdAt).thenReturn(NOW)
+        Mockito.`when`(deletedParent.updatedAt).thenReturn(NOW)
+        Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(commentReader.readRootPage(POST_ID, 0, 10)).thenReturn(
+            RecruitmentPostCommentPage(
+                comments = listOf(deletedParent),
+                page = 0,
+                size = 10,
+                totalElements = 1,
+                totalPages = 1,
+            ),
+        )
+        Mockito.`when`(commentReader.readReplyPreviews(POST_ID, listOf(checkNotNull(deletedParent.id)), 5))
+            .thenReturn(emptyMap())
+        Mockito.`when`(userProfileReader.readAll(setOf(USER_ID))).thenReturn(emptyMap())
+
+        // when
+        val result = service.readComments(userId = null, postId = POST_ID, page = 0, size = 10)
+
+        // then
+        assertEquals("삭제된 댓글입니다", result.items.single().comment.content)
+        assertEquals(0, result.items.single().replies.totalElements)
+    }
 
     @Test
     fun `활성 사용자가 모집글에 댓글을 작성하면 댓글 식별자를 반환한다`() {

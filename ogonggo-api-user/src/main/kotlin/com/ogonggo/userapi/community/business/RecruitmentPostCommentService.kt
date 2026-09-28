@@ -179,7 +179,7 @@ class RecruitmentPostCommentService(
                 nickname = profile?.nickname,
                 profileImageUrl = profile?.profileImageUrl,
             ),
-            content = content,
+            content = if (deletedAt == null) content else DELETED_COMMENT_CONTENT,
             createdAt = createdAt,
             updatedAt = updatedAt,
             mine = viewerUserId == userId,
@@ -202,6 +202,7 @@ class RecruitmentPostCommentService(
 
     companion object {
         private const val REPLY_PREVIEW_SIZE = 5
+        private const val DELETED_COMMENT_CONTENT = "삭제된 댓글입니다"
     }
 }
 

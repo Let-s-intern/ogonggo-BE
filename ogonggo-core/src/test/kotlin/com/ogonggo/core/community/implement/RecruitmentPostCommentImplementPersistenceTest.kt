@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -154,7 +155,8 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
     }
 
     @Test
-    fun `부모 댓글을 소프트 삭제하면 활성 대댓글도 함께 소프트 삭제한다`() {
+    @DisplayName("부모 댓글만 소프트 삭제하고 대댓글과 삭제된 부모 조회를 유지한다")
+    fun `부모 댓글만 소프트 삭제하고 대댓글과 삭제된 부모 조회를 유지한다`() {
         // given
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
@@ -185,10 +187,15 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         entityManager.clear()
 
         // then
-        assertEquals(2, deletedCount)
+        assertEquals(1, deletedCount)
         assertEquals(deletedAt, commentRepository.findById(parentId).orElseThrow().deletedAt)
-        assertEquals(deletedAt, commentRepository.findById(replyId).orElseThrow().deletedAt)
-        assertEquals(0, commentReader.readRootPage(postId, page = 0, size = 10).totalElements)
+        assertNull(commentRepository.findById(replyId).orElseThrow().deletedAt)
+        val rootPage = commentReader.readRootPage(postId, page = 0, size = 10)
+        assertEquals(1, rootPage.totalElements)
+        assertEquals(parentId, rootPage.comments.single().id)
+        assertEquals(deletedAt, rootPage.comments.single().deletedAt)
+        assertEquals(parentId, commentReader.readRoot(postId, parentId).id)
+        assertEquals(1, commentReader.readReplyPage(postId, parentId, page = 0, size = 10).totalElements)
         assertThrows(EntityNotFoundException::class.java) {
             commentReader.readInPost(postId, parentId)
         }
