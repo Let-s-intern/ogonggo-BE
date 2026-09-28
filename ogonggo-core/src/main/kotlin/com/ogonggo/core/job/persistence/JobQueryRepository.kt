@@ -1,19 +1,26 @@
 package com.ogonggo.core.job.persistence
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.domain.QJob.job
+import com.ogonggo.core.job.domain.QJobBookmark.jobBookmark
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.review.domain.ContentSource
+import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
+import com.querydsl.jpa.JPAExpressions
 import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
 import java.time.LocalDateTime
@@ -37,6 +44,86 @@ internal class JobQueryRepository(
         sortType: JobSortType,
         pageable: Pageable,
     ): Page<Job> = findPage(publishedPredicates(condition), sortType, pageable)
+
+    /**
+     * 북마크한 공고 중 게시된 것만 읽는다. 선택 필터는 공개 목록과 같고, 지원 단계와 모집 상태로 더 좁힐 수 있다.
+     * 공고와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
+     */
+    fun findBookmarkedPublishedPage(
+        userId: Long,
+        condition: JobSearchCondition,
+        bookmarkCondition: JobBookmarkSearchCondition,
+        now: LocalDateTime,
+        pageable: Pageable,
+    ): Page<Job> {
+        val predicates = arrayOf(
+            jobBookmark.userId.eq(userId),
+            jobBookmark.deletedAt.isNull,
+            bookmarkCondition.applicationStatus?.let { jobBookmark.applicationStatus.eq(it) },
+            recruitmentStatusEq(bookmarkCondition.recruitmentStatus, now),
+            *publishedPredicates(condition),
+        )
+        val content = queryFactory.select(job)
+            .from(job)
+            .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
+            .where(*predicates)
+            .orderBy(*bookmarkOrders(bookmarkCondition.sortType))
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+
+        val total = queryFactory.select(job.count())
+            .from(job)
+            .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
+            .where(*predicates)
+            .fetchOne() ?: 0L
+
+        return PageImpl(content, pageable, total)
+    }
+
+    /**
+     * 모집 기간이 조회 범위와 겹치는 게시 공고를 종료 일시순으로 읽는다. 기간이 없는 공고는 달력에 놓을 수 없어 뺀다.
+     * 마감일 기준이면 겹치는 공고가 아니라 모집 종료 일시가 범위 안에 있는 공고만 읽는다.
+     * 선택 필터와 검색어는 공개 목록과 같다.
+     * 북마크는 공고당 사용자별로 한 행뿐이므로 조인 대신 존재 여부로 걸러 행이 늘지 않게 한다.
+     */
+    fun findPublishedCalendar(
+        condition: JobSearchCondition,
+        calendarCondition: JobCalendarSearchCondition,
+        rangeStart: LocalDateTime,
+        rangeEndExclusive: LocalDateTime,
+        now: LocalDateTime,
+    ): List<Job> =
+        queryFactory.selectFrom(job)
+            .where(
+                *publishedPredicates(condition),
+                job.recruitmentStartAt.isNotNull,
+                job.recruitmentEndAt.isNotNull,
+                job.recruitmentEndAt.goe(rangeStart),
+                if (calendarCondition.deadlineOnly) {
+                    job.recruitmentEndAt.lt(rangeEndExclusive)
+                } else {
+                    job.recruitmentStartAt.lt(rangeEndExclusive)
+                },
+                recruiting(now).takeIf { calendarCondition.excludeClosed },
+                calendarCondition.bookmarkedUserId?.let(::bookmarkedBy),
+            )
+            .orderBy(job.recruitmentEndAt.asc(), job.id.asc())
+            .fetch()
+
+    private fun bookmarkedBy(userId: Long): BooleanExpression =
+        JPAExpressions.selectOne()
+            .from(jobBookmark)
+            .where(
+                jobBookmark.jobId.eq(job.id),
+                jobBookmark.userId.eq(userId),
+                jobBookmark.deletedAt.isNull,
+            )
+            .exists()
+
+    private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {
+        BookmarkSortType.RECENTLY_SAVED -> arrayOf(jobBookmark.updatedAt.desc(), jobBookmark.id.desc())
+    }
 
     /**
      * 관리 목록은 게시 상태를 고정하지 않으므로 게시 인덱스를 타지 못하고 식별자 역순으로 훑는다.
@@ -68,12 +155,13 @@ internal class JobQueryRepository(
      * 공고에서 출발하면 게시 공고 전체를 읽어 정렬해야 하므로 지표에서 출발한다.
      * 상위 지표만 먼저 고르면 그중 마감된 공고가 빠져 limit건을 채우지 못하므로 한 쿼리에서 거른다.
      * 지표 행은 첫 조회 시점에 생기므로 한 번도 조회되지 않은 공고는 대상이 아니다.
+     * 고용 형태가 없으면 모든 고용 형태를 대상으로 한다.
      */
-    fun findPopularRecruiting(limit: Int, now: LocalDateTime): List<Job> =
+    fun findPopularRecruiting(employmentType: EmploymentType?, limit: Int, now: LocalDateTime): List<Job> =
         queryFactory.select(job)
             .from(jobMetric)
             .join(job).on(job.id.eq(jobMetric.jobId))
-            .where(*recruitingPredicates(now))
+            .where(*recruitingPredicates(now), employmentTypeEq(employmentType))
             .orderBy(jobMetric.viewCount.desc(), jobMetric.jobId.desc())
             .limit(limit.toLong())
             .fetch()
@@ -84,7 +172,7 @@ internal class JobQueryRepository(
      * 조건으로 먼저 좁힌 뒤 정렬하므로 인기 공고와 달리 한 번도 조회되지 않은 공고도 0으로 포함한다.
      */
     fun findRecruitingMatched(
-        jobRoles: Collection<String>,
+        jobRoles: Collection<JobRole>,
         industries: Collection<String>,
         excludedJobIds: Collection<Long>,
         limit: Int,
@@ -115,6 +203,10 @@ internal class JobQueryRepository(
         job.deletedAt.isNull,
         employmentTypeEq(condition.employmentType),
         experienceTypeEq(condition.experienceType),
+        condition.jobField?.let(job.jobField::eq),
+        condition.jobRole?.let(job.jobRole::eq),
+        condition.region?.let(job.region::eq),
+        condition.subRegion?.let(job.subRegion::eq),
         keywordContains(condition.keyword),
     )
 

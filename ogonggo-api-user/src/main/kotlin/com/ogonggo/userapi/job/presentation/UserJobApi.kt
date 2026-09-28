@@ -2,7 +2,11 @@ package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
@@ -37,8 +41,12 @@ interface UserJobApi {
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
 
-            employmentType과 experienceType으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
-            보내지 않으면 해당 조건을 적용하지 않습니다. 두 필터와 정렬은 함께 사용할 수 있습니다.
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
+            보내지 않으면 해당 조건을 적용하지 않습니다. jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
+            jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
+            region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
+            region만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다.
+            필터끼리, 그리고 정렬과 함께 사용할 수 있습니다.
 
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
@@ -57,6 +65,10 @@ interface UserJobApi {
         sortType: JobSortType,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
+        jobField: JobField?,
+        jobRole: JobRole?,
+        region: Region?,
+        subRegion: SubRegion?,
         @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
@@ -70,6 +82,9 @@ interface UserJobApi {
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
             보내지 않으면 항상 false입니다.
 
+            employmentType을 보내면 해당 고용 형태의 공고 중에서 고릅니다. 예를 들어 FULL_TIME은 정규직,
+            INTERN은 인턴 인기 공고입니다. 보내지 않으면 고용 형태와 관계없이 전체에서 고릅니다.
+
             게시 중인 공고 중 마감 처리되지 않았고 모집 종료 일시가 지나지 않은 공고만 대상입니다.
             모집 종료 일시가 없는 ALWAYS_OPEN 공고는 포함하며, 한 번도 조회되지 않은 공고는 포함하지 않습니다.
             조회 수 내림차순이며 조회 수가 같으면 최신순입니다.
@@ -81,6 +96,7 @@ interface UserJobApi {
     fun getPopularJobs(
         @Parameter(hidden = true)
         userId: Long?,
+        employmentType: EmploymentType?,
     ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
 
     @Operation(
@@ -90,7 +106,8 @@ interface UserJobApi {
             내 정보의 희망 직무(wishJob)와 희망 산업(wishIndustry)에 맞는 채용공고를 최대 4건 반환합니다.
             사용자마다 결과가 다르므로 로그인이 필요합니다.
 
-            희망 값은 쉼표로 나눠 앞뒤 공백을 지운 뒤, 공고의 직무(jobRole)·산업(industry)과 정확히 같은지 비교합니다.
+            희망 값은 쉼표로 나눠 앞뒤 공백을 지운 뒤 비교합니다. 희망 직무는 직무(JobRole) 라벨과 같은 값만
+            그 직무로 보고, 희망 산업은 공고의 산업(industry)과 정확히 같은지 비교합니다.
             직무와 산업이 모두 맞는 공고, 직무만 맞는 공고, 산업만 맞는 공고 순으로 채우며
             각 순서 안에서는 조회 수 내림차순이고 조회 수가 같으면 최신순입니다.
 
@@ -164,7 +181,20 @@ interface UserJobApi {
             모집 기간이 없는 ALWAYS_OPEN 공고는 제외합니다.
             시작·종료 일시가 모두 있는 공고만 대상이며 종료 일시, 식별자 오름차순으로 정렬합니다.
 
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion, keyword는 채용공고 목록 조회와 같습니다.
+            각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않으며 서로 함께 사용할 수 있습니다.
+            keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않고 2자 이상 100자 이하여야 합니다.
+
+            excludeClosed=true면 마감 처리됐거나 모집 종료 일시가 지난 공고를 뺍니다.
+            deadlineOnly=true(마감일 기준)면 기간이 겹치는 공고 대신 모집 종료 일시가 from~to 안에 있는 공고만 반환합니다.
+            bookmarkedOnly=true면 내가 북마크한 공고만 반환하며, 이때만 로그인이 필요하고 토큰이 없으면 401입니다.
+            세 값은 기본이 false이며 다른 필터와 함께 사용할 수 있습니다.
+
+            로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
+            보내지 않으면 항상 false입니다.
+
             응답에 페이지네이션이 없어 조회 기간이 곧 응답 크기가 되므로 from부터 to까지 최대 92일만 허용합니다.
+            날짜별 목록의 더보기는 받은 목록을 클라이언트가 나눠 보여 줍니다.
         """,
     )
     @ApiResponses(
@@ -176,14 +206,33 @@ interface UserJobApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 시작일이 종료일보다 늦거나 조회 기간이 92일을 넘습니다.",
+                description = "BAD_REQUEST: 시작일이 종료일보다 늦거나 조회 기간이 92일을 넘거나 필터 값이 올바르지 않습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "UNAUTHORIZED: bookmarkedOnly=true인데 로그인하지 않았습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
     )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     fun getJobCalendar(
+        @Parameter(hidden = true)
+        userId: Long?,
         from: LocalDate,
         to: LocalDate,
+        employmentType: EmploymentType?,
+        experienceType: ExperienceType?,
+        jobField: JobField?,
+        jobRole: JobRole?,
+        region: Region?,
+        subRegion: SubRegion?,
+        @Size(min = 2, max = 100)
+        keyword: String?,
+        excludeClosed: Boolean,
+        bookmarkedOnly: Boolean,
+        deadlineOnly: Boolean,
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>>
 
     @Operation(

@@ -4,23 +4,27 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
-import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.implement.JobBookmarkReader
-import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
+import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 class UserJobServiceTest {
 
@@ -48,7 +52,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
-        Mockito.`when`(job.region).thenReturn("서울")
+        Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(job.companyAndTeamIntroduction).thenReturn("회사 및 팀 소개")
         Mockito.`when`(job.responsibilities).thenReturn("주요 업무")
@@ -138,11 +142,11 @@ class UserJobServiceTest {
             mapOf(1L to JobMetricDto(viewCount = 5, bookmarkCount = 2, commentCount = 0)),
         )
 
-        Mockito.`when`(jobReader.readPopularRecruiting(UserJobService.POPULAR_JOB_LIMIT)).thenReturn(listOf(job))
+        Mockito.`when`(jobReader.readPopularRecruiting(null, UserJobService.POPULAR_JOB_LIMIT)).thenReturn(listOf(job))
 
         assertEquals(false, service.getJob(null, 1L).bookmarked)
         assertEquals(false, service.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 20).items.single().bookmarked)
-        assertEquals(false, service.getPopularJobs(null).single().bookmarked)
+        assertEquals(false, service.getPopularJobs(null, null).single().bookmarked)
 
         Mockito.verifyNoInteractions(jobBookmarkReader)
     }
@@ -152,7 +156,7 @@ class UserJobServiceTest {
         val popular = createJobMock()
         val other = createJobMock()
         Mockito.`when`(other.id).thenReturn(2L)
-        Mockito.`when`(jobReader.readPopularRecruiting(4)).thenReturn(listOf(popular, other))
+        Mockito.`when`(jobReader.readPopularRecruiting(EmploymentType.INTERN, 4)).thenReturn(listOf(popular, other))
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L, 2L))).thenReturn(setOf(2L))
         Mockito.`when`(jobMetricReader.readAll(listOf(1L, 2L))).thenReturn(
             mapOf(
@@ -161,25 +165,25 @@ class UserJobServiceTest {
             ),
         )
 
-        val result = service.getPopularJobs(USER_ID)
+        val result = service.getPopularJobs(USER_ID, EmploymentType.INTERN)
 
         assertEquals(listOf(1L, 2L), result.map { it.id })
         assertEquals(listOf(false, true), result.map { it.bookmarked })
         assertEquals(listOf(9L, 7L), result.map { it.viewCount })
         assertEquals(listOf(1L, 2L), result.map { it.bookmarkCount })
-        Mockito.verify(jobReader).readPopularRecruiting(4)
+        Mockito.verify(jobReader).readPopularRecruiting(EmploymentType.INTERN, 4)
     }
 
     @Test
     fun `직무와 산업 일치 다음 직무만 다음 산업만 순으로 네 건까지 채운다`() {
-        givenProfile(wishJob = "마케터", wishIndustry = "뷰티")
+        givenProfile(wishJob = "마케팅기획·전략", wishIndustry = "뷰티")
         // 공고 mock도 내부에서 stub을 걸므로 thenReturn 인자 안에서 만들지 않고 먼저 만든다.
         val both = createJobMock(id = 1L)
         val jobRoleOnly = createJobMock(id = 2L)
         val industryOnly = createJobMock(id = 3L)
-        Mockito.`when`(jobReader.readRecruitingMatched(listOf("마케터"), listOf("뷰티"), emptyList(), 4))
+        Mockito.`when`(jobReader.readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), listOf("뷰티"), emptyList(), 4))
             .thenReturn(listOf(both))
-        Mockito.`when`(jobReader.readRecruitingMatched(listOf("마케터"), emptyList(), listOf(1L), 3))
+        Mockito.`when`(jobReader.readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), emptyList(), listOf(1L), 3))
             .thenReturn(listOf(jobRoleOnly))
         Mockito.`when`(jobReader.readRecruitingMatched(emptyList(), listOf("뷰티"), listOf(1L, 2L), 2))
             .thenReturn(listOf(industryOnly))
@@ -197,24 +201,24 @@ class UserJobServiceTest {
 
     @Test
     fun `네 건이 차면 다음 단계를 조회하지 않는다`() {
-        givenProfile(wishJob = "마케터", wishIndustry = "뷰티")
+        givenProfile(wishJob = "마케팅기획·전략", wishIndustry = "뷰티")
         val jobs = (1L..4L).map { createJobMock(id = it) }
-        Mockito.`when`(jobReader.readRecruitingMatched(listOf("마케터"), listOf("뷰티"), emptyList(), 4))
+        Mockito.`when`(jobReader.readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), listOf("뷰티"), emptyList(), 4))
             .thenReturn(jobs)
 
         assertEquals(4, service.getSimilarJobs(USER_ID).size)
 
-        Mockito.verify(jobReader).readRecruitingMatched(listOf("마케터"), listOf("뷰티"), emptyList(), 4)
+        Mockito.verify(jobReader).readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), listOf("뷰티"), emptyList(), 4)
         Mockito.verifyNoMoreInteractions(jobReader)
     }
 
     @Test
     fun `희망 직무만 있으면 직무 단계만 조회한다`() {
-        givenProfile(wishJob = "마케터", wishIndustry = null)
+        givenProfile(wishJob = "마케팅기획·전략", wishIndustry = null)
 
         service.getSimilarJobs(USER_ID)
 
-        Mockito.verify(jobReader).readRecruitingMatched(listOf("마케터"), emptyList(), emptyList(), 4)
+        Mockito.verify(jobReader).readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), emptyList(), emptyList(), 4)
         Mockito.verifyNoMoreInteractions(jobReader)
     }
 
@@ -225,6 +229,15 @@ class UserJobServiceTest {
         service.getSimilarJobs(USER_ID)
 
         Mockito.verify(jobReader).readRecruitingMatched(emptyList(), listOf("IT", "금융"), emptyList(), 4)
+    }
+
+    @Test
+    fun `희망 직무가 직무 라벨과 다르면 직무로 보지 않고 산업으로만 고른다`() {
+        givenProfile(wishJob = "마케터", wishIndustry = "뷰티")
+
+        service.getSimilarJobs(USER_ID)
+
+        Mockito.verify(jobReader).readRecruitingMatched(emptyList(), listOf("뷰티"), emptyList(), 4)
     }
 
     @Test
@@ -250,28 +263,72 @@ class UserJobServiceTest {
     }
 
     @Test
-    fun `달력 조회 기간을 일시 경계로 변환하고 필요한 필드만 반환한다`() {
+    fun `달력 조회 기간을 일시 경계로 변환하고 카드에 필요한 필드와 북마크 여부를 반환한다`() {
+        // given
         val job = createJobMock()
         val startAt = LocalDateTime.of(2026, 8, 10, 9, 0)
         val endAt = LocalDateTime.of(2026, 8, 31, 23, 59)
         Mockito.`when`(job.recruitmentStartAt).thenReturn(startAt)
         Mockito.`when`(job.recruitmentEndAt).thenReturn(endAt)
+        Mockito.`when`(job.jobRole).thenReturn(JobRole.MARKETING_STRATEGY)
         Mockito.`when`(
             jobReader.readPublishedCalendar(
+                JobSearchCondition.NONE,
+                JobCalendarSearchCondition.NONE,
+                LocalDateTime.of(2026, 8, 1, 0, 0),
+                LocalDateTime.of(2026, 9, 1, 0, 0),
+            ),
+        ).thenReturn(listOf(job))
+        Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L))).thenReturn(setOf(1L))
+
+        // when
+        val result = service.getJobCalendar(
+            userId = USER_ID,
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition.NONE,
+            from = LocalDate.of(2026, 8, 1),
+            to = LocalDate.of(2026, 8, 31),
+        ).single()
+
+        // then
+        assertEquals(1L, result.id)
+        assertEquals("오공고", result.companyName)
+        assertEquals("백엔드 개발자", result.title)
+        assertEquals(EmploymentType.FULL_TIME, result.employmentType)
+        assertEquals(ExperienceType.EXPERIENCED, result.experienceType)
+        assertEquals(JobRole.MARKETING_STRATEGY, result.jobRole)
+        assertEquals(startAt, result.recruitmentStartAt)
+        assertEquals(endAt, result.recruitmentEndAt)
+        assertEquals(true, result.bookmarked)
+    }
+
+    @Test
+    fun `비로그인 달력 조회는 북마크를 조회하지 않고 모두 북마크하지 않은 것으로 반환한다`() {
+        // given
+        val job = createJobMock()
+        Mockito.`when`(job.recruitmentStartAt).thenReturn(LocalDateTime.of(2026, 8, 10, 9, 0))
+        Mockito.`when`(job.recruitmentEndAt).thenReturn(LocalDateTime.of(2026, 8, 31, 23, 59))
+        Mockito.`when`(
+            jobReader.readPublishedCalendar(
+                JobSearchCondition.NONE,
+                JobCalendarSearchCondition.NONE,
                 LocalDateTime.of(2026, 8, 1, 0, 0),
                 LocalDateTime.of(2026, 9, 1, 0, 0),
             ),
         ).thenReturn(listOf(job))
 
+        // when
         val result = service.getJobCalendar(
+            userId = null,
+            condition = JobSearchCondition.NONE,
+            calendarCondition = JobCalendarSearchCondition.NONE,
             from = LocalDate.of(2026, 8, 1),
             to = LocalDate.of(2026, 8, 31),
         )
 
-        assertEquals(1L, result.single().id)
-        assertEquals("오공고", result.single().companyName)
-        assertEquals(startAt, result.single().recruitmentStartAt)
-        assertEquals(endAt, result.single().recruitmentEndAt)
+        // then
+        assertEquals(false, result.single().bookmarked)
+        Mockito.verifyNoInteractions(jobBookmarkReader)
     }
 
     private fun givenProfile(wishJob: String?, wishIndustry: String?) {
@@ -300,7 +357,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
-        Mockito.`when`(job.region).thenReturn("서울")
+        Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
     }
 

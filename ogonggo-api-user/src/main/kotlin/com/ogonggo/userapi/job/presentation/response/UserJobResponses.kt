@@ -3,24 +3,45 @@ package com.ogonggo.userapi.job.presentation.response
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobSummary
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
 data class UserJobCalendarItemResponse(
     val id: Long,
     val companyName: String,
+    val title: String,
+    @field:Schema(description = "공고 대표 이미지 주소. 달력 칸과 카드의 로고 자리에 쓴다. 없으면 null")
+    val coverImageUrl: String?,
+    val employmentType: EmploymentType,
+    val experienceType: ExperienceType,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val recruitmentStartAt: LocalDateTime,
     val recruitmentEndAt: LocalDateTime,
+    @field:Schema(description = "로그인한 사용자의 북마크 여부. 토큰이 없으면 항상 false")
+    val bookmarked: Boolean,
 ) {
     companion object {
         internal fun from(result: UserJobCalendarItem): UserJobCalendarItemResponse = UserJobCalendarItemResponse(
             id = result.id,
             companyName = result.companyName,
+            title = result.title,
+            coverImageUrl = result.coverImageUrl,
+            employmentType = result.employmentType,
+            experienceType = result.experienceType,
+            jobField = result.jobField,
+            jobRole = result.jobRole,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
+            bookmarked = result.bookmarked,
         )
     }
 }
@@ -29,12 +50,13 @@ data class UserJobSummaryResponse(
     val id: Long,
     val companyName: String,
     val title: String,
+    val coverImageUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
-    val experienceMaxYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -49,12 +71,13 @@ data class UserJobSummaryResponse(
             id = result.id,
             companyName = result.companyName,
             title = result.title,
+            coverImageUrl = result.coverImageUrl,
             employmentType = result.employmentType,
             experienceType = result.experienceType,
             experienceMinYears = result.experienceMinYears,
-            experienceMaxYears = result.experienceMaxYears,
             educationLevel = result.educationLevel,
             region = result.region,
+            subRegion = result.subRegion,
             recruitmentType = result.recruitmentType,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
@@ -71,12 +94,14 @@ data class UserJobDetailResponse(
     val id: Long,
     val companyName: String,
     val title: String,
+    val coverImageUrl: String?,
+    val logoUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
-    val experienceMaxYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -88,6 +113,7 @@ data class UserJobDetailResponse(
     val benefits: String?,
     val hiringProcess: String?,
     val sourceUrl: String?,
+    val applyEmail: String?,
     val closedAt: LocalDateTime?,
     val bookmarked: Boolean,
     val viewCount: Long,
@@ -99,12 +125,14 @@ data class UserJobDetailResponse(
             id = result.id,
             companyName = result.companyName,
             title = result.title,
+            coverImageUrl = result.coverImageUrl,
+            logoUrl = result.logoUrl,
             employmentType = result.employmentType,
             experienceType = result.experienceType,
             experienceMinYears = result.experienceMinYears,
-            experienceMaxYears = result.experienceMaxYears,
             educationLevel = result.educationLevel,
             region = result.region,
+            subRegion = result.subRegion,
             recruitmentType = result.recruitmentType,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
@@ -116,6 +144,7 @@ data class UserJobDetailResponse(
             benefits = result.benefits,
             hiringProcess = result.hiringProcess,
             sourceUrl = result.sourceUrl,
+            applyEmail = result.applyEmail,
             closedAt = result.closedAt,
             bookmarked = result.bookmarked,
             viewCount = result.viewCount,

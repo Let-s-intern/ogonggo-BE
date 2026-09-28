@@ -1,6 +1,8 @@
 package com.ogonggo.core.community.persistence
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.community.domain.RecruitmentPostApplicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.community.domain.RecruitmentPostManagementStatus
@@ -11,7 +13,9 @@ import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.implement.RecruitmentPostListFilter
 import com.ogonggo.core.community.domain.QRecruitmentPostApplication.recruitmentPostApplication
 import com.ogonggo.core.community.domain.QRecruitmentPost.recruitmentPost
+import com.ogonggo.core.community.domain.QRecruitmentPostBookmark.recruitmentPostBookmark
 import com.ogonggo.core.community.domain.QPostMetric.postMetric
+import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.Expressions
 import com.querydsl.jpa.JPAExpressions
@@ -82,6 +86,43 @@ internal class RecruitmentPostQueryRepository(
             .where(*predicates)
             .fetchOne() ?: 0L
         return PageImpl(content, pageable, total)
+    }
+
+    /**
+     * 북마크한 모집글 중 공개된 것만 읽는다. 모집글과 북마크의 읽기 전용 연관관계를 쓰지 않고 식별자로 조인한다.
+     */
+    fun findBookmarkedPublishedPage(
+        userId: Long,
+        condition: RecruitmentPostBookmarkSearchCondition,
+        pageable: Pageable,
+    ): Page<RecruitmentPost> {
+        val predicates = arrayOf(
+            recruitmentPostBookmark.userId.eq(userId),
+            recruitmentPostBookmark.deletedAt.isNull,
+            recruitmentPost.publicationStatus.eq(PublicationStatus.PUBLISHED),
+            recruitmentPost.deletedAt.isNull,
+            condition.recruitmentStatus?.let { recruitmentPost.recruitmentStatus.eq(it) },
+            condition.recruitmentType?.let { recruitmentPost.recruitmentType.eq(it) },
+            condition.keyword?.takeIf(String::isNotBlank)?.let { recruitmentPost.title.containsIgnoreCase(it) },
+        )
+        val content = queryFactory.select(recruitmentPost)
+            .from(recruitmentPostBookmark)
+            .join(recruitmentPost).on(recruitmentPost.id.eq(recruitmentPostBookmark.postId))
+            .where(*predicates)
+            .orderBy(*bookmarkOrders(condition.sortType))
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+        val total = queryFactory.select(recruitmentPostBookmark.count())
+            .from(recruitmentPostBookmark)
+            .join(recruitmentPost).on(recruitmentPost.id.eq(recruitmentPostBookmark.postId))
+            .where(*predicates)
+            .fetchOne() ?: 0L
+        return PageImpl(content, pageable, total)
+    }
+
+    private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {
+        BookmarkSortType.RECENTLY_SAVED -> arrayOf(recruitmentPostBookmark.updatedAt.desc(), recruitmentPostBookmark.id.desc())
     }
 
     private fun ownedPredicates(

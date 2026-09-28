@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-05
+- 최종 변경일: 2026-09-28
 - 적용 범위: `ogonggo-api-user`, `ogonggo-core`, `lets-career-server`
 - 예상 독자: 오공고 서버와 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -39,6 +39,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 2. 일반 회원은 `users.letscareer_user_id`로 렛츠커리어 계정과 1:1 대응합니다.
 3. 일반 회원 계정은 별도 가입 API 없이 최초 토큰 교환 시점에 생성합니다.
 4. 로그인 이후 렛츠커리어 장애는 오공고 사용자 요청에 영향을 주지 않습니다.
+
+로그인 이후 렛츠커리어를 부르는 예외는 렛츠커리어 콘텐츠를 오공고 화면에 보여줄 때뿐입니다(지금은 [추천 챌린지](api-response.md#추천-렛츠커리어-챌린지)). 인증에는 쓰지 않고, 실패하면 빈 값으로 응답해 4번 규칙을 지킵니다.
 
 ## 2. 왜 이렇게 나누는가
 
@@ -112,14 +114,16 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | 경로 | 로그인 | 비고 |
 | --- | --- | --- |
 | `GET /api/v1/jobs`, `/api/v1/jobs/{jobId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
-| `GET /api/v1/jobs/calendar` | 불필요 | 응답에 사용자별 값이 없다 |
+| `GET /api/v1/jobs/calendar` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false`. `bookmarkedOnly=true`는 토큰이 없으면 401 |
 | `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
+| `GET /api/v1/recommended-challenges` | 선택 | 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘기고, 없거나 기업 회원이면 넘기지 않는다 |
 | `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
 | `POST /api/v1/bootcamps/{bootcampId}/application-url-clicks` | 필수 | `bootcamp_application_url_clicks.user_id`가 NOT NULL이다 |
 | `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
 | `PUT /api/v1/users/me/profile` | 필수 | 자기 학력과 희망 조건을 고친다 |
+| `PUT /api/v1/users/me/company-profile` | 필수 | 기업 회원이 자기 기업 정보(기관명·담당자 이름·로고·연락처·수신 이메일)를 고친다 |
 
 `anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다. 브라우저 preflight(`OPTIONS`)만 예외로, 인가 규칙 첫 줄의 `CorsUtils::isPreFlightRequest`가 먼저 허용합니다([브라우저 CORS 허용 오리진](#7-2-브라우저-cors-허용-오리진) 참고).
 
@@ -157,7 +161,7 @@ POST /api/v1/auth/company/signin
 → 200 { "accessToken": "...", "refreshToken": "..." }
 ```
 
-**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 기업 정보는 기관명과 담당자 이름 두 가지입니다.
+**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 받는 기업 정보는 기관명과 담당자 이름 두 가지입니다. 기업 로고, 담당자 연락처, 정보 수신용 이메일은 선택 값으로 가입 후 `PUT /api/v1/users/me/company-profile`에서 채웁니다.
 
 | 상황 | 응답 |
 | --- | --- |
@@ -233,7 +237,15 @@ GET /api/v1/users/me
 
 ## 6. 렛츠커리어 내부 API
 
-`POST /api/v1/internal/auth/verify`는 서버 간 호출 전용이며 브라우저에 노출하지 않습니다. `X-Internal-Api-Key` 헤더가 서버 설정값과 일치할 때만 `INTERNAL` 권한을 부여하고, 그 외에는 인가 단계에서 차단합니다. 키가 설정되지 않으면 모든 요청을 거부합니다.
+오공고가 부르는 렛츠커리어 내부 API는 다음과 같습니다.
+
+| 경로 | 호출 시점 |
+| --- | --- |
+| `POST /api/v1/internal/auth/verify` | 매 로그인 |
+| `GET /api/v1/internal/users/{userId}/job-profile` | 최초 가입 시 1회 |
+| `GET /api/v1/internal/challenges/recommend?userId=` | 추천 챌린지 조회마다. `userId`는 선택 |
+
+모두 서버 간 호출 전용이며 브라우저에 노출하지 않습니다. `X-Internal-Api-Key` 헤더가 서버 설정값과 일치할 때만 `INTERNAL` 권한을 부여하고, 그 외에는 인가 단계에서 차단합니다. 키가 설정되지 않으면 모든 요청을 거부합니다.
 
 응답에는 연동에 필요한 최소 정보만 담습니다. 연락처, 결제, 지원 이력은 포함하지 않습니다.
 
@@ -327,7 +339,7 @@ GET /api/v1/users/me
 | 탈퇴 사용자의 재로그인 | 확인 필요 | 403으로 막는다. 현재 도메인은 탈퇴를 되돌릴 수 없다고 선언하고 있다 |
 | 렛츠커리어 로그아웃 시 오공고 동시 로그아웃 | 미정 | 오공고 세션은 유지된다 |
 | `ADMIN` 역할 부여 경로 | DB 직접 부여로 결정(2026-09-14) | 부여 API와 화면은 없다. 부여 이력·감사 기록은 미정이다. 렛츠커리어의 `isAdmin`은 반영하지 않는다 |
-| 프로필 수정 | 미정 | 구직 프로필은 수정할 수 있다. 렛츠커리어에서 복제한 이름·닉네임·프로필 이미지는 로그인 시 갱신될 뿐 바꾸는 경로가 없고, 기업 정보도 가입 이후 바꿀 수 없다 |
+| 프로필 수정 | 미정 | 구직 프로필은 수정할 수 있다. 렛츠커리어에서 복제한 이름·닉네임·프로필 이미지는 로그인 시 갱신될 뿐 바꾸는 경로가 없다. 기업 정보(기관명·담당자 이름·로고·연락처·수신 이메일)는 `PUT /api/v1/users/me/company-profile`로 고친다 |
 
 앞의 세 가지는 서로 얽혀 있으므로 함께 결정합니다. 재발급 시점에 렛츠커리어를 재검증하는 방식(`last_synced_at`이 일정 기간을 넘겼을 때만 호출)이 전파 지연을 좁히는 후보이며, 탈퇴 정책이 정해진 뒤 함께 검토합니다.
 

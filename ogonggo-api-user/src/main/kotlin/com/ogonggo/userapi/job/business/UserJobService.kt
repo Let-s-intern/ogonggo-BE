@@ -1,6 +1,9 @@
 package com.ogonggo.userapi.job.business
 
+import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
@@ -9,9 +12,9 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.user.implement.UserProfileReader
+import java.time.LocalDate
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
-import java.time.LocalDate
 
 @Service
 class UserJobService(
@@ -40,23 +43,24 @@ class UserJobService(
         )
     }
 
-    fun getPopularJobs(userId: Long?): List<UserJobSummary> =
-        toSummaries(userId, jobReader.readPopularRecruiting(POPULAR_JOB_LIMIT))
+    fun getPopularJobs(userId: Long?, employmentType: EmploymentType?): List<UserJobSummary> =
+        toSummaries(userId, jobReader.readPopularRecruiting(employmentType, POPULAR_JOB_LIMIT))
 
     /**
      * 희망 직무와 산업이 모두 맞는 공고부터 직무만, 산업만 맞는 공고 순으로 채운다.
      * 앞 단계에서 담은 공고는 다음 단계에서 빼고, 네 건이 차면 더 조회하지 않는다.
      * 모자라도 다른 공고로 채우지 않는다. 기업 회원처럼 프로필이 없거나 희망 값이 비면 빈 목록이다.
+     * 희망 직무는 렛츠커리어 프로필의 문자열이라 직무 라벨([JobRole.desc])과 같은 값만 직무로 본다.
      */
     fun getSimilarJobs(userId: Long): List<UserJobSummary> {
         val profile = userProfileReader.read(userId) ?: return emptyList()
-        val jobRoles = profile.wishJob.splitWishValues()
+        val jobRoles = profile.wishJob.splitWishValues().mapNotNull(::jobRoleOf)
         val industries = profile.wishIndustry.splitWishValues()
 
         val steps = listOfNotNull(
             (jobRoles to industries).takeIf { jobRoles.isNotEmpty() && industries.isNotEmpty() },
             (jobRoles to emptyList<String>()).takeIf { jobRoles.isNotEmpty() },
-            (emptyList<String>() to industries).takeIf { industries.isNotEmpty() },
+            (emptyList<JobRole>() to industries).takeIf { industries.isNotEmpty() },
         )
         val jobs = mutableListOf<Job>()
         for ((stepJobRoles, stepIndustries) in steps) {
@@ -73,12 +77,29 @@ class UserJobService(
         return toSummaries(userId, jobs)
     }
 
-    /** 조회 기간의 유효성은 Presentation이 검증하고, 여기서는 날짜를 일시 경계로 옮기기만 한다. */
-    fun getJobCalendar(from: LocalDate, to: LocalDate): List<UserJobCalendarItem> =
-        jobReader.readPublishedCalendar(
+    /**
+     * 조회 기간의 유효성은 Presentation이 검증하고, 여기서는 날짜를 일시 경계로 옮기기만 한다.
+     * 목록처럼 로그인하지 않았으면 북마크가 하나도 없는 것으로 본다.
+     */
+    fun getJobCalendar(
+        userId: Long?,
+        condition: JobSearchCondition,
+        calendarCondition: JobCalendarSearchCondition,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<UserJobCalendarItem> {
+        val jobs = jobReader.readPublishedCalendar(
+            condition = condition,
+            calendarCondition = calendarCondition,
             rangeStart = from.atStartOfDay(),
             rangeEndExclusive = to.plusDays(1).atStartOfDay(),
-        ).map(UserJobCalendarItem::from)
+        )
+        if (jobs.isEmpty()) {
+            return emptyList()
+        }
+        val bookmarkedJobIds = readBookmarkedJobIds(userId, jobs.map(Job::requiredId))
+        return jobs.map { job -> UserJobCalendarItem.from(job, job.requiredId() in bookmarkedJobIds) }
+    }
 
     /**
      * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.
@@ -139,3 +160,5 @@ class UserJobService(
 /** 희망 값은 렛츠커리어에서 온 자유 문자열이라 "IT, 금융"처럼 쉼표로 여러 값을 담을 수 있다. */
 private fun String?.splitWishValues(): List<String> =
     this?.split(",")?.map(String::trim)?.filter(String::isNotEmpty)?.distinct().orEmpty()
+
+private fun jobRoleOf(label: String): JobRole? = JobRole.entries.firstOrNull { it.desc == label }

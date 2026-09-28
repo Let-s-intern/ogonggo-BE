@@ -7,7 +7,6 @@ import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
-import com.ogonggo.userapi.error.InvalidRequestParameterException
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import org.springframework.http.ResponseEntity
@@ -37,7 +36,7 @@ class UserBootcampController(
         @RequestParam(name = "status", required = false) status: BootcampStatus?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
-        validateStatus(status)
+        validatePublicStatus(status)
         val result = userBootcampService.getBootcamps(
             userId = userId,
             condition = BootcampSearchCondition(
@@ -75,21 +74,4 @@ class UserBootcampController(
         @PathVariable("bootcampId") bootcampId: Long,
     ): ResponseEntity<SuccessResponse<UserBootcampDetailResponse>> =
         SuccessResponse.ok(UserBootcampDetailResponse.from(userBootcampService.getBootcamp(userId, bootcampId)))
-
-    /**
-     * 공개 목록은 모집중과 모집 마감만 다루므로 임시저장은 고를 수 없다.
-     * 그대로 넘기면 항상 빈 목록이 나가 클라이언트가 잘못 보냈다는 사실을 알 수 없다.
-     */
-    private fun validateStatus(status: BootcampStatus?) {
-        if (status != null && status !in SELECTABLE_STATUSES) {
-            throw InvalidRequestParameterException(
-                "status",
-                "고를 수 있는 모집 상태는 ${SELECTABLE_STATUSES.joinToString()}입니다.",
-            )
-        }
-    }
-
-    companion object {
-        private val SELECTABLE_STATUSES = listOf(BootcampStatus.RECRUITING, BootcampStatus.CLOSED)
-    }
 }

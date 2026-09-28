@@ -10,5 +10,5 @@ enum class RecruitmentApplicationProgressStatus(
     PREPARING(1, "지원 준비 중"),
     COMPLETED(2, "지원 완료"),
     IN_PROGRESS(3, "활동 중"),
-    ENDED(4, "활동 종료"),
+    ENDED(4, "활동 완료"),
 }

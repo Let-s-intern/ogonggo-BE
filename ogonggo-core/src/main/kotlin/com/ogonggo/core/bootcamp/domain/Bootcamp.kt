@@ -42,6 +42,10 @@ class Bootcamp internal constructor(
     shortDescription: String,
     content: String,
     eligibilityAndSelectionProcess: String? = null,
+    logoUrl: String? = null,
+    instructorInfo: String? = null,
+    programFeatures: String? = null,
+    completionRequirements: String? = null,
     applicationMethod: ApplicationMethod,
     applicationUrl: String? = null,
     managerEmail: String? = null,
@@ -77,6 +81,10 @@ class Bootcamp internal constructor(
             shortDescription = shortDescription,
             content = content,
             eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
+            logoUrl = logoUrl,
+            instructorInfo = instructorInfo,
+            programFeatures = programFeatures,
+            completionRequirements = completionRequirements,
             applicationMethod = applicationMethod,
             applicationUrl = applicationUrl,
             managerEmail = managerEmail,
@@ -162,6 +170,23 @@ class Bootcamp internal constructor(
     var eligibilityAndSelectionProcess: String? = eligibilityAndSelectionProcess /* 지원 자격 및 전형 안내 */
         protected set
 
+    /** 기업회원이 대표 이미지와 따로 올리는 로고다. 수집한 부트캠프는 값이 없다. */
+    @Column(name = "logo_url", length = 2048)
+    var logoUrl: String? = logoUrl /* 운영 회사 로고 이미지 URL */
+        protected set
+
+    @Column(name = "instructor_info", columnDefinition = "LONGTEXT")
+    var instructorInfo: String? = instructorInfo /* 강사 정보 */
+        protected set
+
+    @Column(name = "program_features", columnDefinition = "LONGTEXT")
+    var programFeatures: String? = programFeatures /* 교육 특징 */
+        protected set
+
+    @Column(name = "completion_requirements", columnDefinition = "LONGTEXT")
+    var completionRequirements: String? = completionRequirements /* 수료 조건 */
+        protected set
+
     @Enumerated(EnumType.STRING)
     @Column(name = "application_method", nullable = false, length = 20)
     var applicationMethod: ApplicationMethod = applicationMethod /* 지원 방법 */
@@ -232,6 +257,10 @@ class Bootcamp internal constructor(
         shortDescription: String,
         content: String,
         eligibilityAndSelectionProcess: String?,
+        logoUrl: String?,
+        instructorInfo: String?,
+        programFeatures: String?,
+        completionRequirements: String?,
         applicationMethod: ApplicationMethod,
         applicationUrl: String?,
         managerEmail: String?,
@@ -256,6 +285,10 @@ class Bootcamp internal constructor(
             shortDescription = shortDescription,
             content = content,
             eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
+            logoUrl = logoUrl,
+            instructorInfo = instructorInfo,
+            programFeatures = programFeatures,
+            completionRequirements = completionRequirements,
             applicationMethod = applicationMethod,
             applicationUrl = applicationUrl,
             managerEmail = managerEmail,
@@ -280,6 +313,10 @@ class Bootcamp internal constructor(
         this.shortDescription = shortDescription
         this.content = content
         this.eligibilityAndSelectionProcess = eligibilityAndSelectionProcess
+        this.logoUrl = logoUrl
+        this.instructorInfo = instructorInfo
+        this.programFeatures = programFeatures
+        this.completionRequirements = completionRequirements
         this.applicationMethod = applicationMethod
         this.applicationUrl = applicationUrl
         this.managerEmail = managerEmail
@@ -408,6 +445,10 @@ private fun validateBootcampValues(
     shortDescription: String,
     content: String,
     eligibilityAndSelectionProcess: String?,
+    logoUrl: String?,
+    instructorInfo: String?,
+    programFeatures: String?,
+    completionRequirements: String?,
     applicationMethod: ApplicationMethod,
     applicationUrl: String?,
     managerEmail: String?,
@@ -439,6 +480,10 @@ private fun validateBootcampValues(
     require(eligibilityAndSelectionProcess == null || eligibilityAndSelectionProcess.isNotBlank()) {
         "지원 자격 및 전형 안내는 공백일 수 없습니다."
     }
+    require(logoUrl == null || logoUrl.isNotBlank()) { "운영 회사 로고 URL은 공백일 수 없습니다." }
+    require(instructorInfo == null || instructorInfo.isNotBlank()) { "강사 정보는 공백일 수 없습니다." }
+    require(programFeatures == null || programFeatures.isNotBlank()) { "교육 특징은 공백일 수 없습니다." }
+    require(completionRequirements == null || completionRequirements.isNotBlank()) { "수료 조건은 공백일 수 없습니다." }
     when (applicationMethod) {
         ApplicationMethod.EXTERNAL_PAGE -> require(!applicationUrl.isNullOrBlank()) {
             "외부 페이지 지원 링크는 필수입니다."

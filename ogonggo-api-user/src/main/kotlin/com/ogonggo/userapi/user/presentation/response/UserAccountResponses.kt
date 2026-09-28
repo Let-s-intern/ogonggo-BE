@@ -71,11 +71,20 @@ data class MyProfileResponse(
 data class MyCompanyProfileResponse(
     val organizationName: String,
     val managerName: String,
+    @Schema(description = "기업 로고 이미지 주소. 입력하지 않았으면 null이다.")
+    val logoUrl: String?,
+    @Schema(description = "담당자 연락처. 입력하지 않았으면 null이다.")
+    val managerPhone: String?,
+    @Schema(description = "로그인 이메일과 따로 받는 정보 수신용 이메일. 입력하지 않았으면 null이다.")
+    val notificationEmail: String?,
 ) {
     companion object {
         internal fun from(result: MyCompanyProfileResult): MyCompanyProfileResponse = MyCompanyProfileResponse(
             organizationName = result.organizationName,
             managerName = result.managerName,
+            logoUrl = result.logoUrl,
+            managerPhone = result.managerPhone,
+            notificationEmail = result.notificationEmail,
         )
     }
 }

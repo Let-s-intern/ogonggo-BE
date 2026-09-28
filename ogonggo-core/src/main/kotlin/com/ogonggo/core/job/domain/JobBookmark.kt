@@ -1,8 +1,11 @@
 package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.job.domain.JobApplicationStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -37,5 +40,10 @@ internal class JobBookmark(
 
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 북마크 해제 일시 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "application_status", nullable = false, length = 30)
+    var applicationStatus: JobApplicationStatus = JobApplicationStatus.SCRAPPED /* 지원·신청 관리 단계 */
         protected set
 }

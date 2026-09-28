@@ -33,9 +33,6 @@ class JobMetricManager internal constructor(
 ) {
 
     fun increaseViewCount(jobId: Long, now: LocalDateTime) {
-        if (jobMetricRepository.increaseViewCount(jobId, now) > 0) {
-            return
-        }
         ensureMetric(jobId)
         jobMetricRepository.increaseViewCount(jobId, now)
     }
@@ -45,15 +42,20 @@ class JobMetricManager internal constructor(
      * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
      */
     fun syncBookmarkCount(jobId: Long, now: LocalDateTime) {
-        if (jobMetricRepository.syncBookmarkCount(jobId, now) > 0) {
-            return
-        }
         ensureMetric(jobId)
         jobMetricRepository.syncBookmarkCount(jobId, now)
     }
 
-    /** 다른 요청이 먼저 만들었으면 생성 전용 트랜잭션만 롤백되므로 그대로 이어서 갱신한다. */
+    /**
+     * 갱신보다 먼저 행을 준비한다.
+     * 없는 행을 UPDATE로 먼저 찾으면 MySQL이 그 자리에 gap lock을 걸어,
+     * 같은 스레드가 여는 생성 전용 트랜잭션의 INSERT가 잠금 대기 시간 초과로 실패한다.
+     * 다른 요청이 먼저 만들었으면 생성 전용 트랜잭션만 롤백되므로 그대로 이어서 갱신한다.
+     */
     private fun ensureMetric(jobId: Long) {
+        if (jobMetricRepository.findByJobId(jobId) != null) {
+            return
+        }
         try {
             jobMetricRegistrar.create(jobId)
         } catch (exception: DataIntegrityViolationException) {

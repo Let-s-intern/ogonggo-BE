@@ -37,6 +37,10 @@ data class CreateCompanyBootcampRequest(
     @field:NotBlank @field:Size(max = 500) override val shortDescription: String,
     @field:NotBlank override val content: String,
     override val eligibilityAndSelectionProcess: String?,
+    @field:Size(max = 2048) @field:URL override val logoUrl: String?,
+    override val instructorInfo: String?,
+    override val programFeatures: String?,
+    override val completionRequirements: String?,
     override val applicationMethod: ApplicationMethod,
     @field:Size(max = 2048) @field:URL override val applicationUrl: String?,
     @field:Size(max = 320) @field:Email override val managerEmail: String?,
@@ -67,6 +71,10 @@ data class CreateCompanyBootcampRequest(
             shortDescription = shortDescription,
             content = content,
             eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
+            logoUrl = logoUrl,
+            instructorInfo = instructorInfo,
+            programFeatures = programFeatures,
+            completionRequirements = completionRequirements,
             applicationMethod = applicationMethod,
             applicationUrl = applicationUrl,
             managerEmail = managerEmail,
@@ -98,6 +106,10 @@ data class UpdateCompanyBootcampRequest(
     @field:NotBlank @field:Size(max = 500) override val shortDescription: String,
     @field:NotBlank override val content: String,
     override val eligibilityAndSelectionProcess: String?,
+    @field:Size(max = 2048) @field:URL override val logoUrl: String?,
+    override val instructorInfo: String?,
+    override val programFeatures: String?,
+    override val completionRequirements: String?,
     override val applicationMethod: ApplicationMethod,
     @field:Size(max = 2048) @field:URL override val applicationUrl: String?,
     @field:Size(max = 320) @field:Email override val managerEmail: String?,
@@ -127,6 +139,10 @@ data class UpdateCompanyBootcampRequest(
             shortDescription = shortDescription,
             content = content,
             eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
+            logoUrl = logoUrl,
+            instructorInfo = instructorInfo,
+            programFeatures = programFeatures,
+            completionRequirements = completionRequirements,
             applicationMethod = applicationMethod,
             applicationUrl = applicationUrl,
             managerEmail = managerEmail,
@@ -182,6 +198,10 @@ private interface CompanyBootcampWriteRequest {
     val shortDescription: String
     val content: String
     val eligibilityAndSelectionProcess: String?
+    val logoUrl: String?
+    val instructorInfo: String?
+    val programFeatures: String?
+    val completionRequirements: String?
     val applicationMethod: ApplicationMethod
     val applicationUrl: String?
     val managerEmail: String?
@@ -237,6 +257,10 @@ private fun CompanyBootcampWriteRequest.validateRelations() {
 
 private fun CompanyBootcampWriteRequest.optionalTextValues(): List<Pair<String, String?>> = listOf(
     "eligibilityAndSelectionProcess" to eligibilityAndSelectionProcess,
+    "logoUrl" to logoUrl,
+    "instructorInfo" to instructorInfo,
+    "programFeatures" to programFeatures,
+    "completionRequirements" to completionRequirements,
     "managerEmail" to managerEmail,
     "inquiryUrl" to inquiryUrl,
     "sourceUrl" to sourceUrl,

@@ -13,27 +13,33 @@ import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.userapi.auth.error.AuthErrorCode
+import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
-import com.ogonggo.userapi.auth.error.AuthErrorCode
-import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
 import com.ogonggo.userapi.bootcamp.presentation.UserBootcampController
-import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.config.UserSecurityConfiguration
-import com.ogonggo.userapi.job.business.UserJobPageResult
+import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
+import com.ogonggo.userapi.job.business.UserJobPageResult
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.business.UserJobSummary
 import com.ogonggo.userapi.job.presentation.UserJobController
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -48,8 +54,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [UserJobController::class, UserBootcampController::class])
 @Import(UserSecurityConfiguration::class, UserApiExceptionHandler::class)
@@ -76,6 +80,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.items[0].id").value(1))
+            .andExpect(jsonPath("$.data.items[0].coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data.items[0].viewCount").value(12))
             .andExpect(jsonPath("$.data.items[0].bookmarkCount").value(3))
@@ -93,8 +98,10 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.title").value("백엔드 개발자"))
+            .andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
             .andExpect(jsonPath("$.data.qualifications").value("자격 요건"))
+            .andExpect(jsonPath("$.data.applyEmail").value("recruit@example.com"))
             .andExpect(jsonPath("$.data.bookmarked").value(true))
             .andExpect(jsonPath("$.data.viewCount").value(12))
             .andExpect(jsonPath("$.data.bookmarkCount").value(3))
@@ -104,7 +111,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `인기 공고는 페이지 정보 없이 목록으로 응답한다`() {
-        Mockito.`when`(userJobService.getPopularJobs(USER_ID)).thenReturn(listOf(jobSummary()))
+        Mockito.`when`(userJobService.getPopularJobs(USER_ID, null)).thenReturn(listOf(jobSummary()))
 
         mockMvc.perform(get("/api/v1/jobs/popular").with(authenticatedUser()))
             .andExpect(status().isOk)
@@ -116,7 +123,18 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].viewCount").value(12))
             .andExpect(jsonPath("$.data[0].bookmarkCount").value(3))
 
-        Mockito.verify(userJobService).getPopularJobs(USER_ID)
+        Mockito.verify(userJobService).getPopularJobs(USER_ID, null)
+    }
+
+    @Test
+    fun `인기 공고는 고용 형태로 좁혀 조회한다`() {
+        Mockito.`when`(userJobService.getPopularJobs(USER_ID, EmploymentType.INTERN)).thenReturn(listOf(jobSummary()))
+
+        mockMvc.perform(get("/api/v1/jobs/popular").param("employmentType", "INTERN").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].id").value(1))
+
+        Mockito.verify(userJobService).getPopularJobs(USER_ID, EmploymentType.INTERN)
     }
 
     @Test
@@ -210,10 +228,12 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `고용 형태와 경력 유형 필터는 정렬과 함께 조회 조건으로 전달된다`() {
+    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달된다`() {
         val condition = JobSearchCondition(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
             .thenReturn(jobPageResult())
@@ -222,6 +242,8 @@ class UserReadControllerTest @Autowired constructor(
             get("/api/v1/jobs")
                 .param("employmentType", "INTERN")
                 .param("experienceType", "NEWCOMER")
+                .param("jobField", "IT_DEVELOPMENT")
+                .param("jobRole", "IT_BACKEND")
                 .param("sort", "VIEW_COUNT")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
@@ -382,13 +404,20 @@ class UserReadControllerTest @Autowired constructor(
     fun `인증 사용자는 기간과 겹치는 공고 달력을 조회한다`() {
         val from = LocalDate.of(2026, 8, 1)
         val to = LocalDate.of(2026, 8, 31)
-        Mockito.`when`(userJobService.getJobCalendar(from, to)).thenReturn(
+        Mockito.`when`(userJobService.getJobCalendar(USER_ID, JobSearchCondition.NONE, JobCalendarSearchCondition.NONE, from, to)).thenReturn(
             listOf(
                 UserJobCalendarItem(
                     id = 1L,
                     companyName = "오공고",
+                    title = "콘텐츠 마케팅 인턴",
+                    coverImageUrl = "https://example.com/logo.png",
+                    employmentType = EmploymentType.INTERN,
+                    experienceType = ExperienceType.IRRELEVANT,
+                    jobField = JobField.MARKETING_ADVERTISING,
+                    jobRole = JobRole.MARKETING_CONTENT,
                     recruitmentStartAt = LocalDateTime.of(2026, 8, 10, 9, 0),
                     recruitmentEndAt = LocalDateTime.of(2026, 8, 31, 23, 59),
+                    bookmarked = true,
                 ),
             ),
         )
@@ -404,8 +433,98 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].companyName").value("오공고"))
             .andExpect(jsonPath("$.data[0].recruitmentStartAt").value("2026-08-10T09:00:00"))
             .andExpect(jsonPath("$.data[0].recruitmentEndAt").value("2026-08-31T23:59:00"))
-            .andExpect(jsonPath("$.data[0].title").doesNotExist())
+            .andExpect(jsonPath("$.data[0].title").value("콘텐츠 마케팅 인턴"))
+            .andExpect(jsonPath("$.data[0].coverImageUrl").value("https://example.com/logo.png"))
+            .andExpect(jsonPath("$.data[0].employmentType").value("INTERN"))
+            .andExpect(jsonPath("$.data[0].experienceType").value("IRRELEVANT"))
+            .andExpect(jsonPath("$.data[0].jobRole").value("MARKETING_CONTENT"))
+            .andExpect(jsonPath("$.data[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data[0].sourceUrl").doesNotExist())
+            .andExpect(jsonPath("$.data[0].viewCount").doesNotExist())
+    }
+
+    @Test
+    fun `달력의 필터와 검색어는 조회 조건으로 전달된다`() {
+        // given
+        val from = LocalDate.of(2026, 8, 1)
+        val to = LocalDate.of(2026, 8, 31)
+        val condition = JobSearchCondition(
+            employmentType = EmploymentType.INTERN,
+            experienceType = ExperienceType.NEWCOMER,
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
+            keyword = "오공고",
+        )
+        Mockito.`when`(userJobService.getJobCalendar(null, condition, JobCalendarSearchCondition.NONE, from, to)).thenReturn(emptyList())
+
+        // when & then
+        mockMvc.perform(
+            get("/api/v1/jobs/calendar")
+                .param("from", from.toString())
+                .param("to", to.toString())
+                .param("employmentType", "INTERN")
+                .param("experienceType", "NEWCOMER")
+                .param("jobField", "IT_DEVELOPMENT")
+                .param("jobRole", "IT_BACKEND")
+                .param("keyword", "오공고"),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isArray)
+    }
+
+    @Test
+    fun `달력의 마감 공고 제외 스크랩 공고만 마감일 기준은 로그인 사용자 조건으로 전달된다`() {
+        // given
+        val from = LocalDate.of(2026, 8, 1)
+        val to = LocalDate.of(2026, 8, 31)
+        val calendarCondition = JobCalendarSearchCondition(
+            bookmarkedUserId = USER_ID,
+            excludeClosed = true,
+            deadlineOnly = true,
+        )
+        Mockito.`when`(userJobService.getJobCalendar(USER_ID, JobSearchCondition.NONE, calendarCondition, from, to))
+            .thenReturn(emptyList())
+
+        // when & then
+        mockMvc.perform(
+            get("/api/v1/jobs/calendar")
+                .param("from", from.toString())
+                .param("to", to.toString())
+                .param("excludeClosed", "true")
+                .param("bookmarkedOnly", "true")
+                .param("deadlineOnly", "true")
+                .with(authenticatedUser()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isArray)
+    }
+
+    @Test
+    fun `로그인하지 않고 달력에서 스크랩 공고만 요청하면 401을 반환한다`() {
+        mockMvc.perform(
+            get("/api/v1/jobs/calendar")
+                .param("from", "2026-08-01")
+                .param("to", "2026-08-31")
+                .param("bookmarkedOnly", "true"),
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+
+        Mockito.verifyNoInteractions(userJobService)
+    }
+
+    @Test
+    fun `달력 검색어가 2자보다 짧으면 400을 반환한다`() {
+        mockMvc.perform(
+            get("/api/v1/jobs/calendar")
+                .param("from", "2026-08-01")
+                .param("to", "2026-08-31")
+                .param("keyword", "a"),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(userJobService)
     }
 
     @Test
@@ -442,7 +561,7 @@ class UserReadControllerTest @Autowired constructor(
     fun `달력 조회 기간이 정확히 92일이면 조회한다`() {
         val from = LocalDate.of(2026, 1, 1)
         val to = LocalDate.of(2026, 4, 2)
-        Mockito.`when`(userJobService.getJobCalendar(from, to)).thenReturn(emptyList())
+        Mockito.`when`(userJobService.getJobCalendar(USER_ID, JobSearchCondition.NONE, JobCalendarSearchCondition.NONE, from, to)).thenReturn(emptyList())
 
         mockMvc.perform(
             get("/api/v1/jobs/calendar")
@@ -458,8 +577,8 @@ class UserReadControllerTest @Autowired constructor(
     fun `익명 사용자도 공고와 부트캠프 조회 API를 호출할 수 있다`() {
         Mockito.`when`(userJobService.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult())
-        Mockito.`when`(userJobService.getPopularJobs(null)).thenReturn(listOf(jobSummary(bookmarked = false)))
-        Mockito.`when`(userJobService.getJobCalendar(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+        Mockito.`when`(userJobService.getPopularJobs(null, null)).thenReturn(listOf(jobSummary(bookmarked = false)))
+        Mockito.`when`(userJobService.getJobCalendar(null, JobSearchCondition.NONE, JobCalendarSearchCondition.NONE, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
             .thenReturn(emptyList())
         Mockito.`when`(userBootcampService.getBootcamps(null, BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10))
             .thenReturn(bootcampPageResult())
@@ -578,12 +697,13 @@ class UserReadControllerTest @Autowired constructor(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
+        coverImageUrl = "https://example.com/cover.png",
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
-        experienceMaxYears = 3,
         educationLevel = EducationLevel.ANY,
-        region = "서울",
+        region = Region.SEOUL,
+        subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = null,
         recruitmentEndAt = null,
@@ -598,12 +718,14 @@ class UserReadControllerTest @Autowired constructor(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
+        coverImageUrl = "https://example.com/cover.png",
+        logoUrl = null,
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
-        experienceMaxYears = 3,
         educationLevel = EducationLevel.ANY,
-        region = "서울",
+        region = Region.SEOUL,
+        subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = null,
         recruitmentEndAt = null,
@@ -615,6 +737,7 @@ class UserReadControllerTest @Autowired constructor(
         benefits = "복지 및 혜택",
         hiringProcess = "채용 절차",
         sourceUrl = null,
+        applyEmail = "recruit@example.com",
         closedAt = null,
         bookmarked = bookmarked,
         viewCount = 12,
@@ -677,6 +800,10 @@ class UserReadControllerTest @Autowired constructor(
         shortDescription = "백엔드 개발자로 성장하는 12주",
         content = "부트캠프 상세 내용",
         eligibilityAndSelectionProcess = null,
+        logoUrl = null,
+        instructorInfo = null,
+        programFeatures = null,
+        completionRequirements = null,
         applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
         managerEmail = null,

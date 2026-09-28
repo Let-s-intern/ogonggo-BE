@@ -1,6 +1,8 @@
 package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
@@ -391,6 +393,38 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         assertThrows(EntityNotFoundException::class.java) { bootcampReader.readForUpdate(bootcampId) }
     }
 
+    @Test
+    fun `크롤러는 원문 URL이 있는 수집 부트캠프만 찾고 기업회원이나 원문 없는 부트캠프는 찾지 못한다`() {
+        val crawled = checkNotNull(bootcampAppender.append(createCommand(sourceUrl = CRAWLED_URL)).id)
+        val company = checkNotNull(
+            bootcampAppender.append(
+                createCommand(
+                    ownerUserId = USER_ID,
+                    sourceUrl = COMPANY_URL,
+                    publicationStatus = BootcampPublicationStatus.DRAFT,
+                ),
+            ).id,
+        )
+        val withoutSource = checkNotNull(bootcampAppender.append(createCommand()).id)
+
+        assertEquals(true, bootcampReader.existsBySourceUrl(CRAWLED_URL))
+        assertEquals(crawled, bootcampReader.readCrawledForUpdate(crawled).id)
+        assertEquals(crawled, bootcampReader.readCrawledBySourceUrl(CRAWLED_URL).id)
+        listOf(company, withoutSource).forEach { bootcampId ->
+            assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledForUpdate(bootcampId) }
+            assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledForDelete(bootcampId) }
+        }
+        assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledBySourceUrl(COMPANY_URL) }
+
+        bootcampManager.delete(bootcampReader.readCrawledForDelete(crawled), NOW)
+        bootcampManager.delete(bootcampReader.readCrawledForDelete(crawled), NOW.plusDays(1))
+
+        assertEquals(false, bootcampReader.existsBySourceUrl(CRAWLED_URL))
+        assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledForUpdate(crawled) }
+        assertThrows(EntityNotFoundException::class.java) { bootcampReader.readCrawledBySourceUrl(CRAWLED_URL) }
+        assertEquals(NOW, bootcampReader.readIncludingDeleted(crawled).deletedAt)
+    }
+
     private fun createCommand(
         publicationStartAt: LocalDateTime? = null,
         publicationEndAt: LocalDateTime? = null,
@@ -401,7 +435,11 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         tuitionType: TuitionType = TuitionType.FREE,
         publicationStatus: BootcampPublicationStatus =
             BootcampPublicationStatus.PUBLISHED,
+        ownerUserId: Long? = null,
+        sourceUrl: String? = null,
     ): BootcampAppendDto = BootcampAppendDto(
+        ownerUserId = ownerUserId,
+        sourceUrl = sourceUrl,
         companyName = companyName,
         title = title,
         programType = "개발",
@@ -510,6 +548,87 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `신청 단계는 선후 관계 없이 어느 단계로든 옮기고 같은 단계로 다시 옮겨도 결과가 같다`() {
+        // given
+        val bootcampId = startedRecruitmentBootcampId()
+        bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
+
+        // when
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.COMPLETED, NOW.plusMinutes(1))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.COMPLETED, NOW.plusMinutes(2))
+
+        // then
+        val completed = bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)
+        assertEquals(BootcampApplicationStatus.COMPLETED, completed?.applicationStatus)
+        // 이미 옮긴 단계로 다시 옮기면 갱신하지 않으므로 목록 순서가 바뀌지 않는다.
+        assertEquals(NOW.plusMinutes(1), completed?.updatedAt)
+
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.APPLIED, NOW.plusMinutes(3))
+        assertEquals(BootcampApplicationStatus.APPLIED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.SCRAPPED, NOW.plusMinutes(4))
+        assertEquals(BootcampApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
+    }
+
+    @Test
+    fun `북마크가 없거나 해제되었으면 신청 단계를 옮기지 못한다`() {
+        // given
+        val bootcampId = startedRecruitmentBootcampId()
+        bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
+        bootcampBookmarkManager.delete(USER_ID, bootcampId, NOW.plusMinutes(1))
+
+        // when
+        val deleted = assertThrows(EntityNotFoundException::class.java) {
+            bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        }
+        val otherUser = assertThrows(EntityNotFoundException::class.java) {
+            bootcampBookmarkManager.changeApplicationStatus(OTHER_USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(2))
+        }
+
+        // then
+        assertEquals(BootcampErrorCode.BOOTCAMP_BOOKMARK_NOT_FOUND, deleted.errorCode)
+        assertEquals(BootcampErrorCode.BOOTCAMP_BOOKMARK_NOT_FOUND, otherUser.errorCode)
+    }
+
+    @Test
+    fun `해제 후 다시 등록한 북마크는 스크랩 단계에서 시작한다`() {
+        // given
+        val bootcampId = startedRecruitmentBootcampId()
+        bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, bootcampId, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(1))
+        bootcampBookmarkManager.delete(USER_ID, bootcampId, NOW.plusMinutes(2))
+
+        // when
+        bootcampBookmarkManager.append(USER_ID, bootcampId, NOW.plusMinutes(3))
+
+        // then
+        assertEquals(BootcampApplicationStatus.SCRAPPED, bootcampBookmarkRepository.findByBootcampIdAndUserId(bootcampId, USER_ID)?.applicationStatus)
+    }
+
+    @Test
+    fun `북마크 목록은 신청 단계로 좁히고 옮긴 북마크를 그 단계의 맨 앞에 둔다`() {
+        // given
+        val first = startedRecruitmentBootcampId()
+        val second = startedRecruitmentBootcampId()
+        val scrapped = startedRecruitmentBootcampId()
+        bootcampBookmarkManager.append(USER_ID, first, NOW)
+        bootcampBookmarkManager.append(USER_ID, second, NOW.plusMinutes(1))
+        bootcampBookmarkManager.append(USER_ID, scrapped, NOW.plusMinutes(2))
+
+        // when
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, second, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(3))
+        bootcampBookmarkManager.changeApplicationStatus(USER_ID, first, BootcampApplicationStatus.PREPARING, NOW.plusMinutes(4))
+
+        // then
+        val preparing = readBookmarks(BootcampBookmarkSearchCondition(applicationStatus = BootcampApplicationStatus.PREPARING))
+        assertEquals(listOf(first, second), preparing.bootcamps.map { it.id })
+        assertEquals(2L, preparing.totalElements)
+        val scrappedPage = readBookmarks(BootcampBookmarkSearchCondition(applicationStatus = BootcampApplicationStatus.SCRAPPED))
+        assertEquals(listOf(scrapped), scrappedPage.bootcamps.map { it.id })
+        assertEquals(1L, scrappedPage.totalElements)
+        assertEquals(3L, readBookmarks(BootcampBookmarkSearchCondition.NONE).totalElements)
+    }
+
+    @Test
     fun `이미 등록한 북마크를 다시 등록하면 유니크 제약이 막는다`() {
         val bootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
@@ -530,7 +649,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampBookmarkManager.append(USER_ID, newerId, NOW.plusMinutes(1))
         bootcampBookmarkManager.append(USER_ID, draftId, NOW.plusMinutes(2))
 
-        val page = bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10, NOW)
+        val page = bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW)
 
         // 게시되지 않은 부트캠프는 북마크가 있어도 목록에서 빠진다.
         assertEquals(listOf(newerId, olderId), page.bootcamps.map { it.id })
@@ -540,23 +659,67 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         assertEquals(
             listOf(olderId),
-            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 10, NOW).bootcamps.map { it.id },
+            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW).bootcamps.map { it.id },
         )
+    }
+
+    @Test
+    fun `북마크 목록은 공개 목록과 같은 필터와 검색어로 좁히고 전체 건수에도 반영한다`() {
+        // given
+        val target = startedRecruitmentBootcampId(
+            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE),
+        )
+        val paid = startedRecruitmentBootcampId(
+            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.PAID),
+        )
+        val otherTitle = startedRecruitmentBootcampId(
+            createCommand(title = "디자인 부트캠프", tuitionType = TuitionType.FREE),
+        )
+        listOf(target, paid, otherTitle).forEach { bootcampBookmarkManager.append(USER_ID, it, NOW) }
+        // 북마크하지 않은 부트캠프는 조건에 맞아도 나오지 않는다.
+        startedRecruitmentBootcampId(createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE))
+
+        // when
+        val page = bootcampBookmarkReader.readBookmarkedPublicPage(
+            userId = USER_ID,
+            condition = BootcampSearchCondition(
+                tuitionType = TuitionType.FREE,
+                status = BootcampStatus.RECRUITING,
+                keyword = "spring",
+            ),
+            page = 0,
+            size = 10,
+            now = NOW,
+        )
+
+        // then
+        assertEquals(listOf(target), page.bootcamps.map { it.id })
+        assertEquals(1L, page.totalElements)
     }
 
     @Test
     fun `북마크 목록의 페이지 요청 범위를 검증한다`() {
         assertThrows(IllegalArgumentException::class.java) {
-            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, -1, 10)
+            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, -1, 10)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, 0, 0)
+            bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 0)
         }
         assertEquals(emptySet<Long>(), bootcampBookmarkReader.readBookmarkedBootcampIds(USER_ID, emptyList()))
     }
 
-    private fun startedRecruitmentBootcampId(): Long {
-        val bootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
+    private fun readBookmarks(bookmarkCondition: BootcampBookmarkSearchCondition): BootcampPageDto =
+        bootcampBookmarkReader.readBookmarkedPublicPage(
+            userId = USER_ID,
+            condition = BootcampSearchCondition.NONE,
+            page = 0,
+            size = 10,
+            now = NOW,
+            bookmarkCondition = bookmarkCondition,
+        )
+
+    private fun startedRecruitmentBootcampId(command: BootcampAppendDto = createCommand()): Long {
+        val bootcampId = checkNotNull(bootcampAppender.append(command).id)
         bootcampManager.startRecruitment(bootcampReader.readForUpdate(bootcampId))
         return bootcampId
     }
@@ -588,5 +751,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         private const val USER_ID = 17L
         private const val OTHER_USER_ID = 23L
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 28, 10, 0)
+        private const val CRAWLED_URL = "https://example.com/bootcamps/crawled"
+        private const val COMPANY_URL = "https://example.com/bootcamps/company"
     }
 }

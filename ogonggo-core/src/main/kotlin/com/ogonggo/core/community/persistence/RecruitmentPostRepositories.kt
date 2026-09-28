@@ -217,37 +217,6 @@ internal interface RecruitmentPostBookmarkJpaRepository : JpaRepository<Recruitm
 
     @Query(
         """
-        select new com.ogonggo.core.community.persistence.RecruitmentPostBookmarkRow(
-            post,
-            bookmark.updatedAt,
-            bookmark.id
-        )
-        from RecruitmentPostBookmark bookmark
-        join RecruitmentPost post on bookmark.postId = post.id
-        where bookmark.userId = :userId
-          and bookmark.deletedAt is null
-          and post.publicationStatus = :publicationStatus
-          and post.deletedAt is null
-        order by bookmark.updatedAt desc, bookmark.id desc
-        """,
-        countQuery = """
-        select count(bookmark)
-        from RecruitmentPostBookmark bookmark
-        join RecruitmentPost post on bookmark.postId = post.id
-        where bookmark.userId = :userId
-          and bookmark.deletedAt is null
-          and post.publicationStatus = :publicationStatus
-          and post.deletedAt is null
-        """,
-    )
-    fun findBookmarkedPublishedPage(
-        @Param("userId") userId: Long,
-        @Param("publicationStatus") publicationStatus: PublicationStatus,
-        pageable: Pageable,
-    ): Page<RecruitmentPostBookmarkRow>
-
-    @Query(
-        """
         select bookmark.postId
         from RecruitmentPostBookmark bookmark
         where bookmark.userId = :userId
@@ -260,9 +229,3 @@ internal interface RecruitmentPostBookmarkJpaRepository : JpaRepository<Recruitm
         @Param("postIds") postIds: Collection<Long>,
     ): Set<Long>
 }
-
-data class RecruitmentPostBookmarkRow(
-    val post: RecruitmentPost,
-    val updatedAt: LocalDateTime,
-    val bookmarkId: Long,
-)

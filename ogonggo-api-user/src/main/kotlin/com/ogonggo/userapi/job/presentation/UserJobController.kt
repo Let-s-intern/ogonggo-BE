@@ -1,16 +1,25 @@
 package com.ogonggo.userapi.job.presentation
 
+import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestParameterException
+import com.ogonggo.userapi.error.UserApiErrorCode
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -21,8 +30,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 @Validated
 @RestController
@@ -39,6 +46,10 @@ class UserJobController(
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: JobSortType,
         @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
+        @RequestParam(name = "jobRole", required = false) jobRole: JobRole?,
+        @RequestParam(name = "region", required = false) region: Region?,
+        @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
@@ -46,6 +57,10 @@ class UserJobController(
             condition = JobSearchCondition(
                 employmentType = employmentType,
                 experienceType = experienceType,
+                jobField = jobField,
+                jobRole = jobRole,
+                region = region,
+                subRegion = subRegion,
                 keyword = keyword,
             ),
             sortType = sortType,
@@ -66,8 +81,9 @@ class UserJobController(
     @GetMapping("/popular")
     override fun getPopularJobs(
         @AuthenticationPrincipal userId: Long?,
+        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
     ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>> =
-        SuccessResponse.ok(userJobService.getPopularJobs(userId).map(UserJobSummaryResponse::from))
+        SuccessResponse.ok(userJobService.getPopularJobs(userId, employmentType).map(UserJobSummaryResponse::from))
 
     @GetMapping("/similar")
     override fun getSimilarJobs(
@@ -93,12 +109,37 @@ class UserJobController(
 
     @GetMapping("/calendar")
     override fun getJobCalendar(
+        @AuthenticationPrincipal userId: Long?,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
+        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
+        @RequestParam(name = "jobRole", required = false) jobRole: JobRole?,
+        @RequestParam(name = "region", required = false) region: Region?,
+        @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "excludeClosed", defaultValue = "false") excludeClosed: Boolean,
+        @RequestParam(name = "bookmarkedOnly", defaultValue = "false") bookmarkedOnly: Boolean,
+        @RequestParam(name = "deadlineOnly", defaultValue = "false") deadlineOnly: Boolean,
     ): ResponseEntity<SuccessResponse<List<UserJobCalendarItemResponse>>> {
         validateCalendarRange(from, to)
+        val calendarCondition = JobCalendarSearchCondition(
+            bookmarkedUserId = if (bookmarkedOnly) requireLogin(userId) else null,
+            excludeClosed = excludeClosed,
+            deadlineOnly = deadlineOnly,
+        )
+        val condition = JobSearchCondition(
+            employmentType = employmentType,
+            experienceType = experienceType,
+            jobField = jobField,
+            jobRole = jobRole,
+            region = region,
+            subRegion = subRegion,
+            keyword = keyword,
+        )
         return SuccessResponse.ok(
-            userJobService.getJobCalendar(from, to).map(UserJobCalendarItemResponse::from),
+            userJobService.getJobCalendar(userId, condition, calendarCondition, from, to).map(UserJobCalendarItemResponse::from),
         )
     }
 
@@ -118,6 +159,10 @@ class UserJobController(
             )
         }
     }
+
+    /** 달력은 로그인 없이 열려 있지만, 내 북마크로 거르려면 누구인지 알아야 한다. */
+    private fun requireLogin(userId: Long?): Long =
+        userId ?: throw UnauthorizedException(UserApiErrorCode.UNAUTHORIZED)
 
     companion object {
         private const val MAX_CALENDAR_RANGE_DAYS = 92L

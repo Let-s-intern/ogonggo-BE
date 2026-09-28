@@ -1,6 +1,9 @@
 package com.ogonggo.adminapi.openapi
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.adminapi.config.ADMIN_INTERNAL_API_KEY_SCHEME
+import com.ogonggo.adminapi.ingestion.work24.implement.Work24Api
+import com.ogonggo.adminapi.ingestion.work24.presentation.pathName
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -67,9 +70,79 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1review-queue~1{type}~1{id}~1undo/patch",
             "/paths/~1api~1v1~1admin~1rejections/get",
             "/paths/~1api~1v1~1admin~1rejections~1{type}~1{id}/patch",
+            "/paths/~1api~1v1~1admin~1notices/get",
+            "/paths/~1api~1v1~1admin~1notices/post",
+            "/paths/~1api~1v1~1admin~1notices~1{noticeId}/get",
+            "/paths/~1api~1v1~1admin~1notices~1{noticeId}/patch",
+            "/paths/~1api~1v1~1admin~1notices~1{noticeId}/delete",
+            "/paths/~1api~1v1~1admin~1work24~1{apiName}/get",
+            "/paths/~1api~1v1~1admin~1service-feedbacks/get",
+            "/paths/~1api~1v1~1admin~1general-members/get",
+            "/paths/~1api~1v1~1admin~1company-members/get",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
+    }
+
+    @Test
+    fun `크롤러 내부 API는 내부 API 키 인증을 요구한다`() {
+        val document = openApiDocument()
+
+        listOf(
+            "/paths/~1api~1v1~1internal~1jobs/post",
+            "/paths/~1api~1v1~1internal~1jobs/get",
+            "/paths/~1api~1v1~1internal~1jobs~1{jobId}/put",
+            "/paths/~1api~1v1~1internal~1jobs~1{jobId}/delete",
+            "/paths/~1api~1v1~1internal~1bootcamps/post",
+            "/paths/~1api~1v1~1internal~1bootcamps/get",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/put",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete",
+        ).forEach { pointer ->
+            assertTrue(
+                document.at("$pointer/security/0/$ADMIN_INTERNAL_API_KEY_SCHEME").isArray,
+                "내부 API 키 인증 명세가 없습니다: $pointer",
+            )
+        }
+    }
+
+    @Test
+    fun `크롤러 부트캠프 등록은 중복 원문을 409 BOOTCAMP_ALREADY_EXISTS로 명시한다`() {
+        val document = openApiDocument()
+
+        val conflict = document.at("/paths/~1api~1v1~1internal~1bootcamps/post/responses/409/description").asText()
+        assertTrue(conflict.startsWith("BOOTCAMP_ALREADY_EXISTS"), "409 명세가 없습니다: $conflict")
+        assertTrue(document.at("/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/delete/responses/404").isObject)
+    }
+
+    @Test
+    fun `크롤러 부트캠프 요청의 모집 상태는 선택 칸이며 모집 중과 모집 마감만 받는다`() {
+        val document = openApiDocument()
+
+        val schema = document.at("/components/schemas/CrawlerBootcampRequest")
+        val statusSchema = schema.at("/properties/status")
+        assertEquals(listOf("RECRUITING", "CLOSED"), statusSchema.at("/enum").map { it.asText() })
+        // 값 설명 표도 받는 값만 싣는다.
+        assertFalse(statusSchema.at("/description").asText().contains("`DRAFT`"), "받지 않는 값이 설명에 있습니다.")
+        assertTrue(statusSchema.at("/description").asText().contains("`CLOSED`"), "값 설명 표가 없습니다.")
+        assertFalse(schema.at("/required").any { it.asText() == "status" }, "모집 상태가 필수로 잡혀 있습니다.")
+        listOf(
+            "/paths/~1api~1v1~1internal~1bootcamps/post/description",
+            "/paths/~1api~1v1~1internal~1bootcamps~1{bootcampId}/put/description",
+        ).forEach { pointer ->
+            assertTrue(document.at(pointer).asText().contains("status"), "모집 상태 설명이 없습니다: $pointer")
+        }
+    }
+
+    @Test
+    fun `고용24 조회의 apiName 목록은 지원하는 고용24 API와 같다`() {
+        val document = openApiDocument()
+
+        val apiName = document.at("/paths/~1api~1v1~1admin~1work24~1{apiName}/get/parameters")
+            .first { it.at("/name").asText() == "apiName" }
+        assertEquals(
+            Work24Api.entries.map { it.pathName },
+            apiName.at("/schema/enum").map { it.asText() },
+        )
     }
 
     private fun openApiDocument() = objectMapper.readTree(

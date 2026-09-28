@@ -14,8 +14,9 @@ import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
 /**
- * 사용자가 모집글의 외부 지원 연락처를 열었다는 이력이다.
+ * 사용자가 모집글의 외부 지원 연락처를 열었거나, 마이페이지에서 스크랩한 모집글을 지원 준비 중으로 옮긴 이력이다.
  * 실제 지원서 제출이 아니며, 같은 사용자·모집글 조합은 하나의 행으로 관리한다.
+ * 스크랩에서 옮긴 이력은 옮긴 시각을 최초·최근 접근 시각으로 기록한다.
  */
 @Entity
 @Table(
@@ -76,6 +77,12 @@ internal class RecruitmentPostApplication(
         if (clickedAt.isAfter(lastClickedAt)) {
             lastClickedAt = clickedAt
         }
+    }
+
+    /** 연락처를 열지 않고 스크랩에서 옮겨 온 경우다. 지운 이력을 되살리면 지원 준비 중부터 다시 시작한다. */
+    fun restoreAsPreparing() {
+        deletedAt = null
+        applicationStatus = RecruitmentApplicationProgressStatus.PREPARING
     }
 
     fun changeStatus(status: RecruitmentApplicationProgressStatus) {

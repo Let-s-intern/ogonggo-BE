@@ -1,6 +1,13 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampBookmarkService
+import com.ogonggo.userapi.bootcamp.presentation.request.UpdateBootcampApplicationStatusRequest
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -11,6 +18,8 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -27,8 +36,24 @@ class UserBootcampBookmarkController(
         @AuthenticationPrincipal userId: Long,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
+        @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
+        @RequestParam(name = "status", required = false) status: BootcampStatus?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "applicationStatus", required = false) applicationStatus: BootcampApplicationStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
-        val result = userBootcampBookmarkService.getBookmarks(userId, page - 1, size)
+        validatePublicStatus(status)
+        val result = userBootcampBookmarkService.getBookmarks(
+            userId = userId,
+            condition = BootcampSearchCondition(
+                tuitionType = tuitionType,
+                status = status,
+                keyword = keyword,
+            ),
+            page = page - 1,
+            size = size,
+            bookmarkCondition = BootcampBookmarkSearchCondition(applicationStatus = applicationStatus, sortType = sortType),
+        )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
                 items = result.items.map(UserBootcampSummaryResponse::from),
@@ -55,6 +80,16 @@ class UserBootcampBookmarkController(
         @PathVariable("bootcampId") bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         userBootcampBookmarkService.deleteBookmark(userId, bootcampId)
+        return SuccessResponse.ok()
+    }
+
+    @PutMapping("/{bootcampId}/application-status")
+    override fun updateApplicationStatus(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable("bootcampId") bootcampId: Long,
+        @RequestBody request: UpdateBootcampApplicationStatusRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userBootcampBookmarkService.changeApplicationStatus(userId, bootcampId, checkNotNull(request.applicationStatus))
         return SuccessResponse.ok()
     }
 }

@@ -1,13 +1,19 @@
 package com.ogonggo.userapi.community.business
 
+import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
 import com.ogonggo.core.community.domain.RecruitmentPost
+import com.ogonggo.core.community.error.RecruitmentPostApplicationErrorCode
+import com.ogonggo.core.community.error.RecruitmentPostErrorCode
 import com.ogonggo.core.community.implement.PostMetricManager
 import com.ogonggo.core.community.implement.PostMetricReader
+import com.ogonggo.core.community.implement.RecruitmentPostApplicationManager
 import com.ogonggo.core.community.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.community.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.community.implement.RecruitmentPostReader
 import com.ogonggo.core.user.implement.UserProfileReader
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -33,6 +39,7 @@ class RecruitmentPostBookmarkServiceTest {
     private val postMetricReader = Mockito.mock(PostMetricReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
+    private val applicationManager = Mockito.mock(RecruitmentPostApplicationManager::class.java)
     private val service = RecruitmentPostBookmarkService(
         userReader,
         postReader,
@@ -43,6 +50,7 @@ class RecruitmentPostBookmarkServiceTest {
         Clock.fixed(Instant.parse("2026-09-15T00:00:00Z"), ZONE),
         userProfileReader,
         applicationReader,
+        applicationManager,
     )
 
     @Test
@@ -109,6 +117,101 @@ class RecruitmentPostBookmarkServiceTest {
 
         // then
         Mockito.verifyNoInteractions(postMetricManager)
+    }
+
+    @Test
+    fun `스크랩한 모집글을 지원 준비 중으로 옮기면 북마크를 해제하고 지원 이력을 만든다`() {
+        // given
+        givenActivePublishedPost()
+        Mockito.`when`(bookmarkManager.delete(USER_ID, POST_ID, NOW)).thenReturn(true)
+
+        // when
+        service.prepare(USER_ID, POST_ID)
+
+        // then
+        Mockito.verify(postMetricManager).decreaseBookmarkCount(POST_ID, NOW)
+        Mockito.verify(applicationManager).startPreparation(POST_ID, USER_ID, NOW)
+    }
+
+    @Test
+    fun `이미 지원 준비 중이면 북마크만 정리하고 지원 이력은 그대로 둔다`() {
+        // given
+        givenActivePublishedPost()
+        Mockito.`when`(applicationReader.readActiveStatus(POST_ID, USER_ID))
+            .thenReturn(RecruitmentApplicationProgressStatus.PREPARING)
+        Mockito.`when`(bookmarkManager.delete(USER_ID, POST_ID, NOW)).thenReturn(false)
+
+        // when
+        service.prepare(USER_ID, POST_ID)
+
+        // then
+        Mockito.verifyNoInteractions(applicationManager, postMetricManager)
+    }
+
+    @Test
+    fun `북마크도 지원 이력도 없으면 지원 준비 중으로 옮기지 못한다`() {
+        // given
+        givenActivePublishedPost()
+        Mockito.`when`(bookmarkManager.delete(USER_ID, POST_ID, NOW)).thenReturn(false)
+
+        // when
+        val exception = assertThrows(EntityNotFoundException::class.java) { service.prepare(USER_ID, POST_ID) }
+
+        // then
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_BOOKMARK_NOT_FOUND, exception.errorCode)
+        Mockito.verifyNoInteractions(applicationManager)
+    }
+
+    @Test
+    fun `지원 완료 이후 단계의 모집글은 지원 준비 중이나 스크랩으로 옮기지 못한다`() {
+        // given
+        givenActivePublishedPost()
+        Mockito.`when`(applicationReader.readActiveStatus(POST_ID, USER_ID))
+            .thenReturn(RecruitmentApplicationProgressStatus.COMPLETED)
+
+        // when
+        val prepare = assertThrows(ConflictException::class.java) { service.prepare(USER_ID, POST_ID) }
+        val cancel = assertThrows(ConflictException::class.java) { service.cancelPreparation(USER_ID, POST_ID) }
+
+        // then
+        listOf(prepare, cancel).forEach {
+            assertEquals(RecruitmentPostApplicationErrorCode.INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION, it.errorCode)
+        }
+        Mockito.verifyNoInteractions(bookmarkManager, applicationManager)
+    }
+
+    @Test
+    fun `지원 준비 중을 스크랩으로 되돌리면 지원 이력을 지우고 다시 북마크한다`() {
+        // given
+        givenActivePublishedPost()
+        Mockito.`when`(applicationReader.readActiveStatus(POST_ID, USER_ID))
+            .thenReturn(RecruitmentApplicationProgressStatus.PREPARING)
+        Mockito.`when`(bookmarkManager.append(USER_ID, POST_ID, NOW)).thenReturn(true)
+
+        // when
+        service.cancelPreparation(USER_ID, POST_ID)
+
+        // then
+        Mockito.verify(applicationManager).delete(POST_ID, USER_ID, NOW)
+        Mockito.verify(postMetricManager).increaseBookmarkCount(POST_ID, NOW)
+    }
+
+    @Test
+    fun `이미 스크랩 칸에만 있으면 되돌려도 아무것도 바꾸지 않는다`() {
+        // given
+        givenActivePublishedPost()
+        Mockito.`when`(bookmarkReader.isBookmarked(USER_ID, POST_ID)).thenReturn(true)
+
+        // when
+        service.cancelPreparation(USER_ID, POST_ID)
+
+        // then
+        Mockito.verifyNoInteractions(bookmarkManager, applicationManager, postMetricManager)
+    }
+
+    private fun givenActivePublishedPost() {
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
+        Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
     }
 
     private fun user(status: UserStatus) = UserAccountDto(

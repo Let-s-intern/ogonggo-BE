@@ -152,6 +152,16 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(recruitmentPostBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(recruitmentPostBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(recruitmentPostBookmarks, "size", defaultValue = "10", minimum = 1, maximum = 100)
+        listOf("recruitmentStatus", "recruitmentType", "keyword", "sort")
+            .forEach { name -> assertTrue(recruitmentPostBookmarks.parameter(name).isObject) }
+        listOf("prepare", "cancel-preparation").forEach { command ->
+            val move = document.at("/paths/~1api~1v1~1recruitment-post-bookmarks~1{postId}~1$command/post")
+            assertTrue(move.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(
+                move.at("/responses/409/description").asText()
+                    .startsWith("INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION"),
+            )
+        }
         val addRecruitmentPostBookmark =
             document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}~1bookmarks~1me/put")
         assertTrue(addRecruitmentPostBookmark.isObject)
@@ -254,13 +264,37 @@ class UserOpenApiContractTest @Autowired constructor(
         val popularJobs = document.at("/paths/~1api~1v1~1jobs~1popular/get")
         assertTrue(popularJobs.isObject)
         assertTrue(popularJobs.at("/security/0/BearerAuth").isArray)
-        assertFalse(popularJobs.has("parameters"))
+        assertEquals(listOf("employmentType"), popularJobs.at("/parameters").map { it.at("/name").asText() })
 
         // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 인증이 필수다.
         val similarJobs = document.at("/paths/~1api~1v1~1jobs~1similar/get")
         assertTrue(similarJobs.at("/security/0/BearerAuth").isArray)
         assertTrue(similarJobs.at("/responses/401/description").asText().startsWith("UNAUTHORIZED"))
         assertTrue(similarJobs.at("/responses/200/content/application~1json/schema").isObject)
+
+        // 공지는 토큰으로 달라지는 값이 없어 인증 요구를 노출하지 않는다.
+        val noticeList = document.at("/paths/~1api~1v1~1notices/get")
+        assertTrue(noticeList.isObject)
+        assertTrue(noticeList.at("/security").isMissingNode)
+        assertTrue(document.at("/paths/~1api~1v1~1notices~1{noticeId}/get/security").isMissingNode)
+        assertPageParameter(noticeList, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(noticeList, "size", defaultValue = "10", minimum = 1, maximum = 100)
+
+        // enum 선택지는 누구에게나 같은 고정 값이라 인증 요구를 노출하지 않는다.
+        val enums = document.at("/paths/~1api~1v1~1enums/get")
+        assertTrue(enums.isObject)
+        assertTrue(enums.at("/security").isMissingNode)
+
+        // 추천 챌린지는 토큰을 보내면 그 사용자로 추천하므로 채용공고 목록과 같은 선택적 인증을 노출한다.
+        val recommendedChallenges = document.at("/paths/~1api~1v1~1recommended-challenges/get")
+        assertTrue(recommendedChallenges.isObject)
+        assertTrue(recommendedChallenges.at("/security/0/BearerAuth").isArray)
+
+        // 개선 의견도 로그인 없이 남기고, 토큰을 보내면 작성자를 기록하는 선택적 인증이다.
+        val createServiceFeedback = document.at("/paths/~1api~1v1~1service-feedbacks/post")
+        assertTrue(createServiceFeedback.at("/security/0/BearerAuth").isArray)
+        assertTrue(createServiceFeedback.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(createServiceFeedback.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
 
         // 부트캠프 목록·상세도 토큰을 보내면 북마크 여부가 채워지므로 공고와 같은 선택적 인증을 노출한다.
         val bootcampList = document.at("/paths/~1api~1v1~1bootcamps/get")
@@ -288,15 +322,27 @@ class UserOpenApiContractTest @Autowired constructor(
         val jobBookmarks = document.at("/paths/~1api~1v1~1job-bookmarks/get")
         assertTrue(jobBookmarks.at("/security/0/BearerAuth").isArray)
         assertPageParameter(jobBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
+        listOf("employmentType", "experienceType", "jobField", "jobRole", "keyword", "applicationStatus", "recruitmentStatus", "sort")
+            .forEach { name -> assertTrue(jobBookmarks.parameter(name).isObject) }
         val addBookmark = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/post")
         assertTrue(addBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(addBookmark.at("/responses/409/description").asText().startsWith("JOB_BOOKMARK_ALREADY_EXISTS"))
         val deleteBookmark = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}/delete")
         assertTrue(deleteBookmark.at("/responses/200/content/application~1json/schema").isObject)
+        val movejobId = document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}~1application-status/put")
+        assertTrue(movejobId.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(movejobId.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(movejobId.at("/responses/404/description").asText().startsWith("JOB_BOOKMARK_NOT_FOUND"))
+        assertFalse(document.at("/paths/~1api~1v1~1job-bookmarks~1{jobId}~1prepare").isObject)
 
         val bootcampBookmarks = document.at("/paths/~1api~1v1~1bootcamp-bookmarks/get")
         assertTrue(bootcampBookmarks.at("/security/0/BearerAuth").isArray)
+        listOf("status", "keyword", "applicationStatus", "sort")
+            .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }
         assertPageParameter(bootcampBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
+        listOf("tuitionType", "status", "keyword")
+            .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }
+        assertTrue(bootcampBookmarks.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         val addBootcampBookmark = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/post")
         assertTrue(addBootcampBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(
@@ -305,6 +351,11 @@ class UserOpenApiContractTest @Autowired constructor(
         )
         val deleteBootcampBookmark = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/delete")
         assertTrue(deleteBootcampBookmark.at("/responses/200/content/application~1json/schema").isObject)
+        val movebootcampId = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}~1application-status/put")
+        assertTrue(movebootcampId.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(movebootcampId.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(movebootcampId.at("/responses/404/description").asText().startsWith("BOOTCAMP_BOOKMARK_NOT_FOUND"))
+        assertFalse(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}~1prepare").isObject)
 
         // 역할은 토큰에 없으므로 내 정보 조회는 인증이 필수다.
         val myAccount = document.at("/paths/~1api~1v1~1users~1me/get")
@@ -328,14 +379,32 @@ class UserOpenApiContractTest @Autowired constructor(
             "wishField", "wishJob", "wishIndustry", "wishEmploymentType", "wishCompany",
         ).forEach { field -> assertTrue(profileProperties.has(field)) }
 
+        // 기업 정보도 조회는 내 정보에 담고 수정만 따로 연다.
+        val replaceCompanyProfile = document.at("/paths/~1api~1v1~1users~1me~1company-profile/put")
+        assertTrue(replaceCompanyProfile.at("/security/0/BearerAuth").isArray)
+        assertTrue(
+            replaceCompanyProfile.at("/responses/403/description").asText().startsWith("COMPANY_ROLE_REQUIRED"),
+        )
+        val companyProfileRequest = document.at("/components/schemas/ReplaceMyCompanyProfileRequest")
+        assertEquals(150, companyProfileRequest.at("/properties/organizationName/maxLength").asInt())
+        assertEquals(100, companyProfileRequest.at("/properties/managerName/maxLength").asInt())
+
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
-        assertFalse(jobCalendar.has("security"))
+        // 스크랩 공고만 거를 때 토큰이 필요하므로 Swagger UI에서 토큰을 보낼 수 있어야 한다.
+        assertTrue(jobCalendar.at("/security/0/BearerAuth").isArray)
         assertEquals("date", jobCalendar.parameter("from").at("/schema/format").asText())
         assertEquals("date", jobCalendar.parameter("to").at("/schema/format").asText())
+        assertEquals(2, jobCalendar.parameter("keyword").at("/schema/minLength").asInt())
+        assertTrue(jobCalendar.parameter("jobRole").at("/schema/enum").any { it.asText() == "IT_BACKEND" })
+        assertFalse(jobCalendar.parameter("employmentType")["required"]?.asBoolean() ?: false)
 
         val calendarBadRequest = document.at("/paths/~1api~1v1~1jobs~1calendar/get/responses/400")
         assertTrue(calendarBadRequest["description"].asText().startsWith("BAD_REQUEST"))
         assertTrue(calendarBadRequest.at("/content/application~1json/schema").isObject)
+        assertTrue(
+            document.at("/paths/~1api~1v1~1jobs~1calendar/get/responses/401/description").asText()
+                .startsWith("UNAUTHORIZED"),
+        )
 
         val jobNotFound = document.at("/paths/~1api~1v1~1jobs~1{jobId}/get/responses/404")
         assertTrue(jobNotFound["description"].asText().startsWith("JOB_NOT_FOUND"))

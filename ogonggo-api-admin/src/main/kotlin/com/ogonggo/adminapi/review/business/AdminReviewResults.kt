@@ -37,7 +37,7 @@ data class AdminReviewItem(
             meta = listOfNotNull(
                 AdminReviewMeta("고용 형태", job.employmentType.desc),
                 AdminReviewMeta("경력", job.experienceType.desc),
-                job.region?.let { AdminReviewMeta("지역", it) },
+                job.region?.let { region -> AdminReviewMeta("지역", listOfNotNull(region.desc, job.subRegion?.desc).joinToString(" ")) },
                 AdminReviewMeta(
                     "모집 마감",
                     recruitmentEndText(
@@ -46,6 +46,8 @@ data class AdminReviewItem(
                         recruitmentEndAt = job.recruitmentEndAt,
                     ),
                 ),
+                job.applyEmail?.let { AdminReviewMeta("지원 이메일", it) },
+                job.inquiryEmail?.let { AdminReviewMeta("문의 이메일", it) },
             ),
             sections = JobContentField.entries.mapNotNull { field ->
                 job.contentOf(field)?.let { AdminReviewSection(field.fieldName, field.desc, it) }

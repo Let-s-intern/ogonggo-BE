@@ -8,6 +8,8 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import io.swagger.v3.oas.annotations.media.Schema
@@ -23,7 +25,8 @@ data class AdminJobSummaryResponse(
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val closedAt: LocalDateTime?,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -48,6 +51,7 @@ data class AdminJobSummaryResponse(
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
             region = result.region,
+            subRegion = result.subRegion,
             closedAt = result.closedAt,
             viewCount = result.viewCount,
             bookmarkCount = result.bookmarkCount,
@@ -71,7 +75,8 @@ data class AdminJobDetailResponse(
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val closedAt: LocalDateTime?,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -106,6 +111,7 @@ data class AdminJobDetailResponse(
                 recruitmentStartAt = summary.recruitmentStartAt,
                 recruitmentEndAt = summary.recruitmentEndAt,
                 region = summary.region,
+                subRegion = summary.subRegion,
                 closedAt = summary.closedAt,
                 viewCount = summary.viewCount,
                 bookmarkCount = summary.bookmarkCount,

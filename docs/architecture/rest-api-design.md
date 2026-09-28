@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-08-28
+- 최종 변경일: 2026-09-28
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -38,7 +38,7 @@
 - 필터·정렬·페이지 조건은 Query Parameter로 전달합니다.
 - 요청 본문이 필요한 복잡한 검색만 `POST /search`를 허용하며 실제 요구가 생길 때 정의합니다.
 - `/health`는 배포 환경용 운영 엔드포인트이므로 버전 경로와 성공 응답 포맷을 적용하지 않습니다.
-- 사람이 아닌 내부 클라이언트 전용 경로는 `/api/v1/internal` 아래에 둡니다: `/api/v1/internal/jobs`.
+- 사람이 아닌 내부 클라이언트 전용 경로는 `/api/v1/internal` 아래에 둡니다: `/api/v1/internal/jobs`, `/api/v1/internal/bootcamps`.
 
 ## 3. HTTP 메서드와 상태
 
@@ -101,16 +101,13 @@ POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
 
 ```text
 GET /api/v1/users/me
-```
-
-```text
-GET /api/v1/users/me
 PUT /api/v1/users/me/profile
+PUT /api/v1/users/me/company-profile
 ```
 
 `/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`, `/users/me/profile`이 그 하위에 있습니다. 프로필은 사용자마다 하나뿐인 단일 리소스여서 목록이 아니므로 단수 명사를 사용합니다. 복수 명사 규칙은 여러 항목을 담는 컬렉션에 적용합니다.
 
-조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
+조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기관명·담당자 이름도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile`로 엽니다. 화면이 두 값을 한 폼으로 함께 보내므로 PATCH가 아니라 PUT으로 전체를 교체하며, 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
 
 ### 부트캠프 북마크
 
@@ -121,6 +118,146 @@ DELETE /api/v1/bootcamp-bookmarks/{bootcampId}
 ```
 
 채용공고 북마크와 같은 규칙을 따릅니다. 등록은 지금 공개된 부트캠프만 허용하고, 중복 등록은 409 `BOOTCAMP_BOOKMARK_ALREADY_EXISTS`로 응답합니다.
+
+### 지원·신청 관리 단계
+
+```text
+GET  /api/v1/job-bookmarks?applicationStatus={단계}&recruitmentStatus={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
+PUT  /api/v1/job-bookmarks/{jobId}/application-status
+
+GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&status={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
+PUT  /api/v1/bootcamp-bookmarks/{bootcampId}/application-status
+
+GET  /api/v1/recruitment-post-bookmarks?recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}&sort=RECENTLY_SAVED
+GET  /api/v1/me/recruitment-applications?applicationStatus={단계}&recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}
+POST /api/v1/recruitment-post-bookmarks/{postId}/prepare
+POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
+```
+
+- 결정일: 2026-09-21 / 리뷰 상태: 팀 리뷰 필요
+- 마이페이지 지원·신청 관리 화면은 탭마다 단계가 다릅니다.
+
+| 탭 | 단계 | 저장 위치 |
+| --- | --- | --- |
+| 채용공고 | 스크랩(`SCRAPPED`), 지원 준비 중(`PREPARING`), 지원 완료(`APPLIED`), 면접(`INTERVIEWING`), 합격(`PASSED`), 불합격(`FAILED`) | 북마크 행의 `application_status` |
+| 교육·부트캠프 | 스크랩(`SCRAPPED`), 신청 전(`PREPARING`), 신청 완료(`APPLIED`), 활동 중(`IN_PROGRESS`), 활동 완료(`COMPLETED`) | 북마크 행의 `application_status` |
+| 사이드·스터디 | 스크랩, 지원 준비 중(`PREPARING`), 지원 완료(`COMPLETED`), 활동 중(`IN_PROGRESS`), 활동 완료(`ENDED`) | 스크랩은 북마크, 나머지는 지원 이력 |
+
+- 채용공고·부트캠프는 단계를 북마크 행이 가지며, 등록하거나 해제 후 다시 등록하면 스크랩에서 시작합니다. 각 단계 목록은 북마크 목록에 `applicationStatus`를 주어 조회하고, 단계별 건수는 그 응답의 전체 건수를 씁니다. 한 단계만 모아 보는 필터도 같은 `applicationStatus`를 씁니다.
+- 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/me/recruitment-applications/{postId}`를 씁니다.
+- 마감 상태는 채용공고 `recruitmentStatus`, 부트캠프 `status`, 사이드·스터디 `recruitmentStatus`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
+- 북마크 목록 정렬은 `sort`로 고르며 지금은 최근 저장순(`RECENTLY_SAVED`)만 있고 기본값입니다. 등록·재등록하거나 단계를 옮긴 시각이 최근인 순서입니다. 다른 정렬은 필요할 때 값을 추가합니다.
+- 채용공고·부트캠프 단계에는 선후 관계가 없어 어느 단계에서든 다른 어느 단계로든 옮길 수 있습니다. 그래서 이동마다 명령 경로를 두지 않고 `PUT .../application-status`가 `{ "applicationStatus": "INTERVIEWING" }`처럼 목표 단계를 받습니다. 4절의 명령별 경로 원칙은 전이 규칙이 행위마다 다를 때를 위한 것이라, 전이 규칙이 없는 이 경우에는 적용하지 않습니다.
+  - 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요. 이전(2026-09-21)에는 스크랩과 지원 준비 중(부트캠프는 신청 전) 사이만 옮길 수 있어 `POST .../prepare`, `POST .../cancel-preparation`을 두었습니다. 화면에서 모든 단계를 서로 옮길 수 있게 정해져 두 경로를 없애고 하나로 바꿨습니다. 영향 범위는 채용공고·부트캠프 북마크 단계 이동 API이며 사이드·스터디는 바뀌지 않습니다.
+  - 이미 목표 칸에 있으면 아무것도 바꾸지 않고 200으로 응답합니다. `applicationStatus`가 없거나 정의되지 않은 값이면 400 `BAD_REQUEST`입니다.
+  - 활성 북마크가 없으면 404 `JOB_BOOKMARK_NOT_FOUND`·`BOOTCAMP_BOOKMARK_NOT_FOUND`입니다.
+- 사이드·스터디의 스크랩 ↔ 지원 준비 중은 계속 `POST .../prepare`, `POST .../cancel-preparation`으로 옮깁니다. 활성 북마크가 없으면 404 `RECRUITMENT_POST_BOOKMARK_NOT_FOUND`, 허용되지 않는 이동은 409 `INVALID_RECRUITMENT_APPLICATION_STATUS_TRANSITION`입니다.
+- 사이드·스터디의 스크랩 → 지원 준비 중은 북마크를 해제하고 지원 준비 중 지원 이력을 만듭니다. 되돌리기는 지원 이력을 지우고 북마크가 없으면 다시 북마크합니다. 연락처를 열지 않고 만든 지원 이력은 옮긴 시각을 최초 접근 시각으로 기록합니다.
+- 채용공고·부트캠프에서 이동한 북마크는 수정 일시가 갱신되어 해당 단계 목록의 맨 앞에 옵니다.
+- 사이드·스터디에서 북마크한 모집글의 연락처를 열면 스크랩 칸과 지원 준비 중 칸에 함께 보입니다. 이때 한쪽을 정리할지는 **확인 필요**입니다.
+
+### 추천 렛츠커리어 챌린지
+
+```text
+GET /api/v1/recommended-challenges
+```
+
+- 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
+- 오공고 리소스가 아니라 렛츠커리어가 이 사용자에게 추천한 챌린지 모음이므로, `/challenges`가 아닌 `recommended-challenges`로 이름에 추천임을 드러냅니다. 오공고가 챌린지 목록·상세를 따로 열 계획은 없습니다.
+- 응답 계약은 [API 성공 응답의 추천 렛츠커리어 챌린지](api-response.md#추천-렛츠커리어-챌린지)를 따릅니다.
+
+### 서비스 개선 의견
+
+```text
+POST /api/v1/service-feedbacks                사용자 API, 로그인 선택
+GET  /api/v1/admin/service-feedbacks          관리자 콘솔
+```
+
+- 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
+- 사용자가 "이용 중 가장 만족스러운 점"(`satisfaction`)과 "아쉬운 점이나 개선됐으면 하는 점"(`improvement`)을 남깁니다. 제출할 때마다 새 행이 생기므로 201과 `data.id`로 응답합니다.
+- 로그인 없이도 남길 수 있어 채용공고 조회처럼 토큰이 선택입니다. 토큰을 보내면 작성자(`user_id`)를 함께 기록하고, 토큰이 없거나 유효하지 않으면 작성자 없이 저장합니다.
+- 한 사용자가 여러 번 남길 수 있어 유니크 제약을 두지 않고 409도 쓰지 않습니다.
+- 수정·삭제 경로는 두지 않습니다. 운영자는 관리자 콘솔에서 목록을 읽기만 합니다.
+- 응답 계약은 [API 성공 응답의 서비스 개선 의견](api-response.md#서비스-개선-의견)을 따릅니다.
+
+### 크롤러 채용공고
+
+```text
+POST   /api/v1/internal/jobs
+GET    /api/v1/internal/jobs?sourceUrl={원문 URL}
+PUT    /api/v1/internal/jobs/{jobId}
+DELETE /api/v1/internal/jobs/{jobId}
+```
+
+크롤러가 내부 API 키로 호출합니다. 소유자가 없는 수집 공고만 다루며, 기업회원 공고는 없는 공고와 같이 404로 응답합니다.
+
+- 등록은 201과 `data.jobId`를 반환합니다. 같은 원문 URL의 미삭제 공고가 있으면 409 `JOB_ALREADY_EXISTS`입니다.
+- 크롤러는 등록 응답의 식별자를 저장해 교체·삭제에 씁니다. 식별자를 잃었으면 `GET ?sourceUrl=`로 되찾습니다. 원문 URL을 경로 변수로 쓰지 않는 이유는 URL 안의 `/`·`#`이 경로와 섞이기 때문입니다.
+- 교체는 다시 수집·분류한 값으로 공고 전체를 바꾸므로 PUT이며 200과 `data: null`로 응답합니다. 같은 값을 반복해 보내도 결과가 같습니다. 태그는 등록할 때만 받고 교체하지 않습니다.
+- 삭제는 소프트 삭제이며 반복해도 200입니다. 직무별로 나뉘어 새 공고로 등록된 원래 공고를 지울 때 씁니다.
+- 크롤러 공고는 검수를 거치지 않고 등록하면 곧바로 게시합니다. 교체는 게시 상태를 바꾸지 않습니다. [API 성공 응답의 검수와 노출](api-response.md#검수와-노출) 참고.
+
+### 크롤러 부트캠프
+
+```text
+POST   /api/v1/internal/bootcamps
+GET    /api/v1/internal/bootcamps?sourceUrl={원문 URL}
+PUT    /api/v1/internal/bootcamps/{bootcampId}
+DELETE /api/v1/internal/bootcamps/{bootcampId}
+```
+
+크롤러 채용공고와 같은 계약입니다. 소유자가 없고 원문 URL이 있는 수집 부트캠프만 다루며, 기업회원 부트캠프와 원문 URL이 없는 부트캠프는 없는 부트캠프와 같이 404 `BOOTCAMP_NOT_FOUND`로 응답합니다.
+
+- 등록은 201과 `data.bootcampId`를 반환합니다. 같은 원문 URL의 미삭제 부트캠프가 있으면 409 `BOOTCAMP_ALREADY_EXISTS`입니다.
+- 요청 본문의 선택 칸 `status`는 모집 상태이며 `RECRUITING` 또는 `CLOSED`만 받습니다. `DRAFT` 등 다른 값은 400 `BAD_REQUEST`입니다. 새싹처럼 운영 중이거나 과정이 끝난 과정도 모집 마감으로 보내 게시해 둡니다.
+- 등록하면 게시(`PUBLISHED`) 상태로 곧바로 노출하며 검수는 거치지 않습니다. `status`가 없으면 모집 중(`RECRUITING`)이고, `CLOSED`면 모집 중으로 저장한 뒤 등록 시각으로 마감합니다(`closedAt` = 등록 시각).
+- 교체는 PUT이며 200과 `data: null`로 응답합니다. 커리큘럼은 기존 것을 소프트 삭제하고 보낸 목록으로 바꾸며, 배열 순서가 노출 순서입니다. 게시 상태와 크롤러가 보내지 않는 공개 기간·파트너사는 그대로 둡니다.
+- 교체에 `status`를 보내면 모집 상태를 그 값으로 맞춥니다. `RECRUITING`→`CLOSED`는 교체 시각으로 마감하고, `CLOSED`→`RECRUITING`은 마감 일시를 지우고 다시 모집 중으로 둡니다. 같으면 그대로이며, `status`가 없으면 모집 상태를 바꾸지 않습니다.
+- 삭제는 소프트 삭제이며 반복해도 200입니다.
+- 부트캠프 모집 상태는 저장된 값이라 모집 종료 일시가 지나도 저절로 `CLOSED`가 되지 않습니다. 자동 마감 처리는 **미정**입니다.
+
+### 공지사항
+
+```text
+GET    /api/v1/notices                        사용자 API, 로그인 없이 조회
+GET    /api/v1/notices/{noticeId}
+
+GET    /api/v1/admin/notices                  관리자 콘솔
+POST   /api/v1/admin/notices
+GET    /api/v1/admin/notices/{noticeId}
+PATCH  /api/v1/admin/notices/{noticeId}
+DELETE /api/v1/admin/notices/{noticeId}
+```
+
+- 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요
+- 공지는 관리자만 작성하므로 쓰기 경로는 관리자 API에만 둡니다. 사용자 API에는 GET만 열고 나머지 메서드는 거부합니다.
+- 노출·상단 고정도 콘솔의 다른 콘텐츠처럼 `PATCH`로 내용과 함께 부분 수정합니다. 1절의 관리자 콘솔 예외와 같은 이유입니다.
+- 응답 계약은 [API 성공 응답의 공지사항](api-response.md#공지사항)을 따릅니다.
+
+### 관리자 회원 조회
+
+```text
+GET /api/v1/admin/general-members             일반 회원
+GET /api/v1/admin/company-members             비즈니스(기업) 회원
+```
+
+- 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
+- 콘솔 화면이 두 회원을 다른 메뉴·필터로 다루고 응답 항목도 달라 `/users?role=` 하나로 합치지 않고 역할별 컬렉션으로 나눕니다. 이름은 `UserRole`의 `USER`(일반 회원)·`COMPANY`(기업 회원)를 따릅니다.
+- 목록만 둡니다. 목록 항목이 회원 정보 전체를 담아 상세 조회가 따로 필요하지 않고, 정지·역할 변경 같은 쓰기도 두지 않습니다.
+- 응답 계약은 [API 성공 응답의 관리자 회원 조회](api-response.md#관리자-회원-조회)를 따릅니다.
+
+### 고용24 Open API 조회
+
+```text
+GET /api/v1/admin/work24/{apiName}?{고용24 요청 파라미터}
+```
+
+- 결정일: 2026-09-27 / 리뷰 상태: 팀 리뷰 필요
+- 운영자가 관리자 콘솔이나 Swagger에서 고용24 데이터를 확인하는 조회입니다. 서버가 인증키를 붙여 고용24를 대신 호출하고 저장하지 않습니다.
+- `apiName`은 호출할 고용24 API로, 관리자 API의 `Work24Api` 이름을 kebab-case 소문자로 씁니다(`tomorrow-learning-card-courses`). 정의되지 않은 값은 `[apiName]` 400 `BAD_REQUEST`입니다.
+- API가 24개이고 파라미터가 모두 달라 API마다 경로와 `@RequestParam`을 두지 않고, 경로 하나가 query 전체를 받아 이름 그대로 넘깁니다. [OpenAPI 명세](openapi.md)의 파라미터 이름 명시 원칙과 다른 예외이며, 파라미터 설명은 고용24 개발명세를 따릅니다. 수집·저장처럼 특정 API를 실제로 쓰게 되면 그 API는 이름 있는 파라미터와 전용 경로로 옮깁니다.
+- 인증키(`authKey`), 응답 형식(`returnType`), 명세가 값을 고정한 파라미터는 서버가 채우므로 보내도 무시합니다. 값이 빈 파라미터는 보내지 않은 것으로 봅니다.
+- 응답 계약은 [API 성공 응답의 고용24 Open API 조회](api-response.md#고용24-open-api-조회)를 따릅니다.
 
 ## 6. 현재 보류하는 항목
 

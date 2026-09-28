@@ -3,6 +3,10 @@ package com.ogonggo.core.job.domain
 import com.ogonggo.core.common.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.error.JobErrorCode
+import com.querydsl.core.annotations.PropertyType
+import com.querydsl.core.annotations.QueryType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import jakarta.persistence.Column
@@ -42,12 +46,24 @@ import java.time.LocalDateTime
             columnList = "publication_status, deleted_at, experience_type",
         ),
         Index(
+            name = "idx_jobs_published_job_field",
+            columnList = "publication_status, deleted_at, job_field",
+        ),
+        Index(
             name = "idx_jobs_published_job_role",
             columnList = "publication_status, deleted_at, job_role",
         ),
         Index(
             name = "idx_jobs_published_industry",
             columnList = "publication_status, deleted_at, industry",
+        ),
+        Index(
+            name = "idx_jobs_published_region",
+            columnList = "publication_status, deleted_at, region",
+        ),
+        Index(
+            name = "idx_jobs_published_sub_region",
+            columnList = "publication_status, deleted_at, sub_region",
         ),
         Index(
             name = "idx_jobs_owner",
@@ -63,18 +79,18 @@ class Job internal constructor(
     ownerUserId: Long? = null,
     companyName: String,
     parentCompanyName: String? = null,
-    companyLogoUrl: String? = null,
     title: String,
-    jobField: String? = null,
-    jobRole: String? = null,
+    jobField: JobField? = null,
+    jobRole: JobRole? = null,
     industry: String? = null,
     coverImageUrl: String? = null,
+    logoUrl: String? = null,
     employmentType: EmploymentType,
     experienceType: ExperienceType,
     experienceMinYears: Int? = null,
-    experienceMaxYears: Int? = null,
     educationLevel: EducationLevel = EducationLevel.ANY,
-    region: String? = null,
+    region: Region? = null,
+    subRegion: SubRegion? = null,
     recruitmentType: JobRecruitmentType,
     recruitmentHeadcount: Int? = null,
     recruitmentStartAt: LocalDateTime? = null,
@@ -90,6 +106,8 @@ class Job internal constructor(
     hiringProcess: String? = null,
     recruitmentNotice: String? = null,
     applicationMethod: JobApplicationMethod? = null,
+    applyEmail: String? = null,
+    inquiryEmail: String? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
 ) : BaseTimeEntity() {
@@ -102,16 +120,18 @@ class Job internal constructor(
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
-            companyLogoUrl = companyLogoUrl,
             title = title,
             jobField = jobField,
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
+            logoUrl = logoUrl,
+            applyEmail = applyEmail,
+            inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
-            experienceMaxYears = experienceMaxYears,
             region = region,
+            subRegion = subRegion,
             recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
@@ -136,10 +156,6 @@ class Job internal constructor(
     var parentCompanyName: String? = parentCompanyName /* 모회사명. 모회사가 없으면 null */
         protected set
 
-    @Column(name = "company_logo_url", length = 2048)
-    var companyLogoUrl: String? = companyLogoUrl /* 기업 로고 이미지 주소 */
-        protected set
-
     @Column(nullable = false, length = 255)
     var title: String = title /* 채용공고 제목 */
         protected set
@@ -148,13 +164,17 @@ class Job internal constructor(
      * 직군·직무·산업은 기획이 확정되기 전까지 자유 문자열로 둔다. 확정되면 고정된 값 집합으로 바꾼다.
      * 세 값은 사용자 프로필의 희망 직군·직무·산업과 짝을 이룬다.
      */
+    // QueryDSL APT가 JobField를 숫자 경로로 만들어 컴파일이 깨지므로 enum 경로로 고정한다.
+    @field:QueryType(PropertyType.ENUM)
+    @Enumerated(EnumType.STRING)
     @Column(name = "job_field", length = 100)
-    var jobField: String? = jobField /* 직군 */
+    var jobField: JobField? = jobField /* 직군 */
         protected set
 
     /** 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다. */
+    @Enumerated(EnumType.STRING)
     @Column(name = "job_role", length = 100)
-    var jobRole: String? = jobRole /* 직무 */
+    var jobRole: JobRole? = jobRole /* 직무 */
         protected set
 
     /** 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다. */
@@ -164,6 +184,11 @@ class Job internal constructor(
 
     @Column(name = "cover_image_url", length = 2048)
     var coverImageUrl: String? = coverImageUrl /* 공고 대표 이미지 주소 */
+        protected set
+
+    /** 기업회원이 대표 이미지와 따로 올리는 로고다. 수집한 공고는 로고를 대표 이미지로 받으므로 값이 없다. */
+    @Column(name = "logo_url", length = 2048)
+    var logoUrl: String? = logoUrl /* 기업 로고 이미지 주소 */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -180,17 +205,19 @@ class Job internal constructor(
     var experienceMinYears: Int? = experienceMinYears /* 최소 요구 경력 연수 */
         protected set
 
-    @Column(name = "experience_max_years")
-    var experienceMaxYears: Int? = experienceMaxYears /* 최대 요구 경력 연수 */
-        protected set
-
     @Enumerated(EnumType.STRING)
     @Column(name = "education_level", nullable = false, length = 30)
     var educationLevel: EducationLevel = educationLevel /* 요구 학력 */
         protected set
 
-    @Column(length = 100)
-    var region: String? = region /* 근무 지역. 원문에 없으면 null */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    var region: Region? = region /* 근무 시·도. 원문에 없거나 알 수 없으면 null */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sub_region", length = 40)
+    var subRegion: SubRegion? = subRegion /* 근무 시·군·구. 시·도만 알면 null */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -257,6 +284,18 @@ class Job internal constructor(
     var applicationMethod: JobApplicationMethod? = applicationMethod /* 지원 방법 */
         protected set
 
+    /**
+     * 지원서를 받는 이메일과 채용 문의 이메일을 따로 둔다. 한 공고에 둘 다 적힐 수 있다.
+     * 한 주소로 지원과 문의를 함께 받으면 두 칸에 같은 값을 둔다.
+     */
+    @Column(name = "apply_email", length = 320)
+    var applyEmail: String? = applyEmail /* 지원 접수 이메일 */
+        protected set
+
+    @Column(name = "inquiry_email", length = 320)
+    var inquiryEmail: String? = inquiryEmail /* 채용 문의 이메일 */
+        protected set
+
     @Column(name = "source_url", length = 2048)
     var sourceUrl: String? = sourceUrl /* 채용공고 원문 URL */
         protected set
@@ -286,18 +325,18 @@ class Job internal constructor(
     fun update(
         companyName: String,
         parentCompanyName: String?,
-        companyLogoUrl: String?,
         title: String,
-        jobField: String?,
-        jobRole: String?,
+        jobField: JobField?,
+        jobRole: JobRole?,
         industry: String?,
         coverImageUrl: String?,
+        logoUrl: String?,
         employmentType: EmploymentType,
         experienceType: ExperienceType,
         experienceMinYears: Int?,
-        experienceMaxYears: Int?,
         educationLevel: EducationLevel,
-        region: String?,
+        region: Region?,
+        subRegion: SubRegion?,
         recruitmentType: JobRecruitmentType,
         recruitmentHeadcount: Int?,
         recruitmentStartAt: LocalDateTime?,
@@ -313,22 +352,26 @@ class Job internal constructor(
         hiringProcess: String?,
         recruitmentNotice: String?,
         applicationMethod: JobApplicationMethod?,
+        applyEmail: String?,
+        inquiryEmail: String?,
         sourceUrl: String?,
     ) {
         checkModifiable()
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
-            companyLogoUrl = companyLogoUrl,
             title = title,
             jobField = jobField,
             jobRole = jobRole,
             industry = industry,
             coverImageUrl = coverImageUrl,
+            logoUrl = logoUrl,
+            applyEmail = applyEmail,
+            inquiryEmail = inquiryEmail,
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
-            experienceMaxYears = experienceMaxYears,
             region = region,
+            subRegion = subRegion,
             recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
@@ -336,18 +379,18 @@ class Job internal constructor(
 
         this.companyName = companyName
         this.parentCompanyName = parentCompanyName
-        this.companyLogoUrl = companyLogoUrl
         this.title = title
         this.jobField = jobField
         this.jobRole = jobRole
         this.industry = industry
         this.coverImageUrl = coverImageUrl
+        this.logoUrl = logoUrl
         this.employmentType = employmentType
         this.experienceType = experienceType
         this.experienceMinYears = experienceMinYears
-        this.experienceMaxYears = experienceMaxYears
         this.educationLevel = educationLevel
         this.region = region
+        this.subRegion = subRegion
         this.recruitmentType = recruitmentType
         this.recruitmentHeadcount = recruitmentHeadcount
         this.recruitmentStartAt = recruitmentStartAt
@@ -363,6 +406,8 @@ class Job internal constructor(
         this.hiringProcess = hiringProcess
         this.recruitmentNotice = recruitmentNotice
         this.applicationMethod = applicationMethod
+        this.applyEmail = applyEmail
+        this.inquiryEmail = inquiryEmail
         this.sourceUrl = sourceUrl
     }
 
@@ -486,16 +531,18 @@ class Job internal constructor(
 private fun validateJobValues(
     companyName: String,
     parentCompanyName: String?,
-    companyLogoUrl: String?,
     title: String,
-    jobField: String?,
-    jobRole: String?,
+    jobField: JobField?,
+    jobRole: JobRole?,
     industry: String?,
     coverImageUrl: String?,
+    logoUrl: String?,
+    applyEmail: String?,
+    inquiryEmail: String?,
     recruitmentHeadcount: Int?,
     experienceMinYears: Int?,
-    experienceMaxYears: Int?,
-    region: String?,
+    region: Region?,
+    subRegion: SubRegion?,
     recruitmentType: JobRecruitmentType,
     recruitmentStartAt: LocalDateTime?,
     recruitmentEndAt: LocalDateTime?,
@@ -503,18 +550,15 @@ private fun validateJobValues(
     require(companyName.isNotBlank()) { "회사명은 비어 있을 수 없습니다." }
     require(parentCompanyName == null || parentCompanyName.isNotBlank()) { "모회사명은 비어 있을 수 없습니다." }
     require(title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
-    require(region == null || region.isNotBlank()) { "근무 지역은 비어 있을 수 없습니다." }
-    require(companyLogoUrl == null || companyLogoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }
-    require(jobField == null || jobField.isNotBlank()) { "직군은 비어 있을 수 없습니다." }
-    require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
+    require(subRegion == null || subRegion.region == region) { "시·군·구는 같은 시·도에 속해야 합니다." }
+    require(jobRole == null || jobRole.jobField == jobField) { "직무는 같은 직군에 속해야 합니다." }
     require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }
     require(coverImageUrl == null || coverImageUrl.isNotBlank()) { "공고 대표 이미지 주소는 비어 있을 수 없습니다." }
+    require(logoUrl == null || logoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }
+    require(applyEmail == null || applyEmail.isNotBlank()) { "지원 접수 이메일은 비어 있을 수 없습니다." }
+    require(inquiryEmail == null || inquiryEmail.isNotBlank()) { "채용 문의 이메일은 비어 있을 수 없습니다." }
     require(recruitmentHeadcount == null || recruitmentHeadcount > 0) { "모집 인원은 1명 이상이어야 합니다." }
     require(experienceMinYears == null || experienceMinYears >= 0) { "최소 경력 연수는 음수일 수 없습니다." }
-    require(experienceMaxYears == null || experienceMaxYears >= 0) { "최대 경력 연수는 음수일 수 없습니다." }
-    require(experienceMinYears == null || experienceMaxYears == null || experienceMinYears <= experienceMaxYears) {
-        "최소 경력 연수는 최대 경력 연수보다 클 수 없습니다."
-    }
     require(recruitmentType != JobRecruitmentType.ALWAYS_OPEN || recruitmentEndAt == null) {
         "상시 채용에는 모집 종료 일시를 둘 수 없습니다."
     }

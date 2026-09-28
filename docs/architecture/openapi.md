@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-08
+- 최종 변경일: 2026-09-27
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: API를 개발·연동·검증하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -41,6 +41,7 @@ Swagger 경로는 문서가 활성화된 환경에서 세션 없이 접근할 �
 - 인터페이스에는 `@RestController`나 기본 구현을 두지 않습니다.
 - 같은 annotation을 인터페이스와 구현체에 중복해서 선언하지 않습니다. 각 annotation은 한쪽에만 둡니다.
 - `@RequestParam`, `@PathVariable` 이름은 명시적으로 선언합니다.
+  - 예외: 관리자 고용24 조회(`GET /api/v1/admin/work24/{apiName}`)는 고용24 API마다 파라미터가 달라 query 전체를 `Map`으로 받습니다. 이유와 범위는 [REST API 설계](rest-api-design.md#고용24-open-api-조회)에 있습니다. **팀 리뷰 필요.**
 - 반환형은 `ResponseEntity<*>`가 아니라 실제 `SuccessResponse<T>` 타입까지 명시합니다.
 - 인증 Principal처럼 명세 입력이 아닌 파라미터는 `@Parameter(hidden = true)`로 숨깁니다.
 
@@ -111,7 +112,7 @@ PUT  /api/v1/users/me/jobs/{jobId}   replaceMyJob
 
 이런 작업에는 `@SecurityRequirement`를 **붙입니다.** 붙이지 않으면 Swagger UI가 토큰을 보내지 않아 `bookmarked`가 항상 `false`인 경로밖에 시험할 수 없습니다. 다만 OpenAPI에는 "선택적 인증"을 표현하는 방법이 없어, 명세만 보면 필수처럼 읽힙니다. 실제 필수 여부는 작업 description에 적습니다.
 
-`@SecurityRequirement`를 인터페이스가 아니라 메서드에 선언하는 이유도 여기에 있습니다. 한 인터페이스 안에서 공개 작업(`GET /api/v1/jobs/calendar`), 토큰 선택 작업(`GET /api/v1/jobs`), 인증 필수 작업(`POST /api/v1/jobs/{jobId}/source-url-clicks`)이 섞입니다. 모든 작업이 같은 요구를 가지는 `UserJobBookmarkApi`, `UserBootcampBookmarkApi`처럼 인터페이스 단위로 선언해도 되는 경우는 예외입니다.
+`@SecurityRequirement`를 인터페이스가 아니라 메서드에 선언하는 이유도 여기에 있습니다. 한 인터페이스 안에서 토큰 선택 작업(`GET /api/v1/jobs`, `GET /api/v1/jobs/calendar`)과 인증 필수 작업(`POST /api/v1/jobs/{jobId}/source-url-clicks`)이 섞이고, 다른 인터페이스에는 공개 작업도 있습니다. 모든 작업이 같은 요구를 가지는 `UserJobBookmarkApi`, `UserBootcampBookmarkApi`처럼 인터페이스 단위로 선언해도 되는 경우는 예외입니다.
 
 대안으로 `security: [{}, {BearerAuth: []}]`처럼 빈 요구사항을 함께 선언해 선택임을 표현하는 방법이 있지만 springdoc annotation으로는 표현이 번거롭고 도구별 해석이 갈립니다. **팀 논의 필요.**
 

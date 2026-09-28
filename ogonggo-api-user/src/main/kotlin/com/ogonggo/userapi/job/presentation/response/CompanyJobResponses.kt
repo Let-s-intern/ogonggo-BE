@@ -4,8 +4,12 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.userapi.job.business.CompanyJobResult
 import com.ogonggo.userapi.job.business.CompanyJobSummary
@@ -20,12 +24,13 @@ data class CompanyJobSummaryResponse(
     val id: Long,
     val companyName: String,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -45,6 +50,7 @@ data class CompanyJobSummaryResponse(
             employmentType = result.employmentType,
             experienceType = result.experienceType,
             region = result.region,
+            subRegion = result.subRegion,
             recruitmentType = result.recruitmentType,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
@@ -59,18 +65,18 @@ data class CompanyJobDetailResponse(
     val id: Long,
     val companyName: String,
     val parentCompanyName: String?,
-    val companyLogoUrl: String?,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val coverImageUrl: String?,
+    val logoUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
-    val experienceMaxYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int?,
     val recruitmentStartAt: LocalDateTime?,
@@ -86,6 +92,7 @@ data class CompanyJobDetailResponse(
     val hiringProcess: String?,
     val recruitmentNotice: String?,
     val applicationMethod: JobApplicationMethod?,
+    val applyEmail: String?,
     val sourceUrl: String?,
     val publicationStatus: JobPublicationStatus,
     @Schema(description = REVIEW_STATUS_DESCRIPTION)
@@ -97,18 +104,18 @@ data class CompanyJobDetailResponse(
             id = result.id,
             companyName = result.companyName,
             parentCompanyName = result.parentCompanyName,
-            companyLogoUrl = result.companyLogoUrl,
             title = result.title,
             jobField = result.jobField,
             jobRole = result.jobRole,
             industry = result.industry,
             coverImageUrl = result.coverImageUrl,
+            logoUrl = result.logoUrl,
             employmentType = result.employmentType,
             experienceType = result.experienceType,
             experienceMinYears = result.experienceMinYears,
-            experienceMaxYears = result.experienceMaxYears,
             educationLevel = result.educationLevel,
             region = result.region,
+            subRegion = result.subRegion,
             recruitmentType = result.recruitmentType,
             recruitmentHeadcount = result.recruitmentHeadcount,
             recruitmentStartAt = result.recruitmentStartAt,
@@ -124,6 +131,7 @@ data class CompanyJobDetailResponse(
             hiringProcess = result.hiringProcess,
             recruitmentNotice = result.recruitmentNotice,
             applicationMethod = result.applicationMethod,
+            applyEmail = result.applyEmail,
             sourceUrl = result.sourceUrl,
             publicationStatus = result.publicationStatus,
             reviewStatus = result.reviewStatus,

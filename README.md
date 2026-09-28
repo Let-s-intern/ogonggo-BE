@@ -12,7 +12,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 - QueryDSL 5.0.0
 - MySQL
 - Redis (사용자 리프레시 토큰)
-- Hibernate `ddl-auto=update`
+- Hibernate `ddl-auto=none` in production (schema changes are applied with `docs/schema` SQL)
 - No Flyway or Liquibase
 
 ## Modules
@@ -21,7 +21,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 ogonggo-api-user  ---> ogonggo-core <--- ogonggo-api-admin
 ```
 
-- `ogonggo-core`: user, job, bootcamp and study domain boundaries; JPA persistence
+- `ogonggo-core`: user, job, bootcamp, study and notice domain boundaries; JPA persistence
 - `ogonggo-api-user`: public API and LetsCareer login integration
 - `ogonggo-api-admin`: administrator API boundary
 
@@ -79,6 +79,41 @@ Administrator console endpoints (`/api/v1/admin/**`) accept a user API access to
 
 Before deploying the admin console changes to an existing database, apply `docs/schema/2026-09-14-admin-review.sql`.
 
+Before deploying the company profile contact fields (logo, manager phone, notification email), apply `docs/schema/2026-09-28-company-profile-contact.sql`.
+
+Before deploying the job region enums (`region`, `subRegion`), apply `docs/schema/2026-09-28-job-region-enum.sql`.
+
+Before deploying the job field and role enums (`jobField`, `jobRole`), apply `docs/schema/2026-09-28-job-field-role-enum.sql`.
+
+After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
+
+## Work24 (고용24) Open API
+
+관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.
+
+```yaml
+ogonggo:
+  work24:
+    recruitment-auth-key:              # 채용정보
+    tomorrow-learning-card-auth-key:   # 국민내일배움카드 훈련과정
+    work-study-auth-key:               # 일학습병행 훈련과정
+    government-job-auth-key:           # 정부지원일자리정보
+    job-seeker-program-auth-key:       # 구직자취업역량 강화프로그램
+    occupation-auth-key:               # 직업정보
+    duty-auth-key:                     # 직무정보
+    small-giant-company-auth-key:      # 강소기업
+    common-code-auth-key:              # 공통코드(채용 지역·직종, 훈련 KECO·NCS 등)
+    bootcamp-image-url:                # 로고 없는 훈련기관의 과정에 쓰는 대체 대표 이미지(선택)
+```
+
+키 이름은 배포 로그 마스킹이 가리도록 모두 `-auth-key`로 끝냅니다. 응답 계약은 [API 성공 응답](docs/architecture/api-response.md#고용24-open-api-조회)을 읽습니다.
+
+관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보를 채용공고로, 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 훈련과정은 고용24가 과정 이미지를 주지 않아 훈련기관 로고를 대표 이미지로 쓰고, 로고가 없는 기관만 `ogonggo.work24.bootcamp-image-url`을 씁니다. 이 값이 없으면 로고 없는 과정은 등록하지 않습니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
+
+## Scheduled jobs
+
+스케줄 작업의 실행 주기(cron)와 켜짐 여부는 DB `scheduled_jobs` 테이블에서 SQL로 바꿉니다. 바꾼 cron은 1분 안에 반영되고, 행은 애플리케이션이 기동할 때 없는 작업만 기본값으로 만들어집니다. 두 API를 배포하기 전에 `docs/schema/2026-09-27-scheduled-jobs.sql`을 적용합니다. 규칙과 작업 목록은 [스케줄 작업](docs/architecture/scheduling.md)을 읽습니다.
+
 ## Docker
 
 이미지는 미리 빌드된 jar를 복사만 합니다. 컨테이너 안에서 Gradle을 돌리지 않으므로 jar를 먼저 만들어야 합니다.
@@ -95,7 +130,7 @@ CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_F
 
 ## Deployment
 
-`main` 브랜치에 푸시하면 `ogonggo-api-user` → `ogonggo-api-admin` 순서로 ECS에 배포합니다.
+`main` 브랜치에 푸시하면 `ogonggo-api-user`와 `ogonggo-api-admin`을 ECS에 병렬로 배포합니다. 두 서비스 모두 운영 `ddl-auto`가 `none`이라 기동하면서 공유 DB의 스키마를 바꾸지 않기 때문입니다.
 
 운영 설정은 저장소에 없고 GitHub 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)의 내용을 그대로 `application.yml`로 씁니다. 잘못된 시크릿이 운영 서비스를 죽이지 못하도록, 배포 워크플로는 이미지를 ECR에 올리기 전에 시크릿·AWS 리소스를 확인하고 운영 설정으로 컨테이너를 띄워 `/health` 200을 확인합니다. 그래도 배포가 실패하면 직전 태스크 정의로 되돌립니다.
 
@@ -105,15 +140,15 @@ CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_F
 
 ## Schema management
 
-The project intentionally follows the current LetsCareer approach and does not include a migration tool. Configure schema behavior with `DDL_AUTO`:
+The project intentionally follows the current LetsCareer approach and does not include a migration tool.
 
-```text
-DDL_AUTO=update
-```
+운영의 두 API는 모두 `spring.jpa.hibernate.ddl-auto=none`으로 띄웁니다. 두 서비스가 하나의 DB를 공유하므로, 어느 한쪽이라도 `update`로 뜨면 병렬 배포 중 동시에 스키마를 바꿀 수 있습니다. 운영 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)에 `none` 외의 값을 넣지 않습니다.
 
-When both ECS services share one database, avoid concurrent schema updates during deployment. Assign schema changes to one deployment step or switch production services to `DDL_AUTO=validate` after the schema is prepared.
+엔티티를 바꿔 스키마가 달라지면 `docs/schema`에 날짜별 SQL을 추가하고, 두 API를 배포하기 전에 운영 DB에 한 번 적용합니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
 
-Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 `docs/schema`의 날짜별 SQL을 검토하고 백업 후 한 번만 실행합니다. 신규 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환 SQL을 실행하지 않습니다.
+로컬과 테스트는 빈 DB에서 시작하므로 `update`나 `create-drop`을 씁니다.
+
+Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 `docs/schema`의 날짜별 SQL을 검토하고 백업 후 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환 SQL을 실행하지 않습니다.
 
 ## Study domain
 

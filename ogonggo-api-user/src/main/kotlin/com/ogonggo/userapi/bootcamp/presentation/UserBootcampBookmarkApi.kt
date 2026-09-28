@@ -1,5 +1,10 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bookmark.domain.BookmarkSortType
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.userapi.bootcamp.presentation.request.UpdateBootcampApplicationStatusRequest
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
@@ -13,16 +18,48 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 
 @Tag(name = "부트캠프 북마크")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
 interface UserBootcampBookmarkApi {
 
-    @Operation(operationId = "listMyBootcampBookmarks", summary = "부트캠프 북마크 목록 조회")
+    @Operation(
+        operationId = "listMyBootcampBookmarks",
+        summary = "부트캠프 북마크 목록 조회",
+        description = """
+            북마크한 부트캠프 중 지금 공개된 부트캠프만 반환합니다.
+
+            부트캠프 목록과 같은 필터를 사용할 수 있습니다.
+            tuitionType과 status로 목록을 좁히며 각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않습니다.
+            status는 RECRUITING(모집중)과 CLOSED(모집 마감)만 받으며 그 밖의 값은 400입니다.
+
+            keyword는 운영 회사명 또는 프로그램명에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
+            2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
+
+            applicationStatus는 지원·신청 관리 단계로 SCRAPPED(스크랩), PREPARING(신청 전), APPLIED(신청 완료),
+            IN_PROGRESS(활동 중), COMPLETED(활동 완료) 중 하나입니다.
+            보내면 그 단계의 북마크만 반환하고, 보내지 않으면 모든 단계를 반환합니다.
+
+            sort로 정렬을 고릅니다. 지금은 RECENTLY_SAVED(최근 저장순)만 있으며 보내지 않으면 RECENTLY_SAVED입니다.
+            북마크를 등록·재등록하거나 신청 단계를 옮긴 시각이 최근인 순서입니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 공개 목록에서 고를 수 없는 모집 상태입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
     fun getBookmarks(
         @Parameter(hidden = true)
         userId: Long,
@@ -31,6 +68,12 @@ interface UserBootcampBookmarkApi {
         @Min(1)
         @Max(100)
         size: Int,
+        sortType: BookmarkSortType,
+        tuitionType: TuitionType?,
+        status: BootcampStatus?,
+        @Size(min = 2, max = 100)
+        keyword: String?,
+        applicationStatus: BootcampApplicationStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(operationId = "createBootcampBookmark", summary = "부트캠프 북마크 등록")
@@ -72,5 +115,39 @@ interface UserBootcampBookmarkApi {
         userId: Long,
         @Positive
         bootcampId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "replaceMyBootcampBookmarkApplicationStatus",
+        summary = "부트캠프 북마크의 지원·신청 관리 단계 변경",
+        description = """
+            북마크를 applicationStatus 단계로 옮깁니다. 단계는 스크랩, 신청 전, 신청 완료, 활동 중, 활동 완료입니다.
+            단계 사이에 선후 관계가 없어 어느 단계에서든 다른 어느 단계로든 옮길 수 있습니다.
+            이미 그 단계면 아무것도 바꾸지 않고 200으로 응답합니다.
+            옮긴 북마크는 해당 단계 목록의 맨 앞에 옵니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "이동 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: applicationStatus가 없거나 정의되지 않은 단계입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "BOOTCAMP_BOOKMARK_NOT_FOUND: 북마크하지 않은 부트캠프입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun updateApplicationStatus(
+        @Parameter(hidden = true)
+        userId: Long,
+        @Positive
+        bootcampId: Long,
+        @Valid
+        request: UpdateBootcampApplicationStatusRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 }

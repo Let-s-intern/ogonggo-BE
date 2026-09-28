@@ -1,6 +1,7 @@
 package com.ogonggo.core.bootcamp.persistence
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
@@ -23,6 +24,27 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     fun findByIdAndDeletedAtIsNull(id: Long): Bootcamp?
 
     fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Bootcamp?
+
+    fun existsBySourceUrlAndDeletedAtIsNull(sourceUrl: String): Boolean
+
+    /** 원문 URL은 등록 시점에만 중복을 막고 DB 제약이 없으므로, 겹친 행이 있어도 가장 먼저 등록된 행을 고른다. */
+    fun findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String): Bootcamp?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        "select bootcamp from Bootcamp bootcamp " +
+            "where bootcamp.id = :bootcampId and bootcamp.ownerUserId is null " +
+            "and bootcamp.sourceUrl is not null and bootcamp.deletedAt is null",
+    )
+    fun findCrawledByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
+
+    /** 크롤러 삭제는 멱등해야 하므로 이미 삭제된 수집 부트캠프도 찾는다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        "select bootcamp from Bootcamp bootcamp " +
+            "where bootcamp.id = :bootcampId and bootcamp.ownerUserId is null and bootcamp.sourceUrl is not null",
+    )
+    fun findCrawledByIdForDelete(@Param("bootcampId") bootcampId: Long): Bootcamp?
 
     @Query(
         """
@@ -59,45 +81,6 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ReviewStatus): List<Bootcamp>
 
     fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
-
-    /**
-     * 북마크한 부트캠프 중 지금 공개된 것만 최근 북마크 순으로 조회한다.
-     * 부트캠프와 북마크는 연관관계가 없으므로 명시적으로 조인한다.
-     */
-    @Query(
-        value = """
-        select bootcamp
-        from Bootcamp bootcamp
-        join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
-        where bookmark.userId = :userId
-          and bookmark.deletedAt is null
-          and bootcamp.publicationStatus = :publicationStatus
-          and bootcamp.status in :statuses
-          and bootcamp.deletedAt is null
-          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
-          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
-        order by bookmark.updatedAt desc, bookmark.id desc
-        """,
-        countQuery = """
-        select count(bootcamp)
-        from Bootcamp bootcamp
-        join BootcampBookmark bookmark on bookmark.bootcampId = bootcamp.id
-        where bookmark.userId = :userId
-          and bookmark.deletedAt is null
-          and bootcamp.publicationStatus = :publicationStatus
-          and bootcamp.status in :statuses
-          and bootcamp.deletedAt is null
-          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
-          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
-        """,
-    )
-    fun findBookmarkedBootcamps(
-        @Param("userId") userId: Long,
-        @Param("statuses") statuses: Collection<BootcampStatus>,
-        @Param("publicationStatus") publicationStatus: BootcampPublicationStatus,
-        @Param("now") now: LocalDateTime,
-        pageable: Pageable,
-    ): Page<Bootcamp>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
@@ -171,7 +154,7 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
     fun findByBootcampIdAndUserId(bootcampId: Long, userId: Long): BootcampBookmark?
 
     /**
-     * 해제된 북마크를 다시 활성으로 되돌린다.
+     * 해제된 북마크를 다시 활성으로 되돌리고 지원·신청 관리 단계는 스크랩부터 다시 시작한다.
      * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.
      * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
      */
@@ -180,6 +163,7 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         """
         update BootcampBookmark bookmark
         set bookmark.deletedAt = null,
+            bookmark.applicationStatus = com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus.SCRAPPED,
             bookmark.updatedAt = :now
         where bookmark.bootcampId = :bootcampId
           and bookmark.userId = :userId
@@ -191,6 +175,44 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         @Param("userId") userId: Long,
         @Param("now") now: LocalDateTime,
     ): Int
+
+    /**
+     * 활성 북마크의 지원·신청 관리 단계를 옮긴다. 단계 사이에 선후 관계가 없어 출발 단계를 가리지 않는다.
+     * 이미 목표 단계면 갱신하지 않아, 같은 이동을 반복해도 목록 순서가 바뀌지 않는다.
+     * 벌크 연산은 Auditing을 거치지 않으므로 북마크 목록의 정렬 기준인 수정 일시를 함께 기록한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update BootcampBookmark bookmark
+        set bookmark.applicationStatus = :target,
+            bookmark.updatedAt = :now
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+          and bookmark.applicationStatus <> :target
+        """,
+    )
+    fun changeApplicationStatus(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("userId") userId: Long,
+        @Param("target") target: BootcampApplicationStatus,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Query(
+        """
+        select bookmark.applicationStatus
+        from BootcampBookmark bookmark
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun findActiveApplicationStatus(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("userId") userId: Long,
+    ): BootcampApplicationStatus?
 
     /** 활성 북마크만 해제한다. 이미 해제된 북마크는 갱신 대상이 아니므로 최초 해제 일시가 덮어써지지 않는다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

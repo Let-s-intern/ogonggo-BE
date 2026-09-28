@@ -1,9 +1,10 @@
 package com.ogonggo.core.bootcamp.implement
 
-import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
-import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
+import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
@@ -11,26 +12,41 @@ import org.springframework.stereotype.Component
 
 @Component
 class BootcampBookmarkReader internal constructor(
-    private val bootcampRepository: BootcampJpaRepository,
+    private val bootcampQueryRepository: BootcampQueryRepository,
     private val bootcampBookmarkRepository: BootcampBookmarkJpaRepository,
     private val clock: Clock,
 ) {
 
-    fun readBookmarkedPublicPage(userId: Long, page: Int, size: Int): BootcampPageDto =
-        readBookmarkedPublicPage(userId, page, size, LocalDateTime.now(clock))
+    fun readBookmarkedPublicPage(
+        userId: Long,
+        condition: BootcampSearchCondition,
+        page: Int,
+        size: Int,
+        bookmarkCondition: BootcampBookmarkSearchCondition = BootcampBookmarkSearchCondition.NONE,
+    ): BootcampPageDto = readBookmarkedPublicPage(
+        userId = userId,
+        condition = condition,
+        page = page,
+        size = size,
+        now = LocalDateTime.now(clock),
+        bookmarkCondition = bookmarkCondition,
+    )
 
     fun readBookmarkedPublicPage(
         userId: Long,
+        condition: BootcampSearchCondition,
         page: Int,
         size: Int,
         now: LocalDateTime,
+        bookmarkCondition: BootcampBookmarkSearchCondition = BootcampBookmarkSearchCondition.NONE,
     ): BootcampPageDto {
         validateBookmarkPageRequest(page, size)
-        // 정렬을 JPQL이 이미 정하므로 Pageable에 정렬을 넘기지 않는다.
-        val result = bootcampRepository.findBookmarkedBootcamps(
+        // 정렬은 조회 쿼리가 북마크 정렬 기준으로 정하므로 Pageable에 정렬을 넘기지 않는다.
+        val result = bootcampQueryRepository.findBookmarkedPublicPage(
             userId = userId,
-            statuses = PUBLIC_STATUSES,
-            publicationStatus = BootcampPublicationStatus.PUBLISHED,
+            condition = condition,
+            bookmarkCondition = bookmarkCondition,
+            publicStatuses = PUBLIC_STATUSES,
             now = now,
             pageable = PageRequest.of(page, size),
         )

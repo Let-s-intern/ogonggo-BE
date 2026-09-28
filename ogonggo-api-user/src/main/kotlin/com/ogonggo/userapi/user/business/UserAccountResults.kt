@@ -38,6 +38,9 @@ data class MyAccountResult(
                 MyCompanyProfileResult(
                     organizationName = it.organizationName,
                     managerName = it.managerName,
+                    logoUrl = it.logoUrl,
+                    managerPhone = it.managerPhone,
+                    notificationEmail = it.notificationEmail,
                 )
             },
         )
@@ -81,4 +84,7 @@ data class MyProfileResult(
 data class MyCompanyProfileResult(
     val organizationName: String,
     val managerName: String,
+    val logoUrl: String?,
+    val managerPhone: String?,
+    val notificationEmail: String?,
 )

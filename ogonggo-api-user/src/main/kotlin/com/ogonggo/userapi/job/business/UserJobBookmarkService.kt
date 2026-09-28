@@ -1,6 +1,9 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -21,8 +24,21 @@ class UserJobBookmarkService(
     private val clock: Clock,
 ) {
 
-    fun getBookmarks(userId: Long, page: Int, size: Int): UserJobPageResult {
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(userId, page, size)
+    fun getBookmarks(
+        userId: Long,
+        condition: JobSearchCondition,
+        page: Int,
+        size: Int,
+        bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
+    ): UserJobPageResult {
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(
+            userId = userId,
+            condition = condition,
+            page = page,
+            size = size,
+            now = LocalDateTime.now(clock),
+            bookmarkCondition = bookmarkCondition,
+        )
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,
@@ -43,5 +59,11 @@ class UserJobBookmarkService(
         jobReader.readIncludingDeleted(jobId)
         jobBookmarkManager.delete(userId, jobId, LocalDateTime.now(clock))
         eventPublisher.publishEvent(JobBookmarkChangedEvent(jobId))
+    }
+
+    /** 단계 사이에 선후 관계가 없어 어느 단계로든 옮긴다. */
+    @Transactional
+    fun changeApplicationStatus(userId: Long, jobId: Long, status: JobApplicationStatus) {
+        jobBookmarkManager.changeApplicationStatus(userId, jobId, status, LocalDateTime.now(clock))
     }
 }

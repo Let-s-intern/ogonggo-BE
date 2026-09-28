@@ -5,7 +5,6 @@ import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
@@ -20,9 +19,9 @@ class ImageAssetCleanupScheduler(
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
-    @Scheduled(fixedDelayString = "\${ogonggo.storage.s3.cleanup.fixed-delay-ms:3600000}")
+    /** 실행 주기와 켜짐 여부는 `scheduled_jobs`가 정한다. `UserScheduledJobConfiguration` 참고. */
     @SchedulerLock(
-        name = "imageAssetCleanup",
+        name = SCHEDULER_NAME,
         lockAtLeastFor = "\${ogonggo.storage.s3.cleanup.lock-at-least-for:PT55M}",
         lockAtMostFor = "\${ogonggo.storage.s3.cleanup.lock-at-most-for:PT2H}",
     )
@@ -37,7 +36,7 @@ class ImageAssetCleanupScheduler(
     }
 
     companion object {
-        private const val SCHEDULER_NAME = "imageAssetCleanup"
+        const val SCHEDULER_NAME = "imageAssetCleanup"
         private val log = LoggerFactory.getLogger(ImageAssetCleanupScheduler::class.java)
     }
 }

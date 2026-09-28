@@ -1,14 +1,18 @@
 package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.time.LocalDateTime
 
 class JobDomainTest {
 
@@ -23,17 +27,17 @@ class JobDomainTest {
             title = "백엔드 인턴",
             employmentType = EmploymentType.INTERN,
             parentCompanyName = "변경 모회사",
-            companyLogoUrl = "https://example.com/logo2.png",
-            jobField = "개발",
-            jobRole = "서버 개발자",
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
             industry = "IT",
             coverImageUrl = "https://example.com/cover2.png",
+            logoUrl = "https://example.com/logo2.png",
             recruitmentHeadcount = 5,
             experienceType = ExperienceType.NEWCOMER,
             experienceMinYears = 0,
-            experienceMaxYears = 1,
             educationLevel = EducationLevel.BACHELOR,
-            region = "부산",
+            region = Region.BUSAN,
+            subRegion = SubRegion.BUSAN_HAEUNDAE_GU,
             recruitmentType = JobRecruitmentType.PERIOD,
             recruitmentStartAt = startAt,
             recruitmentEndAt = endAt,
@@ -48,17 +52,21 @@ class JobDomainTest {
             hiringProcess = "변경된 채용 절차",
             recruitmentNotice = "변경된 채용 안내사항",
             applicationMethod = JobApplicationMethod.EMAIL,
+            applyEmail = "recruit@example.com",
+            inquiryEmail = "hr@example.com",
             sourceUrl = "https://example.com/jobs/2",
         )
 
         assertEquals("변경 회사", job.companyName)
+        assertEquals("recruit@example.com", job.applyEmail)
+        assertEquals("hr@example.com", job.inquiryEmail)
         assertEquals("변경 모회사", job.parentCompanyName)
-        assertEquals("https://example.com/logo2.png", job.companyLogoUrl)
         assertEquals("백엔드 인턴", job.title)
-        assertEquals("개발", job.jobField)
-        assertEquals("서버 개발자", job.jobRole)
+        assertEquals(JobField.IT_DEVELOPMENT, job.jobField)
+        assertEquals(JobRole.IT_BACKEND, job.jobRole)
         assertEquals("IT", job.industry)
         assertEquals("https://example.com/cover2.png", job.coverImageUrl)
+        assertEquals("https://example.com/logo2.png", job.logoUrl)
         assertEquals(5, job.recruitmentHeadcount)
         assertEquals(EmploymentType.INTERN, job.employmentType)
         assertEquals(startAt, job.recruitmentStartAt)
@@ -80,17 +88,16 @@ class JobDomainTest {
     fun `필수값과 경력 및 모집 기간을 검증한다`() {
         assertThrows(IllegalArgumentException::class.java) { createJob(companyName = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(parentCompanyName = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(region = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(companyLogoUrl = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(jobField = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(jobRole = " ") }
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(region = Region.BUSAN, subRegion = SubRegion.SEOUL_GANGNAM_GU)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(jobField = JobField.DESIGN, jobRole = JobRole.IT_BACKEND)
+        }
         assertThrows(IllegalArgumentException::class.java) { createJob(industry = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(coverImageUrl = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(recruitmentHeadcount = 0) }
         assertThrows(IllegalArgumentException::class.java) { createJob(experienceMinYears = -1) }
-        assertThrows(IllegalArgumentException::class.java) {
-            createJob(experienceMinYears = 5, experienceMaxYears = 3)
-        }
         assertThrows(IllegalArgumentException::class.java) {
             createJob(
                 recruitmentStartAt = LocalDateTime.of(2026, 9, 2, 0, 0),
@@ -230,15 +237,14 @@ class JobDomainTest {
         publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
         companyName: String = "오공고",
         parentCompanyName: String? = null,
-        companyLogoUrl: String? = null,
-        jobField: String? = null,
-        jobRole: String? = null,
+        jobField: JobField? = null,
+        jobRole: JobRole? = null,
         industry: String? = null,
         coverImageUrl: String? = null,
         recruitmentHeadcount: Int? = null,
-        region: String? = "서울",
+        region: Region? = Region.SEOUL,
+        subRegion: SubRegion? = null,
         experienceMinYears: Int? = 1,
-        experienceMaxYears: Int? = 3,
         recruitmentStartAt: LocalDateTime? = LocalDateTime.of(2026, 8, 1, 0, 0),
         // 상시 채용은 종료 일시를 둘 수 없으므로 기본값도 모집 유형을 따른다.
         recruitmentEndAt: LocalDateTime? =
@@ -248,7 +254,6 @@ class JobDomainTest {
         publicationStatus = publicationStatus,
         companyName = companyName,
         parentCompanyName = parentCompanyName,
-        companyLogoUrl = companyLogoUrl,
         title = "백엔드 개발자",
         jobField = jobField,
         jobRole = jobRole,
@@ -257,9 +262,9 @@ class JobDomainTest {
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = experienceMinYears,
-        experienceMaxYears = experienceMaxYears,
         educationLevel = EducationLevel.ANY,
         region = region,
+        subRegion = subRegion,
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,

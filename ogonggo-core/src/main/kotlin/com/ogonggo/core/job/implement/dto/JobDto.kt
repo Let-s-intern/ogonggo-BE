@@ -6,27 +6,31 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobContentField
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import java.time.LocalDateTime
 
 data class JobAppendDto(
     val ownerUserId: Long? = null,
     val companyName: String,
     val parentCompanyName: String? = null,
-    val companyLogoUrl: String? = null,
     val title: String,
-    val jobField: String? = null,
-    val jobRole: String? = null,
+    val jobField: JobField? = null,
+    val jobRole: JobRole? = null,
     val industry: String? = null,
     val coverImageUrl: String? = null,
+    val logoUrl: String? = null,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int? = null,
-    val experienceMaxYears: Int? = null,
     val educationLevel: EducationLevel = EducationLevel.ANY,
-    val region: String? = null,
+    val region: Region? = null,
+    val subRegion: SubRegion? = null,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int? = null,
     val recruitmentStartAt: LocalDateTime? = null,
@@ -42,6 +46,8 @@ data class JobAppendDto(
     val hiringProcess: String? = null,
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
+    val applyEmail: String? = null,
+    val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
     val publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
 )
@@ -49,18 +55,18 @@ data class JobAppendDto(
 data class JobUpdateDto(
     val companyName: String,
     val parentCompanyName: String? = null,
-    val companyLogoUrl: String? = null,
     val title: String,
-    val jobField: String? = null,
-    val jobRole: String? = null,
+    val jobField: JobField? = null,
+    val jobRole: JobRole? = null,
     val industry: String? = null,
     val coverImageUrl: String? = null,
+    val logoUrl: String? = null,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int? = null,
-    val experienceMaxYears: Int? = null,
     val educationLevel: EducationLevel = EducationLevel.ANY,
-    val region: String? = null,
+    val region: Region? = null,
+    val subRegion: SubRegion? = null,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int? = null,
     val recruitmentStartAt: LocalDateTime? = null,
@@ -76,6 +82,8 @@ data class JobUpdateDto(
     val hiringProcess: String? = null,
     val recruitmentNotice: String? = null,
     val applicationMethod: JobApplicationMethod? = null,
+    val applyEmail: String? = null,
+    val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
 )
 

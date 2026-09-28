@@ -3,11 +3,15 @@ package com.ogonggo.userapi.job.business
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
-import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.LocalDateTime
 
@@ -34,12 +38,13 @@ data class CompanyJobSummary(
     val id: Long,
     val companyName: String,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -58,6 +63,7 @@ data class CompanyJobSummary(
             employmentType = job.employmentType,
             experienceType = job.experienceType,
             region = job.region,
+            subRegion = job.subRegion,
             recruitmentType = job.recruitmentType,
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,
@@ -72,18 +78,18 @@ data class CompanyJobResult(
     val id: Long,
     val companyName: String,
     val parentCompanyName: String?,
-    val companyLogoUrl: String?,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val coverImageUrl: String?,
+    val logoUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
-    val experienceMaxYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int?,
     val recruitmentStartAt: LocalDateTime?,
@@ -99,6 +105,7 @@ data class CompanyJobResult(
     val hiringProcess: String?,
     val recruitmentNotice: String?,
     val applicationMethod: JobApplicationMethod?,
+    val applyEmail: String?,
     val sourceUrl: String?,
     val publicationStatus: JobPublicationStatus,
     val reviewStatus: ReviewStatus?,
@@ -109,18 +116,18 @@ data class CompanyJobResult(
             id = job.requiredId(),
             companyName = job.companyName,
             parentCompanyName = job.parentCompanyName,
-            companyLogoUrl = job.companyLogoUrl,
             title = job.title,
             jobField = job.jobField,
             jobRole = job.jobRole,
             industry = job.industry,
             coverImageUrl = job.coverImageUrl,
+            logoUrl = job.logoUrl,
             employmentType = job.employmentType,
             experienceType = job.experienceType,
             experienceMinYears = job.experienceMinYears,
-            experienceMaxYears = job.experienceMaxYears,
             educationLevel = job.educationLevel,
             region = job.region,
+            subRegion = job.subRegion,
             recruitmentType = job.recruitmentType,
             recruitmentHeadcount = job.recruitmentHeadcount,
             recruitmentStartAt = job.recruitmentStartAt,
@@ -136,6 +143,7 @@ data class CompanyJobResult(
             hiringProcess = job.hiringProcess,
             recruitmentNotice = job.recruitmentNotice,
             applicationMethod = job.applicationMethod,
+            applyEmail = job.applyEmail,
             sourceUrl = job.sourceUrl,
             publicationStatus = job.publicationStatus,
             reviewStatus = job.reviewStatus,

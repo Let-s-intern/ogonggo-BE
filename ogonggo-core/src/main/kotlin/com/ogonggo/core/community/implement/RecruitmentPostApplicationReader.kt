@@ -6,6 +6,7 @@ import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
 import com.ogonggo.core.community.domain.RecruitmentApplicationSortType
+import com.ogonggo.core.community.persistence.RecruitmentPostApplicationJpaRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostApplicationQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
@@ -15,7 +16,12 @@ import java.time.LocalDateTime
 @Component
 class RecruitmentPostApplicationReader internal constructor(
     private val applicationQueryRepository: RecruitmentPostApplicationQueryRepository,
+    private val applicationRepository: RecruitmentPostApplicationJpaRepository,
 ) {
+
+    /** 삭제되지 않은 지원 이력의 상태를 읽는다. 이력이 없으면 null이다. */
+    fun readActiveStatus(postId: Long, userId: Long): RecruitmentApplicationProgressStatus? =
+        applicationRepository.findByPostIdAndUserIdAndDeletedAtIsNull(postId, userId)?.applicationStatus
 
     fun readPage(
         userId: Long,

@@ -31,6 +31,26 @@ class RecruitmentPostApplicationManager internal constructor(
         applicationRepository.save(application)
     }
 
+    /**
+     * 스크랩한 모집글을 지원 준비 중 이력으로 만든다. 지운 이력이 있으면 새로 만들지 않고 되살린다.
+     * 활성 이력이 있는지는 호출하는 유스케이스가 먼저 확인한다.
+     */
+    fun startPreparation(
+        postId: Long,
+        userId: Long,
+        now: LocalDateTime,
+    ) {
+        val application = applicationRepository.findByPostIdAndUserId(postId, userId)
+            ?: RecruitmentPostApplication(
+                postId = postId,
+                userId = userId,
+                firstClickedAt = now,
+                lastClickedAt = now,
+            )
+        application.restoreAsPreparing()
+        applicationRepository.save(application)
+    }
+
     fun changeStatus(
         postId: Long,
         userId: Long,
