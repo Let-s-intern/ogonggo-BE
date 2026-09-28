@@ -3,6 +3,8 @@ package com.ogonggo.core.job.domain
 import com.ogonggo.core.common.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import jakarta.persistence.Column
@@ -54,6 +56,14 @@ import java.time.LocalDateTime
             columnList = "publication_status, deleted_at, industry",
         ),
         Index(
+            name = "idx_jobs_published_region",
+            columnList = "publication_status, deleted_at, region",
+        ),
+        Index(
+            name = "idx_jobs_published_sub_region",
+            columnList = "publication_status, deleted_at, sub_region",
+        ),
+        Index(
             name = "idx_jobs_owner",
             columnList = "owner_user_id, deleted_at",
         ),
@@ -77,7 +87,8 @@ class Job internal constructor(
     experienceType: ExperienceType,
     experienceMinYears: Int? = null,
     educationLevel: EducationLevel = EducationLevel.ANY,
-    region: String? = null,
+    region: Region? = null,
+    subRegion: SubRegion? = null,
     recruitmentType: JobRecruitmentType,
     recruitmentHeadcount: Int? = null,
     recruitmentStartAt: LocalDateTime? = null,
@@ -118,6 +129,7 @@ class Job internal constructor(
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
             region = region,
+            subRegion = subRegion,
             recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
@@ -192,8 +204,14 @@ class Job internal constructor(
     var educationLevel: EducationLevel = educationLevel /* 요구 학력 */
         protected set
 
-    @Column(length = 100)
-    var region: String? = region /* 근무 지역. 원문에 없으면 null */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    var region: Region? = region /* 근무 시·도. 원문에 없거나 알 수 없으면 null */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sub_region", length = 40)
+    var subRegion: SubRegion? = subRegion /* 근무 시·군·구. 시·도만 알면 null */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -311,7 +329,8 @@ class Job internal constructor(
         experienceType: ExperienceType,
         experienceMinYears: Int?,
         educationLevel: EducationLevel,
-        region: String?,
+        region: Region?,
+        subRegion: SubRegion?,
         recruitmentType: JobRecruitmentType,
         recruitmentHeadcount: Int?,
         recruitmentStartAt: LocalDateTime?,
@@ -346,6 +365,7 @@ class Job internal constructor(
             recruitmentHeadcount = recruitmentHeadcount,
             experienceMinYears = experienceMinYears,
             region = region,
+            subRegion = subRegion,
             recruitmentType = recruitmentType,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
@@ -364,6 +384,7 @@ class Job internal constructor(
         this.experienceMinYears = experienceMinYears
         this.educationLevel = educationLevel
         this.region = region
+        this.subRegion = subRegion
         this.recruitmentType = recruitmentType
         this.recruitmentHeadcount = recruitmentHeadcount
         this.recruitmentStartAt = recruitmentStartAt
@@ -514,7 +535,8 @@ private fun validateJobValues(
     inquiryEmail: String?,
     recruitmentHeadcount: Int?,
     experienceMinYears: Int?,
-    region: String?,
+    region: Region?,
+    subRegion: SubRegion?,
     recruitmentType: JobRecruitmentType,
     recruitmentStartAt: LocalDateTime?,
     recruitmentEndAt: LocalDateTime?,
@@ -522,7 +544,7 @@ private fun validateJobValues(
     require(companyName.isNotBlank()) { "회사명은 비어 있을 수 없습니다." }
     require(parentCompanyName == null || parentCompanyName.isNotBlank()) { "모회사명은 비어 있을 수 없습니다." }
     require(title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
-    require(region == null || region.isNotBlank()) { "근무 지역은 비어 있을 수 없습니다." }
+    require(subRegion == null || subRegion.region == region) { "시·군·구는 같은 시·도에 속해야 합니다." }
     require(jobField == null || jobField.isNotBlank()) { "직군은 비어 있을 수 없습니다." }
     require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
     require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }

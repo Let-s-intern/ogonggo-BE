@@ -17,6 +17,9 @@ enum class Work24Service(
     OCCUPATION(6, "직업정보"),
     DUTY(7, "직무정보"),
     SMALL_GIANT_COMPANY(8, "강소기업"),
+
+    /** 채용(지역·직종 등)과 훈련(KECO·NCS·훈련종류 등) 공통코드다. */
+    COMMON_CODE(9, "공통코드"),
 }
 
 /** 고용24 응답 형식이다. 대부분의 API는 XML만 지원한다. */

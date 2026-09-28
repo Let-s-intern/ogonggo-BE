@@ -9,6 +9,8 @@ import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import java.time.LocalDateTime
 
 data class JobAppendDto(
@@ -25,7 +27,8 @@ data class JobAppendDto(
     val experienceType: ExperienceType,
     val experienceMinYears: Int? = null,
     val educationLevel: EducationLevel = EducationLevel.ANY,
-    val region: String? = null,
+    val region: Region? = null,
+    val subRegion: SubRegion? = null,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int? = null,
     val recruitmentStartAt: LocalDateTime? = null,
@@ -60,7 +63,8 @@ data class JobUpdateDto(
     val experienceType: ExperienceType,
     val experienceMinYears: Int? = null,
     val educationLevel: EducationLevel = EducationLevel.ANY,
-    val region: String? = null,
+    val region: Region? = null,
+    val subRegion: SubRegion? = null,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int? = null,
     val recruitmentStartAt: LocalDateTime? = null,

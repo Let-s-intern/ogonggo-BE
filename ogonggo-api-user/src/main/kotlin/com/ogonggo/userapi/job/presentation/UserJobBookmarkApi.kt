@@ -5,6 +5,8 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.request.UpdateJobApplicationStatusRequest
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
@@ -37,8 +39,10 @@ interface UserJobBookmarkApi {
             북마크한 공고 중 게시 중인 공고만 반환합니다.
 
             채용공고 목록과 같은 필터를 사용할 수 있습니다.
-            employmentType, experienceType, jobField(직군), jobRole(직무)로 목록을 좁히며 각각 하나씩 고를 수 있고,
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁히며 각각 하나씩 고를 수 있고,
             보내지 않으면 해당 조건을 적용하지 않습니다. jobField와 jobRole은 공고의 값과 정확히 같은지로 거릅니다.
+            region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
+            region만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다.
 
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
@@ -69,6 +73,8 @@ interface UserJobBookmarkApi {
         jobField: String?,
         @Size(max = 100)
         jobRole: String?,
+        region: Region?,
+        subRegion: SubRegion?,
         @Size(min = 2, max = 100)
         keyword: String?,
         applicationStatus: JobApplicationStatus?,

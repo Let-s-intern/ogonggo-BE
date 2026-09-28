@@ -13,6 +13,8 @@ import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import java.time.LocalTime
 
 /**
@@ -20,6 +22,7 @@ import java.time.LocalTime
  *
  * 크롤러 공고처럼 소유자 없이 곧바로 게시한다. 같은 공고인지는 워크넷 채용정보 URL(`wantedInfoUrl`)을
  * 원문 URL로 보고 판단한다. 직군은 고용24 직종 분류와 오공고 분류가 달라 채우지 않고, 모집 직종을 직무에 넣는다.
+ * 근무 지역은 도로명코드(`strtnmCd`) 앞 5자리 행정구역 코드로 찾고, 코드가 없으면 지역명(`region`)으로 찾는다.
  * 코드 값의 뜻은 고용24 개발명세를 따른다.
  */
 internal object Work24JobMapper {
@@ -39,6 +42,8 @@ internal object Work24JobMapper {
         val end = date(closeText)?.atTime(LocalTime.of(23, 59, 59))
         val hasPeriod = start != null && end != null && !start.isAfter(end)
 
+        val subRegion = subRegion(item)
+
         return JobAppendDto(
             companyName = requireNotNull(corp.text("corpNm") ?: item.text("company")) { "회사명이 없습니다." }
                 .limit(COMPANY_NAME_MAX),
@@ -49,7 +54,8 @@ internal object Work24JobMapper {
             employmentType = employmentType(info.text("empTpCd") ?: item.text("empTpCd")),
             experienceType = experienceType(info.text("enterTpCd"), item.text("career")),
             educationLevel = educationLevel(info.text("minEdubgIcd")),
-            region = (item.text("region") ?: info.text("workRegion"))?.limit(CATEGORY_MAX),
+            region = subRegion?.region ?: region(item),
+            subRegion = subRegion,
             recruitmentType = if (hasPeriod) JobRecruitmentType.PERIOD else JobRecruitmentType.ALWAYS_OPEN,
             recruitmentHeadcount = number(info.text("collectPsncnt"))?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
             recruitmentStartAt = start,
@@ -99,6 +105,27 @@ internal object Work24JobMapper {
             publicationStatus = JobPublicationStatus.PUBLISHED,
         )
     }
+
+    private fun subRegion(item: JsonNode): SubRegion? {
+        item.text("strtnmCd")?.let { return SubRegion.fromAdministrativeCode(it) }
+        val (regionName, subRegionName) = regionNames(item) ?: return null
+        return SubRegion.entries.firstOrNull { it.region == regionOf(regionName) && it.desc == subRegionName }
+    }
+
+    private fun region(item: JsonNode): Region? {
+        item.text("strtnmCd")?.let { return Region.fromAdministrativeCode(it) }
+        return regionNames(item)?.first?.let(::regionOf)
+    }
+
+    /** 지역명은 `서울 강남구`, `경기도 화성시 동탄구`처럼 시·도와 시·군·구를 공백으로 잇는다. */
+    private fun regionNames(item: JsonNode): Pair<String, String?>? {
+        val words = item.text("region")?.split(' ')?.filter(String::isNotBlank).orEmpty()
+        return words.firstOrNull()?.let { it to words.getOrNull(1) }
+    }
+
+    /** `경기도`처럼 끝에 `도`를 붙여 오는 이름도 있다. */
+    private fun regionOf(name: String): Region? =
+        Region.entries.firstOrNull { it.desc == name || it.desc + "도" == name }
 
     /** 10·20은 기간의 정함이 없는·있는 근로계약, 11·21은 그 시간(선택)제, 4는 파견이다. */
     private fun employmentType(code: String?): EmploymentType = when (code) {

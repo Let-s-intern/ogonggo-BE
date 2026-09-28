@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.LocalDateTime
@@ -24,7 +25,8 @@ internal object AdminJobFixtures {
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 8, 0, 0),
         recruitmentEndAt = LocalDateTime.of(2026, 9, 14, 23, 59),
-        region = "서울 본사",
+        region = Region.SEOUL,
+        subRegion = null,
         closedAt = null,
         viewCount = 3254,
         bookmarkCount = 196,

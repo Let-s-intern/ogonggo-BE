@@ -81,6 +81,8 @@ Before deploying the admin console changes to an existing database, apply `docs/
 
 Before deploying the company profile contact fields (logo, manager phone, notification email), apply `docs/schema/2026-09-28-company-profile-contact.sql`.
 
+Before deploying the job region enums (`region`, `subRegion`), apply `docs/schema/2026-09-28-job-region-enum.sql`.
+
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
 ## Work24 (고용24) Open API
@@ -98,6 +100,7 @@ ogonggo:
     occupation-auth-key:               # 직업정보
     duty-auth-key:                     # 직무정보
     small-giant-company-auth-key:      # 강소기업
+    common-code-auth-key:              # 공통코드(채용 지역·직종, 훈련 KECO·NCS 등)
     bootcamp-image-url:                # 로고 없는 훈련기관의 과정에 쓰는 대체 대표 이미지(선택)
 ```
 

@@ -204,6 +204,8 @@ internal class JobQueryRepository(
         experienceTypeEq(condition.experienceType),
         jobFieldEq(condition.jobField),
         jobRoleEq(condition.jobRole),
+        condition.region?.let(job.region::eq),
+        condition.subRegion?.let(job.subRegion::eq),
         keywordContains(condition.keyword),
     )
 

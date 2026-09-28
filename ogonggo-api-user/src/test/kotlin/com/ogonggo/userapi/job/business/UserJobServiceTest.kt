@@ -4,24 +4,25 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
-import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
-import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.implement.JobBookmarkReader
-import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
+import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 class UserJobServiceTest {
 
@@ -49,7 +50,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
-        Mockito.`when`(job.region).thenReturn("서울")
+        Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(job.companyAndTeamIntroduction).thenReturn("회사 및 팀 소개")
         Mockito.`when`(job.responsibilities).thenReturn("주요 업무")
@@ -345,7 +346,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
-        Mockito.`when`(job.region).thenReturn("서울")
+        Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
     }
 

@@ -9,10 +9,12 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobTagAppender
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CrawlerJobService(
@@ -79,6 +81,7 @@ private fun CrawlerJobCommand.toAppendDto(): JobAppendDto = JobAppendDto(
     experienceMinYears = experienceMinYears,
     educationLevel = educationLevel,
     region = region,
+    subRegion = subRegion,
     recruitmentType = recruitmentType,
     recruitmentHeadcount = recruitmentHeadcount,
     recruitmentStartAt = recruitmentStartAt,
@@ -114,6 +117,7 @@ private fun CrawlerJobCommand.toUpdateDto(): JobUpdateDto = JobUpdateDto(
     experienceMinYears = experienceMinYears,
     educationLevel = educationLevel,
     region = region,
+    subRegion = subRegion,
     recruitmentType = recruitmentType,
     recruitmentHeadcount = recruitmentHeadcount,
     recruitmentStartAt = recruitmentStartAt,

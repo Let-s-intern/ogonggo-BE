@@ -2,13 +2,15 @@ package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.time.LocalDateTime
 
 class JobDomainTest {
 
@@ -32,7 +34,8 @@ class JobDomainTest {
             experienceType = ExperienceType.NEWCOMER,
             experienceMinYears = 0,
             educationLevel = EducationLevel.BACHELOR,
-            region = "부산",
+            region = Region.BUSAN,
+            subRegion = SubRegion.BUSAN_HAEUNDAE_GU,
             recruitmentType = JobRecruitmentType.PERIOD,
             recruitmentStartAt = startAt,
             recruitmentEndAt = endAt,
@@ -83,7 +86,9 @@ class JobDomainTest {
     fun `필수값과 경력 및 모집 기간을 검증한다`() {
         assertThrows(IllegalArgumentException::class.java) { createJob(companyName = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(parentCompanyName = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(region = " ") }
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(region = Region.BUSAN, subRegion = SubRegion.SEOUL_GANGNAM_GU)
+        }
         assertThrows(IllegalArgumentException::class.java) { createJob(jobField = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(jobRole = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(industry = " ") }
@@ -234,7 +239,8 @@ class JobDomainTest {
         industry: String? = null,
         coverImageUrl: String? = null,
         recruitmentHeadcount: Int? = null,
-        region: String? = "서울",
+        region: Region? = Region.SEOUL,
+        subRegion: SubRegion? = null,
         experienceMinYears: Int? = 1,
         recruitmentStartAt: LocalDateTime? = LocalDateTime.of(2026, 8, 1, 0, 0),
         // 상시 채용은 종료 일시를 둘 수 없으므로 기본값도 모집 유형을 따른다.
@@ -255,6 +261,7 @@ class JobDomainTest {
         experienceMinYears = experienceMinYears,
         educationLevel = EducationLevel.ANY,
         region = region,
+        subRegion = subRegion,
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,

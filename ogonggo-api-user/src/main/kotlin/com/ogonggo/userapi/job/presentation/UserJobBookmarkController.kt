@@ -7,6 +7,8 @@ import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.job.business.UserJobBookmarkService
 import com.ogonggo.userapi.job.presentation.request.UpdateJobApplicationStatusRequest
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
@@ -42,6 +44,8 @@ class UserJobBookmarkController(
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: String?,
         @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "region", required = false) region: Region?,
+        @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "applicationStatus", required = false) applicationStatus: JobApplicationStatus?,
         @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
@@ -53,6 +57,8 @@ class UserJobBookmarkController(
                 experienceType = experienceType,
                 jobField = jobField,
                 jobRole = jobRole,
+                region = region,
+                subRegion = subRegion,
                 keyword = keyword,
             ),
             page = page - 1,

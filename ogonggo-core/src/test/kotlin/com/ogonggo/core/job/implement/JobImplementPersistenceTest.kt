@@ -26,6 +26,8 @@ import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -821,6 +823,18 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `시·도 필터는 그 시·도의 시·군·구 공고도 남기고 시·군·구 필터는 그 시·군·구만 남긴다`() {
+        // given
+        val gangnam = publishCommand(createCommand(region = Region.SEOUL, subRegion = SubRegion.SEOUL_GANGNAM_GU))
+        val seoulOnly = publishCommand(createCommand(region = Region.SEOUL))
+        publishCommand(createCommand(region = Region.BUSAN, subRegion = SubRegion.BUSAN_HAEUNDAE_GU))
+
+        // when & then
+        assertEquals(listOf(seoulOnly, gangnam), readIds(JobSearchCondition(region = Region.SEOUL)))
+        assertEquals(listOf(gangnam), readIds(JobSearchCondition(subRegion = SubRegion.SEOUL_GANGNAM_GU)))
+    }
+
+    @Test
     fun `두 필터를 함께 지정하면 모두 만족하는 공고만 남는다`() {
         val target = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
         publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
@@ -1043,6 +1057,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobField: String? = null,
         jobRole: String? = null,
         industry: String? = null,
+        region: Region? = Region.SEOUL,
+        subRegion: SubRegion? = null,
         publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
@@ -1053,7 +1069,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         experienceType = experienceType,
         experienceMinYears = 1,
         educationLevel = EducationLevel.ANY,
-        region = "서울",
+        region = region,
+        subRegion = subRegion,
         recruitmentType = recruitmentType,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
@@ -1073,7 +1090,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
         educationLevel = EducationLevel.ANY,
-        region = "서울",
+        region = Region.SEOUL,
+        subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
         responsibilities = "주요 업무",
     )

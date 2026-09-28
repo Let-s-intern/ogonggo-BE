@@ -13,6 +13,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -65,7 +67,7 @@ class Work24CollectorTest {
                       <wanted><wantedAuthNo>K1</wantedAuthNo><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
                       <wanted>
                         <wantedAuthNo>K2</wantedAuthNo><company>목록회사</company><title>목록 제목</title>
-                        <region>서울 강남구</region><regDt>26-09-25</regDt><closeDt>26-10-31</closeDt>
+                        <region>서울 강남구</region><strtnmCd>116804166040</strtnmCd><regDt>26-09-25</regDt><closeDt>26-10-31</closeDt>
                         <wantedInfoUrl>$WORKNET/K2</wantedInfoUrl>
                       </wanted>
                     </wantedRoot>
@@ -105,7 +107,8 @@ class Work24CollectorTest {
         assertEquals("오공고", job.companyName)
         assertEquals("백엔드 개발자", job.title)
         assertEquals("응용 소프트웨어 개발자", job.jobRole)
-        assertEquals("서울 강남구", job.region)
+        assertEquals(Region.SEOUL, job.region)
+        assertEquals(SubRegion.SEOUL_GANGNAM_GU, job.subRegion)
         assertEquals(EmploymentType.FULL_TIME, job.employmentType)
         assertEquals(ExperienceType.NEWCOMER, job.experienceType)
         assertEquals(EducationLevel.BACHELOR, job.educationLevel)

@@ -4,6 +4,8 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobSummary
@@ -51,7 +53,8 @@ data class UserJobSummaryResponse(
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -72,6 +75,7 @@ data class UserJobSummaryResponse(
             experienceMinYears = result.experienceMinYears,
             educationLevel = result.educationLevel,
             region = result.region,
+            subRegion = result.subRegion,
             recruitmentType = result.recruitmentType,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
@@ -94,7 +98,8 @@ data class UserJobDetailResponse(
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -125,6 +130,7 @@ data class UserJobDetailResponse(
             experienceMinYears = result.experienceMinYears,
             educationLevel = result.educationLevel,
             region = result.region,
+            subRegion = result.subRegion,
             recruitmentType = result.recruitmentType,
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,

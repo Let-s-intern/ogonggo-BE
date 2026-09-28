@@ -13,28 +13,31 @@ import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
-import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.userapi.auth.error.AuthErrorCode
+import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
-import com.ogonggo.userapi.auth.error.AuthErrorCode
-import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
 import com.ogonggo.userapi.bootcamp.presentation.UserBootcampController
-import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.config.UserSecurityConfiguration
-import com.ogonggo.userapi.job.business.UserJobPageResult
+import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
+import com.ogonggo.userapi.job.business.UserJobPageResult
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.business.UserJobSummary
 import com.ogonggo.userapi.job.presentation.UserJobController
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -49,8 +52,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [UserJobController::class, UserBootcampController::class])
 @Import(UserSecurityConfiguration::class, UserApiExceptionHandler::class)
@@ -699,7 +700,8 @@ class UserReadControllerTest @Autowired constructor(
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
         educationLevel = EducationLevel.ANY,
-        region = "서울",
+        region = Region.SEOUL,
+        subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = null,
         recruitmentEndAt = null,
@@ -720,7 +722,8 @@ class UserReadControllerTest @Autowired constructor(
         experienceType = ExperienceType.EXPERIENCED,
         experienceMinYears = 1,
         educationLevel = EducationLevel.ANY,
-        region = "서울",
+        region = Region.SEOUL,
+        subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = null,
         recruitmentEndAt = null,

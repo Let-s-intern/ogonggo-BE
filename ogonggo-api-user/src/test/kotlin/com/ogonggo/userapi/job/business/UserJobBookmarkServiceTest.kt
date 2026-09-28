@@ -1,24 +1,25 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.JobBookmarkManager
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
-import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.implement.JobReader
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.springframework.context.ApplicationEventPublisher
+import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 
 class UserJobBookmarkServiceTest {
 
@@ -70,7 +71,7 @@ class UserJobBookmarkServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
-        Mockito.`when`(job.region).thenReturn("서울")
+        Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10, NOW)).thenReturn(
             JobPageDto(listOf(job), 0, 10, 1, 1, false),

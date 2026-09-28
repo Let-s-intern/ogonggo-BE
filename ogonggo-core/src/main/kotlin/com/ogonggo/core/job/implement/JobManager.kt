@@ -30,6 +30,7 @@ class JobManager internal constructor(
             experienceMinYears = command.experienceMinYears,
             educationLevel = command.educationLevel,
             region = command.region,
+            subRegion = command.subRegion,
             recruitmentType = command.recruitmentType,
             recruitmentHeadcount = command.recruitmentHeadcount,
             recruitmentStartAt = command.recruitmentStartAt,

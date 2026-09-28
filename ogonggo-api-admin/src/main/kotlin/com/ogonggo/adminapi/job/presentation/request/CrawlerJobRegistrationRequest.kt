@@ -8,14 +8,16 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
-import org.hibernate.validator.constraints.URL
 import java.time.LocalDateTime
+import org.hibernate.validator.constraints.URL
 
 /**
  * 등록과 교체가 같은 칸을 받으므로 입력 계약을 한 곳에 모은다.
@@ -36,7 +38,8 @@ interface CrawlerJobWriteRequest {
     val experienceType: ExperienceType
     val experienceMinYears: Int?
     val educationLevel: EducationLevel
-    val region: String?
+    val region: Region?
+    val subRegion: SubRegion?
     val recruitmentType: JobRecruitmentType
     val recruitmentHeadcount: Int?
     val recruitmentStartAt: LocalDateTime?
@@ -57,10 +60,16 @@ interface CrawlerJobWriteRequest {
     val sourceUrl: String
 }
 
-/** 상시 채용은 종료 일시가 없어야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
+/**
+ * 상시 채용은 종료 일시가 없어야 하고, 시·군·구는 함께 보낸 시·도에 속해야 한다.
+ * 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다.
+ */
 private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
     if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN && recruitmentEndAt != null) {
         throw InvalidRequestFieldException("recruitmentEndAt", "상시 채용에는 모집 종료 일시를 둘 수 없습니다.")
+    }
+    if (subRegion != null && subRegion?.region != region) {
+        throw InvalidRequestFieldException("subRegion", "region과 같은 시·도의 시·군·구여야 합니다.")
     }
     return CrawlerJobCommand(
         companyName = companyName,
@@ -76,6 +85,7 @@ private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
         experienceMinYears = experienceMinYears,
         educationLevel = educationLevel,
         region = region,
+        subRegion = subRegion,
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
@@ -150,9 +160,11 @@ data class CrawlerJobRegistrationRequest(
 
     override val educationLevel: EducationLevel,
 
-    @field:Schema(description = "근무 지역", example = "서울 강남구")
-    @field:Size(max = 100, message = "근무 지역은 100자 이하여야 합니다.")
-    override val region: String? = null,
+    @field:Schema(description = "근무 시·도. GET /api/v1/enums(사용자 API)의 Region 값입니다.", example = "SEOUL")
+    override val region: Region? = null,
+
+    @field:Schema(description = "근무 시·군·구. region과 같은 시·도에 속해야 합니다.", example = "SEOUL_GANGNAM_GU")
+    override val subRegion: SubRegion? = null,
 
     override val recruitmentType: JobRecruitmentType,
 
@@ -257,8 +269,8 @@ data class CrawlerJobReplaceRequest(
 
     override val educationLevel: EducationLevel,
 
-    @field:Size(max = 100, message = "근무 지역은 100자 이하여야 합니다.")
-    override val region: String? = null,
+    override val region: Region? = null,
+    override val subRegion: SubRegion? = null,
 
     override val recruitmentType: JobRecruitmentType,
 
