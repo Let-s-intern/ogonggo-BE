@@ -6,6 +6,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
@@ -92,7 +93,7 @@ class JobReader internal constructor(
     }
 
     fun readRecruitingMatched(
-        jobRoles: Collection<String>,
+        jobRoles: Collection<JobRole>,
         industries: Collection<String>,
         excludedJobIds: Collection<Long>,
         limit: Int,
@@ -100,7 +101,7 @@ class JobReader internal constructor(
 
     /** 직무와 산업이 모두 비면 조건 없이 모든 공고를 읽게 되므로 둘 중 하나는 있어야 한다. */
     fun readRecruitingMatched(
-        jobRoles: Collection<String>,
+        jobRoles: Collection<JobRole>,
         industries: Collection<String>,
         excludedJobIds: Collection<Long>,
         limit: Int,

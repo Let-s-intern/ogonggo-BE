@@ -28,9 +28,11 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
@@ -66,6 +68,9 @@ class UserEnumService {
             options<JobApplicationStatus>(),
             options<JobPublicationStatus>(),
             options<JobSortType>(),
+            // 직군·직무. JobRole의 parent는 속한 JobField다.
+            options<JobField>(),
+            options<JobRole>(),
             // 근무 지역. SubRegion의 parent는 속한 Region이다.
             options<Region>(),
             options<SubRegion>(),

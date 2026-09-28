@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -171,7 +172,7 @@ internal class JobQueryRepository(
      * 조건으로 먼저 좁힌 뒤 정렬하므로 인기 공고와 달리 한 번도 조회되지 않은 공고도 0으로 포함한다.
      */
     fun findRecruitingMatched(
-        jobRoles: Collection<String>,
+        jobRoles: Collection<JobRole>,
         industries: Collection<String>,
         excludedJobIds: Collection<Long>,
         limit: Int,
@@ -202,8 +203,8 @@ internal class JobQueryRepository(
         job.deletedAt.isNull,
         employmentTypeEq(condition.employmentType),
         experienceTypeEq(condition.experienceType),
-        jobFieldEq(condition.jobField),
-        jobRoleEq(condition.jobRole),
+        condition.jobField?.let(job.jobField::eq),
+        condition.jobRole?.let(job.jobRole::eq),
         condition.region?.let(job.region::eq),
         condition.subRegion?.let(job.subRegion::eq),
         keywordContains(condition.keyword),
@@ -224,12 +225,6 @@ internal class JobQueryRepository(
 
     private fun experienceTypeEq(experienceType: ExperienceType?): BooleanExpression? =
         experienceType?.let(job.experienceType::eq)
-
-    private fun jobFieldEq(jobField: String?): BooleanExpression? =
-        jobField?.takeIf(String::isNotBlank)?.let(job.jobField::eq)
-
-    private fun jobRoleEq(jobRole: String?): BooleanExpression? =
-        jobRole?.takeIf(String::isNotBlank)?.let(job.jobRole::eq)
 
     private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {
         null -> null

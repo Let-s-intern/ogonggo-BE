@@ -5,7 +5,9 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
@@ -42,8 +44,8 @@ class UserJobBookmarkController(
         @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
         @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
-        @RequestParam(name = "jobField", required = false) jobField: String?,
-        @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
+        @RequestParam(name = "jobRole", required = false) jobRole: JobRole?,
         @RequestParam(name = "region", required = false) region: Region?,
         @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,

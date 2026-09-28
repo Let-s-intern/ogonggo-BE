@@ -14,7 +14,9 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
@@ -230,8 +232,8 @@ class UserReadControllerTest @Autowired constructor(
         val condition = JobSearchCondition(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
-            jobField = "개발",
-            jobRole = "백엔드",
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
             .thenReturn(jobPageResult())
@@ -240,8 +242,8 @@ class UserReadControllerTest @Autowired constructor(
             get("/api/v1/jobs")
                 .param("employmentType", "INTERN")
                 .param("experienceType", "NEWCOMER")
-                .param("jobField", "개발")
-                .param("jobRole", "백엔드")
+                .param("jobField", "IT_DEVELOPMENT")
+                .param("jobRole", "IT_BACKEND")
                 .param("sort", "VIEW_COUNT")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
@@ -411,8 +413,8 @@ class UserReadControllerTest @Autowired constructor(
                     coverImageUrl = "https://example.com/logo.png",
                     employmentType = EmploymentType.INTERN,
                     experienceType = ExperienceType.IRRELEVANT,
-                    jobField = "마케팅",
-                    jobRole = "콘텐츠 마케팅",
+                    jobField = JobField.MARKETING_ADVERTISING,
+                    jobRole = JobRole.MARKETING_CONTENT,
                     recruitmentStartAt = LocalDateTime.of(2026, 8, 10, 9, 0),
                     recruitmentEndAt = LocalDateTime.of(2026, 8, 31, 23, 59),
                     bookmarked = true,
@@ -435,7 +437,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].coverImageUrl").value("https://example.com/logo.png"))
             .andExpect(jsonPath("$.data[0].employmentType").value("INTERN"))
             .andExpect(jsonPath("$.data[0].experienceType").value("IRRELEVANT"))
-            .andExpect(jsonPath("$.data[0].jobRole").value("콘텐츠 마케팅"))
+            .andExpect(jsonPath("$.data[0].jobRole").value("MARKETING_CONTENT"))
             .andExpect(jsonPath("$.data[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data[0].sourceUrl").doesNotExist())
             .andExpect(jsonPath("$.data[0].viewCount").doesNotExist())
@@ -449,8 +451,8 @@ class UserReadControllerTest @Autowired constructor(
         val condition = JobSearchCondition(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
-            jobField = "개발",
-            jobRole = "백엔드",
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
             keyword = "오공고",
         )
         Mockito.`when`(userJobService.getJobCalendar(null, condition, JobCalendarSearchCondition.NONE, from, to)).thenReturn(emptyList())
@@ -462,8 +464,8 @@ class UserReadControllerTest @Autowired constructor(
                 .param("to", to.toString())
                 .param("employmentType", "INTERN")
                 .param("experienceType", "NEWCOMER")
-                .param("jobField", "개발")
-                .param("jobRole", "백엔드")
+                .param("jobField", "IT_DEVELOPMENT")
+                .param("jobRole", "IT_BACKEND")
                 .param("keyword", "오공고"),
         )
             .andExpect(status().isOk)

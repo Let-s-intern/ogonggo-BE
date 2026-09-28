@@ -4,6 +4,8 @@ import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.region.domain.Region
@@ -44,8 +46,8 @@ class UserJobController(
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: JobSortType,
         @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
-        @RequestParam(name = "jobField", required = false) jobField: String?,
-        @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
+        @RequestParam(name = "jobRole", required = false) jobRole: JobRole?,
         @RequestParam(name = "region", required = false) region: Region?,
         @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
@@ -112,8 +114,8 @@ class UserJobController(
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
         @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
-        @RequestParam(name = "jobField", required = false) jobField: String?,
-        @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
+        @RequestParam(name = "jobRole", required = false) jobRole: JobRole?,
         @RequestParam(name = "region", required = false) region: Region?,
         @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,

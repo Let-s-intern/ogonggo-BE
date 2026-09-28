@@ -8,8 +8,10 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
@@ -67,7 +69,7 @@ class Work24CollectorTest {
                       <wanted><wantedAuthNo>K1</wantedAuthNo><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
                       <wanted>
                         <wantedAuthNo>K2</wantedAuthNo><company>목록회사</company><title>목록 제목</title>
-                        <region>서울 강남구</region><strtnmCd>116804166040</strtnmCd><regDt>26-09-25</regDt><closeDt>26-10-31</closeDt>
+                        <region>서울 강남구</region><strtnmCd>116804166040</strtnmCd><jobsCd>133201</jobsCd><regDt>26-09-25</regDt><closeDt>26-10-31</closeDt>
                         <wantedInfoUrl>$WORKNET/K2</wantedInfoUrl>
                       </wanted>
                     </wantedRoot>
@@ -106,7 +108,8 @@ class Work24CollectorTest {
         val job = appendedJobs.single()
         assertEquals("오공고", job.companyName)
         assertEquals("백엔드 개발자", job.title)
-        assertEquals("응용 소프트웨어 개발자", job.jobRole)
+        assertEquals(JobField.IT_DEVELOPMENT, job.jobField)
+        assertEquals(JobRole.IT_BACKEND, job.jobRole)
         assertEquals(Region.SEOUL, job.region)
         assertEquals(SubRegion.SEOUL_GANGNAM_GU, job.subRegion)
         assertEquals(EmploymentType.FULL_TIME, job.employmentType)

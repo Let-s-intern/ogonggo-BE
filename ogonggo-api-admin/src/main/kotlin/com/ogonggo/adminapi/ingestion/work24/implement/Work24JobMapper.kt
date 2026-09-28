@@ -21,7 +21,7 @@ import java.time.LocalTime
  * 고용24 채용정보 목록 항목(`wanted`)과 상세(`wantedDtl`)를 채용공고로 옮긴다.
  *
  * 크롤러 공고처럼 소유자 없이 곧바로 게시한다. 같은 공고인지는 워크넷 채용정보 URL(`wantedInfoUrl`)을
- * 원문 URL로 보고 판단한다. 직군은 고용24 직종 분류와 오공고 분류가 달라 채우지 않고, 모집 직종을 직무에 넣는다.
+ * 원문 URL로 보고 판단한다. 직군·직무는 목록의 직종코드(`jobsCd`)를 [Work24JobRoles] 표로 옮긴다.
  * 근무 지역은 도로명코드(`strtnmCd`) 앞 5자리 행정구역 코드로 찾고, 코드가 없으면 지역명(`region`)으로 찾는다.
  * 코드 값의 뜻은 고용24 개발명세를 따른다.
  */
@@ -43,13 +43,15 @@ internal object Work24JobMapper {
         val hasPeriod = start != null && end != null && !start.isAfter(end)
 
         val subRegion = subRegion(item)
+        val jobRole = Work24JobRoles.of(item.text("jobsCd"))
 
         return JobAppendDto(
             companyName = requireNotNull(corp.text("corpNm") ?: item.text("company")) { "회사명이 없습니다." }
                 .limit(COMPANY_NAME_MAX),
             title = requireNotNull(info.text("wantedTitle") ?: item.text("title")) { "채용 제목이 없습니다." }
                 .limit(TITLE_MAX),
-            jobRole = info.text("jobsNm")?.limit(CATEGORY_MAX),
+            jobField = jobRole?.jobField,
+            jobRole = jobRole,
             industry = (corp.text("indTpCdNm") ?: item.text("indTpNm"))?.limit(CATEGORY_MAX),
             employmentType = employmentType(info.text("empTpCd") ?: item.text("empTpCd")),
             experienceType = experienceType(info.text("enterTpCd"), item.text("career")),

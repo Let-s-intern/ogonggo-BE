@@ -4,7 +4,9 @@ import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -40,7 +42,8 @@ interface UserJobBookmarkApi {
 
             채용공고 목록과 같은 필터를 사용할 수 있습니다.
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁히며 각각 하나씩 고를 수 있고,
-            보내지 않으면 해당 조건을 적용하지 않습니다. jobField와 jobRole은 공고의 값과 정확히 같은지로 거릅니다.
+            보내지 않으면 해당 조건을 적용하지 않습니다. jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
+            jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
             region만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다.
 
@@ -69,10 +72,8 @@ interface UserJobBookmarkApi {
         sortType: BookmarkSortType,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
-        @Size(max = 100)
-        jobField: String?,
-        @Size(max = 100)
-        jobRole: String?,
+        jobField: JobField?,
+        jobRole: JobRole?,
         region: Region?,
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)

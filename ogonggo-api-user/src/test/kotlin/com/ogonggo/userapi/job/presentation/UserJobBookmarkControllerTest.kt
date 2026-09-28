@@ -8,8 +8,10 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.region.domain.Region
@@ -66,8 +68,8 @@ class UserJobBookmarkControllerTest @Autowired constructor(
         val condition = JobSearchCondition(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
-            jobField = "개발",
-            jobRole = "백엔드",
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
             keyword = "오공고",
         )
         Mockito.`when`(userJobBookmarkService.getBookmarks(USER_ID, condition, 0, 10)).thenReturn(bookmarkPage())
@@ -77,8 +79,8 @@ class UserJobBookmarkControllerTest @Autowired constructor(
             get("/api/v1/job-bookmarks")
                 .param("employmentType", "INTERN")
                 .param("experienceType", "NEWCOMER")
-                .param("jobField", "개발")
-                .param("jobRole", "백엔드")
+                .param("jobField", "IT_DEVELOPMENT")
+                .param("jobRole", "IT_BACKEND")
                 .param("keyword", "오공고")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
