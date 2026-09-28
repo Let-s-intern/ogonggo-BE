@@ -18,7 +18,7 @@ class RecruitmentPostCommentReader internal constructor(
             )
 
     fun readRoot(postId: Long, commentId: Long): RecruitmentPostComment =
-        commentRepository.findActiveRootByIdAndPostId(commentId, postId)
+        commentRepository.findRootByIdAndPostId(commentId, postId)
             ?: throw EntityNotFoundException(RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_NOT_FOUND)
 
     fun readInPost(postId: Long, commentId: Long): RecruitmentPostComment =
