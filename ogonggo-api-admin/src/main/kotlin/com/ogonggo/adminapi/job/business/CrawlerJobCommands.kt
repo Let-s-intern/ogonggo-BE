@@ -16,6 +16,7 @@ data class CrawlerJobCommand(
     val jobRole: String?,
     val industry: String?,
     val coverImageUrl: String?,
+    val logoUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,

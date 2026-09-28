@@ -78,7 +78,8 @@ class CrawlerJobServiceTest {
         assertEquals("IT·개발", appended.jobField)
         assertEquals("서버·백엔드", appended.jobRole)
         assertEquals("IT·정보통신업", appended.industry)
-        assertEquals("https://example.com/logo.png", appended.coverImageUrl)
+        assertEquals("https://example.com/cover.png", appended.coverImageUrl)
+        assertEquals("https://example.com/logo.png", appended.logoUrl)
         // 크롤러가 고른 판단 값을 서버가 다른 값으로 바꾸지 않는다.
         assertEquals(ExperienceType.BOTH, appended.experienceType)
         assertEquals(0, appended.experienceMinYears)
@@ -162,7 +163,8 @@ class CrawlerJobServiceTest {
         jobField = "IT·개발",
         jobRole = "서버·백엔드",
         industry = "IT·정보통신업",
-        coverImageUrl = "https://example.com/logo.png",
+        coverImageUrl = "https://example.com/cover.png",
+        logoUrl = "https://example.com/logo.png",
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.BOTH,
         experienceMinYears = 0,

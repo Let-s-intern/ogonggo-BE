@@ -31,6 +31,7 @@ interface CrawlerJobWriteRequest {
     val jobRole: String?
     val industry: String?
     val coverImageUrl: String?
+    val logoUrl: String?
     val employmentType: EmploymentType
     val experienceType: ExperienceType
     val experienceMinYears: Int?
@@ -69,6 +70,7 @@ private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
         jobRole = jobRole,
         industry = industry,
         coverImageUrl = coverImageUrl,
+        logoUrl = logoUrl,
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = experienceMinYears,
@@ -128,10 +130,15 @@ data class CrawlerJobRegistrationRequest(
     @field:Size(max = 100, message = "산업은 100자 이하여야 합니다.")
     override val industry: String? = null,
 
-    @field:Schema(description = "공고 대표 이미지 주소. 회사 로고가 있으면 로고, 없으면 원문 페이지의 대표 이미지")
+    @field:Schema(description = "공고 대표 이미지 주소. 원문 페이지의 대표 이미지(og:image)")
     @field:Size(max = 2048, message = "대표 이미지 주소는 2048자 이하여야 합니다.")
     @field:URL(message = "대표 이미지 주소가 URL 형식이 아닙니다.")
     override val coverImageUrl: String? = null,
+
+    @field:Schema(description = "기업 로고 주소. 크롤러에 등록한 회사 로고가 있으면 그 로고, 없으면 원문 사이트의 아이콘")
+    @field:Size(max = 2048, message = "로고 주소는 2048자 이하여야 합니다.")
+    @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
+    override val logoUrl: String? = null,
 
     override val employmentType: EmploymentType,
 
@@ -236,6 +243,10 @@ data class CrawlerJobReplaceRequest(
     @field:Size(max = 2048, message = "대표 이미지 주소는 2048자 이하여야 합니다.")
     @field:URL(message = "대표 이미지 주소가 URL 형식이 아닙니다.")
     override val coverImageUrl: String? = null,
+
+    @field:Size(max = 2048, message = "로고 주소는 2048자 이하여야 합니다.")
+    @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
+    override val logoUrl: String? = null,
 
     override val employmentType: EmploymentType,
 
