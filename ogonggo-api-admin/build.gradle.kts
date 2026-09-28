@@ -22,6 +22,8 @@ dependencies {
     implementation("org.springframework:spring-tx")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
+    implementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.16.0")
 
     // 사용자 API가 발급한 액세스 토큰을 검증만 한다. 발급은 사용자 API가 한다.
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")

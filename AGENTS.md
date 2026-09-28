@@ -26,6 +26,7 @@
 | 테스트 작성 방식, 공통 규칙, 계층 선택, 테스트 추가·유지·제거 | [`docs/architecture/testing.md`](docs/architecture/testing.md) | 자동화 테스트를 추가·수정·삭제하거나 테스트 범위를 검토할 때 |
 | 시간대, Clock, 현재 시각 생성, JPA Auditing, 시간 테스트 | [`docs/architecture/time-handling.md`](docs/architecture/time-handling.md) | 시간 기반 기능·엔티티 일시·스케줄러·외부 시간 연동을 추가하거나 변경할 때 |
 | 사용자 인증, 렛츠커리어 로그인 연동, 토큰 수명, 내부 API 키, 사용자 역할과 기업회원 등록, 브라우저 CORS 허용 오리진 | [`docs/architecture/authentication.md`](docs/architecture/authentication.md) | 로그인·토큰·세션 흐름이나 사용자 역할을 바꾸거나, 렛츠커리어 연동 지점 또는 CORS 허용 오리진을 수정할 때 |
+| 스케줄 작업, DB로 관리하는 실행 주기(cron)·켜짐 여부, 작업 추가 방법 | [`docs/architecture/scheduling.md`](docs/architecture/scheduling.md) | 주기 작업을 추가·변경하거나 운영 중 주기를 바꿀 때 |
 | 배포 검증, GitHub Actions 게이트, 자동 롤백, 시크릿 로그 마스킹 | [`docs/infra/ci-cd-validation.md`](docs/infra/ci-cd-validation.md) | 배포 워크플로, 시크릿, 배포 절차를 수정할 때 |
 | 실제 Gradle 모듈과 의존성 | `settings.gradle.kts`, 루트 및 각 모듈의 `build.gradle.kts` | 모듈이나 라이브러리 의존성을 변경할 때 |
 
