@@ -26,6 +26,11 @@ data class Work24Properties(
     val occupationAuthKey: String = "",
     val dutyAuthKey: String = "",
     val smallGiantCompanyAuthKey: String = "",
+    /**
+     * 고용24에서 받은 훈련과정을 부트캠프로 등록할 때 쓰는 대표 이미지다. 고용24는 과정 이미지를 주지 않는다.
+     * 비어 있으면 훈련과정 수집을 건너뛴다. 부트캠프는 대표 이미지가 필수다.
+     */
+    val bootcampImageUrl: String = "",
 ) {
     fun authKey(service: Work24Service): String = when (service) {
         Work24Service.RECRUITMENT -> recruitmentAuthKey
@@ -39,5 +44,5 @@ data class Work24Properties(
     }
 
     /** 설정 객체가 로그에 찍혀도 인증키가 드러나지 않게 한다. */
-    override fun toString(): String = "Work24Properties(baseUrl=$baseUrl)"
+    override fun toString(): String = "Work24Properties(baseUrl=$baseUrl, bootcampImageUrl=$bootcampImageUrl)"
 }

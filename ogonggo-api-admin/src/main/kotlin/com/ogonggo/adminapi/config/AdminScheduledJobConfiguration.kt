@@ -18,7 +18,7 @@ class AdminScheduledJobConfiguration {
     fun work24DailyCollectionJob(scheduler: Work24CollectionScheduler) = ScheduledJobDefinition(
         name = Work24CollectionScheduler.SCHEDULER_NAME,
         defaultCron = "0 0 4 * * *",
-        description = "고용24 목록 일일 수집 (매일 04:00)",
+        description = "고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 (매일 04:00)",
         action = scheduler::collect,
     )
 }

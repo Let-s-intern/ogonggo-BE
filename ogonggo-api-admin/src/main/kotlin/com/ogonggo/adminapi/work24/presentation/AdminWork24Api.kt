@@ -25,7 +25,7 @@ interface AdminWork24Api {
             고용24 Open API를 서버의 인증키로 호출하고 응답을 JSON으로 바꿔 돌려줍니다. 저장하지 않습니다.
 
             요청 파라미터는 고용24 개발명세(고용24 > 고객센터 > OPEN-API > 서비스 소개 및 신청)의 이름 그대로 query로 보냅니다.
-            인증키(authKey)와 응답 형식(returnType), 명세가 값을 고정한 파라미터(훈련과정 outType, 직업정보 target·jobGb)는
+            인증키(authKey)와 응답 형식(returnType), 명세가 값을 고정한 파라미터(채용정보 callTp·infoSvc, 훈련과정 outType, 직업정보 target·jobGb)는
             서버가 채우므로 보내도 무시합니다. 값이 빈 파라미터는 보내지 않은 것으로 봅니다.
 
             XML 응답은 최상위 요소를 벗겨 JSON 객체로 바꿉니다. 같은 이름의 요소가 여러 개면 배열이 되지만
@@ -34,7 +34,8 @@ interface AdminWork24Api {
 
             | apiName | 고용24 API |
             | --- | --- |
-            | recruitments | 채용정보 목록·상세 (callTp=L·D) |
+            | recruitments | 채용정보 목록 |
+            | recruitment-detail | 채용정보 상세 (wantedAuthNo) |
             | tomorrow-learning-card-courses | 국민내일배움카드 훈련과정 목록 |
             | tomorrow-learning-card-course-detail | 국민내일배움카드 훈련과정 과정·기관정보 |
             | tomorrow-learning-card-course-schedules | 국민내일배움카드 훈련과정 훈련일정 |
@@ -89,6 +90,7 @@ interface AdminWork24Api {
                 type = "string",
                 allowableValues = [
                     "recruitments",
+                    "recruitment-detail",
                     "tomorrow-learning-card-courses",
                     "tomorrow-learning-card-course-detail",
                     "tomorrow-learning-card-course-schedules",

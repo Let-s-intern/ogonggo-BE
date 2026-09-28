@@ -41,7 +41,14 @@ enum class Work24Api(
     val fixedParameters: Map<String, String> = emptyMap(),
 ) : EnumField {
     RECRUITMENTS(
-        1, "채용정보 목록·상세", Work24Service.RECRUITMENT, "/wk/callOpenApiSvcInfo210L01.do",
+        1, "채용정보 목록", Work24Service.RECRUITMENT, "/wk/callOpenApiSvcInfo210L01.do",
+        fixedParameters = mapOf(CALL_TYPE to "L"),
+    ),
+
+    /** 워크넷 인증 공고(infoSvc=VALIDATION)만 조회한다. */
+    RECRUITMENT_DETAIL(
+        24, "채용정보 상세", Work24Service.RECRUITMENT, "/wk/callOpenApiSvcInfo210D01.do",
+        fixedParameters = mapOf(CALL_TYPE to "D", "infoSvc" to "VALIDATION"),
     ),
 
     TOMORROW_LEARNING_CARD_COURSES(
@@ -141,3 +148,4 @@ private const val OUT_TYPE = "outType"
 private const val OUT_TYPE_LIST = "1"
 private const val OUT_TYPE_DETAIL = "2"
 private const val TARGET = "target"
+private const val CALL_TYPE = "callTp"

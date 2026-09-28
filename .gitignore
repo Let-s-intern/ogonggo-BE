@@ -12,3 +12,6 @@ application-dev.yml
 # 테스트 설정은 저장소에 있어야 CI가 운영 설정 없이 돌 수 있다.
 !*/src/test/resources/application.yml
 
+
+# 로컬 실행 경로와 포트가 사람마다 달라 저장소에 두지 않는다.
+.claude/launch.json

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 class AdminWork24CollectionServiceTest {
@@ -22,15 +22,15 @@ class AdminWork24CollectionServiceTest {
     )
 
     @Test
-    fun `인증키가 없는 대상은 건너뛰고 한 대상이 실패해도 나머지를 서울 날짜로 받는다`() {
+    fun `준비되지 않은 대상은 건너뛰고 한 대상이 실패해도 나머지를 서울 시각으로 받는다`() {
         // given
         val targets = Work24CollectionTarget.entries
         targets.forEach { target ->
-            Mockito.`when`(collector.isConfigured(target)).thenReturn(target != Work24CollectionTarget.RECRUITMENTS)
-            Mockito.`when`(collector.collect(target, SEOUL_TODAY))
-                .thenReturn(Work24CollectDto(target, pageCount = 1, fetchedCount = 1, appendedCount = 1))
+            Mockito.`when`(collector.isReady(target)).thenReturn(target != Work24CollectionTarget.RECRUITMENTS)
+            Mockito.`when`(collector.collect(target, SEOUL_NOW))
+                .thenReturn(Work24CollectDto(target, pageCount = 1, appendedCount = 1, skippedCount = 0, failedCount = 0))
         }
-        Mockito.`when`(collector.collect(Work24CollectionTarget.OCCUPATIONS, SEOUL_TODAY))
+        Mockito.`when`(collector.collect(Work24CollectionTarget.WORK_STUDY_COURSES, SEOUL_NOW))
             .thenThrow(InternalServerException(Work24ErrorCode.WORK24_UNAVAILABLE))
 
         // when
@@ -43,15 +43,15 @@ class AdminWork24CollectionServiceTest {
             results.first { it.target == Work24CollectionTarget.RECRUITMENTS },
         )
         assertEquals(
-            AdminWork24CollectResult.Failed(Work24CollectionTarget.OCCUPATIONS),
-            results.first { it.target == Work24CollectionTarget.OCCUPATIONS },
+            AdminWork24CollectResult.Failed(Work24CollectionTarget.WORK_STUDY_COURSES),
+            results.first { it.target == Work24CollectionTarget.WORK_STUDY_COURSES },
         )
         assertEquals(targets.size - 2, results.count { it is AdminWork24CollectResult.Collected })
-        Mockito.verify(collector, Mockito.never()).collect(Work24CollectionTarget.RECRUITMENTS, SEOUL_TODAY)
+        Mockito.verify(collector, Mockito.never()).collect(Work24CollectionTarget.RECRUITMENTS, SEOUL_NOW)
     }
 
     private companion object {
-        /** UTC로는 아직 26일이지만 서울은 27일 새벽이다. */
-        val SEOUL_TODAY: LocalDate = LocalDate.of(2026, 9, 27)
+        /** UTC로는 아직 26일이지만 서울은 27일 새벽 4시다. */
+        val SEOUL_NOW: LocalDateTime = LocalDateTime.of(2026, 9, 27, 4, 0)
     }
 }
