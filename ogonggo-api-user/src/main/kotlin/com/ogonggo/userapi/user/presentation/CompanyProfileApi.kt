@@ -23,10 +23,11 @@ interface CompanyProfileApi {
         operationId = "replaceMyCompanyProfile",
         summary = "내 기업 정보 수정",
         description = """
-            기업 회원의 기관명과 담당자 이름을 교체합니다.
+            기업 회원의 기관명, 담당자 이름, 기업 로고, 담당자 연락처, 정보 수신용 이메일을 교체합니다.
             조회는 내 정보 조회(GET /api/v1/users/me)의 companyProfile에 함께 담깁니다.
 
-            두 값을 함께 교체하므로 하나만 바꿀 때도 바꾸지 않을 값을 함께 보내야 합니다.
+            모든 값을 함께 교체하므로 하나만 바꿀 때도 바꾸지 않을 값을 함께 보내야 합니다.
+            로고·연락처·수신 이메일은 선택 값이며, 빼거나 null로 보내면 저장된 값을 비웁니다.
             로그인 이메일과 비밀번호는 여기서 바꿀 수 없습니다.
         """,
     )
@@ -35,7 +36,8 @@ interface CompanyProfileApi {
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 기관명(150자)과 담당자 이름(100자)은 비어 있거나 길이를 넘을 수 없습니다.",
+                description = "BAD_REQUEST: 기관명(150자)과 담당자 이름(100자)은 비어 있거나 길이를 넘을 수 없습니다. " +
+                    "로고는 URL(2048자), 연락처는 숫자·하이픈(20자), 수신 이메일은 이메일 형식(320자)이며 공백일 수 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

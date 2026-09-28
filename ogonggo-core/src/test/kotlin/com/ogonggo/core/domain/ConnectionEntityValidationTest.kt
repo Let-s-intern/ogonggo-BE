@@ -40,6 +40,21 @@ class ConnectionEntityValidationTest {
     }
 
     @Test
+    fun `기업 프로필의 로고·연락처·수신 이메일은 비워 둘 수 있지만 공백일 수 없다`() {
+        val profile = CompanyProfile(userId = 1L, organizationName = "렛츠커리어", managerName = "김담당")
+
+        listOf(
+            Triple(" ", null, null),
+            Triple(null, " ", null),
+            Triple(null, null, " "),
+        ).forEach { (logoUrl, managerPhone, notificationEmail) ->
+            assertThrows(IllegalArgumentException::class.java) {
+                profile.replace("렛츠커리어", "김담당", logoUrl, managerPhone, notificationEmail)
+            }
+        }
+    }
+
+    @Test
     fun `태그명과 파트너사 정보는 유효해야 한다`() {
         assertThrows(IllegalArgumentException::class.java) { Tag(name = " ") }
         assertThrows(IllegalArgumentException::class.java) {

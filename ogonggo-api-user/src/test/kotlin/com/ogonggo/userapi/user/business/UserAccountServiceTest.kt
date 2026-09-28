@@ -79,7 +79,13 @@ class UserAccountServiceTest {
     fun `기업 회원은 기업 정보만 담고 렛츠커리어 프로필은 읽지 않는다`() {
         givenAccount(UserRole.COMPANY, email = "company@example.com")
         Mockito.`when`(companyProfileReader.read(USER_ID)).thenReturn(
-            CompanyProfileDto(organizationName = "렛츠커리어", managerName = "김담당"),
+            CompanyProfileDto(
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+                logoUrl = null,
+                managerPhone = null,
+                notificationEmail = null,
+            ),
         )
 
         val result = service.getMyAccount(USER_ID)
@@ -182,6 +188,9 @@ class UserAccountServiceTest {
         private val COMPANY_PROFILE_COMMAND = CompanyProfileUpdateDto(
             organizationName = "오공고",
             managerName = "이담당",
+            logoUrl = null,
+            managerPhone = null,
+            notificationEmail = null,
         )
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L

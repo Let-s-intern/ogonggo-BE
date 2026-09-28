@@ -144,7 +144,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `기업 정보는 기존 행의 기관명과 담당자 이름을 함께 교체한다`() {
+    fun `기업 정보는 기존 행의 모든 값을 함께 교체한다`() {
         // given
         val companyAccount = userAppender.appendCompany(
             CompanyAccountAppendDto(
@@ -164,13 +164,22 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         // when
         companyProfileManager.replace(
             companyAccount.userId,
-            CompanyProfileUpdateDto(organizationName = "오공고", managerName = "이담당"),
+            CompanyProfileUpdateDto(
+                organizationName = "오공고",
+                managerName = "이담당",
+                logoUrl = "https://cdn.example.com/logo.png",
+                managerPhone = "010-1234-5678",
+                notificationEmail = "hr@example.com",
+            ),
         )
 
         // then
         val replaced = companyProfileReader.read(companyAccount.userId)
         assertEquals("오공고", replaced?.organizationName)
         assertEquals("이담당", replaced?.managerName)
+        assertEquals("https://cdn.example.com/logo.png", replaced?.logoUrl)
+        assertEquals("010-1234-5678", replaced?.managerPhone)
+        assertEquals("hr@example.com", replaced?.notificationEmail)
         assertEquals(1L, companyProfileRepository.count())
     }
 

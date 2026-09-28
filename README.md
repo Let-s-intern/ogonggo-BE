@@ -79,6 +79,8 @@ Administrator console endpoints (`/api/v1/admin/**`) accept a user API access to
 
 Before deploying the admin console changes to an existing database, apply `docs/schema/2026-09-14-admin-review.sql`.
 
+Before deploying the company profile contact fields (logo, manager phone, notification email), apply `docs/schema/2026-09-28-company-profile-contact.sql`.
+
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
 ## Work24 (고용24) Open API

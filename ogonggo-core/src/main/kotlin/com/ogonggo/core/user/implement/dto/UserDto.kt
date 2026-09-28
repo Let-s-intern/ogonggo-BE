@@ -35,10 +35,13 @@ data class CompanyProfileAppendDto(
     val managerName: String,
 )
 
-/** 기업 회원이 가입 후 고치는 기업 정보다. 두 값을 함께 교체한다. */
+/** 기업 회원이 가입 후 고치는 기업 정보다. 모든 값을 함께 교체하므로 null이면 비운다. */
 data class CompanyProfileUpdateDto(
     val organizationName: String,
     val managerName: String,
+    val logoUrl: String?,
+    val managerPhone: String?,
+    val notificationEmail: String?,
 )
 
 /**
@@ -91,11 +94,17 @@ data class UserProfileDto(
 data class CompanyProfileDto(
     val organizationName: String,
     val managerName: String,
+    val logoUrl: String?,
+    val managerPhone: String?,
+    val notificationEmail: String?,
 ) {
     companion object {
         internal fun from(profile: CompanyProfile): CompanyProfileDto = CompanyProfileDto(
             organizationName = profile.organizationName,
             managerName = profile.managerName,
+            logoUrl = profile.logoUrl,
+            managerPhone = profile.managerPhone,
+            notificationEmail = profile.notificationEmail,
         )
     }
 }
