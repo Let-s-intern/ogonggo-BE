@@ -38,7 +38,8 @@ class CrawlerJobRegistrationRequestTest {
         ).toCommand()
 
         assertEquals(2, command.job.recruitmentHeadcount)
-        assertEquals("https://example.com/logo.png", command.job.coverImageUrl)
+        assertEquals("https://example.com/cover.png", command.job.coverImageUrl)
+        assertEquals("https://example.com/logo.png", command.job.logoUrl)
         assertEquals(true, command.job.closesWhenFilled)
         assertEquals(false, command.job.autoCloseEnabled)
         assertEquals("제출 서류는 반환하지 않습니다.", command.job.recruitmentNotice)
@@ -102,7 +103,8 @@ class CrawlerJobRegistrationRequestTest {
     ) = CrawlerJobRegistrationRequest(
         companyName = "오공고",
         title = "백엔드 개발자",
-        coverImageUrl = "https://example.com/logo.png",
+        coverImageUrl = "https://example.com/cover.png",
+        logoUrl = "https://example.com/logo.png",
         employmentType = EmploymentType.FULL_TIME,
         experienceType = experienceType,
         educationLevel = educationLevel,
