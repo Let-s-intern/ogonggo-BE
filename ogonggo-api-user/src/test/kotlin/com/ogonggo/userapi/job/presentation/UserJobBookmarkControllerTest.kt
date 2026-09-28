@@ -12,6 +12,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.error.JobErrorCode
+import com.ogonggo.core.region.domain.Region
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
@@ -246,7 +247,8 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 experienceType = ExperienceType.EXPERIENCED,
                 experienceMinYears = 1,
                 educationLevel = EducationLevel.ANY,
-                region = "서울",
+                region = Region.SEOUL,
+                subRegion = null,
                 recruitmentType = JobRecruitmentType.PERIOD,
                 recruitmentStartAt = null,
                 recruitmentEndAt = null,

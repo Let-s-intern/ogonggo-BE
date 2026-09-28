@@ -7,6 +7,8 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import java.time.LocalDateTime
 
 /** 달력 칸과 날짜별 목록 카드를 함께 그리는 데 필요한 값만 담는다. 지표와 본문은 상세 조회로 본다. */
@@ -80,7 +82,8 @@ data class UserJobSummary(
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -101,6 +104,7 @@ data class UserJobSummary(
             experienceMinYears = job.experienceMinYears,
             educationLevel = job.educationLevel,
             region = job.region,
+            subRegion = job.subRegion,
             recruitmentType = job.recruitmentType,
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,
@@ -123,7 +127,8 @@ data class UserJobResult(
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -155,6 +160,7 @@ data class UserJobResult(
             experienceMinYears = job.experienceMinYears,
             educationLevel = job.educationLevel,
             region = job.region,
+            subRegion = job.subRegion,
             recruitmentType = job.recruitmentType,
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,

@@ -4,6 +4,8 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -47,6 +49,17 @@ class CompanyJobRequestTest {
     }
 
     @Test
+    fun `시·군·구가 보낸 시·도에 속하지 않으면 시·군·구 칸이 틀렸다고 알린다`() {
+        // when
+        val exception = assertThrows<InvalidRequestFieldException> {
+            request(region = Region.BUSAN, subRegion = SubRegion.SEOUL_GANGNAM_GU).toCommand()
+        }
+
+        // then
+        assertEquals("subRegion", exception.fieldName)
+    }
+
+    @Test
     fun `외부 페이지 지원은 지원 이메일 없이 등록할 수 있다`() {
         // when
         val command = request(applicationMethod = JobApplicationMethod.EXTERNAL_PAGE, applyEmail = null).toCommand()
@@ -59,6 +72,8 @@ class CompanyJobRequestTest {
         logoUrl: String? = null,
         applicationMethod: JobApplicationMethod = JobApplicationMethod.EMAIL,
         applyEmail: String? = "recruit@example.com",
+        region: Region? = null,
+        subRegion: SubRegion? = null,
     ) = CreateCompanyJobRequest(
         companyName = "오공고",
         parentCompanyName = null,
@@ -72,7 +87,8 @@ class CompanyJobRequestTest {
         experienceType = ExperienceType.NEWCOMER,
         experienceMinYears = null,
         educationLevel = null,
-        region = null,
+        region = region,
+        subRegion = subRegion,
         recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
         recruitmentHeadcount = null,
         recruitmentStartAt = null,

@@ -7,14 +7,16 @@ import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
-import org.hibernate.validator.constraints.URL
 import java.time.LocalDateTime
+import org.hibernate.validator.constraints.URL
 
 /**
  * 등록과 수정이 같은 필드를 받으므로 입력 계약을 한 곳에 모은다.
@@ -37,7 +39,8 @@ interface CompanyJobWriteRequest {
     val experienceType: ExperienceType
     val experienceMinYears: Int?
     val educationLevel: EducationLevel?
-    val region: String?
+    val region: Region?
+    val subRegion: SubRegion?
     val recruitmentType: JobRecruitmentType
     val recruitmentHeadcount: Int?
     val recruitmentStartAt: LocalDateTime?
@@ -71,6 +74,14 @@ private fun CompanyJobWriteRequest.validRecruitmentEndAt(): LocalDateTime? {
     return recruitmentEndAt
 }
 
+/** 시·군·구는 함께 보낸 시·도에 속해야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
+private fun CompanyJobWriteRequest.validSubRegion(): SubRegion? {
+    if (subRegion != null && subRegion?.region != region) {
+        throw InvalidRequestFieldException("subRegion", "region과 같은 시·도의 시·군·구여야 합니다.")
+    }
+    return subRegion
+}
+
 /** 이메일 지원을 고르면 지원서를 받을 주소가 있어야 지원자가 지원할 수 있다. */
 private fun CompanyJobWriteRequest.validApplyEmail(): String? {
     if (applicationMethod == JobApplicationMethod.EMAIL && applyEmail == null) {
@@ -100,7 +111,8 @@ data class CreateCompanyJobRequest(
     override val experienceType: ExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
     override val educationLevel: EducationLevel?,
-    @field:Size(max = 100) override val region: String?,
+    override val region: Region?,
+    override val subRegion: SubRegion?,
     override val recruitmentType: JobRecruitmentType,
     @field:Positive override val recruitmentHeadcount: Int?,
     override val recruitmentStartAt: LocalDateTime?,
@@ -134,6 +146,7 @@ data class CreateCompanyJobRequest(
         experienceMinYears = experienceMinYears,
         educationLevel = educationLevelOrAny(),
         region = region,
+        subRegion = validSubRegion(),
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
@@ -167,7 +180,8 @@ data class UpdateCompanyJobRequest(
     override val experienceType: ExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
     override val educationLevel: EducationLevel?,
-    @field:Size(max = 100) override val region: String?,
+    override val region: Region?,
+    override val subRegion: SubRegion?,
     override val recruitmentType: JobRecruitmentType,
     @field:Positive override val recruitmentHeadcount: Int?,
     override val recruitmentStartAt: LocalDateTime?,
@@ -201,6 +215,7 @@ data class UpdateCompanyJobRequest(
         experienceMinYears = experienceMinYears,
         educationLevel = educationLevelOrAny(),
         region = region,
+        subRegion = validSubRegion(),
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,

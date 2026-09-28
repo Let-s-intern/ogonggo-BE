@@ -15,16 +15,18 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobTagAppender
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
 import org.mockito.stubbing.Answer
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 class CrawlerJobServiceTest {
 
@@ -169,7 +171,8 @@ class CrawlerJobServiceTest {
         experienceType = ExperienceType.BOTH,
         experienceMinYears = 0,
         educationLevel = EducationLevel.BACHELOR,
-        region = "서울 강남구",
+        region = Region.SEOUL,
+        subRegion = SubRegion.SEOUL_GANGNAM_GU,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentHeadcount = 3,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0),

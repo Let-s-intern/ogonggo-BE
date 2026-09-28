@@ -29,10 +29,13 @@ class UserEnumControllerTest @Autowired constructor(
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
 
     @Test
-    fun `로그인 없이 enum 이름별 선택지를 이름과 라벨로 조회한다`() {
+    fun `로그인 없이 enum 이름별 선택지를 이름과 라벨, 상위 값으로 조회한다`() {
         // given
         Mockito.`when`(userEnumService.getEnums()).thenReturn(
-            mapOf("EmploymentType" to listOf(EnumOption(name = "FULL_TIME", desc = "정규직"))),
+            mapOf(
+                "EmploymentType" to listOf(EnumOption(name = "FULL_TIME", desc = "정규직")),
+                "SubRegion" to listOf(EnumOption(name = "SEOUL_GANGNAM_GU", desc = "강남구", parent = "SEOUL")),
+            ),
         )
 
         // when & then
@@ -41,5 +44,7 @@ class UserEnumControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.EmploymentType[0].name").value("FULL_TIME"))
             .andExpect(jsonPath("$.data.EmploymentType[0].desc").value("정규직"))
             .andExpect(jsonPath("$.data.EmploymentType[0].code").doesNotExist())
+            .andExpect(jsonPath("$.data.EmploymentType[0].parent").isEmpty)
+            .andExpect(jsonPath("$.data.SubRegion[0].parent").value("SEOUL"))
     }
 }

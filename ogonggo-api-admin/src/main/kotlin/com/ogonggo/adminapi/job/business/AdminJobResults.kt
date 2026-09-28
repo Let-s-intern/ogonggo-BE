@@ -10,6 +10,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.LocalDateTime
@@ -49,7 +51,8 @@ data class AdminJobSummary(
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val closedAt: LocalDateTime?,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -72,6 +75,7 @@ data class AdminJobSummary(
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,
             region = job.region,
+            subRegion = job.subRegion,
             closedAt = job.closedAt,
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,

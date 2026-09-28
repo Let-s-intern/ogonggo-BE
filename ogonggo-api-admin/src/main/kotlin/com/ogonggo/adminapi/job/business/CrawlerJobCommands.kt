@@ -5,6 +5,8 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import java.time.LocalDateTime
 
 /** 크롤러가 보낸 공고 한 건의 값이다. 등록과 교체가 같은 값을 쓴다. */
@@ -21,7 +23,8 @@ data class CrawlerJobCommand(
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int?,
     val recruitmentStartAt: LocalDateTime?,

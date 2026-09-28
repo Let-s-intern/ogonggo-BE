@@ -37,7 +37,7 @@ data class AdminReviewItem(
             meta = listOfNotNull(
                 AdminReviewMeta("고용 형태", job.employmentType.desc),
                 AdminReviewMeta("경력", job.experienceType.desc),
-                job.region?.let { AdminReviewMeta("지역", it) },
+                job.region?.let { region -> AdminReviewMeta("지역", listOfNotNull(region.desc, job.subRegion?.desc).joinToString(" ")) },
                 AdminReviewMeta(
                     "모집 마감",
                     recruitmentEndText(

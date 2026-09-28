@@ -6,6 +6,8 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestParameterException
 import com.ogonggo.userapi.error.UserApiErrorCode
 import com.ogonggo.userapi.job.business.UserJobService
@@ -14,6 +16,8 @@ import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -24,8 +28,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 @Validated
 @RestController
@@ -44,6 +46,8 @@ class UserJobController(
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: String?,
         @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "region", required = false) region: Region?,
+        @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
@@ -53,6 +57,8 @@ class UserJobController(
                 experienceType = experienceType,
                 jobField = jobField,
                 jobRole = jobRole,
+                region = region,
+                subRegion = subRegion,
                 keyword = keyword,
             ),
             sortType = sortType,
@@ -108,6 +114,8 @@ class UserJobController(
         @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: String?,
         @RequestParam(name = "jobRole", required = false) jobRole: String?,
+        @RequestParam(name = "region", required = false) region: Region?,
+        @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "excludeClosed", defaultValue = "false") excludeClosed: Boolean,
         @RequestParam(name = "bookmarkedOnly", defaultValue = "false") bookmarkedOnly: Boolean,
@@ -124,6 +132,8 @@ class UserJobController(
             experienceType = experienceType,
             jobField = jobField,
             jobRole = jobRole,
+            region = region,
+            subRegion = subRegion,
             keyword = keyword,
         )
         return SuccessResponse.ok(

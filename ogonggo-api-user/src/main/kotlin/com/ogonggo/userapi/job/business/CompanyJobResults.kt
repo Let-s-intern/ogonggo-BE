@@ -3,11 +3,13 @@ package com.ogonggo.userapi.job.business
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
-import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
 import java.time.LocalDateTime
 
@@ -39,7 +41,8 @@ data class CompanyJobSummary(
     val industry: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -58,6 +61,7 @@ data class CompanyJobSummary(
             employmentType = job.employmentType,
             experienceType = job.experienceType,
             region = job.region,
+            subRegion = job.subRegion,
             recruitmentType = job.recruitmentType,
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,
@@ -82,7 +86,8 @@ data class CompanyJobResult(
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
     val educationLevel: EducationLevel,
-    val region: String?,
+    val region: Region?,
+    val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
     val recruitmentHeadcount: Int?,
     val recruitmentStartAt: LocalDateTime?,
@@ -120,6 +125,7 @@ data class CompanyJobResult(
             experienceMinYears = job.experienceMinYears,
             educationLevel = job.educationLevel,
             region = job.region,
+            subRegion = job.subRegion,
             recruitmentType = job.recruitmentType,
             recruitmentHeadcount = job.recruitmentHeadcount,
             recruitmentStartAt = job.recruitmentStartAt,

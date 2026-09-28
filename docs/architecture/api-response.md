@@ -75,13 +75,13 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 
 | 목록 | 필터 | 검색어 |
 | --- | --- | --- |
-| `GET /api/v1/jobs` | `employmentType`, `experienceType`, `jobField`, `jobRole` | `keyword` — 회사명 또는 공고 제목 |
+| `GET /api/v1/jobs` | `employmentType`, `experienceType`, `jobField`, `jobRole`, `region`, `subRegion` | `keyword` — 회사명 또는 공고 제목 |
 | `GET /api/v1/job-bookmarks` | `GET /api/v1/jobs`와 같음 | `GET /api/v1/jobs`와 같음 |
 | `GET /api/v1/bootcamps` | `tuitionType`, `status` | `keyword` — 운영 회사명 또는 프로그램명 |
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
 | `GET /api/v1/notices` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
 
-검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 아직 고정된 값 집합이 없는 자유 문자열이라 공고의 값과 정확히 같은지로 거르며, 100자 이하이고 빈 값은 보내지 않은 것과 같습니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
+검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 아직 고정된 값 집합이 없는 자유 문자열이라 공고의 값과 정확히 같은지로 거르며, 100자 이하이고 빈 값은 보내지 않은 것과 같습니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
 | `sort` | 의미 | 순서 |
 | --- | --- | --- |
@@ -108,7 +108,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 시작·종료 일시가 모두 있는 미삭제 `PUBLISHED` 공고만 대상으로 하고 종료 일시, 식별자 오름차순으로 정렬합니다. `ALWAYS_OPEN` 등 기간이 없는 공고는 제외합니다. D-day 문구는 클라이언트가 `recruitmentEndAt`으로 계산합니다.
 
-달력은 채용공고 목록과 같은 선택 필터 `employmentType`, `experienceType`, `jobField`, `jobRole`과 검색어 `keyword`를 받습니다. 의미와 검증 범위는 목록과 같고, 보내지 않은 조건은 적용하지 않습니다.
+달력은 채용공고 목록과 같은 선택 필터 `employmentType`, `experienceType`, `jobField`, `jobRole`, `region`, `subRegion`과 검색어 `keyword`를 받습니다. 의미와 검증 범위는 목록과 같고, 보내지 않은 조건은 적용하지 않습니다.
 
 달력 전용 조건 `excludeClosed`, `deadlineOnly`, `bookmarkedOnly`는 모두 기본값이 `false`입니다. `excludeClosed=true`는 마감 처리됐거나 모집 종료 일시가 조회 시각보다 이전인 공고를 뺍니다. `deadlineOnly=true`(마감일 기준)는 기간이 겹치는 공고 대신 모집 종료 일시가 조회 범위 안에 있는 공고만 반환합니다. `bookmarkedOnly=true`는 로그인한 사용자가 북마크한 공고만 반환하며, 토큰이 없으면 401 `UNAUTHORIZED`로 응답합니다.
 
@@ -238,6 +238,19 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 일반 회원의 이메일 검색은 렛츠커리어에서 받은 프로필 이메일(`user_profiles.email`)을 봅니다. 일반 회원은 로그인 이메일(`users.email`)이 없습니다.
 - 등록한 공고·부트캠프 수처럼 다른 도메인에서 모아야 하는 값은 싣지 않았습니다. 화면에 필요해지면 추가를 검토합니다(**확인 필요**).
 
+### 채용공고 근무 지역
+
+채용공고의 근무 지역은 시·도 `region`(`Region`)과 시·군·구 `subRegion`(`SubRegion`) 두 enum입니다. 요청·응답·필터 모두 enum 이름으로 주고받습니다.
+
+- 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
+- 값은 고용24 공통코드(지역코드)를 따릅니다. 행정구역이 바뀌면 이 목록도 함께 바꿉니다. 시·도는 17개이고, 행정구역이 아닌 `NATIONWIDE`(전국)와 `OVERSEAS`(해외)를 더합니다.
+- 광주와 전남은 행정구역 통합에 맞춰 `JEONNAM_GWANGJU`(전남광주) 하나이고, 인천은 개편 뒤의 제물포구·영종구·서해구·검단구를 씁니다.
+- 일반구(수원시 장안구 등)는 두지 않고 소속 시로 합칩니다. 세종은 시·군·구가 없습니다.
+- 시·군·구 이름은 `시·도_시·군·구`(예: `SEOUL_GANGNAM_GU`)입니다. 중구·동구처럼 같은 이름의 구가 여러 시·도에 있어 시·도를 앞에 붙입니다.
+- 둘 다 선택 값입니다. 시·도만 정할 수 있고, 시·군·구를 보내면 같은 시·도의 값이어야 하며 어긋나면 400 `BAD_REQUEST`(`[subRegion]`)입니다.
+- 크롤러와 기업회원 공고 등록은 지역을 자유 문자열 대신 이 enum으로 보냅니다.
+- 기존 공고의 원문 지역은 `docs/schema/2026-09-28-job-region-enum.sql`로 옮깁니다. 옮기지 못한 원문은 비워 둡니다.
+
 ### enum 선택지
 
 `GET /api/v1/enums`는 사용자 API의 요청·응답에 나오는 업무 enum을 enum 이름별로 묶어 반환합니다. 로그인 없이 호출할 수 있으며 값은 선언 순서를 따릅니다.
@@ -245,12 +258,16 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 ```json
 {
   "EmploymentType": [
-    { "name": "FULL_TIME", "desc": "정규직" }
+    { "name": "FULL_TIME", "desc": "정규직", "parent": null }
+  ],
+  "SubRegion": [
+    { "name": "SEOUL_GANGNAM_GU", "desc": "강남구", "parent": "SEOUL" }
   ]
 }
 ```
 
 - `name`은 요청과 응답에 쓰는 값이고, `desc`는 화면 라벨입니다. `EnumField.code`는 업무 메타데이터이므로 싣지 않아 클라이언트가 코드 번호로 요청하지 않게 합니다.
+- `parent`는 다른 enum 값에 속하는 값(`HierarchicalEnumField`)의 상위 값 이름이고, 그 밖에는 `null`입니다. 시·군·구(`SubRegion`)의 `parent`는 시·도(`Region`)입니다.
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
 - 어떤 enum을 내보낼지는 사용자 API가 정하며 `UserEnumService`가 목록을 관리합니다. 값을 선택지로 바꾸는 `EnumOption`만 core가 제공합니다.
 - 사용자 API 요청·응답에 새 업무 enum을 쓰면 이 목록에도 추가합니다. presentation의 요청·응답 필드와 Controller 파라미터에 쓰인 `EnumField` enum이 목록에 없으면 테스트가 실패합니다.
@@ -294,6 +311,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | 채용공고 칸 | 고용24 값 |
 | --- | --- |
 | 회사명·제목·직무·산업 | `corpNm`·`wantedTitle`·`jobsNm`(모집 직종)·`indTpCdNm`. 직군은 분류 체계가 달라 비웁니다 |
+| 근무 지역 | 목록의 도로명코드(`strtnmCd`) 앞 5자리 행정구역 코드. 일반구는 소속 시로, 통합·개편 전 코드(강원 42, 전북 45, 광주 29, 전남 46)는 현재 코드로 바꿔 찾습니다. 코드가 없으면 지역명(`region`)으로 찾고, 못 찾으면 비웁니다 |
 | 고용 형태 | `empTpCd` 10 정규직, 20 계약직, 11·21 파트타임, 그 밖 기타 |
 | 경력·학력 | `enterTpCd` N·E·Z → 신입·경력·무관, `minEdubgIcd` 03~07 → 고졸~박사(그 밖 무관) |
 | 모집 기간 | 등록일~접수마감일 23:59:59. 둘 중 하나라도 없으면 상시 채용, 마감일에 `채용시까지`가 있으면 접수 시 마감 |

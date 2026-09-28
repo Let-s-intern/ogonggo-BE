@@ -3,6 +3,8 @@ package com.ogonggo.userapi.job.presentation
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
@@ -37,8 +39,10 @@ interface UserJobApi {
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
 
-            employmentType, experienceType, jobField(직군), jobRole(직무)로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
             보내지 않으면 해당 조건을 적용하지 않습니다. jobField와 jobRole은 공고의 값과 정확히 같은지로 거릅니다.
+            region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
+            region만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다.
             필터끼리, 그리고 정렬과 함께 사용할 수 있습니다.
 
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
@@ -62,6 +66,8 @@ interface UserJobApi {
         jobField: String?,
         @Size(max = 100)
         jobRole: String?,
+        region: Region?,
+        subRegion: SubRegion?,
         @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
@@ -173,7 +179,7 @@ interface UserJobApi {
             모집 기간이 없는 ALWAYS_OPEN 공고는 제외합니다.
             시작·종료 일시가 모두 있는 공고만 대상이며 종료 일시, 식별자 오름차순으로 정렬합니다.
 
-            employmentType, experienceType, jobField(직군), jobRole(직무), keyword는 채용공고 목록 조회와 같습니다.
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion, keyword는 채용공고 목록 조회와 같습니다.
             각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않으며 서로 함께 사용할 수 있습니다.
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않고 2자 이상 100자 이하여야 합니다.
 
@@ -220,6 +226,8 @@ interface UserJobApi {
         jobField: String?,
         @Size(max = 100)
         jobRole: String?,
+        region: Region?,
+        subRegion: SubRegion?,
         @Size(min = 2, max = 100)
         keyword: String?,
         excludeClosed: Boolean,
