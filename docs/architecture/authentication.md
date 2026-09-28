@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-21
+- 최종 변경일: 2026-09-28
 - 적용 범위: `ogonggo-api-user`, `ogonggo-core`, `lets-career-server`
 - 예상 독자: 오공고 서버와 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -39,6 +39,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 2. 일반 회원은 `users.letscareer_user_id`로 렛츠커리어 계정과 1:1 대응합니다.
 3. 일반 회원 계정은 별도 가입 API 없이 최초 토큰 교환 시점에 생성합니다.
 4. 로그인 이후 렛츠커리어 장애는 오공고 사용자 요청에 영향을 주지 않습니다.
+
+로그인 이후 렛츠커리어를 부르는 예외는 렛츠커리어 콘텐츠를 오공고 화면에 보여줄 때뿐입니다(지금은 [추천 챌린지](api-response.md#추천-렛츠커리어-챌린지)). 인증에는 쓰지 않고, 실패하면 빈 값으로 응답해 4번 규칙을 지킵니다.
 
 ## 2. 왜 이렇게 나누는가
 
@@ -114,6 +116,7 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `GET /api/v1/jobs`, `/api/v1/jobs/{jobId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `GET /api/v1/jobs/calendar` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false`. `bookmarkedOnly=true`는 토큰이 없으면 401 |
 | `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
+| `GET /api/v1/recommended-challenges` | 선택 | 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘기고, 없거나 기업 회원이면 넘기지 않는다 |
 | `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
 | `POST /api/v1/bootcamps/{bootcampId}/application-url-clicks` | 필수 | `bootcamp_application_url_clicks.user_id`가 NOT NULL이다 |
 | `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
@@ -234,7 +237,15 @@ GET /api/v1/users/me
 
 ## 6. 렛츠커리어 내부 API
 
-`POST /api/v1/internal/auth/verify`는 서버 간 호출 전용이며 브라우저에 노출하지 않습니다. `X-Internal-Api-Key` 헤더가 서버 설정값과 일치할 때만 `INTERNAL` 권한을 부여하고, 그 외에는 인가 단계에서 차단합니다. 키가 설정되지 않으면 모든 요청을 거부합니다.
+오공고가 부르는 렛츠커리어 내부 API는 다음과 같습니다.
+
+| 경로 | 호출 시점 |
+| --- | --- |
+| `POST /api/v1/internal/auth/verify` | 매 로그인 |
+| `GET /api/v1/internal/users/{userId}/job-profile` | 최초 가입 시 1회 |
+| `GET /api/v1/internal/challenges/recommend?userId=` | 추천 챌린지 조회마다. `userId`는 선택 |
+
+모두 서버 간 호출 전용이며 브라우저에 노출하지 않습니다. `X-Internal-Api-Key` 헤더가 서버 설정값과 일치할 때만 `INTERNAL` 권한을 부여하고, 그 외에는 인가 단계에서 차단합니다. 키가 설정되지 않으면 모든 요청을 거부합니다.
 
 응답에는 연동에 필요한 최소 정보만 담습니다. 연락처, 결제, 지원 이력은 포함하지 않습니다.
 
