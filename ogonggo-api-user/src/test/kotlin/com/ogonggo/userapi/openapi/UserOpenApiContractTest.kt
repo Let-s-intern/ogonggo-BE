@@ -280,6 +280,11 @@ class UserOpenApiContractTest @Autowired constructor(
         assertPageParameter(noticeList, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(noticeList, "size", defaultValue = "10", minimum = 1, maximum = 100)
 
+        // 추천 챌린지는 토큰을 보내면 그 사용자로 추천하므로 채용공고 목록과 같은 선택적 인증을 노출한다.
+        val recommendedChallenges = document.at("/paths/~1api~1v1~1recommended-challenges/get")
+        assertTrue(recommendedChallenges.isObject)
+        assertTrue(recommendedChallenges.at("/security/0/BearerAuth").isArray)
+
         // 부트캠프 목록·상세도 토큰을 보내면 북마크 여부가 채워지므로 공고와 같은 선택적 인증을 노출한다.
         val bootcampList = document.at("/paths/~1api~1v1~1bootcamps/get")
         assertTrue(bootcampList.at("/security/0/BearerAuth").isArray)
