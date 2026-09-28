@@ -2,6 +2,8 @@ package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
@@ -40,7 +42,8 @@ interface UserJobApi {
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
 
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
-            보내지 않으면 해당 조건을 적용하지 않습니다. jobField와 jobRole은 공고의 값과 정확히 같은지로 거릅니다.
+            보내지 않으면 해당 조건을 적용하지 않습니다. jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
+            jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
             region만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다.
             필터끼리, 그리고 정렬과 함께 사용할 수 있습니다.
@@ -62,10 +65,8 @@ interface UserJobApi {
         sortType: JobSortType,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
-        @Size(max = 100)
-        jobField: String?,
-        @Size(max = 100)
-        jobRole: String?,
+        jobField: JobField?,
+        jobRole: JobRole?,
         region: Region?,
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)
@@ -105,7 +106,8 @@ interface UserJobApi {
             내 정보의 희망 직무(wishJob)와 희망 산업(wishIndustry)에 맞는 채용공고를 최대 4건 반환합니다.
             사용자마다 결과가 다르므로 로그인이 필요합니다.
 
-            희망 값은 쉼표로 나눠 앞뒤 공백을 지운 뒤, 공고의 직무(jobRole)·산업(industry)과 정확히 같은지 비교합니다.
+            희망 값은 쉼표로 나눠 앞뒤 공백을 지운 뒤 비교합니다. 희망 직무는 직무(JobRole) 라벨과 같은 값만
+            그 직무로 보고, 희망 산업은 공고의 산업(industry)과 정확히 같은지 비교합니다.
             직무와 산업이 모두 맞는 공고, 직무만 맞는 공고, 산업만 맞는 공고 순으로 채우며
             각 순서 안에서는 조회 수 내림차순이고 조회 수가 같으면 최신순입니다.
 
@@ -222,10 +224,8 @@ interface UserJobApi {
         to: LocalDate,
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
-        @Size(max = 100)
-        jobField: String?,
-        @Size(max = 100)
-        jobRole: String?,
+        jobField: JobField?,
+        jobRole: JobRole?,
         region: Region?,
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)

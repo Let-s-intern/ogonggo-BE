@@ -5,8 +5,10 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
@@ -36,8 +38,8 @@ data class CompanyJobSummary(
     val id: Long,
     val companyName: String,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
@@ -77,8 +79,8 @@ data class CompanyJobResult(
     val companyName: String,
     val parentCompanyName: String?,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val coverImageUrl: String?,
     val logoUrl: String?,

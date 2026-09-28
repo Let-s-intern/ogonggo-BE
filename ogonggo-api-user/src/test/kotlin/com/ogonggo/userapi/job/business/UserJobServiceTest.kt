@@ -5,7 +5,9 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
@@ -174,14 +176,14 @@ class UserJobServiceTest {
 
     @Test
     fun `직무와 산업 일치 다음 직무만 다음 산업만 순으로 네 건까지 채운다`() {
-        givenProfile(wishJob = "마케터", wishIndustry = "뷰티")
+        givenProfile(wishJob = "마케팅기획·전략", wishIndustry = "뷰티")
         // 공고 mock도 내부에서 stub을 걸므로 thenReturn 인자 안에서 만들지 않고 먼저 만든다.
         val both = createJobMock(id = 1L)
         val jobRoleOnly = createJobMock(id = 2L)
         val industryOnly = createJobMock(id = 3L)
-        Mockito.`when`(jobReader.readRecruitingMatched(listOf("마케터"), listOf("뷰티"), emptyList(), 4))
+        Mockito.`when`(jobReader.readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), listOf("뷰티"), emptyList(), 4))
             .thenReturn(listOf(both))
-        Mockito.`when`(jobReader.readRecruitingMatched(listOf("마케터"), emptyList(), listOf(1L), 3))
+        Mockito.`when`(jobReader.readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), emptyList(), listOf(1L), 3))
             .thenReturn(listOf(jobRoleOnly))
         Mockito.`when`(jobReader.readRecruitingMatched(emptyList(), listOf("뷰티"), listOf(1L, 2L), 2))
             .thenReturn(listOf(industryOnly))
@@ -199,24 +201,24 @@ class UserJobServiceTest {
 
     @Test
     fun `네 건이 차면 다음 단계를 조회하지 않는다`() {
-        givenProfile(wishJob = "마케터", wishIndustry = "뷰티")
+        givenProfile(wishJob = "마케팅기획·전략", wishIndustry = "뷰티")
         val jobs = (1L..4L).map { createJobMock(id = it) }
-        Mockito.`when`(jobReader.readRecruitingMatched(listOf("마케터"), listOf("뷰티"), emptyList(), 4))
+        Mockito.`when`(jobReader.readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), listOf("뷰티"), emptyList(), 4))
             .thenReturn(jobs)
 
         assertEquals(4, service.getSimilarJobs(USER_ID).size)
 
-        Mockito.verify(jobReader).readRecruitingMatched(listOf("마케터"), listOf("뷰티"), emptyList(), 4)
+        Mockito.verify(jobReader).readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), listOf("뷰티"), emptyList(), 4)
         Mockito.verifyNoMoreInteractions(jobReader)
     }
 
     @Test
     fun `희망 직무만 있으면 직무 단계만 조회한다`() {
-        givenProfile(wishJob = "마케터", wishIndustry = null)
+        givenProfile(wishJob = "마케팅기획·전략", wishIndustry = null)
 
         service.getSimilarJobs(USER_ID)
 
-        Mockito.verify(jobReader).readRecruitingMatched(listOf("마케터"), emptyList(), emptyList(), 4)
+        Mockito.verify(jobReader).readRecruitingMatched(listOf(JobRole.MARKETING_STRATEGY), emptyList(), emptyList(), 4)
         Mockito.verifyNoMoreInteractions(jobReader)
     }
 
@@ -227,6 +229,15 @@ class UserJobServiceTest {
         service.getSimilarJobs(USER_ID)
 
         Mockito.verify(jobReader).readRecruitingMatched(emptyList(), listOf("IT", "금융"), emptyList(), 4)
+    }
+
+    @Test
+    fun `희망 직무가 직무 라벨과 다르면 직무로 보지 않고 산업으로만 고른다`() {
+        givenProfile(wishJob = "마케터", wishIndustry = "뷰티")
+
+        service.getSimilarJobs(USER_ID)
+
+        Mockito.verify(jobReader).readRecruitingMatched(emptyList(), listOf("뷰티"), emptyList(), 4)
     }
 
     @Test
@@ -259,7 +270,7 @@ class UserJobServiceTest {
         val endAt = LocalDateTime.of(2026, 8, 31, 23, 59)
         Mockito.`when`(job.recruitmentStartAt).thenReturn(startAt)
         Mockito.`when`(job.recruitmentEndAt).thenReturn(endAt)
-        Mockito.`when`(job.jobRole).thenReturn("마케팅")
+        Mockito.`when`(job.jobRole).thenReturn(JobRole.MARKETING_STRATEGY)
         Mockito.`when`(
             jobReader.readPublishedCalendar(
                 JobSearchCondition.NONE,
@@ -285,7 +296,7 @@ class UserJobServiceTest {
         assertEquals("백엔드 개발자", result.title)
         assertEquals(EmploymentType.FULL_TIME, result.employmentType)
         assertEquals(ExperienceType.EXPERIENCED, result.experienceType)
-        assertEquals("마케팅", result.jobRole)
+        assertEquals(JobRole.MARKETING_STRATEGY, result.jobRole)
         assertEquals(startAt, result.recruitmentStartAt)
         assertEquals(endAt, result.recruitmentEndAt)
         assertEquals(true, result.bookmarked)

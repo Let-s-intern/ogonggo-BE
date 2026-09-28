@@ -11,10 +11,10 @@ import com.ogonggo.core.region.domain.SubRegion
 data class JobSearchCondition(
     val employmentType: EmploymentType? = null,
     val experienceType: ExperienceType? = null,
-    /** 직군. 공고의 직군과 정확히 같은지로 거른다. 비어 있으면 거르지 않는다. */
-    val jobField: String? = null,
-    /** 직무. 공고의 직무와 정확히 같은지로 거른다. 비어 있으면 거르지 않는다. */
-    val jobRole: String? = null,
+    /** 직군. 직무까지 정한 공고도 직군이 같으면 걸린다. */
+    val jobField: JobField? = null,
+    /** 직무. */
+    val jobRole: JobRole? = null,
     /** 근무 시·도. 시·군·구까지 정한 공고도 시·도가 같으면 걸린다. */
     val region: Region? = null,
     /** 근무 시·군·구. */

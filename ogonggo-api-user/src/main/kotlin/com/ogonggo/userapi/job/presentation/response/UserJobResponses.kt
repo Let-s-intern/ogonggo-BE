@@ -3,7 +3,9 @@ package com.ogonggo.userapi.job.presentation.response
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
@@ -20,8 +22,8 @@ data class UserJobCalendarItemResponse(
     val coverImageUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val recruitmentStartAt: LocalDateTime,
     val recruitmentEndAt: LocalDateTime,
     @field:Schema(description = "로그인한 사용자의 북마크 여부. 토큰이 없으면 항상 false")

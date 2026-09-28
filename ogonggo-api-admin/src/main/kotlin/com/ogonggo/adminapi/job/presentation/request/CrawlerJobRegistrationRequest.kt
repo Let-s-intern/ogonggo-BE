@@ -7,7 +7,9 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import io.swagger.v3.oas.annotations.media.Schema
@@ -29,8 +31,8 @@ interface CrawlerJobWriteRequest {
     val companyName: String
     val parentCompanyName: String?
     val title: String
-    val jobField: String?
-    val jobRole: String?
+    val jobField: JobField?
+    val jobRole: JobRole?
     val industry: String?
     val coverImageUrl: String?
     val logoUrl: String?
@@ -61,7 +63,7 @@ interface CrawlerJobWriteRequest {
 }
 
 /**
- * 상시 채용은 종료 일시가 없어야 하고, 시·군·구는 함께 보낸 시·도에 속해야 한다.
+ * 상시 채용은 종료 일시가 없어야 하고, 시·군·구와 직무는 함께 보낸 시·도와 직군에 속해야 한다.
  * 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다.
  */
 private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
@@ -70,6 +72,9 @@ private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
     }
     if (subRegion != null && subRegion?.region != region) {
         throw InvalidRequestFieldException("subRegion", "region과 같은 시·도의 시·군·구여야 합니다.")
+    }
+    if (jobRole != null && jobRole?.jobField != jobField) {
+        throw InvalidRequestFieldException("jobRole", "jobField와 같은 직군의 직무여야 합니다.")
     }
     return CrawlerJobCommand(
         companyName = companyName,
@@ -122,16 +127,15 @@ data class CrawlerJobRegistrationRequest(
     @field:Size(max = 255, message = "채용공고 제목은 255자 이하여야 합니다.")
     override val title: String,
 
-    @field:Schema(description = "직군. 크롤러 직무 분류표의 대분류", example = "IT·개발")
-    @field:Size(max = 100, message = "직군은 100자 이하여야 합니다.")
-    override val jobField: String? = null,
+    @field:Schema(description = "직군. GET /api/v1/enums(사용자 API)의 JobField 값입니다.", example = "IT_DEVELOPMENT")
+    override val jobField: JobField? = null,
 
     @field:Schema(
-        description = "직무. 크롤러 직무 분류표의 소분류. 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다",
-        example = "서버·백엔드",
+        description = "직무. GET /api/v1/enums(사용자 API)의 JobRole 값이며 jobField에 속해야 합니다. " +
+            "비슷한 공고 추천에서 사용자의 희망 직무와 라벨로 비교한다",
+        example = "IT_BACKEND",
     )
-    @field:Size(max = 100, message = "직무는 100자 이하여야 합니다.")
-    override val jobRole: String? = null,
+    override val jobRole: JobRole? = null,
 
     @field:Schema(
         description = "산업. 크롤러 산업 분류표의 값. 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다",
@@ -243,11 +247,9 @@ data class CrawlerJobReplaceRequest(
     @field:Size(max = 255, message = "채용공고 제목은 255자 이하여야 합니다.")
     override val title: String,
 
-    @field:Size(max = 100, message = "직군은 100자 이하여야 합니다.")
-    override val jobField: String? = null,
+    override val jobField: JobField? = null,
 
-    @field:Size(max = 100, message = "직무는 100자 이하여야 합니다.")
-    override val jobRole: String? = null,
+    override val jobRole: JobRole? = null,
 
     @field:Size(max = 100, message = "산업은 100자 이하여야 합니다.")
     override val industry: String? = null,

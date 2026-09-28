@@ -4,7 +4,9 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.region.domain.Region
@@ -27,9 +29,9 @@ interface CompanyJobWriteRequest {
     val parentCompanyName: String?
     val title: String
     /** 직군. 직무·산업과 함께 사용자 프로필의 희망 직군·직무·산업과 짝을 이룬다. */
-    val jobField: String?
-    /** 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다. */
-    val jobRole: String?
+    val jobField: JobField?
+    /** 직무. 보내면 [jobField]에 속한 값이어야 한다. 비슷한 공고 추천에서 사용자의 희망 직무와 라벨로 비교한다. */
+    val jobRole: JobRole?
     /** 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다. */
     val industry: String?
     val coverImageUrl: String?
@@ -74,6 +76,14 @@ private fun CompanyJobWriteRequest.validRecruitmentEndAt(): LocalDateTime? {
     return recruitmentEndAt
 }
 
+/** 직무는 함께 보낸 직군에 속해야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
+private fun CompanyJobWriteRequest.validJobRole(): JobRole? {
+    if (jobRole != null && jobRole?.jobField != jobField) {
+        throw InvalidRequestFieldException("jobRole", "jobField와 같은 직군의 직무여야 합니다.")
+    }
+    return jobRole
+}
+
 /** 시·군·구는 함께 보낸 시·도에 속해야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
 private fun CompanyJobWriteRequest.validSubRegion(): SubRegion? {
     if (subRegion != null && subRegion?.region != region) {
@@ -102,8 +112,8 @@ data class CreateCompanyJobRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:Size(max = 150) override val parentCompanyName: String?,
     @field:NotBlank @field:Size(max = 255) override val title: String,
-    @field:Size(max = 100) override val jobField: String?,
-    @field:Size(max = 100) override val jobRole: String?,
+    override val jobField: JobField?,
+    override val jobRole: JobRole?,
     @field:Size(max = 100) override val industry: String?,
     @field:Size(max = 2048) @field:URL override val coverImageUrl: String?,
     @field:Size(max = 2048) @field:URL override val logoUrl: String?,
@@ -137,7 +147,7 @@ data class CreateCompanyJobRequest(
         parentCompanyName = parentCompanyName,
         title = title,
         jobField = jobField,
-        jobRole = jobRole,
+        jobRole = validJobRole(),
         industry = industry,
         coverImageUrl = coverImageUrl,
         logoUrl = validOptionalText("logoUrl", logoUrl),
@@ -171,8 +181,8 @@ data class UpdateCompanyJobRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:Size(max = 150) override val parentCompanyName: String?,
     @field:NotBlank @field:Size(max = 255) override val title: String,
-    @field:Size(max = 100) override val jobField: String?,
-    @field:Size(max = 100) override val jobRole: String?,
+    override val jobField: JobField?,
+    override val jobRole: JobRole?,
     @field:Size(max = 100) override val industry: String?,
     @field:Size(max = 2048) @field:URL override val coverImageUrl: String?,
     @field:Size(max = 2048) @field:URL override val logoUrl: String?,
@@ -206,7 +216,7 @@ data class UpdateCompanyJobRequest(
         parentCompanyName = parentCompanyName,
         title = title,
         jobField = jobField,
-        jobRole = jobRole,
+        jobRole = validJobRole(),
         industry = industry,
         coverImageUrl = coverImageUrl,
         logoUrl = validOptionalText("logoUrl", logoUrl),

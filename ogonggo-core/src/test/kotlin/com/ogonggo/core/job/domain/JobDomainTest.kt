@@ -1,6 +1,8 @@
 package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
@@ -25,8 +27,8 @@ class JobDomainTest {
             title = "백엔드 인턴",
             employmentType = EmploymentType.INTERN,
             parentCompanyName = "변경 모회사",
-            jobField = "개발",
-            jobRole = "서버 개발자",
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
             industry = "IT",
             coverImageUrl = "https://example.com/cover2.png",
             logoUrl = "https://example.com/logo2.png",
@@ -60,8 +62,8 @@ class JobDomainTest {
         assertEquals("hr@example.com", job.inquiryEmail)
         assertEquals("변경 모회사", job.parentCompanyName)
         assertEquals("백엔드 인턴", job.title)
-        assertEquals("개발", job.jobField)
-        assertEquals("서버 개발자", job.jobRole)
+        assertEquals(JobField.IT_DEVELOPMENT, job.jobField)
+        assertEquals(JobRole.IT_BACKEND, job.jobRole)
         assertEquals("IT", job.industry)
         assertEquals("https://example.com/cover2.png", job.coverImageUrl)
         assertEquals("https://example.com/logo2.png", job.logoUrl)
@@ -89,8 +91,9 @@ class JobDomainTest {
         assertThrows(IllegalArgumentException::class.java) {
             createJob(region = Region.BUSAN, subRegion = SubRegion.SEOUL_GANGNAM_GU)
         }
-        assertThrows(IllegalArgumentException::class.java) { createJob(jobField = " ") }
-        assertThrows(IllegalArgumentException::class.java) { createJob(jobRole = " ") }
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(jobField = JobField.DESIGN, jobRole = JobRole.IT_BACKEND)
+        }
         assertThrows(IllegalArgumentException::class.java) { createJob(industry = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(coverImageUrl = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(recruitmentHeadcount = 0) }
@@ -234,8 +237,8 @@ class JobDomainTest {
         publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
         companyName: String = "오공고",
         parentCompanyName: String? = null,
-        jobField: String? = null,
-        jobRole: String? = null,
+        jobField: JobField? = null,
+        jobRole: JobRole? = null,
         industry: String? = null,
         coverImageUrl: String? = null,
         recruitmentHeadcount: Int? = null,

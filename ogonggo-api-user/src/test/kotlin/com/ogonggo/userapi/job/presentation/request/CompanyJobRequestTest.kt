@@ -3,7 +3,9 @@ package com.ogonggo.userapi.job.presentation.request
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestFieldException
@@ -60,6 +62,17 @@ class CompanyJobRequestTest {
     }
 
     @Test
+    fun `직무가 보낸 직군에 속하지 않으면 직무 칸이 틀렸다고 알린다`() {
+        // when
+        val exception = assertThrows<InvalidRequestFieldException> {
+            request(jobField = JobField.DESIGN, jobRole = JobRole.IT_BACKEND).toCommand()
+        }
+
+        // then
+        assertEquals("jobRole", exception.fieldName)
+    }
+
+    @Test
     fun `외부 페이지 지원은 지원 이메일 없이 등록할 수 있다`() {
         // when
         val command = request(applicationMethod = JobApplicationMethod.EXTERNAL_PAGE, applyEmail = null).toCommand()
@@ -74,12 +87,14 @@ class CompanyJobRequestTest {
         applyEmail: String? = "recruit@example.com",
         region: Region? = null,
         subRegion: SubRegion? = null,
+        jobField: JobField? = null,
+        jobRole: JobRole? = null,
     ) = CreateCompanyJobRequest(
         companyName = "오공고",
         parentCompanyName = null,
         title = "백엔드 개발자",
-        jobField = null,
-        jobRole = null,
+        jobField = jobField,
+        jobRole = jobRole,
         industry = null,
         coverImageUrl = null,
         logoUrl = logoUrl,

@@ -6,8 +6,10 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
@@ -77,8 +79,8 @@ class CrawlerJobServiceTest {
         assertEquals(JobPublicationStatus.PUBLISHED, appended.publicationStatus)
         assertEquals("오공고", appended.companyName)
         assertEquals("렛츠커리어", appended.parentCompanyName)
-        assertEquals("IT·개발", appended.jobField)
-        assertEquals("서버·백엔드", appended.jobRole)
+        assertEquals(JobField.IT_DEVELOPMENT, appended.jobField)
+        assertEquals(JobRole.IT_BACKEND, appended.jobRole)
         assertEquals("IT·정보통신업", appended.industry)
         assertEquals("https://example.com/cover.png", appended.coverImageUrl)
         assertEquals("https://example.com/logo.png", appended.logoUrl)
@@ -162,8 +164,8 @@ class CrawlerJobServiceTest {
         companyName = "오공고",
         parentCompanyName = "렛츠커리어",
         title = title,
-        jobField = "IT·개발",
-        jobRole = "서버·백엔드",
+        jobField = JobField.IT_DEVELOPMENT,
+        jobRole = JobRole.IT_BACKEND,
         industry = "IT·정보통신업",
         coverImageUrl = "https://example.com/cover.png",
         logoUrl = "https://example.com/logo.png",

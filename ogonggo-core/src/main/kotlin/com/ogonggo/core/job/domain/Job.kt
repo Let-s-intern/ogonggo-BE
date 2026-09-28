@@ -3,6 +3,8 @@ package com.ogonggo.core.job.domain
 import com.ogonggo.core.common.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.error.JobErrorCode
+import com.querydsl.core.annotations.PropertyType
+import com.querydsl.core.annotations.QueryType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
@@ -78,8 +80,8 @@ class Job internal constructor(
     companyName: String,
     parentCompanyName: String? = null,
     title: String,
-    jobField: String? = null,
-    jobRole: String? = null,
+    jobField: JobField? = null,
+    jobRole: JobRole? = null,
     industry: String? = null,
     coverImageUrl: String? = null,
     logoUrl: String? = null,
@@ -162,13 +164,17 @@ class Job internal constructor(
      * 직군·직무·산업은 기획이 확정되기 전까지 자유 문자열로 둔다. 확정되면 고정된 값 집합으로 바꾼다.
      * 세 값은 사용자 프로필의 희망 직군·직무·산업과 짝을 이룬다.
      */
+    // QueryDSL APT가 JobField를 숫자 경로로 만들어 컴파일이 깨지므로 enum 경로로 고정한다.
+    @field:QueryType(PropertyType.ENUM)
+    @Enumerated(EnumType.STRING)
     @Column(name = "job_field", length = 100)
-    var jobField: String? = jobField /* 직군 */
+    var jobField: JobField? = jobField /* 직군 */
         protected set
 
     /** 비슷한 공고 추천에서 사용자의 희망 직무와 정확히 같은지 비교한다. */
+    @Enumerated(EnumType.STRING)
     @Column(name = "job_role", length = 100)
-    var jobRole: String? = jobRole /* 직무 */
+    var jobRole: JobRole? = jobRole /* 직무 */
         protected set
 
     /** 비슷한 공고 추천에서 사용자의 희망 산업과 정확히 같은지 비교한다. */
@@ -320,8 +326,8 @@ class Job internal constructor(
         companyName: String,
         parentCompanyName: String?,
         title: String,
-        jobField: String?,
-        jobRole: String?,
+        jobField: JobField?,
+        jobRole: JobRole?,
         industry: String?,
         coverImageUrl: String?,
         logoUrl: String?,
@@ -526,8 +532,8 @@ private fun validateJobValues(
     companyName: String,
     parentCompanyName: String?,
     title: String,
-    jobField: String?,
-    jobRole: String?,
+    jobField: JobField?,
+    jobRole: JobRole?,
     industry: String?,
     coverImageUrl: String?,
     logoUrl: String?,
@@ -545,8 +551,7 @@ private fun validateJobValues(
     require(parentCompanyName == null || parentCompanyName.isNotBlank()) { "모회사명은 비어 있을 수 없습니다." }
     require(title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
     require(subRegion == null || subRegion.region == region) { "시·군·구는 같은 시·도에 속해야 합니다." }
-    require(jobField == null || jobField.isNotBlank()) { "직군은 비어 있을 수 없습니다." }
-    require(jobRole == null || jobRole.isNotBlank()) { "직무는 비어 있을 수 없습니다." }
+    require(jobRole == null || jobRole.jobField == jobField) { "직무는 같은 직군에 속해야 합니다." }
     require(industry == null || industry.isNotBlank()) { "산업은 비어 있을 수 없습니다." }
     require(coverImageUrl == null || coverImageUrl.isNotBlank()) { "공고 대표 이미지 주소는 비어 있을 수 없습니다." }
     require(logoUrl == null || logoUrl.isNotBlank()) { "기업 로고 주소는 비어 있을 수 없습니다." }

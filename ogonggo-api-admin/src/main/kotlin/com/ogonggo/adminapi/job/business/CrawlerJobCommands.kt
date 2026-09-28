@@ -4,7 +4,9 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import java.time.LocalDateTime
@@ -14,8 +16,8 @@ data class CrawlerJobCommand(
     val companyName: String,
     val parentCompanyName: String?,
     val title: String,
-    val jobField: String?,
-    val jobRole: String?,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val industry: String?,
     val coverImageUrl: String?,
     val logoUrl: String?,
