@@ -25,6 +25,7 @@ data class Work24Properties(
     val occupationAuthKey: String = "",
     val dutyAuthKey: String = "",
     val smallGiantCompanyAuthKey: String = "",
+    val commonCodeAuthKey: String = "",
     /**
      * 훈련기관 로고 경로(`filePath`)가 `/`로 시작하는 서버 경로일 때 앞에 붙이는 주소다.
      * 명세에 경로 형식이 없어 인증키를 받은 뒤 실제 응답으로 확인해야 한다.
@@ -45,6 +46,7 @@ data class Work24Properties(
         Work24Service.OCCUPATION -> occupationAuthKey
         Work24Service.DUTY -> dutyAuthKey
         Work24Service.SMALL_GIANT_COMPANY -> smallGiantCompanyAuthKey
+        Work24Service.COMMON_CODE -> commonCodeAuthKey
     }
 
     /** 설정 객체가 로그에 찍혀도 인증키가 드러나지 않게 한다. */
