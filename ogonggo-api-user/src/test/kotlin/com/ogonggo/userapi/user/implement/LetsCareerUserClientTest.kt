@@ -25,7 +25,8 @@ class LetsCareerUserClientTest {
 
     private val builder = RestClient.builder().baseUrl(BASE_URL)
     private val server = MockRestServiceServer.bindTo(builder).build()
-    private val client = LetsCareerUserClient(builder.build(), LetsCareerProperties(BASE_URL, API_KEY))
+    private val restClient = builder.build()
+    private val client = LetsCareerUserClient(restClient, restClient, LetsCareerProperties(BASE_URL, API_KEY))
 
     @Test
     fun `내부 API 키와 기존·새 비밀번호를 실어 렛츠커리어에 변경을 전달한다`() {
@@ -98,9 +99,9 @@ class LetsCareerUserClientTest {
     }
 
     @Test
-    fun `처음 요청과 재시도 3번이 모두 응답이 없으면 렛츠커리어 연동 실패로 알린다`() {
+    fun `처음 요청을 포함해 3번 모두 응답이 없으면 렛츠커리어 연동 실패로 알린다`() {
         // given
-        server.expect(ExpectedCount.times(4), requestTo(PASSWORD_URL))
+        server.expect(ExpectedCount.times(3), requestTo(PASSWORD_URL))
             .andRespond { throw SocketTimeoutException("Read timed out") }
 
         // when

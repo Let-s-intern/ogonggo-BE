@@ -41,6 +41,7 @@ data class LetsCareerJobProfile(
 @Component
 class LetsCareerUserClient(
     private val letsCareerRestClient: RestClient,
+    private val letsCareerPasswordRestClient: RestClient,
     private val properties: LetsCareerProperties,
 ) {
 
@@ -68,14 +69,14 @@ class LetsCareerUserClient(
      * 일반 회원의 비밀번호는 렛츠커리어에 있으므로 변경을 그대로 전달한다.
      * 로그인 이후 렛츠커리어를 부르는 예외이며, 사용자가 직접 요청한 변경이라 실패를 삼키지 않고 알린다.
      *
-     * 응답을 받지 못하면(연결 실패·시간 초과) 최대 [PASSWORD_CHANGE_MAX_RETRIES]번 다시 보낸다.
+     * 응답을 받지 못하면(연결 실패·시간 초과) 처음 요청을 포함해 [PASSWORD_CHANGE_MAX_ATTEMPTS]번까지 보낸다.
      * 앞선 요청이 이미 반영됐어도 렛츠커리어가 같은 새 비밀번호의 재시도를 성공으로 처리하므로 안전하다.
      * 응답이 온 실패(4xx·5xx)는 다시 보내도 결과가 같으므로 재시도하지 않는다.
      */
     fun changePassword(letsCareerUserId: Long, currentPassword: String, newPassword: String) {
         val request = PasswordChangeRequest(password = currentPassword, newPassword = newPassword)
 
-        repeat(PASSWORD_CHANGE_MAX_RETRIES + 1) { attempt ->
+        repeat(PASSWORD_CHANGE_MAX_ATTEMPTS) { attempt ->
             try {
                 requestPasswordChange(letsCareerUserId, request)
                 return
@@ -99,7 +100,7 @@ class LetsCareerUserClient(
     }
 
     private fun requestPasswordChange(letsCareerUserId: Long, request: PasswordChangeRequest) {
-        letsCareerRestClient.patch()
+        letsCareerPasswordRestClient.patch()
             .uri(PASSWORD_PATH, letsCareerUserId)
             .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
             .body(request)
@@ -130,7 +131,7 @@ class LetsCareerUserClient(
     companion object {
         private const val JOB_PROFILE_PATH = "/api/v1/internal/users/{userId}/job-profile"
         private const val PASSWORD_PATH = "/api/v1/internal/users/{userId}/password"
-        private const val PASSWORD_CHANGE_MAX_RETRIES = 3
+        private const val PASSWORD_CHANGE_MAX_ATTEMPTS = 3
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
         private val log = LoggerFactory.getLogger(LetsCareerUserClient::class.java)
     }
