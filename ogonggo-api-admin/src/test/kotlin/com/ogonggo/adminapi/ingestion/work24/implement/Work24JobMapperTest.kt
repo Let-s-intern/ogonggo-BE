@@ -31,5 +31,6 @@ class Work24JobMapperTest {
         item = objectMapper.readTree(itemFields.dropLast(1) + """, "company": "오공고", "title": "백엔드 개발자"}"""),
         detail = objectMapper.readTree("{}"),
         sourceUrl = "https://www.work24.go.kr/wanted/1",
+        externalId = "K1",
     )
 }

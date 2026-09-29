@@ -28,7 +28,7 @@ class AdminWork24CollectionServiceTest {
         targets.forEach { target ->
             Mockito.`when`(collector.isReady(target)).thenReturn(target != Work24CollectionTarget.RECRUITMENTS)
             Mockito.`when`(collector.collect(target, SEOUL_NOW))
-                .thenReturn(Work24CollectDto(target, pageCount = 1, appendedCount = 1, skippedCount = 0, noImageCount = 0, failedCount = 0))
+                .thenReturn(Work24CollectDto(target, pageCount = 1, appendedCount = 1, skippedCount = 0, excludedCount = 0, failedCount = 0))
         }
         Mockito.`when`(collector.collect(Work24CollectionTarget.WORK_STUDY_COURSES, SEOUL_NOW))
             .thenThrow(InternalServerException(Work24ErrorCode.WORK24_UNAVAILABLE))

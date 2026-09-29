@@ -43,7 +43,7 @@ interface AdminJobApi {
             필터는 모두 AND로 묶이며 값을 보내지 않거나 빈 값을 보내면 그 조건을 적용하지 않습니다.
             keyword는 제목과 회사명에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
             visibility는 게시 중이면 VISIBLE, 초안·숨김·보관이면 HIDDEN입니다.
-            source는 등록한 기업회원이 있으면 COMPANY, 없으면 CRAWLER입니다.
+            source는 등록 경로입니다. COMPANY 비즈니스 등록, CRAWLER 크롤링, WORK24 고용24 수집입니다.
             recruitmentStatus는 마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING입니다.
 
             정렬 기본값은 REGISTERED_AT(등록일 역순)이며, VIEW_COUNT는 조회 수가 같으면 등록일 역순입니다.
@@ -105,7 +105,7 @@ interface AdminJobApi {
             reviewStatus는 APPROVED나 PENDING만 보낼 수 있습니다. 반려는 검수 화면(PATCH /review-queue)에서 사유와 함께 처리합니다.
             승인하면 곧바로 노출되고, 검수 대기로 되돌리면 노출이 꺼지며 반려 기록이 지워집니다.
             검수 상태를 먼저 반영한 뒤 visibility를 반영합니다.
-            기업회원 공고는 승인 전에 VISIBLE로 바꿀 수 없습니다. 크롤링 수집분은 검수 상태를 바꿀 수 없습니다.
+            기업회원 공고는 승인 전에 VISIBLE로 바꿀 수 없습니다. 크롤링·고용24 수집분은 검수 상태를 바꿀 수 없습니다.
 
             fields는 companyAndTeamIntroduction, responsibilities, qualifications, preferredQualifications,
             compensation, benefits, hiringProcess만 반영하고 나머지 키는 버립니다. 빈 문자열은 그 칸을 비웁니다.

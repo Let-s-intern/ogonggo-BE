@@ -142,12 +142,7 @@ internal class BootcampQueryRepository(
         false -> bootcamp.publicationStatus.ne(BootcampPublicationStatus.PUBLISHED)
     }
 
-    /** 등록 경로는 저장하지 않으므로 소유자 유무로 거른다. */
-    private fun sourceEq(source: ContentSource?): BooleanExpression? = when (source) {
-        null -> null
-        ContentSource.CRAWLER -> bootcamp.ownerUserId.isNull
-        ContentSource.COMPANY -> bootcamp.ownerUserId.isNotNull
-    }
+    private fun sourceEq(source: ContentSource?): BooleanExpression? = source?.let { bootcamp.source.eq(it) }
 
     /**
      * 검색어는 인덱스로 좁힐 수 없어 다른 조건으로 고른 행을 차례로 확인한다.

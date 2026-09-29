@@ -13,12 +13,13 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
-import java.time.Clock
-import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.LocalDateTime
 
 @Component
 class JobReader internal constructor(
@@ -36,19 +37,23 @@ class JobReader internal constructor(
     fun existsBySourceUrl(sourceUrl: String): Boolean =
         jobRepository.existsBySourceUrlAndDeletedAtIsNull(sourceUrl)
 
-    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 소유자가 없는 수집 공고만 다룬다. */
+    /** 같은 곳에서 같은 식별값으로 이미 수집한 공고가 있는지 확인한다. 삭제된 공고도 센다. */
+    fun existsByExternalId(source: ContentSource, externalId: String): Boolean =
+        jobRepository.existsBySourceAndExternalId(source, externalId)
+
+    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 자신이 등록한 공고만 다룬다. */
     fun readCrawledBySourceUrl(sourceUrl: String): Job =
-        jobRepository.findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl)
+        jobRepository.findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    /** 크롤러는 기업회원 공고를 고칠 수 없으므로 소유자가 없는 공고만 잠가 찾는다. */
+    /** 크롤러는 기업회원 공고와 고용24 수집 공고를 고칠 수 없으므로 크롤링 공고만 잠가 찾는다. */
     fun readCrawledForUpdate(jobId: Long): Job =
-        jobRepository.findCrawledByIdForUpdate(jobId)
+        jobRepository.findByIdAndSourceForUpdate(jobId, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
     /** 삭제는 멱등해야 하므로 이미 삭제된 수집 공고도 잠가 찾는다. */
     fun readCrawledForDelete(jobId: Long): Job =
-        jobRepository.findCrawledByIdForDelete(jobId)
+        jobRepository.findIncludingDeletedByIdAndSourceForUpdate(jobId, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
     fun readPublished(jobId: Long): Job =

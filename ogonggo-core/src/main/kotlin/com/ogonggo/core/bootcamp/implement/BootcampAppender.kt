@@ -9,6 +9,7 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
+import com.ogonggo.core.review.domain.ContentSource
 import org.springframework.stereotype.Component
 
 @Component
@@ -52,6 +53,8 @@ class BootcampAppender internal constructor(
                 status = command.status,
                 closedAt = command.closedAt,
                 publicationStatus = command.publicationStatus,
+                source = command.source ?: ContentSource.of(command.ownerUserId),
+                externalId = command.externalId,
             ),
         )
         val bootcampId = checkNotNull(bootcamp.id) { "저장된 부트캠프 식별자가 없습니다." }

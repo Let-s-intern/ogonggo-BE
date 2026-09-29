@@ -13,18 +13,20 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
+import com.ogonggo.core.review.domain.ContentSource
 import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
  * 고용24 훈련과정 목록 항목(`scn_list`)과 과정·기관정보(`inst_base_info`, `inst_detail_info`)를 부트캠프로 옮긴다.
  *
- * 크롤러 부트캠프처럼 소유자 없이 모집 중으로 곧바로 게시한다. 같은 과정인지는 과정 링크(`titleLink`)를
- * 원문 URL로 보고 판단한다. 고용24에 없는 값은 다음처럼 채운다.
- * - 대표 이미지: 고용24가 과정 이미지를 주지 않아 훈련기관 로고(`filePath` + `pFileName`)를 로고와 대표 이미지에 함께 쓴다.
- *   로고가 없으면 호출자가 정한 대체 이미지를 쓴다.
+ * 등록 경로를 고용24로, 과정 ID와 회차(`trprId-trprDegr`)를 외부 식별값으로 두고 모집 중으로 곧바로 게시한다.
+ * 고용24에 없는 값은 다음처럼 채운다.
+ * - 대표 이미지·로고: 비운다. 고용24는 과정 이미지를 주지 않고, 훈련기관 로고(`filePath`)는 다운로드 주소라
+ *   이미지로 열리지 않는다. 비어 있으면 클라이언트가 기본 이미지를 그린다.
  * - 모집 기간: 목록에 없어 수집한 시각부터 개강일 끝까지로 둔다.
- * - 진행 방식: 과정명·훈련대상에 원격·인터넷이 있으면 온라인, 혼합이 있으면 온·오프라인, 그 밖에는 오프라인으로 본다.
+ * - 수강료: 교육생이 내는 본인부담액(`tgcrGnrlTrneOwepAllt`)을 쓴다. 목록의 수강비(`courseMan`)는 정부 지원금을 포함한 총 훈련비다.
+ * - 진행 방식: 훈련방법 코드(`traingMthCd`)로 정한다. M1005 인터넷은 온라인, M1010 혼합·M1014 스마트혼합은 온·오프라인, 그 밖은 오프라인이다.
  */
 internal object Work24BootcampMapper {
 
@@ -36,33 +38,13 @@ internal object Work24BootcampMapper {
         "srchTorgId" to requireNotNull(item.text("trainstCstId")) { "훈련기관 ID가 없습니다." },
     )
 
-    /**
-     * 훈련기관 로고 주소다. 경로와 파일명을 이어 붙이고, 경로가 `/`로 시작하면 [fileBaseUrl]을 앞에 붙인다.
-     * 경로에 파일명까지 들어 있으면 파일명을 다시 붙이지 않는다. 파일명이 없으면 null이다.
-     */
-    fun logoUrl(detail: JsonNode, fileBaseUrl: String): String? {
-        val base = detail.path("inst_base_info")
-        val fileName = base.text("pFileName") ?: return null
-        val path = base.text("filePath")
-        val location = when {
-            path == null -> fileName
-            path.endsWith(fileName) -> path
-            else -> "${path.trimEnd('/')}/$fileName"
-        }
-        return when {
-            location.startsWith("http://") || location.startsWith("https://") -> location
-            location.startsWith("/") -> fileBaseUrl.trimEnd('/') + location
-            else -> null
-        }
-    }
 
     fun toAppendDto(
         target: Work24CollectionTarget,
         item: JsonNode,
         detail: JsonNode,
         sourceUrl: String,
-        logoUrl: String?,
-        representativeImageUrl: String,
+        externalId: String,
         now: LocalDateTime,
     ): BootcampAppendDto {
         val base = detail.path("inst_base_info")
@@ -79,22 +61,22 @@ internal object Work24BootcampMapper {
             companyName = requireNotNull(base.text("inoNm") ?: item.text("subTitle")) { "훈련기관명이 없습니다." }
                 .limit(COMPANY_NAME_MAX),
             title = title.limit(TITLE_MAX),
-            programType = (base.text("trprTargetNm") ?: target.api.service.desc).limit(PROGRAM_TYPE_MAX),
-            operationType = operationType(title, item.text("trainTarget")),
+            programType = (target.programType ?: target.api.service.desc).limit(PROGRAM_TYPE_MAX),
+            operationType = operationType(base.text("traingMthCd")),
             recruitmentType = if (hasPeriod) BootcampRecruitmentType.PERIOD else BootcampRecruitmentType.ALWAYS_OPEN,
             recruitmentStartAt = if (hasPeriod) now else null,
             recruitmentEndAt = if (hasPeriod) recruitmentEndAt else null,
             programStartDate = programStartDate,
             programEndDate = programEndDate,
-            capacity = number(item.text("yardMan"))?.takeIf { it <= Int.MAX_VALUE }?.toInt(),
+            // 일학습병행은 정원을 0으로 주는 경우가 있어 0은 정원 없음으로 본다.
+            capacity = number(item.text("yardMan"))?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
             tuitionType = TuitionType.GOVERNMENT_FUNDED,
-            tuitionAmount = number(item.text("courseMan") ?: item.text("realMan")),
-            representativeImageUrl = representativeImageUrl,
+            tuitionAmount = number(detailInfo.text("tgcrGnrlTrneOwepAllt")),
+            representativeImageUrl = null,
             shortDescription = listOfNotNull(base.text("ncsNm"), totalHours?.let { "총 ${it}시간" })
                 .joinToString(" · ")
                 .ifBlank { title }
                 .limit(SHORT_DESCRIPTION_MAX),
-            logoUrl = logoUrl,
             content = requireNotNull(
                 section(
                     "훈련기관" to (base.text("inoNm") ?: item.text("subTitle")),
@@ -104,10 +86,8 @@ internal object Work24BootcampMapper {
                     "총 훈련시간" to totalHours?.let { "${it}시간" },
                     "훈련 분야" to (base.text("ncsNm") ?: detailInfo.text("govBusiNm")),
                     "훈련 대상" to item.text("trainTarget"),
-                    "수강비" to item.text("courseMan")?.let { "${it}원" },
-                    "실제 훈련비" to (base.text("instPerTrco") ?: item.text("realMan"))?.let { "${it}원" },
-                    "정부 지원금" to base.text("perTrco")?.let { "${it}원" },
                     "본인 부담액" to detailInfo.text("tgcrGnrlTrneOwepAllt")?.let { "${it}원" },
+                    "총 훈련비" to (base.text("instPerTrco") ?: item.text("realMan"))?.let { "${it}원" },
                     "만족도" to item.text("stdgScor"),
                     "3개월 취업률" to item.text("eiEmplRate3")?.let { "$it%" },
                     "담당자" to base.text("trprChap"),
@@ -121,16 +101,15 @@ internal object Work24BootcampMapper {
             sourceUrl = sourceUrl,
             status = BootcampStatus.RECRUITING,
             publicationStatus = BootcampPublicationStatus.PUBLISHED,
+            source = ContentSource.WORK24,
+            externalId = externalId,
         )
     }
 
-    private fun operationType(title: String, trainTarget: String?): OperationType {
-        val text = "$title ${trainTarget.orEmpty()}"
-        return when {
-            text.contains("혼합") -> OperationType.HYBRID
-            text.contains("원격") || text.contains("인터넷") -> OperationType.ONLINE
-            else -> OperationType.OFFLINE
-        }
+    private fun operationType(trainingMethodCode: String?): OperationType = when (trainingMethodCode) {
+        "M1005" -> OperationType.ONLINE
+        "M1010", "M1014" -> OperationType.HYBRID
+        else -> OperationType.OFFLINE
     }
 
     private const val COMPANY_NAME_MAX = 150

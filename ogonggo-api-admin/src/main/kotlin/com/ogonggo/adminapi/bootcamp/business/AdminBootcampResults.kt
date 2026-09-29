@@ -53,7 +53,7 @@ data class AdminBootcampSummary(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val status: BootcampStatus,
     val closedAt: LocalDateTime?,
@@ -88,7 +88,7 @@ data class AdminBootcampSummary(
             bookmarkCount = metric.bookmarkCount,
             commentCount = metric.commentCount,
             visibility = AdminContentVisibility.of(bootcamp.publicationStatus == BootcampPublicationStatus.PUBLISHED),
-            source = ContentSource.of(bootcamp.ownerUserId),
+            source = bootcamp.source,
             reviewStatus = bootcamp.reviewStatus,
             registeredAt = bootcamp.createdAt,
         )

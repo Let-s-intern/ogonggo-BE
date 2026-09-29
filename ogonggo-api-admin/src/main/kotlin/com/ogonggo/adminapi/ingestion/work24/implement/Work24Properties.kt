@@ -26,16 +26,6 @@ data class Work24Properties(
     val dutyAuthKey: String = "",
     val smallGiantCompanyAuthKey: String = "",
     val commonCodeAuthKey: String = "",
-    /**
-     * 훈련기관 로고 경로(`filePath`)가 `/`로 시작하는 서버 경로일 때 앞에 붙이는 주소다.
-     * 명세에 경로 형식이 없어 인증키를 받은 뒤 실제 응답으로 확인해야 한다.
-     */
-    val trainingFileBaseUrl: String = "https://www.work24.go.kr",
-    /**
-     * 로고가 없는 훈련기관의 과정을 부트캠프로 등록할 때 쓰는 대표 이미지다. 고용24는 과정 이미지를 주지 않는다.
-     * 비어 있으면 로고가 없는 과정은 건너뛴다. 부트캠프는 대표 이미지가 필수다.
-     */
-    val bootcampImageUrl: String = "",
 ) {
     fun authKey(service: Work24Service): String = when (service) {
         Work24Service.RECRUITMENT -> recruitmentAuthKey
@@ -50,5 +40,5 @@ data class Work24Properties(
     }
 
     /** 설정 객체가 로그에 찍혀도 인증키가 드러나지 않게 한다. */
-    override fun toString(): String = "Work24Properties(baseUrl=$baseUrl, bootcampImageUrl=$bootcampImageUrl)"
+    override fun toString(): String = "Work24Properties(baseUrl=$baseUrl)"
 }

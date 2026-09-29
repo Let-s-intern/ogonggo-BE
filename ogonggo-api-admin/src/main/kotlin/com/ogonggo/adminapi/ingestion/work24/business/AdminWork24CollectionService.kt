@@ -37,12 +37,12 @@ class AdminWork24CollectionService(
         return try {
             val result = work24Collector.collect(target, now)
             log.info(
-                "고용24 수집 완료. target={}, pages={}, appended={}, skipped={}, noImage={}, failed={}",
+                "고용24 수집 완료. target={}, pages={}, appended={}, skipped={}, excluded={}, failed={}",
                 target,
                 result.pageCount,
                 result.appendedCount,
                 result.skippedCount,
-                result.noImageCount,
+                result.excludedCount,
                 result.failedCount,
             )
             AdminWork24CollectResult.Collected(result)

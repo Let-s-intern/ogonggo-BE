@@ -11,13 +11,14 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
-import java.time.Clock
-import java.time.LocalDateTime
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.LocalDateTime
 
 @Component
 class BootcampReader internal constructor(
@@ -33,22 +34,26 @@ class BootcampReader internal constructor(
     fun existsBySourceUrl(sourceUrl: String): Boolean =
         bootcampRepository.existsBySourceUrlAndDeletedAtIsNull(sourceUrl)
 
-    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 소유자가 없는 수집 부트캠프만 다룬다. */
+    /** 같은 곳에서 같은 식별값으로 이미 수집한 부트캠프가 있는지 확인한다. 삭제된 부트캠프도 센다. */
+    fun existsByExternalId(source: ContentSource, externalId: String): Boolean =
+        bootcampRepository.existsBySourceAndExternalId(source, externalId)
+
+    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 자신이 등록한 부트캠프만 다룬다. */
     fun readCrawledBySourceUrl(sourceUrl: String): Bootcamp =
-        bootcampRepository.findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl)
+        bootcampRepository.findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
     /**
-     * 크롤러는 기업회원 부트캠프를 고칠 수 없으므로 소유자가 없고 원문 URL이 있는 부트캠프만 잠가 찾는다.
-     * 원문 URL이 없는 소유자 없는 부트캠프는 크롤러가 넣은 것이 아니다.
+     * 크롤러는 기업회원·고용24 부트캠프를 고칠 수 없으므로 크롤링 경로이고 원문 URL이 있는 부트캠프만 잠가 찾는다.
+     * 원문 URL이 없는 크롤링 경로 부트캠프는 크롤러가 넣은 것이 아니다.
      */
     fun readCrawledForUpdate(bootcampId: Long): Bootcamp =
-        bootcampRepository.findCrawledByIdForUpdate(bootcampId)
+        bootcampRepository.findByIdAndSourceForUpdate(bootcampId, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
     /** 삭제는 멱등해야 하므로 이미 삭제된 수집 부트캠프도 잠가 찾는다. */
     fun readCrawledForDelete(bootcampId: Long): Bootcamp =
-        bootcampRepository.findCrawledByIdForDelete(bootcampId)
+        bootcampRepository.findIncludingDeletedByIdAndSourceForUpdate(bootcampId, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
     fun readIncludingDeleted(bootcampId: Long): Bootcamp =

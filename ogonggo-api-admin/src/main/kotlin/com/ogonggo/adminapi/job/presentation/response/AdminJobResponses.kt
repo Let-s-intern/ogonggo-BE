@@ -33,7 +33,7 @@ data class AdminJobSummaryResponse(
     val commentCount: Long,
     val visibility: AdminContentVisibility,
     val source: ContentSource,
-    @Schema(description = "크롤링 수집분은 null입니다.")
+    @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ReviewStatus?,
     @Schema(description = "저장하지 않고 마감 처리 일시와 모집 종료 일시로 계산한 값입니다.")
     val recruitmentStatus: JobRecruitmentStatus,
@@ -83,7 +83,7 @@ data class AdminJobDetailResponse(
     val commentCount: Long,
     val visibility: AdminContentVisibility,
     val source: ContentSource,
-    @Schema(description = "크롤링 수집분은 null입니다.")
+    @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ReviewStatus?,
     @Schema(description = "저장하지 않고 마감 처리 일시와 모집 종료 일시로 계산한 값입니다.")
     val recruitmentStatus: JobRecruitmentStatus,

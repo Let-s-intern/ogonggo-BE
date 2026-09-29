@@ -6,13 +6,14 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
-import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
 
 class JobDomainTest {
 
@@ -231,8 +232,26 @@ class JobDomainTest {
         assertThrows(IllegalStateException::class.java) { job.archive() }
     }
 
+    @Test
+    fun `등록 경로는 비즈니스 등록만 소유자가 있고 고용24 수집만 외부 식별값을 가진다`() {
+        // 등록 경로를 정하지 않으면 소유자 유무로 정한다.
+        assertEquals(ContentSource.CRAWLER, createJob().source)
+        assertEquals(ContentSource.COMPANY, createJob(ownerUserId = 7L).source)
+        assertEquals("K1", createJob(source = ContentSource.WORK24, externalId = "K1").externalId)
+
+        assertThrows(IllegalArgumentException::class.java) { createJob(source = ContentSource.COMPANY) }
+        assertThrows(IllegalArgumentException::class.java) { createJob(ownerUserId = 7L, source = ContentSource.CRAWLER) }
+        assertThrows(IllegalArgumentException::class.java) { createJob(source = ContentSource.WORK24) }
+        assertThrows(IllegalArgumentException::class.java) { createJob(externalId = "K1") }
+        assertThrows(IllegalArgumentException::class.java) {
+            createJob(source = ContentSource.WORK24, externalId = "K".repeat(ContentSource.EXTERNAL_ID_MAX_LENGTH + 1))
+        }
+    }
+
     private fun createJob(
         ownerUserId: Long? = null,
+        source: ContentSource = ContentSource.of(ownerUserId),
+        externalId: String? = null,
         recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,
         publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
         companyName: String = "오공고",
@@ -277,5 +296,7 @@ class JobDomainTest {
         benefits = "복지 및 혜택",
         hiringProcess = "채용 절차",
         sourceUrl = "https://example.com/jobs/1",
+        source = source,
+        externalId = externalId,
     )
 }

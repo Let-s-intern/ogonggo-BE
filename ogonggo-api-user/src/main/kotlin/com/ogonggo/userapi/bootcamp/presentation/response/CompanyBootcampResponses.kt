@@ -34,7 +34,7 @@ data class CompanyBootcampSummaryResponse(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val status: BootcampStatus,
     @Schema(description = PUBLICATION_STATUS_DESCRIPTION)
@@ -83,7 +83,7 @@ data class CompanyBootcampDetailResponse(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val content: String,
     val eligibilityAndSelectionProcess: String?,

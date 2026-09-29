@@ -30,7 +30,8 @@ data class AdminBootcampSummaryResponse(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
+    val representativeImageUrl: String?,
     val shortDescription: String,
     @Schema(description = "모집 상태입니다. 콘솔에서는 RECRUITING·CLOSED만 다룹니다.")
     val status: BootcampStatus,
@@ -40,7 +41,7 @@ data class AdminBootcampSummaryResponse(
     val commentCount: Long,
     val visibility: AdminContentVisibility,
     val source: ContentSource,
-    @Schema(description = "크롤링 수집분은 null입니다.")
+    @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ReviewStatus?,
     val registeredAt: LocalDateTime,
 ) {
@@ -88,7 +89,8 @@ data class AdminBootcampDetailResponse(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
+    val representativeImageUrl: String?,
     val shortDescription: String,
     @Schema(description = "모집 상태입니다. 콘솔에서는 RECRUITING·CLOSED만 다룹니다.")
     val status: BootcampStatus,
@@ -98,7 +100,7 @@ data class AdminBootcampDetailResponse(
     val commentCount: Long,
     val visibility: AdminContentVisibility,
     val source: ContentSource,
-    @Schema(description = "크롤링 수집분은 null입니다.")
+    @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ReviewStatus?,
     val registeredAt: LocalDateTime,
     val content: String,

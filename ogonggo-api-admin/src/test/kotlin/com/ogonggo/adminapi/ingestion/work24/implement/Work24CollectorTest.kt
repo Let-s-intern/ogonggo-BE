@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
@@ -17,6 +18,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
+import com.ogonggo.core.review.domain.ContentSource
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -55,18 +57,19 @@ class Work24CollectorTest {
     }
 
     @Test
-    fun `채용정보는 이미 등록된 원문은 건너뛰고 새 공고만 상세를 불러 게시한다`() {
+    fun `채용정보는 구인인증번호로 이미 등록한 공고는 건너뛰고 새 공고만 상세를 불러 고용24 경로로 게시한다`() {
         // given
-        Mockito.`when`(jobReader.existsBySourceUrl("$WORKNET/K1")).thenReturn(true)
+        Mockito.`when`(jobReader.existsByExternalId(ContentSource.WORK24, "K1")).thenReturn(true)
         server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
             .andExpect(queryParam("callTp", "L"))
             .andExpect(queryParam("regDate", "D-3"))
+            .andExpect(queryParam("empTp", "10%7C20"))
             .andExpect(queryParam("startPage", "1"))
             .andRespond(
                 xml(
                     """
                     <wantedRoot><total>2</total>
-                      <wanted><wantedAuthNo>K1</wantedAuthNo><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K1</wantedAuthNo><jobsCd>133201</jobsCd><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
                       <wanted>
                         <wantedAuthNo>K2</wantedAuthNo><company>목록회사</company><title>목록 제목</title>
                         <region>서울 강남구</region><strtnmCd>116804166040</strtnmCd><jobsCd>133201</jobsCd><regDt>26-09-25</regDt><closeDt>26-10-31</closeDt>
@@ -123,19 +126,60 @@ class Work24CollectorTest {
         assertTrue(job.recruitmentNotice!!.contains("문의 전화: 02-000-0000"))
         assertEquals("$WORKNET/K2", job.sourceUrl)
         assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
+        assertEquals(ContentSource.WORK24, job.source)
+        assertEquals("K2", job.externalId)
+        assertNull(job.ownerUserId)
     }
 
     @Test
-    fun `훈련과정은 전체 건수만큼 페이지를 넘기며 과정 정보를 불러 개강일까지 모집하는 부트캠프로 게시한다`() {
+    fun `마감일은 날짜가 있는 쪽을 쓰고 급여는 목록 값을 쓰며 줄바꿈을 맞춘다`() {
+        // given: 실제 고용24 응답처럼 상세 마감일에는 날짜가 없고 목록 마감일에만 날짜가 있다.
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
+            .andRespond(
+                xml(
+                    """
+                    <wantedRoot><total>1</total><wanted>
+                      <wantedAuthNo>K1</wantedAuthNo><jobsCd>133201</jobsCd><company>회사</company><title>제목</title>
+                      <salTpNm>연봉</salTpNm><sal>3000만원 ~ 3500만원</sal>
+                      <regDt>26-09-28</regDt><closeDt>채용시까지  26-10-30</closeDt>
+                      <wantedInfoUrl>$WORKNET/K1</wantedInfoUrl>
+                    </wanted></wantedRoot>
+                    """.trimIndent(),
+                ),
+            )
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210D01.do")))
+            .andRespond(
+                xml(
+                    "<wantedDtl><wantedInfo><receiptCloseDt>채용시까지</receiptCloseDt>" +
+                        "<salTpNm>연봉30,000,000원 이상 ~ 35,000,000원 이하,</salTpNm>" +
+                        "<jobCont>[주요업무]&#xd;\n- 설치</jobCont></wantedInfo></wantedDtl>",
+                ),
+            )
+
+        // when
+        collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
+
+        // then
+        val job = appendedJobs.single()
+        assertEquals(JobRecruitmentType.PERIOD, job.recruitmentType)
+        assertEquals(LocalDateTime.of(2026, 10, 30, 23, 59, 59), job.recruitmentEndAt)
+        assertEquals(true, job.closesWhenFilled)
+        assertEquals("연봉 3000만원 ~ 3500만원", job.compensation)
+        assertEquals("[주요업무]\n- 설치", job.responsibilities)
+    }
+
+    @Test
+    fun `K-디지털 트레이닝만 전체 건수만큼 페이지를 넘기며 받아 개강일까지 모집하는 부트캠프로 게시한다`() {
         // given
         server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L01.do")))
+            .andExpect(queryParam("crseTracseSe", "C0104"))
             .andExpect(queryParam("pageNum", "1"))
             .andExpect(queryParam("pageSize", "100"))
             .andExpect(queryParam("srchTraStDt", "20260927"))
             .andExpect(queryParam("srchTraEndDt", "20261226"))
             .andRespond(xml(trainingPage(total = 101, ids = (1..100).map { "C$it" })))
         // 앞 페이지의 과정은 이미 등록되어 있다고 둔다.
-        (1..100).forEach { Mockito.`when`(bootcampReader.existsBySourceUrl("$HRD/C$it")).thenReturn(true) }
+        (1..100).forEach { Mockito.`when`(bootcampReader.existsByExternalId(ContentSource.WORK24, "C$it-1")).thenReturn(true) }
         server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L01.do")))
             .andExpect(queryParam("pageNum", "2"))
             // 마지막 페이지에 항목이 하나뿐이면 배열이 아니라 객체로 온다.
@@ -152,16 +196,18 @@ class Work24CollectorTest {
                       <inst_base_info>
                         <inoNm>오공고 아카데미</inoNm><trprNm>자바 백엔드 과정</trprNm><trtm>600</trtm>
                         <ncsNm>응용SW엔지니어링</ncsNm><trprChapEmail>edu@ogonggo.test</trprChapEmail>
-                        <filePath>/upload/logo/</filePath><pFileName>academy.png</pFileName>
+                        <traingMthCd>M1005</traingMthCd><instPerTrco>22687500</instPerTrco>
+                        <filePath>http://hrd.work24.go.kr/comm/com/fileDownload.do?athfilId=1&amp;athfilSeqNo=1</filePath>
+                        <pFileName>캡처.JPG</pFileName>
                       </inst_base_info>
-                      <inst_detail_info><tgcrGnrlTrneOwepAllt>0</tgcrGnrlTrneOwepAllt></inst_detail_info>
+                      <inst_detail_info><tgcrGnrlTrneOwepAllt>600000</tgcrGnrlTrneOwepAllt></inst_detail_info>
                     </HRDNet>
                     """.trimIndent(),
                 ),
             )
 
         // when
-        val result = collector().collect(Work24CollectionTarget.TOMORROW_LEARNING_CARD_COURSES, NOW)
+        val result = collector().collect(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES, NOW)
 
         // then
         server.verify()
@@ -174,8 +220,15 @@ class Work24CollectorTest {
         assertEquals(BootcampRecruitmentType.PERIOD, bootcamp.recruitmentType)
         assertEquals(NOW, bootcamp.recruitmentStartAt)
         assertEquals(LocalDateTime.of(2026, 10, 5, 23, 59, 59), bootcamp.recruitmentEndAt)
-        assertEquals("https://www.work24.go.kr/upload/logo/academy.png", bootcamp.logoUrl)
-        assertEquals(bootcamp.logoUrl, bootcamp.representativeImageUrl)
+        // 고용24는 과정 이미지를 주지 않고 훈련기관 로고는 이미지로 열리지 않는 다운로드 주소라 비운다.
+        assertNull(bootcamp.logoUrl)
+        assertNull(bootcamp.representativeImageUrl)
+        assertEquals("K-디지털 트레이닝", bootcamp.programType)
+        assertEquals(OperationType.ONLINE, bootcamp.operationType)
+        // 총 훈련비가 아니라 교육생이 내는 본인부담액이다.
+        assertEquals(600_000L, bootcamp.tuitionAmount)
+        assertEquals(ContentSource.WORK24, bootcamp.source)
+        assertEquals("C101-1", bootcamp.externalId)
         assertEquals("응용SW엔지니어링 · 총 600시간", bootcamp.shortDescription)
         assertEquals("$HRD/C101", bootcamp.applicationUrl)
         assertEquals("edu@ogonggo.test", bootcamp.managerEmail)
@@ -185,9 +238,9 @@ class Work24CollectorTest {
     fun `페이지 파라미터를 무시하고 같은 목록을 되풀이하면 멈춘다`() {
         // 전체 건수가 없고 페이지가 가득 차 있어 다음 페이지를 요청하게 된다.
         val samePage = "<wantedRoot>" +
-            (1..100).joinToString("") { "<wanted><wantedAuthNo>K$it</wantedAuthNo><wantedInfoUrl>$WORKNET/K$it</wantedInfoUrl></wanted>" } +
+            (1..100).joinToString("") { "<wanted><wantedAuthNo>K$it</wantedAuthNo><jobsCd>133201</jobsCd><wantedInfoUrl>$WORKNET/K$it</wantedInfoUrl></wanted>" } +
             "</wantedRoot>"
-        (1..100).forEach { Mockito.`when`(jobReader.existsBySourceUrl("$WORKNET/K$it")).thenReturn(true) }
+        (1..100).forEach { Mockito.`when`(jobReader.existsByExternalId(ContentSource.WORK24, "K$it")).thenReturn(true) }
         repeat(2) {
             server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do"))).andRespond(xml(samePage))
         }
@@ -206,8 +259,8 @@ class Work24CollectorTest {
                 xml(
                     """
                     <wantedRoot><total>2</total>
-                      <wanted><wantedAuthNo>K1</wantedAuthNo></wanted>
-                      <wanted><wantedAuthNo>K2</wantedAuthNo><company>회사</company><title>제목</title><wantedInfoUrl>$WORKNET/K2</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K1</wantedAuthNo><jobsCd>133201</jobsCd></wanted>
+                      <wanted><wantedAuthNo>K2</wantedAuthNo><jobsCd>133201</jobsCd><company>회사</company><title>제목</title><wantedInfoUrl>$WORKNET/K2</wantedInfoUrl></wanted>
                     </wantedRoot>
                     """.trimIndent(),
                 ),
@@ -229,7 +282,7 @@ class Work24CollectorTest {
             .andRespond(
                 xml(
                     "<wantedRoot><total>20</total>" +
-                        (1..20).joinToString("") { "<wanted><wantedAuthNo>K$it</wantedAuthNo><wantedInfoUrl>$WORKNET/K$it</wantedInfoUrl></wanted>" } +
+                        (1..20).joinToString("") { "<wanted><wantedAuthNo>K$it</wantedAuthNo><jobsCd>133201</jobsCd><wantedInfoUrl>$WORKNET/K$it</wantedInfoUrl></wanted>" } +
                         "</wantedRoot>",
                 ),
             )
@@ -244,58 +297,40 @@ class Work24CollectorTest {
     }
 
     @Test
-    fun `로고가 없는 기관은 대체 이미지를 쓰고 대체 이미지도 없으면 그 과정만 등록하지 않는다`() {
-        // given
-        repeat(2) {
-            server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo313L01.do")))
-                .andRespond(xml(trainingPage(total = 1, ids = listOf("W1"))))
-            server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo313D01.do")))
-                .andRespond(xml("<HRDNet><inst_base_info><inoNm>기관</inoNm></inst_base_info></HRDNet>"))
-        }
+    fun `시급·일급 공고와 직군·직무로 분류할 수 없는 직종의 공고는 상세를 부르지 않고 제외한다`() {
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
+            .andRespond(
+                xml(
+                    """
+                    <wantedRoot><total>4</total>
+                      <wanted><wantedAuthNo>K1</wantedAuthNo><salTpNm>시급</salTpNm><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K2</wantedAuthNo><salTpNm>일급</salTpNm><wantedInfoUrl>$WORKNET/K2</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K3</wantedAuthNo><salTpNm>월급</salTpNm><jobsCd>133201</jobsCd><company>회사</company><title>제목</title><wantedInfoUrl>$WORKNET/K3</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K4</wantedAuthNo><salTpNm>월급</salTpNm><jobsCd>999999</jobsCd><wantedInfoUrl>$WORKNET/K4</wantedInfoUrl></wanted>
+                    </wantedRoot>
+                    """.trimIndent(),
+                ),
+            )
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210D01.do")))
+            .andExpect(queryParam("wantedAuthNo", "K3"))
+            .andRespond(xml("<wantedDtl/>"))
 
-        // when
-        val withFallback = collector().collect(Work24CollectionTarget.WORK_STUDY_COURSES, NOW)
-        val withoutFallback = collector(imageUrl = "").collect(Work24CollectionTarget.WORK_STUDY_COURSES, NOW)
+        val result = collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
 
-        // then
-        assertEquals(1, withFallback.appendedCount)
-        assertEquals(IMAGE_URL, appendedBootcamps.single().representativeImageUrl)
-        assertNull(appendedBootcamps.single().logoUrl)
-        assertEquals(0, withoutFallback.appendedCount)
-        assertEquals(1, withoutFallback.noImageCount)
-        assertEquals(0, withoutFallback.failedCount)
+        server.verify()
+        assertEquals(3, result.excludedCount)
+        assertEquals(listOf("K3"), appendedJobs.map { it.externalId })
     }
 
-    @Test
-    fun `로고 경로와 파일명을 이어 로고 주소를 만든다`() {
-        fun logo(path: String?, fileName: String?): String? {
-            val base = listOfNotNull(
-                path?.let { "<filePath>$it</filePath>" },
-                fileName?.let { "<pFileName>$it</pFileName>" },
-            ).joinToString("")
-            val detail = Work24XmlConverter.toJson("<HRDNet><inst_base_info>$base</inst_base_info></HRDNet>")
-            return Work24BootcampMapper.logoUrl(detail, "https://files.test/")
-        }
-
-        assertEquals("https://files.test/upload/a.png", logo("/upload", "a.png"))
-        assertEquals("https://files.test/upload/a.png", logo("/upload/a.png", "a.png"))
-        assertEquals("https://cdn.test/a.png", logo("https://cdn.test/", "a.png"))
-        assertNull(logo("/upload", null))
-        assertNull(logo("upload", "a.png"))
-    }
-
-    private fun collector(imageUrl: String = IMAGE_URL): Work24Collector {
+    private fun collector(): Work24Collector {
         val properties = Work24Properties(
             baseUrl = BASE_URL,
             recruitmentAuthKey = "recruitment-key",
             tomorrowLearningCardAuthKey = "training-key",
             workStudyAuthKey = "work-study-key",
-            trainingFileBaseUrl = "https://www.work24.go.kr",
-            bootcampImageUrl = imageUrl,
         )
         return Work24Collector(
             Work24Client(restClientBuilder.build(), properties, ObjectMapper()),
-            properties,
             jobReader,
             jobAppender,
             bootcampReader,
@@ -318,7 +353,6 @@ class Work24CollectorTest {
         const val BASE_URL = "https://work24.test/cm/openApi/call"
         const val WORKNET = "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo="
         const val HRD = "https://www.work24.go.kr/hr/a/a/3100/selectTracseDetl.do?tracseId="
-        const val IMAGE_URL = "https://cdn.ogonggo.test/work24-bootcamp.png"
         val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 27, 4, 0)
     }
 }

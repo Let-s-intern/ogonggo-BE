@@ -3,6 +3,7 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
+import com.ogonggo.core.review.domain.ContentSource
 import org.springframework.stereotype.Component
 
 @Component
@@ -47,6 +48,8 @@ class JobAppender internal constructor(
                 inquiryEmail = command.inquiryEmail,
                 sourceUrl = command.sourceUrl,
                 publicationStatus = command.publicationStatus,
+                source = command.source ?: ContentSource.of(command.ownerUserId),
+                externalId = command.externalId,
             ),
         )
 }
