@@ -213,6 +213,8 @@ PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한�
 
 #### 전달: 양쪽 아웃박스
 
+실패했을 때 맞추는 방식과 이렇게 정한 이유(보상 트랜잭션을 쓰지 않는 이유 포함)는 [렛츠커리어 연동 쓰기의 일관성](letscareer-write-consistency.md)에 다이어그램과 함께 정리되어 있습니다.
+
 ```text
 오공고  PUT /users/me/profile ─┬ user_profiles 수정 ─┐ 한 트랜잭션
                                └ letscareer_job_profile_outbox 적재 ─┘
@@ -259,6 +261,8 @@ PUT /api/v1/users/me/notification-email   { "notificationEmail": "me@example.com
 휴대폰 번호와 가입 경로(`letscareer_auth_provider`)는 마이페이지용으로 `verify` 응답에 실어 로그인마다 복제합니다. 가입 경로는 렛츠커리어에서 바뀌지 않는 값이라 첫 로그인에 저장된 값이 그대로 유지되며, 학력처럼 최초 1회 호출(`job-profile`)에 싣지 않은 이유는 그 호출이 실패하면 값을 다시 받을 기회가 없기 때문입니다. 두 값은 복제 대상에 나중에 추가되었으므로, `letscareer_updated_at`이 같아도 둘 중 하나가 다르면 한 번 갱신해 기존 행을 채웁니다. 렛츠커리어가 오공고가 모르는 가입 경로를 보내면 그 값만 비우고 로그인은 진행합니다.
 
 ### 비밀번호 변경
+
+재시도와 결과를 알 수 없는 경우의 처리는 [렛츠커리어 연동 쓰기의 일관성](letscareer-write-consistency.md#3-비밀번호-변경-동기-호출과-재시도)에 있습니다.
 
 ```text
 PATCH /api/v1/users/me/password   { "currentPassword": "...", "newPassword": "..." }
