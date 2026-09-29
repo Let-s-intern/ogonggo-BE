@@ -4,6 +4,7 @@ import com.ogonggo.core.user.domain.UserGrade
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
 
 class JobProfileResponseTest {
 
@@ -39,6 +40,7 @@ class JobProfileResponseTest {
         assertEquals("IT", result.wishIndustry)
         assertEquals("정규직", result.wishEmploymentType)
         assertEquals("오공고", result.wishCompany)
+        assertEquals(LocalDateTime.of(2026, 8, 10, 9, 0), result.updatedAt)
     }
 
     private fun response(grade: String?): JobProfileResponse = JobProfileResponse(
@@ -51,5 +53,6 @@ class JobProfileResponseTest {
         wishIndustry = "IT",
         wishEmploymentType = "정규직",
         wishCompany = "오공고",
+        updatedAt = LocalDateTime.of(2026, 8, 10, 9, 0),
     )
 }

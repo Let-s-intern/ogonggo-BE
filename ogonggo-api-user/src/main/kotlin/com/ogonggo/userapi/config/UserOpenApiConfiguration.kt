@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.config
 
+import com.ogonggo.userapi.auth.implement.LetsCareerInternalApiKeyFilter
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 const val USER_BEARER_AUTH_SCHEME = "BearerAuth"
+const val USER_INTERNAL_API_KEY_SCHEME = "InternalApiKey"
 
 @Configuration
 class UserOpenApiConfiguration {
@@ -24,12 +26,20 @@ class UserOpenApiConfiguration {
         // 새어 나가, HTTPS로 연 Swagger UI에서 Try it out이 mixed content로 차단된다.
         .servers(listOf(Server().url("/")))
         .components(
-            Components().addSecuritySchemes(
-                USER_BEARER_AUTH_SCHEME,
-                SecurityScheme()
-                    .type(SecurityScheme.Type.HTTP)
-                    .scheme("bearer")
-                    .bearerFormat("JWT"),
-            ),
+            Components()
+                .addSecuritySchemes(
+                    USER_BEARER_AUTH_SCHEME,
+                    SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT"),
+                )
+                .addSecuritySchemes(
+                    USER_INTERNAL_API_KEY_SCHEME,
+                    SecurityScheme()
+                        .type(SecurityScheme.Type.APIKEY)
+                        .`in`(SecurityScheme.In.HEADER)
+                        .name(LetsCareerInternalApiKeyFilter.INTERNAL_API_KEY_HEADER),
+                ),
         )
 }

@@ -1,8 +1,10 @@
 package com.ogonggo.userapi.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.userapi.auth.implement.LetsCareerInternalApiKeyFilter
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.auth.presentation.UserAuthenticationFilter
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -32,6 +34,8 @@ class UserSecurityConfiguration {
     fun userSecurityFilterChain(
         http: HttpSecurity,
         tokenProvider: OgonggoTokenProvider,
+        // 설정 빈 대신 값을 직접 읽는다. 웹 계층 테스트 슬라이스에는 LetsCareerProperties 빈이 없다.
+        @Value("\${ogonggo.letscareer.internal-api-key:}") letsCareerInternalApiKey: String,
         userAuthenticationEntryPoint: UserAuthenticationEntryPoint,
         userAccessDeniedHandler: UserAccessDeniedHandler,
     ): SecurityFilterChain =
@@ -121,11 +125,18 @@ class UserSecurityConfiguration {
                     "/api/v1/recruitment-post-bookmarks/**",
                     "/api/v1/recruitment-posts/*/bookmarks/me",
                 ).authenticated()
+                // 렛츠커리어 서버가 학력·희망 조건 변경을 보내는 서버 간 경로다. 사용자 토큰으로는 부를 수 없다.
+                it.requestMatchers(HttpMethod.PUT, "/api/v1/internal/letscareer-users/*/job-profile")
+                    .hasAuthority(LetsCareerInternalApiKeyFilter.LETSCAREER_AUTHORITY)
                 it.anyRequest().denyAll()
             }
             .addFilterBefore(
                 UserAuthenticationFilter(tokenProvider),
                 UsernamePasswordAuthenticationFilter::class.java,
+            )
+            .addFilterAfter(
+                LetsCareerInternalApiKeyFilter(letsCareerInternalApiKey),
+                UserAuthenticationFilter::class.java,
             )
             .build()
 

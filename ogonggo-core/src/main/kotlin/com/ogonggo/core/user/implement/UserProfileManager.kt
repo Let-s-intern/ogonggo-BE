@@ -67,19 +67,35 @@ class UserProfileManager internal constructor(
      */
     fun replaceJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) {
         val profile = userProfileRepository.findByUserId(userId)
-            ?: return createWithJobInfo(userId, command, now)
+            ?: return createWithJobInfo(userId, command, updatedAt = now, now = now)
 
-        profile.replaceJobInfo(
-            university = command.university,
-            major = command.major,
-            grade = command.grade,
-            wishField = command.wishField,
-            wishJob = command.wishJob,
-            wishIndustry = command.wishIndustry,
-            wishEmploymentType = command.wishEmploymentType,
-            wishCompany = command.wishCompany,
-        )
+        profile.replaceJobInfo(command, updatedAt = now)
         userProfileRepository.save(profile)
+    }
+
+    /**
+     * 렛츠커리어에서 온 학력·희망 조건을 나중에 고친 쪽 기준으로 반영한다. 반영했으면 true다.
+     * 고친 일시는 렛츠커리어의 값을 그대로 남긴다. 같은 수정을 다시 받으면 같은 일시라 반영하지 않는다.
+     * 렛츠커리어에서 온 값이므로 렛츠커리어로 다시 보낼 변경을 적재하지 않는다.
+     */
+    fun applyLetsCareerJobInfo(
+        userId: Long,
+        command: UserProfileJobInfoDto,
+        letsCareerUpdatedAt: LocalDateTime?,
+        now: LocalDateTime,
+    ): Boolean {
+        val profile = userProfileRepository.findByUserId(userId)
+        if (profile == null) {
+            createWithJobInfo(userId, command, updatedAt = letsCareerUpdatedAt, now = now)
+            return true
+        }
+        if (!profile.acceptsLetsCareerJobInfo(letsCareerUpdatedAt)) {
+            return false
+        }
+
+        profile.replaceJobInfo(command, updatedAt = letsCareerUpdatedAt)
+        userProfileRepository.save(profile)
+        return true
     }
 
     /**
@@ -105,20 +121,25 @@ class UserProfileManager internal constructor(
         }
     }
 
-    private fun createWithJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) =
-        createWith(UserProfile(userId = userId, lastSyncedAt = now)) {
-            replaceJobInfo(
-                university = command.university,
-                major = command.major,
-                grade = command.grade,
-                wishField = command.wishField,
-                wishJob = command.wishJob,
-                wishIndustry = command.wishIndustry,
-                wishEmploymentType = command.wishEmploymentType,
-                wishCompany = command.wishCompany,
-            )
-        }
+    private fun createWithJobInfo(
+        userId: Long,
+        command: UserProfileJobInfoDto,
+        updatedAt: LocalDateTime?,
+        now: LocalDateTime,
+    ) = createWith(UserProfile(userId = userId, lastSyncedAt = now)) { replaceJobInfo(command, updatedAt) }
 }
+
+private fun UserProfile.replaceJobInfo(command: UserProfileJobInfoDto, updatedAt: LocalDateTime?) = replaceJobInfo(
+    university = command.university,
+    major = command.major,
+    grade = command.grade,
+    wishField = command.wishField,
+    wishJob = command.wishJob,
+    wishIndustry = command.wishIndustry,
+    wishEmploymentType = command.wishEmploymentType,
+    wishCompany = command.wishCompany,
+    updatedAt = updatedAt,
+)
 
 /**
  * 휴대폰 번호와 가입 경로는 나중에 복제 대상에 추가되었다.

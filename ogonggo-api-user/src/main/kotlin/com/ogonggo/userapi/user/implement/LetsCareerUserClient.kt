@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.user.implement
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.user.domain.UserGrade
@@ -9,13 +10,18 @@ import com.ogonggo.userapi.auth.error.AuthErrorCode
 import com.ogonggo.userapi.auth.implement.LetsCareerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
+import java.time.LocalDateTime
 
-/** 렛츠커리어가 보관 중인 학력과 희망 조건이다. 최초 가입 시점에 한 번만 가져온다. */
+/**
+ * 렛츠커리어가 보관 중인 학력과 희망 조건이다. 최초 가입 시점에 한 번만 가져온다.
+ * updatedAt은 렛츠커리어에서 마지막으로 고친 일시이며, 한 번도 고친 적 없으면 null이다.
+ */
 data class LetsCareerJobProfile(
     val university: String?,
     val major: String?,
@@ -25,6 +31,7 @@ data class LetsCareerJobProfile(
     val wishIndustry: String?,
     val wishEmploymentType: String?,
     val wishCompany: String?,
+    val updatedAt: LocalDateTime?,
 ) {
     fun toCommand(): UserProfileJobInfoDto = UserProfileJobInfoDto(
         university = university,
@@ -63,6 +70,23 @@ class LetsCareerUserClient(
         }
 
         return response?.data?.toResult()
+    }
+
+    /**
+     * 오공고에서 고친 학력·희망 조건 전체를 렛츠커리어로 보낸다. 렛츠커리어는 더 나중에 고친 쪽의 값만 남긴다.
+     * 실패하면 RestClientException을 그대로 던진다. 아웃박스가 다음 주기에 다시 보낸다.
+     * 렛츠커리어에 사용자가 없으면(탈퇴) 보낼 곳이 없으므로 성공으로 본다.
+     */
+    fun replaceJobProfile(letsCareerUserId: Long, command: LetsCareerJobProfileReplaceCommand) {
+        letsCareerRestClient.put()
+            .uri(JOB_PROFILE_PATH, letsCareerUserId)
+            .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
+            .body(command)
+            .retrieve()
+            .onStatus({ it == HttpStatus.NOT_FOUND }) { _, _ ->
+                log.warn("렛츠커리어에 없는 사용자라 학력·희망 조건을 보내지 않습니다. letsCareerUserId={}", letsCareerUserId)
+            }
+            .toBodilessEntity()
     }
 
     /**
@@ -143,6 +167,21 @@ internal data class LetsCareerApiResponse<T>(
     val data: T?,
 )
 
+/** 렛츠커리어 내부 API의 학력·희망 조건 교체 요청이다. null이면 비운다. */
+data class LetsCareerJobProfileReplaceCommand(
+    val university: String?,
+    val major: String?,
+    val grade: UserGrade?,
+    val wishField: String?,
+    val wishJob: String?,
+    val wishIndustry: String?,
+    val wishEmploymentType: String?,
+    val wishCompany: String?,
+    // 직접 만든 RestClient는 LocalDateTime을 배열로 쓴다. 두 서버가 같은 ISO 문자열로 주고받도록 못 박는다.
+    @get:JsonFormat(shape = JsonFormat.Shape.STRING)
+    val updatedAt: LocalDateTime,
+)
+
 internal data class PasswordChangeRequest(
     val password: String,
     val newPassword: String,
@@ -165,6 +204,7 @@ internal data class JobProfileResponse(
     val wishIndustry: String?,
     val wishEmploymentType: String?,
     val wishCompany: String?,
+    val updatedAt: LocalDateTime?,
 ) {
     /** 렛츠커리어가 주는 형태를 오공고가 쓰는 형태로 옮긴다. */
     fun toResult(): LetsCareerJobProfile = LetsCareerJobProfile(
@@ -177,5 +217,6 @@ internal data class JobProfileResponse(
         wishIndustry = wishIndustry,
         wishEmploymentType = wishEmploymentType,
         wishCompany = wishCompany,
+        updatedAt = updatedAt,
     )
 }

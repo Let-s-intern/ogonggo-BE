@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.user.implement
 
 import com.ogonggo.core.error.BusinessException
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import com.ogonggo.userapi.auth.implement.LetsCareerProperties
@@ -19,6 +20,8 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.request
 import org.springframework.test.web.client.response.MockRestResponseCreators.withStatus
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
+import java.time.LocalDateTime
 import java.net.SocketTimeoutException
 
 class LetsCareerUserClientTest {
@@ -126,6 +129,42 @@ class LetsCareerUserClientTest {
         server.verify()
     }
 
+    @Test
+    fun `학력·희망 조건 전체와 고친 일시를 PUT으로 보낸다`() {
+        server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/job-profile"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(header("X-Internal-Api-Key", API_KEY))
+            .andExpect(
+                content().json(
+                    """{"university":"오공고대학교","major":null,"grade":"THIRD","wishField":"개발",
+                       "updatedAt":"2026-09-29T10:00:00"}""",
+                ),
+            )
+            .andRespond(withSuccess("""{"status":200,"message":"ok","data":{"applied":true}}""", MediaType.APPLICATION_JSON))
+
+        client.replaceJobProfile(4821L, REPLACE_COMMAND)
+
+        server.verify()
+    }
+
+    @Test
+    fun `렛츠커리어에 없는 사용자면 보낼 곳이 없으므로 성공으로 본다`() {
+        server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/job-profile"))
+            .andRespond(errorBody(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"))
+
+        client.replaceJobProfile(4821L, REPLACE_COMMAND)
+
+        server.verify()
+    }
+
+    @Test
+    fun `렛츠커리어가 실패하면 예외를 그대로 던져 아웃박스가 다시 보내게 한다`() {
+        server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/job-profile"))
+            .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+
+        assertThrows(RestClientException::class.java) { client.replaceJobProfile(4821L, REPLACE_COMMAND) }
+    }
+
     private fun errorBody(status: HttpStatus, code: String) = withStatus(status)
         .contentType(MediaType.APPLICATION_JSON)
         .body("""{"status":${status.value()},"code":"$code","message":"렛츠커리어 메시지"}""")
@@ -133,6 +172,17 @@ class LetsCareerUserClientTest {
     companion object {
         private const val BASE_URL = "http://letscareer.test"
         private const val API_KEY = "internal-key"
+        private val REPLACE_COMMAND = LetsCareerJobProfileReplaceCommand(
+            university = "오공고대학교",
+            major = null,
+            grade = UserGrade.THIRD,
+            wishField = "개발",
+            wishJob = null,
+            wishIndustry = null,
+            wishEmploymentType = null,
+            wishCompany = null,
+            updatedAt = LocalDateTime.of(2026, 9, 29, 10, 0),
+        )
         private const val PASSWORD_URL = "$BASE_URL/api/v1/internal/users/4821/password"
     }
 }

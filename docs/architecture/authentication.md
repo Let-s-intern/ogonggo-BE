@@ -182,38 +182,69 @@ POST /api/v1/auth/company/signin
 
 ### 학력과 희망 조건
 
-> 렛츠커리어에서 한 번 가져오고, 그다음부터는 오공고가 소유한다.
+> 렛츠커리어와 오공고 양쪽에서 고칠 수 있고, 나중에 고친 쪽의 값으로 맞춘다. (2026-09-29 결정)
 
 ```text
 GET /api/v1/users/me            profile 안에 함께 담긴다
 PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한다
 ```
 
-통합 로그인을 쓰는 이상 같은 정보를 두 번 입력하게 하지 않기 위해, 최초 가입 시점에 렛츠커리어의 값을 한 번 복제합니다. 그 뒤로는 오공고에서 수정할 수 있고 재로그인해도 덮어쓰지 않습니다.
-
 | 항목 | 값 | 소유 |
 | --- | --- | --- |
 | 이름·가입 이메일·휴대폰 번호·가입 경로·닉네임·프로필 이미지 | `name`, `email`, `phoneNum`, `authProvider`, `nickname`, `profileImageUrl` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
-| 학력 | `university`, `major`, `grade` | 오공고. 사용자가 고친다 |
-| 희망 조건 | `wishField`, `wishJob`, `wishIndustry`, `wishEmploymentType`, `wishCompany` | 오공고. 사용자가 고친다 |
+| 학력 | `university`, `major`, `grade` | 양쪽. 나중에 고친 쪽이 이긴다 |
+| 희망 조건 | `wishField`, `wishJob`, `wishIndustry`, `wishEmploymentType`, `wishCompany` | 양쪽. 나중에 고친 쪽이 이긴다 |
 | 오늘의 공고 수신 이메일 | `notificationEmail` | 오공고. 사용자가 고친다 |
 
-**같은 `user_profiles` 테이블에 두되 소유자는 나눕니다.** 소유자가 다른 값이 한 테이블에 있으므로 무엇이 무엇을 덮어쓰는지를 코드로 못 박아 둡니다. `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값만, `UserProfile.changeNotificationEmail`은 수신 이메일만 건드립니다. 두 메서드의 경계가 곧 소유권 경계이므로 한쪽에 다른 쪽 필드를 추가하지 않습니다.
+**같은 `user_profiles` 테이블에 두되 무엇이 무엇을 덮어쓰는지는 코드로 못 박아 둡니다.** `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값과 그 수정 일시만, `UserProfile.changeNotificationEmail`은 수신 이메일만 건드립니다. 한쪽 메서드에 다른 쪽 필드를 추가하지 않습니다.
 
 `grade`는 렛츠커리어의 `UserGrade`와 값과 `code`를 맞춰 두었습니다. 희망 조건 다섯 값은 렛츠커리어가 자유 문자열로 다루므로 오공고도 형식을 해석하지 않고 그대로 보관합니다.
 
-렛츠커리어에서 값을 가져오는 것은 **최초 계정 생성 시점 한 번뿐**입니다.
+#### 선후 판정
+
+양쪽이 학력·희망 조건만의 최종 수정 일시를 따로 갖습니다. 렛츠커리어의 `updatedAt`(`last_modified_date`)은 전화번호·비밀번호를 바꿔도 바뀌어 쓸 수 없습니다.
+
+| 서버 | 칼럼 | 채워지는 때 |
+| --- | --- | --- |
+| 오공고 | `user_profiles.job_info_updated_at` | 오공고에서 고친 시각. 렛츠커리어 값을 받으면 렛츠커리어의 일시를 그대로 남긴다 |
+| 렛츠커리어 | `user.job_profile_updated_at` | 렛츠커리어 마이페이지·어드민·가입 추가 정보에서 여덟 값이 실제로 바뀐 시각. 오공고 값을 받으면 오공고의 일시를 그대로 남긴다 |
+
+받는 쪽은 보낸 쪽 일시가 **자기 일시보다 나중일 때만** 반영합니다. 같은 일시는 이미 받은 수정이라 반영하지 않으므로, 받은 값을 다시 돌려보내도 되돌아오는 고리가 생기지 않습니다. 자기 일시가 없으면(한 번도 고친 적 없는 과거 계정) 받고, 보낸 쪽 일시가 없으면 자기 일시도 없을 때만 받습니다. 두 서버 모두 KST로 떠서 일시를 그대로 비교하며, 몇 초 차이로 양쪽에서 고친 경우 두 서버의 시계 오차만큼 판정이 뒤집힐 수 있음을 감수합니다.
+
+#### 전달: 양쪽 아웃박스
+
+```text
+오공고  PUT /users/me/profile ─┬ user_profiles 수정 ─┐ 한 트랜잭션
+                               └ letscareer_job_profile_outbox 적재 ─┘
+        letsCareerJobProfileSync(30초) → 렛츠커리어 PUT /api/v1/internal/users/{userId}/job-profile
+
+렛츠커리어 여덟 값 수정 ─┬ user 수정 ─┐ 한 트랜잭션
+                        └ ogonggo_job_profile_outbox 적재 ─┘
+        ogonggoJobProfileSyncJob(30초) → 오공고 PUT /api/v1/internal/letscareer-users/{letsCareerUserId}/job-profile
+```
+
+- 아웃박스는 사용자당 한 행입니다. 여러 번 고쳐도 적재 일시만 갱신하고, 보낼 때 그 시점의 최신 값 전체와 수정 일시를 읽어 보냅니다. 순서가 바뀌거나 같은 요청이 여러 번 가도 받는 쪽 선후 판정 때문에 결과가 같습니다.
+- 성공하면 **적재 일시가 그대로일 때만** 지웁니다. 보내는 사이 다시 고쳤으면 행이 남아 다음 주기에 새 값을 보냅니다.
+- 실패하면 실패 횟수를 올리고 다음 주기에 다시 보냅니다. 계속 실패하는 행이 다른 행을 막지 않도록 실패가 적은 순으로 100건씩 보냅니다.
+- 상대 호출은 트랜잭션 밖에서 하므로 상대 장애가 사용자의 수정 요청을 실패시키지 않습니다.
+- 오공고는 렛츠커리어 계정이 있는 사용자만 적재합니다. 렛츠커리어는 오공고 계정 여부를 모르므로 모두 적재하고, 오공고는 계정이 없는 렛츠커리어 사용자를 `applied: false`로 무시합니다. 그 사람이 나중에 처음 로그인하면 최신 값을 복제합니다.
+- 렛츠커리어에서 사용자가 사라졌으면(404) 보낼 곳이 없으므로 보낸 것으로 봅니다.
+- 두 서버는 같은 내부 API 키(`ogonggo.letscareer.internal-api-key` = 렛츠커리어 `spring.security.internal.api-key`)로 서로를 인증합니다. 렛츠커리어는 오공고 사용자 API 주소를 `ogonggo.base-url`로 받으며, 비어 있으면 전송하지 않고 경고만 남깁니다.
+
+두 내부 API 모두 여덟 값을 **전체 교체**합니다. null이면 비웁니다. 렛츠커리어의 기존 사용자 수정 API는 null이면 값을 유지하지만, 오공고 PUT이 보내지 않은 값을 비우므로 그 결과를 그대로 옮기기 위해서입니다.
+
+#### 최초 가입
+
+통합 로그인을 쓰는 이상 같은 정보를 두 번 입력하게 하지 않기 위해, 계정을 새로 만들 때 렛츠커리어의 값과 수정 일시를 한 번 가져옵니다. 이후 변경은 위의 아웃박스로 오갑니다.
 
 ```text
 POST /api/v1/internal/auth/verify                    매 로그인
-GET  /api/v1/internal/users/{userId}/job-profile     최초 가입 시 1회
+GET  /api/v1/internal/users/{userId}/job-profile     최초 가입 시 1회 (updatedAt 포함)
 ```
 
-매 로그인 호출인 `verify`에 이 값들을 싣지 않고 계정을 새로 만들 때만 별도 내부 API를 한 번 호출합니다. 재로그인마다 쓰지도 않을 개인정보를 실어 나르지 않기 위한 것이며, 나중에 "렛츠커리어에서 다시 불러오기"가 필요해지면 같은 API를 재사용합니다. 두 경로 모두 `X-Internal-Api-Key`로 인증합니다.
+매 로그인 호출인 `verify`에 이 값들을 싣지 않고 계정을 새로 만들 때만 별도 내부 API를 한 번 호출합니다. 재로그인마다 쓰지도 않을 개인정보를 실어 나르지 않기 위한 것입니다.
 
-렛츠커리어 호출은 로그인 트랜잭션 밖에서 합니다. 응답을 기다리는 동안 DB 커넥션을 잡고 있으면 렛츠커리어가 느려질 때 로그인과 무관한 API까지 커넥션이 없어 함께 실패합니다.
-
-그 호출이 실패해도 가입은 성공으로 둡니다. 학력과 희망 조건은 로그인의 성공 조건이 아니고, 비어 있으면 사용자가 오공고에서 직접 입력하면 됩니다. 오공고가 모르는 `grade` 값이 오면 그 값만 비우고 나머지는 저장합니다.
+렛츠커리어 호출은 로그인 트랜잭션 밖에서 합니다. 그 호출이 실패해도 가입은 성공으로 둡니다. 학력과 희망 조건은 로그인의 성공 조건이 아니고, 비어 있으면 사용자가 오공고에서 직접 입력하면 됩니다. 오공고가 모르는 `grade` 값이 오면 그 값만 비우고 나머지는 저장합니다.
 
 PUT은 여덟 값을 함께 교체하며 보내지 않은 값은 비웁니다. 아직 입력한 적이 없어도 조회는 404가 아니라 값이 `null`인 200으로 응답합니다.
 
@@ -290,7 +321,10 @@ GET /api/v1/users/me
 | `POST /api/v1/internal/auth/verify` | 매 로그인 |
 | `GET /api/v1/internal/users/{userId}/job-profile` | 최초 가입 시 1회 |
 | `PATCH /api/v1/internal/users/{userId}/password` | 일반 회원의 비밀번호 변경 |
+| `PUT /api/v1/internal/users/{userId}/job-profile` | 오공고에서 고친 학력·희망 조건 전송(아웃박스) |
 | `GET /api/v1/internal/challenges/recommend?userId=` | 추천 챌린지 조회마다. `userId`는 선택 |
+
+반대로 렛츠커리어가 부르는 오공고 사용자 API의 내부 경로는 `PUT /api/v1/internal/letscareer-users/{letsCareerUserId}/job-profile` 하나입니다(렛츠커리어에서 고친 학력·희망 조건). 같은 내부 API 키로 인증하며 사용자 토큰으로는 부를 수 없습니다.
 
 모두 서버 간 호출 전용이며 브라우저에 노출하지 않습니다. `X-Internal-Api-Key` 헤더가 서버 설정값과 일치할 때만 `INTERNAL` 권한을 부여하고, 그 외에는 인가 단계에서 차단합니다. 키가 설정되지 않으면 모든 요청을 거부합니다.
 

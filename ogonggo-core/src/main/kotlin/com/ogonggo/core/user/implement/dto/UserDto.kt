@@ -78,6 +78,7 @@ data class UserProfileDto(
     val wishIndustry: String?,
     val wishEmploymentType: String?,
     val wishCompany: String?,
+    val jobInfoUpdatedAt: LocalDateTime? = null,
 ) {
     companion object {
         internal fun from(profile: UserProfile): UserProfileDto = UserProfileDto(
@@ -96,9 +97,17 @@ data class UserProfileDto(
             wishIndustry = profile.wishIndustry,
             wishEmploymentType = profile.wishEmploymentType,
             wishCompany = profile.wishCompany,
+            jobInfoUpdatedAt = profile.jobInfoUpdatedAt,
         )
     }
 }
+
+/** 렛츠커리어로 보낼 학력·희망 조건 변경 한 건이다. */
+data class LetsCareerJobProfileOutboxDto(
+    val userId: Long,
+    val requestedAt: LocalDateTime,
+    val attemptCount: Int,
+)
 
 data class CompanyProfileDto(
     val organizationName: String,

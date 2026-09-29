@@ -33,6 +33,7 @@ import org.springframework.test.context.ContextConfiguration
     UserReader::class,
     UserAppender::class,
     UserManager::class,
+    LetsCareerJobProfileOutboxManager::class,
     UserProfileManager::class,
     UserProfileReader::class,
     CompanyProfileAppender::class,
@@ -43,6 +44,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     private val userReader: UserReader,
     private val userAppender: UserAppender,
     private val userManager: UserManager,
+    private val outboxManager: LetsCareerJobProfileOutboxManager,
     private val userProfileManager: UserProfileManager,
     private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -406,6 +408,86 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
         assertNull(userReader.readCredential(account.userId))
     }
+
+    @Test
+    fun `오공고에서 고치면 고친 일시를 남긴다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userProfileManager.replaceJobInfo(account.userId, jobInfo("개발"), NOW)
+
+        assertEquals(NOW, userProfileReader.read(account.userId)?.jobInfoUpdatedAt)
+    }
+
+    @Test
+    fun `렛츠커리어 값은 더 나중에 고친 것일 때만 반영하고 렛츠커리어의 일시를 남긴다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.replaceJobInfo(account.userId, jobInfo("오공고에서 고침"), NOW)
+
+        // 같은 일시(이미 받은 수정)·더 이른 일시·일시 없음은 받지 않는다.
+        listOf(NOW, NOW.minusMinutes(1), null).forEach { letsCareerUpdatedAt ->
+            assertEquals(
+                false,
+                userProfileManager.applyLetsCareerJobInfo(account.userId, jobInfo("렛츠커리어"), letsCareerUpdatedAt, NOW),
+            )
+        }
+        assertEquals("오공고에서 고침", userProfileReader.read(account.userId)?.wishField)
+
+        val later = NOW.plusMinutes(1)
+        assertEquals(true, userProfileManager.applyLetsCareerJobInfo(account.userId, jobInfo("렛츠커리어"), later, NOW))
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("렛츠커리어", profile?.wishField)
+        assertEquals(later, profile?.jobInfoUpdatedAt)
+    }
+
+    @Test
+    fun `한 번도 고친 적 없으면 렛츠커리어 값을 일시가 없어도 받는다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        assertEquals(true, userProfileManager.applyLetsCareerJobInfo(account.userId, jobInfo("렛츠커리어"), null, NOW))
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("렛츠커리어", profile?.wishField)
+        assertNull(profile?.jobInfoUpdatedAt)
+    }
+
+    @Test
+    fun `아웃박스는 사용자당 한 행이고 다시 적재하면 일시만 바뀐다`() {
+        outboxManager.enqueue(17L, NOW)
+        outboxManager.enqueue(17L, NOW.plusMinutes(1))
+
+        val pending = outboxManager.readPending()
+        assertEquals(1, pending.size)
+        assertEquals(NOW.plusMinutes(1), pending.single().requestedAt)
+    }
+
+    @Test
+    fun `보내는 사이 다시 적재됐으면 보낸 것으로 지우지 않는다`() {
+        outboxManager.enqueue(17L, NOW)
+        val sending = outboxManager.readPending().single()
+        outboxManager.enqueue(17L, NOW.plusMinutes(1))
+
+        outboxManager.markSent(sending)
+
+        assertEquals(NOW.plusMinutes(1), outboxManager.readPending().single().requestedAt)
+
+        outboxManager.markSent(outboxManager.readPending().single())
+        assertEquals(0, outboxManager.readPending().size)
+    }
+
+    @Test
+    fun `실패가 적은 행부터 보낸다`() {
+        outboxManager.enqueue(17L, NOW)
+        outboxManager.enqueue(18L, NOW.plusMinutes(1))
+        outboxManager.markFailed(outboxManager.readPending().first { it.userId == 17L })
+
+        val pending = outboxManager.readPending()
+        assertEquals(listOf(18L, 17L), pending.map { it.userId })
+        assertEquals(1, pending.last().attemptCount)
+    }
+
+    private fun jobInfo(wishField: String) =
+        UserProfileJobInfoDto(null, null, null, wishField, null, null, null, null)
 
     private fun syncCommand(
         userId: Long,

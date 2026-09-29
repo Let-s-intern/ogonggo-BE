@@ -10,6 +10,7 @@ import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.dto.CompanyProfileDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
 import com.ogonggo.core.user.implement.CompanyProfileReader
+import com.ogonggo.core.user.implement.LetsCareerJobProfileOutboxManager
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
@@ -33,6 +34,7 @@ class UserAccountServiceTest {
     private val companyProfileReader = Mockito.mock(CompanyProfileReader::class.java)
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val companyProfileManager = Mockito.mock(CompanyProfileManager::class.java)
+    private val letsCareerJobProfileOutboxManager = Mockito.mock(LetsCareerJobProfileOutboxManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = UserAccountService(
         userReader,
@@ -40,6 +42,7 @@ class UserAccountServiceTest {
         companyProfileReader,
         userProfileManager,
         companyProfileManager,
+        letsCareerJobProfileOutboxManager,
         clock,
     )
 
@@ -147,9 +150,23 @@ class UserAccountServiceTest {
             wishCompany = null,
         )
 
+        givenAccount(UserRole.USER, email = null)
+
         service.replaceMyProfile(USER_ID, command)
 
         Mockito.verify(userProfileManager).replaceJobInfo(USER_ID, command, NOW)
+        // 렛츠커리어에서도 고칠 수 있는 값이라 같은 트랜잭션에서 보낼 변경을 적재한다.
+        Mockito.verify(letsCareerJobProfileOutboxManager).enqueue(USER_ID, NOW)
+    }
+
+    @Test
+    fun `렛츠커리어 계정이 없으면 프로필만 고치고 보낼 변경은 적재하지 않는다`() {
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        service.replaceMyProfile(USER_ID, EMPTY_JOB_INFO)
+
+        Mockito.verify(userProfileManager).replaceJobInfo(USER_ID, EMPTY_JOB_INFO, NOW)
+        Mockito.verifyNoInteractions(letsCareerJobProfileOutboxManager)
     }
 
     @Test
@@ -229,6 +246,7 @@ class UserAccountServiceTest {
             managerPhone = null,
             notificationEmail = null,
         )
+        private val EMPTY_JOB_INFO = UserProfileJobInfoDto(null, null, null, null, null, null, null, null)
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
