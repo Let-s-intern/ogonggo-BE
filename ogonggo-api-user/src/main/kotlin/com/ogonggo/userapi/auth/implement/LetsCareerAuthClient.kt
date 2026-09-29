@@ -15,6 +15,7 @@ data class LetsCareerUser(
     val userId: Long,
     val email: String?,
     val name: String?,
+    val phoneNum: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val isAdmin: Boolean,
@@ -75,6 +76,7 @@ internal data class VerifyResponse(
     val userId: Long,
     val email: String?,
     val name: String?,
+    val phoneNum: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
@@ -85,6 +87,7 @@ internal data class VerifyResponse(
         userId = userId,
         email = email,
         name = name,
+        phoneNum = phoneNum,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
         // 렛츠커리어가 값을 주지 않으면 관리자가 아닌 것으로 본다.

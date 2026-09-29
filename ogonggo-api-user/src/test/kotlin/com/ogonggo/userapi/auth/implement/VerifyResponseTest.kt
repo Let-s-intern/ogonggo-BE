@@ -26,6 +26,7 @@ class VerifyResponseTest {
         assertEquals(4821L, result.userId)
         assertEquals("lets@career.co.kr", result.email)
         assertEquals("김렛츠", result.name)
+        assertEquals("010-1234-5678", result.phoneNum)
         assertEquals("렛츠", result.nickname)
         assertEquals("https://example.com/me.png", result.profileImageUrl)
         assertEquals(UPDATED_AT, result.updatedAt)
@@ -35,6 +36,7 @@ class VerifyResponseTest {
         userId = 4821L,
         email = "lets@career.co.kr",
         name = "김렛츠",
+        phoneNum = "010-1234-5678",
         nickname = "렛츠",
         profileImageUrl = "https://example.com/me.png",
         isAdmin = isAdmin,

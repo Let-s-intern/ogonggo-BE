@@ -19,6 +19,7 @@ internal class UserProfile(
 
     name: String? = null,
     email: String? = null,
+    phoneNum: String? = null,
     nickname: String? = null,
     profileImageUrl: String? = null,
     letsCareerUpdatedAt: LocalDateTime? = null,
@@ -42,6 +43,10 @@ internal class UserProfile(
     var email: String? = email /* 사용자 이메일 */
         protected set
 
+    @Column(name = "phone_num", length = 30)
+    var phoneNum: String? = phoneNum /* 휴대폰 번호 */
+        protected set
+
     @Column(length = 100)
     var nickname: String? = nickname /* 사용자 닉네임 */
         protected set
@@ -56,6 +61,10 @@ internal class UserProfile(
 
     @Column(name = "last_synced_at", nullable = false)
     var lastSyncedAt: LocalDateTime = lastSyncedAt /* 렛츠커리어 프로필 최종 동기화 일시 */
+        protected set
+
+    @Column(name = "notification_email", length = 320)
+    var notificationEmail: String? = null /* 오늘의 공고 정보 수신용 이메일 */
         protected set
 
     @Column(length = 30)
@@ -93,11 +102,12 @@ internal class UserProfile(
 
     /**
      * 렛츠커리어에서 복제하는 값만 갱신한다.
-     * 학력과 희망 조건은 오공고가 소유하므로 여기서 건드리지 않는다.
+     * 학력과 희망 조건, 수신 이메일은 오공고가 소유하므로 여기서 건드리지 않는다.
      */
     fun sync(
         name: String?,
         email: String?,
+        phoneNum: String?,
         nickname: String?,
         profileImageUrl: String?,
         letsCareerUpdatedAt: LocalDateTime?,
@@ -105,6 +115,7 @@ internal class UserProfile(
     ) {
         this.name = name
         this.email = email
+        this.phoneNum = phoneNum
         this.nickname = nickname
         this.profileImageUrl = profileImageUrl
         this.letsCareerUpdatedAt = letsCareerUpdatedAt
@@ -133,5 +144,14 @@ internal class UserProfile(
         this.wishIndustry = wishIndustry
         this.wishEmploymentType = wishEmploymentType
         this.wishCompany = wishCompany
+    }
+
+    /**
+     * 오늘의 공고를 받을 이메일을 바꾼다. 렛츠커리어 가입 이메일과 따로 두며 오공고가 소유한다.
+     * null이면 비운다.
+     */
+    fun changeNotificationEmail(notificationEmail: String?) {
+        require(notificationEmail == null || notificationEmail.isNotBlank()) { "수신 이메일은 공백일 수 없습니다." }
+        this.notificationEmail = notificationEmail
     }
 }

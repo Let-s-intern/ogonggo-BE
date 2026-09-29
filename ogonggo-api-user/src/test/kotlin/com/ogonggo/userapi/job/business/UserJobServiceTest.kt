@@ -336,6 +336,8 @@ class UserJobServiceTest {
             UserProfileDto(
                 name = "오공고",
                 email = null,
+                phoneNum = null,
+                notificationEmail = null,
                 nickname = null,
                 profileImageUrl = null,
                 university = null,

@@ -72,6 +72,8 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/company-profile").authenticated()
+                it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/notification-email").authenticated()
+                it.requestMatchers(HttpMethod.PATCH, "/api/v1/users/me/password").authenticated()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
                 it.requestMatchers("/api/v1/users/me/jobs", "/api/v1/users/me/jobs/**").authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/images").authenticated()

@@ -49,10 +49,12 @@ data class MyAccountResult(
 
 /**
  * 렛츠커리어에서 복제한 값과 오공고에서 직접 입력한 값이 함께 담긴다.
- * 이름·닉네임·프로필 이미지는 로그인마다 렛츠커리어 값으로 갱신되고, 나머지는 사용자가 고친다.
+ * 이름·휴대폰 번호·닉네임·프로필 이미지는 로그인마다 렛츠커리어 값으로 갱신되고, 나머지는 사용자가 고친다.
  */
 data class MyProfileResult(
     val name: String?,
+    val phoneNum: String?,
+    val notificationEmail: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val university: String?,
@@ -67,6 +69,8 @@ data class MyProfileResult(
     companion object {
         internal fun from(profile: UserProfileDto): MyProfileResult = MyProfileResult(
             name = profile.name,
+            phoneNum = profile.phoneNum,
+            notificationEmail = profile.notificationEmail,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,
             university = profile.university,

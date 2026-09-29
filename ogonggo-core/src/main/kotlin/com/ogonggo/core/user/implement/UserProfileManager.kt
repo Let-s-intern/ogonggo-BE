@@ -28,6 +28,7 @@ class UserProfileManager internal constructor(
                     userId = command.userId,
                     name = command.name,
                     email = command.email,
+                    phoneNum = command.phoneNum,
                     nickname = command.nickname,
                     profileImageUrl = command.profileImageUrl,
                     letsCareerUpdatedAt = command.letsCareerUpdatedAt,
@@ -37,13 +38,15 @@ class UserProfileManager internal constructor(
             return
         }
 
-        if (profile.letsCareerUpdatedAt == command.letsCareerUpdatedAt) {
+        // 휴대폰 번호는 나중에 복제 대상에 추가되어, 렛츠커리어 값이 그대로인 기존 행도 한 번은 채워야 한다.
+        if (profile.letsCareerUpdatedAt == command.letsCareerUpdatedAt && profile.phoneNum == command.phoneNum) {
             return
         }
 
         profile.sync(
             name = command.name,
             email = command.email,
+            phoneNum = command.phoneNum,
             nickname = command.nickname,
             profileImageUrl = command.profileImageUrl,
             letsCareerUpdatedAt = command.letsCareerUpdatedAt,
@@ -78,8 +81,31 @@ class UserProfileManager internal constructor(
         userProfileRepository.save(profile)
     }
 
-    private fun createWithJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) {
-        val created = UserProfile(userId = userId, lastSyncedAt = now).apply {
+    /**
+     * 학력·희망 조건과 같이 오공고가 소유하는 값이라 재로그인의 `sync`가 덮어쓰지 않는다.
+     * 프로필 행이 없으면 만들며, 동시에 만들어진 경우는 `replaceJobInfo`와 같이 재시도할 수 있는 충돌로 알린다.
+     */
+    fun changeNotificationEmail(userId: Long, notificationEmail: String?, now: LocalDateTime) {
+        val profile = userProfileRepository.findByUserId(userId)
+            ?: return createWith(UserProfile(userId = userId, lastSyncedAt = now)) {
+                changeNotificationEmail(notificationEmail)
+            }
+
+        profile.changeNotificationEmail(notificationEmail)
+        userProfileRepository.save(profile)
+    }
+
+    private fun createWith(created: UserProfile, apply: UserProfile.() -> Unit) {
+        created.apply()
+        try {
+            userProfileRepository.saveAndFlush(created)
+        } catch (exception: DataIntegrityViolationException) {
+            throw ConflictException(UserErrorCode.USER_PROFILE_CONFLICT)
+        }
+    }
+
+    private fun createWithJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) =
+        createWith(UserProfile(userId = userId, lastSyncedAt = now)) {
             replaceJobInfo(
                 university = command.university,
                 major = command.major,
@@ -91,11 +117,4 @@ class UserProfileManager internal constructor(
                 wishCompany = command.wishCompany,
             )
         }
-
-        try {
-            userProfileRepository.saveAndFlush(created)
-        } catch (exception: DataIntegrityViolationException) {
-            throw ConflictException(UserErrorCode.USER_PROFILE_CONFLICT)
-        }
-    }
 }

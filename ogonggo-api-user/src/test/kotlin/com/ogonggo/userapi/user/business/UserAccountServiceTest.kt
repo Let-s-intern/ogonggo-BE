@@ -49,6 +49,8 @@ class UserAccountServiceTest {
             UserProfileDto(
                 name = "김렛츠",
                 email = "lets@career.co.kr",
+                phoneNum = "010-1234-5678",
+                notificationEmail = "today@example.com",
                 nickname = "렛츠",
                 profileImageUrl = "https://example.com/me.png",
                 university = "오공고대학교",
@@ -67,6 +69,8 @@ class UserAccountServiceTest {
         assertEquals(UserRole.USER, result.role)
         assertEquals("김렛츠", result.profile?.name)
         assertEquals("렛츠", result.profile?.nickname)
+        assertEquals("010-1234-5678", result.profile?.phoneNum)
+        assertEquals("today@example.com", result.profile?.notificationEmail)
         assertEquals("오공고대학교", result.profile?.university)
         assertEquals(UserGrade.GRADUATE, result.profile?.grade)
         assertEquals("개발", result.profile?.wishField)
@@ -182,6 +186,33 @@ class UserAccountServiceTest {
         // then
         assertEquals(UserErrorCode.USER_SUSPENDED, exception.errorCode)
         Mockito.verifyNoInteractions(companyProfileManager)
+    }
+
+    @Test
+    fun `일반 회원은 수신 이메일을 오공고 프로필에 저장한다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+
+        // when
+        service.changeMyNotificationEmail(USER_ID, "today@example.com")
+
+        // then
+        Mockito.verify(userProfileManager).changeNotificationEmail(USER_ID, "today@example.com", NOW)
+    }
+
+    @Test
+    fun `기업 회원이 수신 이메일을 고치면 GENERAL_MEMBER_REQUIRED로 막는다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        // when
+        val exception = assertThrows(ForbiddenException::class.java) {
+            service.changeMyNotificationEmail(USER_ID, "today@example.com")
+        }
+
+        // then
+        assertEquals(UserErrorCode.GENERAL_MEMBER_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(userProfileManager)
     }
 
     companion object {

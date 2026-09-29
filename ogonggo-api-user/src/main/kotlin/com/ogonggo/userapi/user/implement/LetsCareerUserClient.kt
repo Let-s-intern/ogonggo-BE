@@ -1,11 +1,16 @@
 package com.ogonggo.userapi.user.implement
 
+import com.ogonggo.core.error.InternalServerException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.user.domain.UserGrade
+import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
+import com.ogonggo.userapi.auth.error.AuthErrorCode
 import com.ogonggo.userapi.auth.implement.LetsCareerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 
@@ -58,8 +63,49 @@ class LetsCareerUserClient(
         return response?.data?.toResult()
     }
 
+    /**
+     * 일반 회원의 비밀번호는 렛츠커리어에 있으므로 변경을 그대로 전달한다.
+     * 로그인 이후 렛츠커리어를 부르는 예외이며, 사용자가 직접 요청한 변경이라 실패를 삼키지 않고 알린다.
+     */
+    fun changePassword(letsCareerUserId: Long, currentPassword: String, newPassword: String) {
+        try {
+            letsCareerRestClient.patch()
+                .uri(PASSWORD_PATH, letsCareerUserId)
+                .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
+                .body(PasswordChangeRequest(password = currentPassword, newPassword = newPassword))
+                .retrieve()
+                .toBodilessEntity()
+        } catch (exception: HttpClientErrorException) {
+            throw passwordChangeFailure(letsCareerUserId, exception)
+        } catch (exception: RestClientException) {
+            log.error("렛츠커리어 비밀번호 변경 호출에 실패했습니다. letsCareerUserId={}", letsCareerUserId, exception)
+            throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
+        }
+    }
+
+    /** 사용자가 고칠 수 있는 400만 오공고 오류로 옮기고, 그 밖의 4xx는 연동 문제로 본다. */
+    private fun passwordChangeFailure(letsCareerUserId: Long, exception: HttpClientErrorException): RuntimeException {
+        val code = runCatching { exception.getResponseBodyAs(LetsCareerErrorResponse::class.java)?.code }.getOrNull()
+        return when {
+            code == "MISMATCH_PASSWORD" -> InvalidValueException(UserErrorCode.CURRENT_PASSWORD_MISMATCH)
+            code == "INVALID_PASSWORD" -> InvalidValueException(UserErrorCode.INVALID_NEW_PASSWORD)
+            code?.startsWith("INVALID_AUTH_PROVIDER") == true ->
+                InvalidValueException(UserErrorCode.SOCIAL_ACCOUNT_PASSWORD_UNAVAILABLE)
+            else -> {
+                log.error(
+                    "렛츠커리어가 비밀번호 변경을 거부했습니다. letsCareerUserId={}, status={}, code={}",
+                    letsCareerUserId,
+                    exception.statusCode,
+                    code,
+                )
+                InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
+            }
+        }
+    }
+
     companion object {
         private const val JOB_PROFILE_PATH = "/api/v1/internal/users/{userId}/job-profile"
+        private const val PASSWORD_PATH = "/api/v1/internal/users/{userId}/password"
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
         private val log = LoggerFactory.getLogger(LetsCareerUserClient::class.java)
     }
@@ -69,6 +115,17 @@ internal data class LetsCareerApiResponse<T>(
     val status: Int?,
     val message: String?,
     val data: T?,
+)
+
+internal data class PasswordChangeRequest(
+    val password: String,
+    val newPassword: String,
+)
+
+internal data class LetsCareerErrorResponse(
+    val status: Int?,
+    val code: String?,
+    val message: String?,
 )
 
 internal data class JobProfileResponse(

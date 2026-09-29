@@ -31,6 +31,7 @@ import org.springframework.test.context.ContextConfiguration
 @Import(
     UserReader::class,
     UserAppender::class,
+    UserManager::class,
     UserProfileManager::class,
     UserProfileReader::class,
     CompanyProfileAppender::class,
@@ -40,6 +41,7 @@ import org.springframework.test.context.ContextConfiguration
 internal class UserImplementPersistenceTest @Autowired constructor(
     private val userReader: UserReader,
     private val userAppender: UserAppender,
+    private val userManager: UserManager,
     private val userProfileManager: UserProfileManager,
     private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -345,14 +347,71 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         assertEquals(UserErrorCode.COMPANY_PROFILE_ALREADY_EXISTS, exception.errorCode)
     }
 
+    @Test
+    fun `렛츠커리어 수정 일시가 같아도 휴대폰 번호가 다르면 채운다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+        // 휴대폰 번호를 복제하기 전에 만들어진 행이다.
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW, phoneNum = null))
+
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+
+        assertEquals("010-1234-5678", userProfileReader.read(account.userId)?.phoneNum)
+    }
+
+    @Test
+    fun `로그인 동기화는 사용자가 입력한 수신 이메일을 덮어쓰지 않는다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+        userProfileManager.changeNotificationEmail(account.userId, "today@example.com", NOW)
+
+        userProfileManager.sync(
+            syncCommand(account.userId, name = "김커리어", letsCareerUpdatedAt = NOW.plusDays(1)),
+        )
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("김커리어", profile?.name)
+        assertEquals("today@example.com", profile?.notificationEmail)
+    }
+
+    @Test
+    fun `프로필 행이 없어도 수신 이메일을 저장하면 행이 생기고 null이면 비운다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userProfileManager.changeNotificationEmail(account.userId, "today@example.com", NOW)
+        assertEquals("today@example.com", userProfileReader.read(account.userId)?.notificationEmail)
+
+        userProfileManager.changeNotificationEmail(account.userId, null, NOW)
+        assertNull(userProfileReader.read(account.userId)?.notificationEmail)
+    }
+
+    @Test
+    fun `기업 회원의 비밀번호를 바꾸면 새 값으로 로그인 자격증명이 바뀐다`() {
+        val account = userAppender.appendCompany(
+            CompanyAccountAppendDto("mock@example.com", "encoded-password", NOW),
+        )
+
+        userManager.changePassword(account.userId, "new-encoded-password")
+
+        assertEquals("new-encoded-password", userReader.readCredential(account.userId)?.encodedPassword)
+    }
+
+    @Test
+    fun `일반 회원은 비밀번호 자격증명이 없다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        assertNull(userReader.readCredential(account.userId))
+    }
+
     private fun syncCommand(
         userId: Long,
         name: String,
         letsCareerUpdatedAt: LocalDateTime,
+        phoneNum: String? = "010-1234-5678",
     ): UserProfileSyncDto = UserProfileSyncDto(
         userId = userId,
         name = name,
         email = "lets@career.co.kr",
+        phoneNum = phoneNum,
         nickname = "렛츠",
         profileImageUrl = null,
         letsCareerUpdatedAt = letsCareerUpdatedAt,

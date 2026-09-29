@@ -444,6 +444,8 @@ class RecruitmentPostServiceTest {
     private fun profile(nickname: String?, profileImageUrl: String?) = UserProfileDto(
         name = null,
         email = null,
+        phoneNum = null,
+        notificationEmail = null,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
         university = null,

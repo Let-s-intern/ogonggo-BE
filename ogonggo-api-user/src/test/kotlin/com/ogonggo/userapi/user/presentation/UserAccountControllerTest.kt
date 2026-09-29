@@ -49,6 +49,8 @@ class UserAccountControllerTest @Autowired constructor(
                 joinedAt = JOINED_AT,
                 profile = MyProfileResult(
                     name = "김렛츠",
+                    phoneNum = "010-1234-5678",
+                    notificationEmail = "today@example.com",
                     nickname = "렛츠",
                     profileImageUrl = "https://example.com/me.png",
                     university = "오공고대학교",
@@ -72,6 +74,8 @@ class UserAccountControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.status").value("ACTIVE"))
             .andExpect(jsonPath("$.data.email").value("lets@career.co.kr"))
             .andExpect(jsonPath("$.data.profile.nickname").value("렛츠"))
+            .andExpect(jsonPath("$.data.profile.phoneNum").value("010-1234-5678"))
+            .andExpect(jsonPath("$.data.profile.notificationEmail").value("today@example.com"))
             .andExpect(jsonPath("$.data.profile.university").value("오공고대학교"))
             .andExpect(jsonPath("$.data.profile.grade").value("GRADUATE"))
             .andExpect(jsonPath("$.data.profile.wishField").value("개발"))

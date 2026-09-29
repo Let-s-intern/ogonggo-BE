@@ -50,6 +50,18 @@ class UserAccountService(
     }
 
     /**
+     * 오늘의 공고를 받을 이메일은 오공고가 소유하므로 렛츠커리어에 보내지 않는다.
+     * 기업 회원은 기업 정보의 수신 이메일(PUT /api/v1/users/me/company-profile)을 쓰므로 막는다.
+     */
+    @Transactional
+    fun changeMyNotificationEmail(userId: Long, notificationEmail: String?) {
+        if (userReader.read(userId).letsCareerUserId == null) {
+            throw ForbiddenException(UserErrorCode.GENERAL_MEMBER_REQUIRED)
+        }
+        userProfileManager.changeNotificationEmail(userId, notificationEmail, LocalDateTime.now(clock))
+    }
+
+    /**
      * 기관명과 담당자 이름을 함께 교체한다.
      * 다른 기업 회원 기능과 같이 정지·탈퇴한 계정과 일반 회원은 막는다.
      */

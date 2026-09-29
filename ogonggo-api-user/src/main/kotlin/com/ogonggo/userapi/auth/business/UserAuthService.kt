@@ -132,6 +132,7 @@ private fun LetsCareerUser.toSyncCommand(userId: Long, now: LocalDateTime): User
         userId = userId,
         name = name,
         email = email,
+        phoneNum = phoneNum,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
         letsCareerUpdatedAt = updatedAt,

@@ -129,6 +129,8 @@ class AdminMemberControllerTest @Autowired constructor(
         profile = UserProfileDto(
             name = "김렛츠",
             email = "lets@test.com",
+            phoneNum = null,
+            notificationEmail = null,
             nickname = "렛츠",
             profileImageUrl = null,
             university = null,

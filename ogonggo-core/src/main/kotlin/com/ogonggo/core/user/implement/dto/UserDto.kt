@@ -23,6 +23,7 @@ data class UserProfileSyncDto(
     val userId: Long,
     val name: String?,
     val email: String?,
+    val phoneNum: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val letsCareerUpdatedAt: LocalDateTime?,
@@ -62,6 +63,8 @@ data class UserProfileJobInfoDto(
 data class UserProfileDto(
     val name: String?,
     val email: String?,
+    val phoneNum: String?,
+    val notificationEmail: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val university: String?,
@@ -77,6 +80,8 @@ data class UserProfileDto(
         internal fun from(profile: UserProfile): UserProfileDto = UserProfileDto(
             name = profile.name,
             email = profile.email,
+            phoneNum = profile.phoneNum,
+            notificationEmail = profile.notificationEmail,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,
             university = profile.university,
