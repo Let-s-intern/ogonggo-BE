@@ -9,6 +9,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
@@ -27,24 +28,33 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
 
     fun existsBySourceUrlAndDeletedAtIsNull(sourceUrl: String): Boolean
 
+    /** 삭제된 부트캠프도 센다. 운영자가 지운 수집 부트캠프가 다음 수집에서 되살아나지 않게 하기 위해서다. */
+    fun existsBySourceAndExternalId(source: ContentSource, externalId: String): Boolean
+
     /** 원문 URL은 등록 시점에만 중복을 막고 DB 제약이 없으므로, 겹친 행이 있어도 가장 먼저 등록된 행을 고른다. */
-    fun findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String): Bootcamp?
+    fun findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String, source: ContentSource): Bootcamp?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         "select bootcamp from Bootcamp bootcamp " +
-            "where bootcamp.id = :bootcampId and bootcamp.ownerUserId is null " +
+            "where bootcamp.id = :bootcampId and bootcamp.source = :source " +
             "and bootcamp.sourceUrl is not null and bootcamp.deletedAt is null",
     )
-    fun findCrawledByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
+    fun findByIdAndSourceForUpdate(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("source") source: ContentSource,
+    ): Bootcamp?
 
     /** 크롤러 삭제는 멱등해야 하므로 이미 삭제된 수집 부트캠프도 찾는다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         "select bootcamp from Bootcamp bootcamp " +
-            "where bootcamp.id = :bootcampId and bootcamp.ownerUserId is null and bootcamp.sourceUrl is not null",
+            "where bootcamp.id = :bootcampId and bootcamp.source = :source and bootcamp.sourceUrl is not null",
     )
-    fun findCrawledByIdForDelete(@Param("bootcampId") bootcampId: Long): Bootcamp?
+    fun findIncludingDeletedByIdAndSourceForUpdate(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("source") source: ContentSource,
+    ): Bootcamp?
 
     @Query(
         """

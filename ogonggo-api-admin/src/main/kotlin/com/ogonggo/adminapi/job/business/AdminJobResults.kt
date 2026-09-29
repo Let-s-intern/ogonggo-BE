@@ -81,7 +81,7 @@ data class AdminJobSummary(
             bookmarkCount = metric.bookmarkCount,
             commentCount = metric.commentCount,
             visibility = AdminContentVisibility.of(job.publicationStatus == JobPublicationStatus.PUBLISHED),
-            source = ContentSource.of(job.ownerUserId),
+            source = job.source,
             reviewStatus = job.reviewStatus,
             recruitmentStatus = job.recruitmentStatus(now),
             registeredAt = job.createdAt,

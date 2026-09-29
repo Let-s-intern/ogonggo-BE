@@ -9,6 +9,7 @@ import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -26,7 +27,8 @@ data class UserBootcampSummaryResponse(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val status: BootcampStatus,
     val closedAt: LocalDateTime?,
@@ -76,7 +78,8 @@ data class UserBootcampDetailResponse(
     val capacity: Int?,
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
-    val representativeImageUrl: String,
+    @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val content: String,
     val eligibilityAndSelectionProcess: String?,

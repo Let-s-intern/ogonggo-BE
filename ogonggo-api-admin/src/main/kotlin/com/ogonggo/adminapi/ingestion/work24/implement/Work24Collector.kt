@@ -6,6 +6,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.review.domain.ContentSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -13,9 +14,9 @@ import java.time.LocalDateTime
 /**
  * 고용24 목록을 끝 페이지까지 넘기며 새 항목을 채용공고·부트캠프로 등록한다.
  *
- * 항목마다 원문 URL로 이미 등록됐는지 보고, 있으면 내용이 바뀌었어도 건너뛴다. 새 항목만 상세 API를 불러
- * 본문을 채운다. 로고도 대체 이미지도 없는 훈련과정은 대표 이미지가 없어 등록하지 않는다. 한 항목이 실패해도 다음 항목으로 넘어가지만, 연달아 [MAX_CONSECUTIVE_FAILURES]번 실패하면
- * 고용24 장애로 보고 이 대상을 멈춘다.
+ * 항목마다 고용24 식별값(구인인증번호, 과정 ID+회차)으로 이미 등록됐는지 보고, 있으면 내용이 바뀌었어도 건너뛴다.
+ * 운영자가 지운 콘텐츠도 등록한 것으로 봐서 다시 넣지 않는다. 새 항목만 상세 API를 불러 본문을 채운다.
+ * 한 항목이 실패해도 다음 항목으로 넘어가지만, 연달아 [MAX_CONSECUTIVE_FAILURES]번 실패하면 고용24 장애로 보고 이 대상을 멈춘다.
  *
  * 페이지를 넘기다 다음 중 하나면 멈춘다.
  * - 응답의 전체 건수만큼 받았거나, 전체 건수가 없고 한 페이지를 다 채우지 못했다.
@@ -28,7 +29,6 @@ import java.time.LocalDateTime
 @Component
 class Work24Collector(
     private val work24Client: Work24Client,
-    private val work24Properties: Work24Properties,
     private val jobReader: JobReader,
     private val jobAppender: JobAppender,
     private val bootcampReader: BootcampReader,
@@ -75,64 +75,73 @@ class Work24Collector(
             pageCount = counter.pages,
             appendedCount = counter.appended,
             skippedCount = counter.skipped,
-            noImageCount = counter.noImage,
+            excludedCount = counter.excluded,
             failedCount = counter.failed,
         )
     }
 
     private fun import(target: Work24CollectionTarget, item: JsonNode, now: LocalDateTime): Outcome =
         try {
-            when (target.destination) {
-                Work24Destination.JOB -> importJob(target, item)
-                Work24Destination.BOOTCAMP -> importBootcamp(target, item, now)
+            if (target.excludes(item)) {
+                Outcome.EXCLUDED
+            } else {
+                when (target.destination) {
+                    Work24Destination.JOB -> importJob(target, item)
+                    Work24Destination.BOOTCAMP -> importBootcamp(target, item, now)
+                }
             }
         } catch (exception: Exception) {
             log.warn("고용24 항목을 등록하지 못해 건너뜁니다. target={}, id={}", target, id(target, item), exception)
             Outcome.FAILED
         }
 
+    /**
+     * 구인인증번호로 이미 등록했으면 건너뛴다. 운영자가 지운 공고도 등록한 것으로 본다.
+     * 크롤러가 같은 원문을 먼저 등록했어도 건너뛰어 같은 공고가 두 번 보이지 않게 한다.
+     */
     private fun importJob(target: Work24CollectionTarget, item: JsonNode): Outcome {
+        val externalId = requireNotNull(id(target, item)) { "구인인증번호가 없습니다." }
         val sourceUrl = requireNotNull(Work24JobMapper.sourceUrl(item)) { "채용정보 URL이 없습니다." }
-        if (jobReader.existsBySourceUrl(sourceUrl)) {
+        if (jobReader.existsByExternalId(ContentSource.WORK24, externalId) || jobReader.existsBySourceUrl(sourceUrl)) {
             return Outcome.SKIPPED
         }
 
         val detail = work24Client.fetch(target.detailApi, Work24JobMapper.detailParameters(item))
-        jobAppender.append(Work24JobMapper.toAppendDto(item, detail, sourceUrl))
+        jobAppender.append(Work24JobMapper.toAppendDto(item, detail, sourceUrl, externalId))
         return Outcome.APPENDED
     }
 
+    /** 과정 ID와 회차로 이미 등록했으면 건너뛴다. 공고와 같은 규칙이다. */
     private fun importBootcamp(target: Work24CollectionTarget, item: JsonNode, now: LocalDateTime): Outcome {
+        val externalId = requireNotNull(id(target, item)) { "훈련과정 ID나 회차가 없습니다." }
         val sourceUrl = requireNotNull(Work24BootcampMapper.sourceUrl(item)) { "훈련과정 링크가 없습니다." }
-        if (bootcampReader.existsBySourceUrl(sourceUrl)) {
+        if (bootcampReader.existsByExternalId(ContentSource.WORK24, externalId) ||
+            bootcampReader.existsBySourceUrl(sourceUrl)
+        ) {
             return Outcome.SKIPPED
         }
 
         val detail = work24Client.fetch(target.detailApi, Work24BootcampMapper.detailParameters(item))
-        val logoUrl = Work24BootcampMapper.logoUrl(detail, work24Properties.trainingFileBaseUrl)
-        val representativeImageUrl = logoUrl ?: work24Properties.bootcampImageUrl.ifBlank { null }
-            ?: return Outcome.NO_IMAGE
         bootcampAppender.append(
             Work24BootcampMapper.toAppendDto(
                 target = target,
                 item = item,
                 detail = detail,
                 sourceUrl = sourceUrl,
-                logoUrl = logoUrl,
-                representativeImageUrl = representativeImageUrl,
+                externalId = externalId,
                 now = now,
             ),
         )
         return Outcome.APPENDED
     }
 
-    private enum class Outcome { APPENDED, SKIPPED, NO_IMAGE, FAILED }
+    private enum class Outcome { APPENDED, SKIPPED, EXCLUDED, FAILED }
 
     private class Counter {
         var pages = 0
         var appended = 0
         var skipped = 0
-        var noImage = 0
+        var excluded = 0
         var failed = 0
         private var consecutiveFailures = 0
 
@@ -140,10 +149,9 @@ class Work24Collector(
             when (outcome) {
                 Outcome.APPENDED -> appended++
                 Outcome.SKIPPED -> skipped++
-                Outcome.NO_IMAGE -> noImage++
+                Outcome.EXCLUDED -> excluded++
                 Outcome.FAILED -> failed++
             }
-            // 로고가 없는 기관은 흔하고 고용24 장애가 아니므로 연속 실패에 세지 않는다.
             consecutiveFailures = if (outcome == Outcome.FAILED) consecutiveFailures + 1 else 0
             check(consecutiveFailures < MAX_CONSECUTIVE_FAILURES) {
                 "고용24 항목 등록이 ${MAX_CONSECUTIVE_FAILURES}번 연달아 실패해 수집을 멈춥니다."

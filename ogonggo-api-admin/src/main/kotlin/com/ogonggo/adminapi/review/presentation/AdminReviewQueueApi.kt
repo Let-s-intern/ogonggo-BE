@@ -75,7 +75,7 @@ interface AdminReviewQueueApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "CONTENT_NOT_REVIEWABLE: 크롤링 수집분은 검수 대상이 아닙니다.",
+                description = "CONTENT_NOT_REVIEWABLE: 크롤링·고용24 수집분은 검수 대상이 아닙니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
@@ -101,7 +101,7 @@ interface AdminReviewQueueApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "CONTENT_NOT_REVIEWABLE: 크롤링 수집분은 검수 대상이 아닙니다.",
+                description = "CONTENT_NOT_REVIEWABLE: 크롤링·고용24 수집분은 검수 대상이 아닙니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

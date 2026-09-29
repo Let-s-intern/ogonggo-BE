@@ -3,6 +3,7 @@ package com.ogonggo.core.bootcamp.domain
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.common.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import jakarta.persistence.Column
@@ -14,12 +15,16 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
 @Table(
     name = "bootcamps",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_bootcamps_source_external_id", columnNames = ["source", "external_id"]),
+    ],
     indexes = [
         Index(name = "idx_bootcamps_review", columnList = "review_status, deleted_at"),
     ],
@@ -38,7 +43,7 @@ class Bootcamp internal constructor(
     capacity: Int? = null,
     tuitionType: TuitionType,
     tuitionAmount: Long? = null,
-    representativeImageUrl: String,
+    representativeImageUrl: String?,
     shortDescription: String,
     content: String,
     eligibilityAndSelectionProcess: String? = null,
@@ -56,10 +61,13 @@ class Bootcamp internal constructor(
     status: BootcampStatus = BootcampStatus.DRAFT,
     closedAt: LocalDateTime? = null,
     publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
+    source: ContentSource = ContentSource.of(ownerUserId),
+    externalId: String? = null,
 ) : BaseTimeEntity() {
 
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
+        ContentSource.requireConsistent(source, ownerUserId, externalId)
         require((status == BootcampStatus.CLOSED) == (closedAt != null)) {
             "모집 마감 상태와 마감 일시가 일치해야 합니다."
         }
@@ -154,8 +162,9 @@ class Bootcamp internal constructor(
     var tuitionAmount: Long? = tuitionAmount /* 수강료 */
         protected set
 
-    @Column(name = "representative_image_url", nullable = false, length = 2048)
-    var representativeImageUrl: String = representativeImageUrl /* 공고 대표 이미지 URL */
+    /** 고용24 수집 과정은 이미지가 없어 비운다. 비어 있으면 클라이언트가 기본 이미지를 그린다. */
+    @Column(name = "representative_image_url", length = 2048)
+    var representativeImageUrl: String? = representativeImageUrl /* 공고 대표 이미지 URL */
         protected set
 
     @Column(name = "short_description", nullable = false, length = 500)
@@ -216,6 +225,17 @@ class Bootcamp internal constructor(
     var sourceUrl: String? = sourceUrl /* 부트캠프 원문 URL */
         protected set
 
+    /** 등록 경로다. 등록할 때 정해지고 바뀌지 않는다. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var source: ContentSource = source /* 등록 경로 */
+        protected set
+
+    /** 수집한 곳에서 쓰는 식별값이다. 고용24 수집분만 있으며, 같은 부트캠프를 다시 등록하지 않는 데 쓴다. */
+    @Column(name = "external_id", length = ContentSource.EXTERNAL_ID_MAX_LENGTH)
+    var externalId: String? = externalId /* 외부 식별값 */
+        protected set
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: BootcampStatus = status /* 부트캠프 모집 상태 */
@@ -253,7 +273,7 @@ class Bootcamp internal constructor(
         capacity: Int?,
         tuitionType: TuitionType,
         tuitionAmount: Long?,
-        representativeImageUrl: String,
+        representativeImageUrl: String?,
         shortDescription: String,
         content: String,
         eligibilityAndSelectionProcess: String?,
@@ -441,7 +461,7 @@ private fun validateBootcampValues(
     programEndDate: LocalDate,
     capacity: Int?,
     tuitionAmount: Long?,
-    representativeImageUrl: String,
+    representativeImageUrl: String?,
     shortDescription: String,
     content: String,
     eligibilityAndSelectionProcess: String?,
@@ -459,7 +479,9 @@ private fun validateBootcampValues(
     require(companyName.isNotBlank()) { "운영 회사명은 비어 있을 수 없습니다." }
     require(title.isNotBlank()) { "부트캠프 프로그램명은 비어 있을 수 없습니다." }
     require(programType.isNotBlank()) { "프로그램 유형은 비어 있을 수 없습니다." }
-    require(representativeImageUrl.isNotBlank()) { "공고 대표 이미지 URL은 비어 있을 수 없습니다." }
+    require(representativeImageUrl == null || representativeImageUrl.isNotBlank()) {
+        "공고 대표 이미지 URL은 공백일 수 없습니다."
+    }
     require(shortDescription.isNotBlank()) { "공고 한 줄 소개는 비어 있을 수 없습니다." }
     require(content.isNotBlank()) { "부트캠프 내용은 비어 있을 수 없습니다." }
     require(capacity == null || capacity >= 0) { "모집 정원은 음수일 수 없습니다." }

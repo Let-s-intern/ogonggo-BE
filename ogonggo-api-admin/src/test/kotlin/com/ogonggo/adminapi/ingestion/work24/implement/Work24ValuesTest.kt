@@ -24,4 +24,14 @@ class Work24ValuesTest {
         assertEquals(3L, Work24Values.number("3명"))
         assertNull(Work24Values.number("미정"))
     }
+
+    @Test
+    fun `고용24가 HTML 엔티티로 담아 온 제목을 풀어 읽는다`() {
+        // XML에는 &amp;lt;처럼 한 번 더 이스케이프되어 온다.
+        val item = Work24XmlConverter.toJson("<wanted><title>영업사원 &amp;lt;건축자재&amp;gt; 생산&amp;amp;제조</title></wanted>")
+
+        with(Work24Values) {
+            assertEquals("영업사원 <건축자재> 생산&제조", item.text("title"))
+        }
+    }
 }

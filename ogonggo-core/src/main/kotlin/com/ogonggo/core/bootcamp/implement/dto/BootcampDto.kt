@@ -9,6 +9,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.review.domain.ContentSource
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -26,7 +27,7 @@ data class BootcampAppendDto(
     val capacity: Int? = null,
     val tuitionType: TuitionType,
     val tuitionAmount: Long? = null,
-    val representativeImageUrl: String,
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val content: String,
     val eligibilityAndSelectionProcess: String? = null,
@@ -46,6 +47,9 @@ data class BootcampAppendDto(
     val status: BootcampStatus = BootcampStatus.DRAFT,
     val closedAt: LocalDateTime? = null,
     val publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
+    /** 비우면 저장할 때 소유자 유무로 정한다. `copy(ownerUserId = ...)`로 만든 값도 소유자와 어긋나지 않게 하기 위해서다. */
+    val source: ContentSource? = null,
+    val externalId: String? = null,
 )
 
 /** 운영자가 고치는 제목과 본문 칸이다. 넘어온 칸만 바꾸며 본문 값이 null이면 그 칸을 비운다. */
@@ -67,7 +71,7 @@ data class BootcampUpdateDto(
     val capacity: Int? = null,
     val tuitionType: TuitionType,
     val tuitionAmount: Long? = null,
-    val representativeImageUrl: String,
+    val representativeImageUrl: String?,
     val shortDescription: String,
     val content: String,
     val eligibilityAndSelectionProcess: String? = null,

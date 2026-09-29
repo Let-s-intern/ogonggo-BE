@@ -23,6 +23,7 @@ import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
+import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
@@ -30,17 +31,21 @@ import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.implement.ContentRejectionManager
-import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.context.ContextConfiguration
+import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -74,7 +79,34 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     private val jobTagRepository: JobTagJpaRepository,
     private val jobBookmarkRepository: JobBookmarkJpaRepository,
     private val jobMetricRepository: JobMetricJpaRepository,
+    private val jobRepository: JobJpaRepository,
 ) {
+
+    @Test
+    fun `외부 식별값으로 수집한 공고는 지운 뒤에도 수집한 것으로 보고 크롤러는 다룰 수 없다`() {
+        // given
+        val collected = jobAppender.append(createCommand().copy(source = ContentSource.WORK24, externalId = "K1"))
+        val jobId = checkNotNull(collected.id)
+
+        // when
+        jobManager.delete(jobReader.readForDelete(jobId), LocalDateTime.of(2026, 9, 29, 4, 0))
+
+        // then
+        assertTrue(jobReader.existsByExternalId(ContentSource.WORK24, "K1"))
+        assertFalse(jobReader.existsByExternalId(ContentSource.WORK24, "K2"))
+        val exception = assertThrows(EntityNotFoundException::class.java) { jobReader.readCrawledForDelete(jobId) }
+        assertEquals(JobErrorCode.JOB_NOT_FOUND, exception.errorCode)
+    }
+
+    @Test
+    fun `같은 등록 경로에서 같은 외부 식별값은 두 번 저장할 수 없다`() {
+        jobAppender.append(createCommand().copy(source = ContentSource.WORK24, externalId = "K1"))
+
+        assertThrows(DataIntegrityViolationException::class.java) {
+            jobAppender.append(createCommand().copy(source = ContentSource.WORK24, externalId = "K1"))
+            jobRepository.flush()
+        }
+    }
 
     @Test
     fun `Appender로 저장하고 Reader로 조회한다`() {

@@ -7,6 +7,7 @@ import com.querydsl.core.annotations.PropertyType
 import com.querydsl.core.annotations.QueryType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import jakarta.persistence.Column
@@ -18,6 +19,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
 /**
@@ -32,6 +34,9 @@ import java.time.LocalDateTime
 @Entity
 @Table(
     name = "jobs",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_jobs_source_external_id", columnNames = ["source", "external_id"]),
+    ],
     indexes = [
         Index(
             name = "idx_jobs_published_latest",
@@ -110,10 +115,13 @@ class Job internal constructor(
     inquiryEmail: String? = null,
     sourceUrl: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
+    source: ContentSource = ContentSource.of(ownerUserId),
+    externalId: String? = null,
 ) : BaseTimeEntity() {
 
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
+        ContentSource.requireConsistent(source, ownerUserId, externalId)
         require(ownerUserId == null || publicationStatus != JobPublicationStatus.PUBLISHED) {
             "기업회원 공고는 검수 승인 전에 게시할 수 없습니다."
         }
@@ -298,6 +306,17 @@ class Job internal constructor(
 
     @Column(name = "source_url", length = 2048)
     var sourceUrl: String? = sourceUrl /* 채용공고 원문 URL */
+        protected set
+
+    /** 등록 경로다. 등록할 때 정해지고 바뀌지 않는다. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var source: ContentSource = source /* 등록 경로 */
+        protected set
+
+    /** 수집한 곳에서 쓰는 식별값이다. 고용24 수집분만 있으며, 같은 공고를 다시 등록하지 않는 데 쓴다. */
+    @Column(name = "external_id", length = ContentSource.EXTERNAL_ID_MAX_LENGTH)
+    var externalId: String? = externalId /* 외부 식별값 */
         protected set
 
     @Enumerated(EnumType.STRING)

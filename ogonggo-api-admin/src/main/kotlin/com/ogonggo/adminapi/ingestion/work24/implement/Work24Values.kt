@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.fasterxml.jackson.databind.JsonNode
+import org.springframework.web.util.HtmlUtils
 import java.time.DateTimeException
 import java.time.LocalDate
 
@@ -11,9 +12,15 @@ internal object Work24Values {
     private val COMPACT_DATE_PATTERN = Regex("""(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)""")
     private val NUMBER_PATTERN = Regex("""\d[\d,]*""")
 
-    /** 비었거나 없는 항목은 null이다. */
+    /**
+     * 비었거나 없는 항목은 null이다. 고용24 본문은 줄바꿈이 `\r\n`이라 `\n`으로 맞춘다.
+     * 제목 등은 XML 이스케이프와 별개로 HTML 엔티티(`&lt;`, `&amp;`)를 한 번 더 담아 오므로 풀어 준다.
+     */
     fun JsonNode.text(field: String): String? =
-        path(field).takeIf { it.isValueNode }?.asText()?.trim()?.takeIf { it.isNotEmpty() }
+        path(field).takeIf { it.isValueNode }?.asText()
+            ?.let(HtmlUtils::htmlUnescape)
+            ?.replace("\r\n", "\n")?.replace('\r', '\n')
+            ?.trim()?.takeIf { it.isNotEmpty() }
 
     /**
      * `2026-10-31`, `26-10-31`, `2026.10.31`, `20261031`을 읽는다. 앞뒤에 `채용시까지` 같은 글자가 붙어도 된다.

@@ -8,13 +8,14 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSourceUrlClick
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
-import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
@@ -24,17 +25,23 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
 
     fun existsBySourceUrlAndDeletedAtIsNull(sourceUrl: String): Boolean
 
+    /** 삭제된 공고도 센다. 운영자가 지운 수집 공고가 다음 수집에서 되살아나지 않게 하기 위해서다. */
+    fun existsBySourceAndExternalId(source: ContentSource, externalId: String): Boolean
+
     /** 원문 URL은 등록 시점에만 중복을 막고 DB 제약이 없으므로, 겹친 행이 있어도 가장 먼저 등록된 행을 고른다. */
-    fun findFirstBySourceUrlAndOwnerUserIdIsNullAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String): Job?
+    fun findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String, source: ContentSource): Job?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select job from Job job where job.id = :jobId and job.ownerUserId is null and job.deletedAt is null")
-    fun findCrawledByIdForUpdate(@Param("jobId") jobId: Long): Job?
+    @Query("select job from Job job where job.id = :jobId and job.source = :source and job.deletedAt is null")
+    fun findByIdAndSourceForUpdate(@Param("jobId") jobId: Long, @Param("source") source: ContentSource): Job?
 
     /** 크롤러 삭제는 멱등해야 하므로 이미 삭제된 수집 공고도 찾는다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select job from Job job where job.id = :jobId and job.ownerUserId is null")
-    fun findCrawledByIdForDelete(@Param("jobId") jobId: Long): Job?
+    @Query("select job from Job job where job.id = :jobId and job.source = :source")
+    fun findIncludingDeletedByIdAndSourceForUpdate(
+        @Param("jobId") jobId: Long,
+        @Param("source") source: ContentSource,
+    ): Job?
 
     fun findByIdAndPublicationStatusAndDeletedAtIsNull(
         id: Long,

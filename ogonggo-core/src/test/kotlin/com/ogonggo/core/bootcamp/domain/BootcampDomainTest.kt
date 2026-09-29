@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.domain
 
+import com.ogonggo.core.review.domain.ContentSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -149,7 +150,25 @@ class BootcampDomainTest {
         assertThrows(IllegalStateException::class.java) { bootcamp.startRecruitment() }
     }
 
+    @Test
+    fun `부트캠프도 고용24 수집만 외부 식별값을 가진다`() {
+        assertEquals(ContentSource.CRAWLER, createBootcamp().source)
+        assertEquals("C1-1", createBootcamp(source = ContentSource.WORK24, externalId = "C1-1").externalId)
+
+        assertThrows(IllegalArgumentException::class.java) { createBootcamp(source = ContentSource.WORK24) }
+        assertThrows(IllegalArgumentException::class.java) { createBootcamp(source = ContentSource.COMPANY) }
+        assertThrows(IllegalArgumentException::class.java) { createBootcamp(externalId = "C1-1") }
+    }
+
+    @Test
+    fun `대표 이미지는 비워 둘 수 있지만 공백일 수는 없다`() {
+        assertEquals(null, createBootcamp(representativeImageUrl = null).representativeImageUrl)
+        assertThrows(IllegalArgumentException::class.java) { createBootcamp(representativeImageUrl = " ") }
+    }
+
     private fun createBootcamp(
+        source: ContentSource = ContentSource.CRAWLER,
+        externalId: String? = null,
         programType: String = "개발",
         recruitmentType: BootcampRecruitmentType = BootcampRecruitmentType.PERIOD,
         recruitmentStartAt: LocalDateTime? = LocalDateTime.of(2026, 8, 1, 0, 0),
@@ -158,7 +177,7 @@ class BootcampDomainTest {
         programEndDate: LocalDate = LocalDate.of(2026, 12, 1),
         capacity: Int? = 50,
         tuitionAmount: Long? = 0,
-        representativeImageUrl: String = "https://example.com/images/bootcamp.png",
+        representativeImageUrl: String? = "https://example.com/images/bootcamp.png",
         shortDescription: String = "백엔드 개발자로 성장하는 12주",
         applicationMethod: ApplicationMethod = ApplicationMethod.EXTERNAL_PAGE,
         applicationUrl: String? = "https://example.com/apply",
@@ -187,5 +206,7 @@ class BootcampDomainTest {
         publicationStartAt = publicationStartAt,
         publicationEndAt = publicationEndAt,
         sourceUrl = "https://example.com/bootcamps/1",
+        source = source,
+        externalId = externalId,
     )
 }

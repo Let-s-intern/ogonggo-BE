@@ -232,12 +232,7 @@ internal class JobQueryRepository(
         false -> job.publicationStatus.ne(JobPublicationStatus.PUBLISHED)
     }
 
-    /** 등록 경로는 저장하지 않으므로 소유자 유무로 거른다. */
-    private fun sourceEq(source: ContentSource?): BooleanExpression? = when (source) {
-        null -> null
-        ContentSource.CRAWLER -> job.ownerUserId.isNull
-        ContentSource.COMPANY -> job.ownerUserId.isNotNull
-    }
+    private fun sourceEq(source: ContentSource?): BooleanExpression? = source?.let { job.source.eq(it) }
 
     /** `Job.recruitmentStatus`와 같은 경계를 쓴다. 종료 일시와 같은 시각까지는 모집 중이다. */
     private fun recruitmentStatusEq(status: JobRecruitmentStatus?, now: LocalDateTime): BooleanExpression? =

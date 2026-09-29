@@ -15,13 +15,16 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
+import com.ogonggo.core.review.domain.ContentSource
 import java.time.LocalTime
 
 /**
  * 고용24 채용정보 목록 항목(`wanted`)과 상세(`wantedDtl`)를 채용공고로 옮긴다.
  *
- * 크롤러 공고처럼 소유자 없이 곧바로 게시한다. 같은 공고인지는 워크넷 채용정보 URL(`wantedInfoUrl`)을
- * 원문 URL로 보고 판단한다. 직군·직무는 목록의 직종코드(`jobsCd`)를 [Work24JobRoles] 표로 옮긴다.
+ * 등록 경로를 고용24로, 구인인증번호(`wantedAuthNo`)를 외부 식별값으로 두고 소유자 없이 곧바로 게시한다.
+ * 원문 URL은 워크넷 채용정보 URL(`wantedInfoUrl`)이다.
+ * 마감일은 상세(`receiptCloseDt`)가 `채용시까지`처럼 날짜 없이 오고 목록(`closeDt`)에만 날짜가 있는 경우가 있어
+ * 날짜가 있는 쪽을 쓴다. 급여도 목록의 `연봉`·`3000만원 ~ 3500만원`이 상세보다 읽기 좋아 목록을 먼저 쓴다. 직군·직무는 목록의 직종코드(`jobsCd`)를 [Work24JobRoles] 표로 옮긴다.
  * 근무 지역은 도로명코드(`strtnmCd`) 앞 5자리 행정구역 코드로 찾고, 코드가 없으면 지역명(`region`)으로 찾는다.
  * 코드 값의 뜻은 고용24 개발명세를 따른다.
  */
@@ -32,14 +35,14 @@ internal object Work24JobMapper {
     fun detailParameters(item: JsonNode): Map<String, String> =
         mapOf("wantedAuthNo" to requireNotNull(item.text("wantedAuthNo")) { "구인인증번호가 없습니다." })
 
-    fun toAppendDto(item: JsonNode, detail: JsonNode, sourceUrl: String): JobAppendDto {
+    fun toAppendDto(item: JsonNode, detail: JsonNode, sourceUrl: String, externalId: String): JobAppendDto {
         val corp = detail.path("corpInfo")
         val info = detail.path("wantedInfo")
         val charge = detail.path("empchargeInfo")
 
-        val closeText = info.text("receiptCloseDt") ?: item.text("closeDt")
+        val closeTexts = listOfNotNull(info.text("receiptCloseDt"), item.text("closeDt"))
         val start = date(item.text("regDt"))?.atStartOfDay()
-        val end = date(closeText)?.atTime(LocalTime.of(23, 59, 59))
+        val end = closeTexts.firstNotNullOfOrNull(::date)?.atTime(LocalTime.of(23, 59, 59))
         val hasPeriod = start != null && end != null && !start.isAfter(end)
 
         val subRegion = subRegion(item)
@@ -62,7 +65,7 @@ internal object Work24JobMapper {
             recruitmentHeadcount = number(info.text("collectPsncnt"))?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
             recruitmentStartAt = start,
             recruitmentEndAt = if (hasPeriod) end else null,
-            closesWhenFilled = closeText?.contains(UNTIL_FILLED),
+            closesWhenFilled = closeTexts.takeIf { it.isNotEmpty() }?.any { it.contains(UNTIL_FILLED) },
             companyAndTeamIntroduction = section(
                 "주요 사업" to corp.text("busiCont"),
                 "회사 규모" to corp.text("busiSize"),
@@ -84,7 +87,8 @@ internal object Work24JobMapper {
                 "기타 우대 조건" to info.text("etcPfCond"),
                 "병역특례 채용 희망" to info.text("mltsvcExcHope"),
             ),
-            compensation = info.text("salTpNm") ?: item.text("sal"),
+            compensation = listOfNotNull(item.text("salTpNm"), item.text("sal")).joinToString(" ").ifBlank { null }
+                ?: info.text("salTpNm")?.trimEnd(','),
             benefits = section(
                 "4대 보험" to info.text("fourIns"),
                 "퇴직금" to info.text("retirepay"),
@@ -105,6 +109,8 @@ internal object Work24JobMapper {
             applicationMethod = JobApplicationMethod.EXTERNAL_PAGE,
             sourceUrl = sourceUrl,
             publicationStatus = JobPublicationStatus.PUBLISHED,
+            source = ContentSource.WORK24,
+            externalId = externalId,
         )
     }
 
