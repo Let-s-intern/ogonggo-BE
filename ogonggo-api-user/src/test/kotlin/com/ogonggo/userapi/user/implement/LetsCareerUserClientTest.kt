@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.web.client.ExpectedCount
 import org.springframework.test.web.client.MockRestServiceServer
 import org.springframework.test.web.client.match.MockRestRequestMatchers.content
 import org.springframework.test.web.client.match.MockRestRequestMatchers.header
@@ -18,6 +19,7 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.request
 import org.springframework.test.web.client.response.MockRestResponseCreators.withStatus
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
+import java.net.SocketTimeoutException
 
 class LetsCareerUserClientTest {
 
@@ -79,6 +81,50 @@ class LetsCareerUserClientTest {
         }
     }
 
+    @Test
+    fun `응답을 받지 못하면 같은 요청을 다시 보내고 성공하면 끝낸다`() {
+        // given
+        server.expect(ExpectedCount.twice(), requestTo(PASSWORD_URL))
+            .andRespond { throw SocketTimeoutException("Read timed out") }
+        server.expect(requestTo(PASSWORD_URL))
+            .andExpect(content().json("""{"password":"old-password!","newPassword":"new-password!"}"""))
+            .andRespond(withSuccess())
+
+        // when
+        client.changePassword(4821L, "old-password!", "new-password!")
+
+        // then
+        server.verify()
+    }
+
+    @Test
+    fun `처음 요청과 재시도 3번이 모두 응답이 없으면 렛츠커리어 연동 실패로 알린다`() {
+        // given
+        server.expect(ExpectedCount.times(4), requestTo(PASSWORD_URL))
+            .andRespond { throw SocketTimeoutException("Read timed out") }
+
+        // when
+        val exception = assertThrows(BusinessException::class.java) {
+            client.changePassword(4821L, "old-password!", "new-password!")
+        }
+
+        // then
+        server.verify()
+        assertEquals(AuthErrorCode.LETSCAREER_UNAVAILABLE, exception.errorCode)
+    }
+
+    @Test
+    fun `응답이 온 실패는 다시 보내지 않는다`() {
+        server.expect(ExpectedCount.once(), requestTo(PASSWORD_URL))
+            .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+
+        assertThrows(BusinessException::class.java) {
+            client.changePassword(4821L, "old-password!", "new-password!")
+        }
+
+        server.verify()
+    }
+
     private fun errorBody(status: HttpStatus, code: String) = withStatus(status)
         .contentType(MediaType.APPLICATION_JSON)
         .body("""{"status":${status.value()},"code":"$code","message":"렛츠커리어 메시지"}""")
@@ -86,5 +132,6 @@ class LetsCareerUserClientTest {
     companion object {
         private const val BASE_URL = "http://letscareer.test"
         private const val API_KEY = "internal-key"
+        private const val PASSWORD_URL = "$BASE_URL/api/v1/internal/users/4821/password"
     }
 }

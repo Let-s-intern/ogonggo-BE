@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 
@@ -66,21 +67,44 @@ class LetsCareerUserClient(
     /**
      * 일반 회원의 비밀번호는 렛츠커리어에 있으므로 변경을 그대로 전달한다.
      * 로그인 이후 렛츠커리어를 부르는 예외이며, 사용자가 직접 요청한 변경이라 실패를 삼키지 않고 알린다.
+     *
+     * 응답을 받지 못하면(연결 실패·시간 초과) 최대 [PASSWORD_CHANGE_MAX_RETRIES]번 다시 보낸다.
+     * 앞선 요청이 이미 반영됐어도 렛츠커리어가 같은 새 비밀번호의 재시도를 성공으로 처리하므로 안전하다.
+     * 응답이 온 실패(4xx·5xx)는 다시 보내도 결과가 같으므로 재시도하지 않는다.
      */
     fun changePassword(letsCareerUserId: Long, currentPassword: String, newPassword: String) {
-        try {
-            letsCareerRestClient.patch()
-                .uri(PASSWORD_PATH, letsCareerUserId)
-                .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
-                .body(PasswordChangeRequest(password = currentPassword, newPassword = newPassword))
-                .retrieve()
-                .toBodilessEntity()
-        } catch (exception: HttpClientErrorException) {
-            throw passwordChangeFailure(letsCareerUserId, exception)
-        } catch (exception: RestClientException) {
-            log.error("렛츠커리어 비밀번호 변경 호출에 실패했습니다. letsCareerUserId={}", letsCareerUserId, exception)
-            throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
+        val request = PasswordChangeRequest(password = currentPassword, newPassword = newPassword)
+
+        repeat(PASSWORD_CHANGE_MAX_RETRIES + 1) { attempt ->
+            try {
+                requestPasswordChange(letsCareerUserId, request)
+                return
+            } catch (exception: ResourceAccessException) {
+                log.warn(
+                    "렛츠커리어 비밀번호 변경 응답을 받지 못했습니다. letsCareerUserId={}, attempt={}",
+                    letsCareerUserId,
+                    attempt + 1,
+                    exception,
+                )
+            } catch (exception: HttpClientErrorException) {
+                throw passwordChangeFailure(letsCareerUserId, exception)
+            } catch (exception: RestClientException) {
+                log.error("렛츠커리어 비밀번호 변경 호출에 실패했습니다. letsCareerUserId={}", letsCareerUserId, exception)
+                throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
+            }
         }
+
+        log.error("렛츠커리어 비밀번호 변경 재시도가 모두 응답 없이 끝났습니다. letsCareerUserId={}", letsCareerUserId)
+        throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
+    }
+
+    private fun requestPasswordChange(letsCareerUserId: Long, request: PasswordChangeRequest) {
+        letsCareerRestClient.patch()
+            .uri(PASSWORD_PATH, letsCareerUserId)
+            .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
+            .body(request)
+            .retrieve()
+            .toBodilessEntity()
     }
 
     /** 사용자가 고칠 수 있는 400만 오공고 오류로 옮기고, 그 밖의 4xx는 연동 문제로 본다. */
@@ -106,6 +130,7 @@ class LetsCareerUserClient(
     companion object {
         private const val JOB_PROFILE_PATH = "/api/v1/internal/users/{userId}/job-profile"
         private const val PASSWORD_PATH = "/api/v1/internal/users/{userId}/password"
+        private const val PASSWORD_CHANGE_MAX_RETRIES = 3
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
         private val log = LoggerFactory.getLogger(LetsCareerUserClient::class.java)
     }
