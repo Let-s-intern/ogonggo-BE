@@ -395,7 +395,8 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals("date", jobCalendar.parameter("from").at("/schema/format").asText())
         assertEquals("date", jobCalendar.parameter("to").at("/schema/format").asText())
         assertEquals(2, jobCalendar.parameter("keyword").at("/schema/minLength").asInt())
-        assertTrue(jobCalendar.parameter("jobRole").at("/schema/enum").any { it.asText() == "IT_BACKEND" })
+        assertEquals("array", jobCalendar.parameter("jobRole").at("/schema/type").asText())
+        assertTrue(jobCalendar.parameter("jobRole").at("/schema/items/enum").any { it.asText() == "IT_BACKEND" })
         assertFalse(jobCalendar.parameter("employmentType")["required"]?.asBoolean() ?: false)
 
         val calendarBadRequest = document.at("/paths/~1api~1v1~1jobs~1calendar/get/responses/400")

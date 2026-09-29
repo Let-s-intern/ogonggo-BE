@@ -237,7 +237,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
                 employmentType = EmploymentType.INTERN,
                 experienceType = ExperienceType.NEWCOMER,
                 jobField = JobField.IT_DEVELOPMENT,
-                jobRole = JobRole.IT_BACKEND,
+                jobRoles = setOf(JobRole.IT_BACKEND),
                 keyword = "backend",
             ),
             calendarCondition = JobCalendarSearchCondition.NONE,
@@ -826,7 +826,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             userId = USER_ID,
             condition = JobSearchCondition(
                 employmentType = EmploymentType.INTERN,
-                jobRole = JobRole.IT_BACKEND,
+                jobRoles = setOf(JobRole.IT_BACKEND),
                 keyword = "백엔드",
             ),
             page = 0,
@@ -840,15 +840,20 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `직군 필터는 그 직군의 직무 공고도 남기고 직무 필터는 그 직무만 남긴다`() {
+    fun `직군 필터는 그 직군의 직무 공고도 남기고 직무 필터는 고른 직무 중 하나에 맞는 공고만 남긴다`() {
         // given
         val backend = publishCommand(createCommand(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_BACKEND))
         val frontend = publishCommand(createCommand(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND))
-        publishCommand(createCommand(jobField = JobField.MARKETING_ADVERTISING, jobRole = JobRole.MARKETING_PERFORMANCE))
+        val marketing =
+            publishCommand(createCommand(jobField = JobField.MARKETING_ADVERTISING, jobRole = JobRole.MARKETING_PERFORMANCE))
 
         // when & then
         assertEquals(listOf(frontend, backend), readIds(JobSearchCondition(jobField = JobField.IT_DEVELOPMENT)))
-        assertEquals(listOf(backend), readIds(JobSearchCondition(jobRole = JobRole.IT_BACKEND)))
+        assertEquals(listOf(backend), readIds(JobSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND))))
+        assertEquals(
+            listOf(marketing, backend),
+            readIds(JobSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND, JobRole.MARKETING_PERFORMANCE))),
+        )
     }
 
     @Test

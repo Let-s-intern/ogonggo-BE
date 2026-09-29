@@ -41,8 +41,10 @@ interface UserJobApi {
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
 
-            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
-            보내지 않으면 해당 조건을 적용하지 않습니다. jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다.
+            jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.
+            나머지는 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않습니다.
+            jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
             jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
             region만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다.
@@ -66,7 +68,7 @@ interface UserJobApi {
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
         jobField: JobField?,
-        jobRole: JobRole?,
+        jobRoles: List<JobRole>?,
         region: Region?,
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)
@@ -182,7 +184,8 @@ interface UserJobApi {
             시작·종료 일시가 모두 있는 공고만 대상이며 종료 일시, 식별자 오름차순으로 정렬합니다.
 
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion, keyword는 채용공고 목록 조회와 같습니다.
-            각각 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않으며 서로 함께 사용할 수 있습니다.
+            jobRole만 여러 번 보내 여러 개를 고를 수 있고 나머지는 하나씩 고릅니다.
+            보내지 않으면 해당 조건을 적용하지 않으며 서로 함께 사용할 수 있습니다.
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않고 2자 이상 100자 이하여야 합니다.
 
             excludeClosed=true면 마감 처리됐거나 모집 종료 일시가 지난 공고를 뺍니다.
@@ -225,7 +228,7 @@ interface UserJobApi {
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
         jobField: JobField?,
-        jobRole: JobRole?,
+        jobRoles: List<JobRole>?,
         region: Region?,
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)

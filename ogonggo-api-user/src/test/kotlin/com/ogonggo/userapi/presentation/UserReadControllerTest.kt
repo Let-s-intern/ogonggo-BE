@@ -228,12 +228,12 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달된다`() {
+    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달되고 직무는 여러 개 고를 수 있다`() {
         val condition = JobSearchCondition(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
             jobField = JobField.IT_DEVELOPMENT,
-            jobRole = JobRole.IT_BACKEND,
+            jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND),
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
             .thenReturn(jobPageResult())
@@ -243,7 +243,7 @@ class UserReadControllerTest @Autowired constructor(
                 .param("employmentType", "INTERN")
                 .param("experienceType", "NEWCOMER")
                 .param("jobField", "IT_DEVELOPMENT")
-                .param("jobRole", "IT_BACKEND")
+                .param("jobRole", "IT_BACKEND", "IT_FRONTEND")
                 .param("sort", "VIEW_COUNT")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
@@ -452,7 +452,7 @@ class UserReadControllerTest @Autowired constructor(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
             jobField = JobField.IT_DEVELOPMENT,
-            jobRole = JobRole.IT_BACKEND,
+            jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",
         )
         Mockito.`when`(userJobService.getJobCalendar(null, condition, JobCalendarSearchCondition.NONE, from, to)).thenReturn(emptyList())
