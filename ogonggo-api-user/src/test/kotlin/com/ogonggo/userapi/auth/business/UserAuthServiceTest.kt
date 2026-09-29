@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.auth.business
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.domain.UserRole
@@ -98,6 +99,7 @@ class UserAuthServiceTest {
                 name = "김렛츠",
                 email = "lets@career.co.kr",
                 phoneNum = "010-1234-5678",
+                letsCareerAuthProvider = LetsCareerAuthProvider.SERVICE,
                 nickname = "렛츠",
                 profileImageUrl = null,
                 letsCareerUpdatedAt = LETSCAREER_UPDATED_AT,
@@ -172,6 +174,7 @@ class UserAuthServiceTest {
                 email = "lets@career.co.kr",
                 name = "김렛츠",
                 phoneNum = "010-1234-5678",
+                authProvider = LetsCareerAuthProvider.SERVICE,
                 nickname = "렛츠",
                 profileImageUrl = null,
                 isAdmin = false,

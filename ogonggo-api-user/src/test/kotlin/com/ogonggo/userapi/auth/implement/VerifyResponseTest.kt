@@ -1,6 +1,8 @@
 package com.ogonggo.userapi.auth.implement
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
@@ -32,11 +34,19 @@ class VerifyResponseTest {
         assertEquals(UPDATED_AT, result.updatedAt)
     }
 
-    private fun response(isAdmin: Boolean?): VerifyResponse = VerifyResponse(
+    @Test
+    fun `가입 경로는 이름으로 옮기고 모르는 값은 비운다`() {
+        assertEquals(LetsCareerAuthProvider.KAKAO, response(isAdmin = false, authProvider = "KAKAO").toResult().authProvider)
+        assertNull(response(isAdmin = false, authProvider = "APPLE").toResult().authProvider)
+        assertNull(response(isAdmin = false, authProvider = null).toResult().authProvider)
+    }
+
+    private fun response(isAdmin: Boolean?, authProvider: String? = "SERVICE"): VerifyResponse = VerifyResponse(
         userId = 4821L,
         email = "lets@career.co.kr",
         name = "김렛츠",
         phoneNum = "010-1234-5678",
+        authProvider = authProvider,
         nickname = "렛츠",
         profileImageUrl = "https://example.com/me.png",
         isAdmin = isAdmin,

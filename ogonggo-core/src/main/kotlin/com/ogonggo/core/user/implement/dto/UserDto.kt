@@ -1,6 +1,7 @@
 package com.ogonggo.core.user.implement.dto
 
 import com.ogonggo.core.user.domain.CompanyProfile
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserProfile
@@ -24,6 +25,7 @@ data class UserProfileSyncDto(
     val name: String?,
     val email: String?,
     val phoneNum: String?,
+    val letsCareerAuthProvider: LetsCareerAuthProvider?,
     val nickname: String?,
     val profileImageUrl: String?,
     val letsCareerUpdatedAt: LocalDateTime?,
@@ -64,6 +66,7 @@ data class UserProfileDto(
     val name: String?,
     val email: String?,
     val phoneNum: String?,
+    val letsCareerAuthProvider: LetsCareerAuthProvider?,
     val notificationEmail: String?,
     val nickname: String?,
     val profileImageUrl: String?,
@@ -81,6 +84,7 @@ data class UserProfileDto(
             name = profile.name,
             email = profile.email,
             phoneNum = profile.phoneNum,
+            letsCareerAuthProvider = profile.letsCareerAuthProvider,
             notificationEmail = profile.notificationEmail,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,

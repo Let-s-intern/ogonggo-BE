@@ -2,6 +2,7 @@ package com.ogonggo.userapi.auth.implement
 
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.core.error.UnauthorizedException
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
@@ -16,6 +17,7 @@ data class LetsCareerUser(
     val email: String?,
     val name: String?,
     val phoneNum: String?,
+    val authProvider: LetsCareerAuthProvider?,
     val nickname: String?,
     val profileImageUrl: String?,
     val isAdmin: Boolean,
@@ -77,6 +79,8 @@ internal data class VerifyResponse(
     val email: String?,
     val name: String?,
     val phoneNum: String?,
+    /** 렛츠커리어가 가입 경로를 추가해도 로그인이 깨지지 않도록 문자열로 받는다. */
+    val authProvider: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
@@ -88,6 +92,8 @@ internal data class VerifyResponse(
         email = email,
         name = name,
         phoneNum = phoneNum,
+        // 모르는 가입 경로는 비워 둔다. 비밀번호 변경란을 숨기지 못할 뿐 로그인에는 영향이 없다.
+        authProvider = authProvider?.let { name -> LetsCareerAuthProvider.entries.find { it.name == name } },
         nickname = nickname,
         profileImageUrl = profileImageUrl,
         // 렛츠커리어가 값을 주지 않으면 관리자가 아닌 것으로 본다.

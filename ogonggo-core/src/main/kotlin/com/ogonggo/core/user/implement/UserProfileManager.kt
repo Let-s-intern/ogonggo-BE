@@ -29,6 +29,7 @@ class UserProfileManager internal constructor(
                     name = command.name,
                     email = command.email,
                     phoneNum = command.phoneNum,
+                    letsCareerAuthProvider = command.letsCareerAuthProvider,
                     nickname = command.nickname,
                     profileImageUrl = command.profileImageUrl,
                     letsCareerUpdatedAt = command.letsCareerUpdatedAt,
@@ -38,8 +39,7 @@ class UserProfileManager internal constructor(
             return
         }
 
-        // 휴대폰 번호는 나중에 복제 대상에 추가되어, 렛츠커리어 값이 그대로인 기존 행도 한 번은 채워야 한다.
-        if (profile.letsCareerUpdatedAt == command.letsCareerUpdatedAt && profile.phoneNum == command.phoneNum) {
+        if (profile.isSyncedWith(command)) {
             return
         }
 
@@ -47,6 +47,7 @@ class UserProfileManager internal constructor(
             name = command.name,
             email = command.email,
             phoneNum = command.phoneNum,
+            letsCareerAuthProvider = command.letsCareerAuthProvider,
             nickname = command.nickname,
             profileImageUrl = command.profileImageUrl,
             letsCareerUpdatedAt = command.letsCareerUpdatedAt,
@@ -118,3 +119,12 @@ class UserProfileManager internal constructor(
             )
         }
 }
+
+/**
+ * 휴대폰 번호와 가입 경로는 나중에 복제 대상에 추가되었다.
+ * 렛츠커리어 수정 일시가 그대로여도 이 값이 다르면 기존 행을 한 번 채워야 하므로 함께 비교한다.
+ */
+private fun UserProfile.isSyncedWith(command: UserProfileSyncDto): Boolean =
+    letsCareerUpdatedAt == command.letsCareerUpdatedAt &&
+        phoneNum == command.phoneNum &&
+        letsCareerAuthProvider == command.letsCareerAuthProvider

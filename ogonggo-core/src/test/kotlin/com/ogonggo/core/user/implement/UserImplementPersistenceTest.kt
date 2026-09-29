@@ -3,6 +3,7 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -348,14 +349,18 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `렛츠커리어 수정 일시가 같아도 휴대폰 번호가 다르면 채운다`() {
+    fun `렛츠커리어 수정 일시가 같아도 휴대폰 번호나 가입 경로가 비어 있으면 채운다`() {
         val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
-        // 휴대폰 번호를 복제하기 전에 만들어진 행이다.
-        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW, phoneNum = null))
+        // 휴대폰 번호와 가입 경로를 복제하기 전에 만들어진 행이다.
+        userProfileManager.sync(
+            syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW, phoneNum = null, authProvider = null),
+        )
 
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
 
-        assertEquals("010-1234-5678", userProfileReader.read(account.userId)?.phoneNum)
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("010-1234-5678", profile?.phoneNum)
+        assertEquals(LetsCareerAuthProvider.SERVICE, profile?.letsCareerAuthProvider)
     }
 
     @Test
@@ -407,11 +412,13 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         name: String,
         letsCareerUpdatedAt: LocalDateTime,
         phoneNum: String? = "010-1234-5678",
+        authProvider: LetsCareerAuthProvider? = LetsCareerAuthProvider.SERVICE,
     ): UserProfileSyncDto = UserProfileSyncDto(
         userId = userId,
         name = name,
         email = "lets@career.co.kr",
         phoneNum = phoneNum,
+        letsCareerAuthProvider = authProvider,
         nickname = "렛츠",
         profileImageUrl = null,
         letsCareerUpdatedAt = letsCareerUpdatedAt,

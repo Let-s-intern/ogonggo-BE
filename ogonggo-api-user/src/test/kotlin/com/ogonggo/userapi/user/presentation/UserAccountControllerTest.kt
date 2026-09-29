@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -47,9 +48,11 @@ class UserAccountControllerTest @Autowired constructor(
                 status = UserStatus.ACTIVE,
                 email = "lets@career.co.kr",
                 joinedAt = JOINED_AT,
+                passwordChangeable = true,
                 profile = MyProfileResult(
                     name = "김렛츠",
                     phoneNum = "010-1234-5678",
+                    authProvider = LetsCareerAuthProvider.SERVICE,
                     notificationEmail = "today@example.com",
                     nickname = "렛츠",
                     profileImageUrl = "https://example.com/me.png",
@@ -74,7 +77,9 @@ class UserAccountControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.status").value("ACTIVE"))
             .andExpect(jsonPath("$.data.email").value("lets@career.co.kr"))
             .andExpect(jsonPath("$.data.profile.nickname").value("렛츠"))
+            .andExpect(jsonPath("$.data.passwordChangeable").value(true))
             .andExpect(jsonPath("$.data.profile.phoneNum").value("010-1234-5678"))
+            .andExpect(jsonPath("$.data.profile.authProvider").value("SERVICE"))
             .andExpect(jsonPath("$.data.profile.notificationEmail").value("today@example.com"))
             .andExpect(jsonPath("$.data.profile.university").value("오공고대학교"))
             .andExpect(jsonPath("$.data.profile.grade").value("GRADUATE"))
@@ -91,6 +96,7 @@ class UserAccountControllerTest @Autowired constructor(
                 status = UserStatus.ACTIVE,
                 email = "company@example.com",
                 joinedAt = JOINED_AT,
+                passwordChangeable = true,
                 profile = null,
                 companyProfile = MyCompanyProfileResult(
                     organizationName = "렛츠커리어",

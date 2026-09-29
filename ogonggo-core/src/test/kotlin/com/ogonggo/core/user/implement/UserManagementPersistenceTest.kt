@@ -137,6 +137,7 @@ internal class UserManagementPersistenceTest @Autowired constructor(
                 name = "회원$letsCareerUserId",
                 email = email,
                 phoneNum = null,
+                letsCareerAuthProvider = null,
                 nickname = nickname,
                 profileImageUrl = null,
                 letsCareerUpdatedAt = NOW,

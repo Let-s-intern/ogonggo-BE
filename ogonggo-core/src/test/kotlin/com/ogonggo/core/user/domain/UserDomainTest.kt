@@ -1,5 +1,6 @@
 package com.ogonggo.core.user.domain
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -93,6 +94,7 @@ class UserDomainTest {
             name = "홍길동",
             email = "user@example.com",
             phoneNum = "010-1234-5678",
+            letsCareerAuthProvider = LetsCareerAuthProvider.KAKAO,
             nickname = "오공고",
             profileImageUrl = "https://example.com/profile.png",
             letsCareerUpdatedAt = updatedAt,

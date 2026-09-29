@@ -20,6 +20,7 @@ internal class UserProfile(
     name: String? = null,
     email: String? = null,
     phoneNum: String? = null,
+    letsCareerAuthProvider: LetsCareerAuthProvider? = null,
     nickname: String? = null,
     profileImageUrl: String? = null,
     letsCareerUpdatedAt: LocalDateTime? = null,
@@ -45,6 +46,11 @@ internal class UserProfile(
 
     @Column(name = "phone_num", length = 30)
     var phoneNum: String? = phoneNum /* 휴대폰 번호 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "letscareer_auth_provider", length = 20)
+    var letsCareerAuthProvider: LetsCareerAuthProvider? = letsCareerAuthProvider /* 렛츠커리어 가입 경로 */
         protected set
 
     @Column(length = 100)
@@ -108,6 +114,7 @@ internal class UserProfile(
         name: String?,
         email: String?,
         phoneNum: String?,
+        letsCareerAuthProvider: LetsCareerAuthProvider?,
         nickname: String?,
         profileImageUrl: String?,
         letsCareerUpdatedAt: LocalDateTime?,
@@ -116,6 +123,7 @@ internal class UserProfile(
         this.name = name
         this.email = email
         this.phoneNum = phoneNum
+        this.letsCareerAuthProvider = letsCareerAuthProvider
         this.nickname = nickname
         this.profileImageUrl = profileImageUrl
         this.letsCareerUpdatedAt = letsCareerUpdatedAt

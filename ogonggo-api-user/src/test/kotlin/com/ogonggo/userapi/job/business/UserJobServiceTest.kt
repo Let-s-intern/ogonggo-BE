@@ -337,6 +337,7 @@ class UserJobServiceTest {
                 name = "오공고",
                 email = null,
                 phoneNum = null,
+                letsCareerAuthProvider = null,
                 notificationEmail = null,
                 nickname = null,
                 profileImageUrl = null,

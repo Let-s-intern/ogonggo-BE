@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -50,6 +51,7 @@ class UserAccountServiceTest {
                 name = "김렛츠",
                 email = "lets@career.co.kr",
                 phoneNum = "010-1234-5678",
+                letsCareerAuthProvider = LetsCareerAuthProvider.KAKAO,
                 notificationEmail = "today@example.com",
                 nickname = "렛츠",
                 profileImageUrl = "https://example.com/me.png",
@@ -71,6 +73,9 @@ class UserAccountServiceTest {
         assertEquals("렛츠", result.profile?.nickname)
         assertEquals("010-1234-5678", result.profile?.phoneNum)
         assertEquals("today@example.com", result.profile?.notificationEmail)
+        assertEquals(LetsCareerAuthProvider.KAKAO, result.profile?.authProvider)
+        // 카카오로 가입해 비밀번호가 없다.
+        assertEquals(false, result.passwordChangeable)
         assertEquals("오공고대학교", result.profile?.university)
         assertEquals(UserGrade.GRADUATE, result.profile?.grade)
         assertEquals("개발", result.profile?.wishField)
@@ -97,6 +102,7 @@ class UserAccountServiceTest {
         assertEquals(UserRole.COMPANY, result.role)
         assertEquals("렛츠커리어", result.companyProfile?.organizationName)
         assertEquals("김담당", result.companyProfile?.managerName)
+        assertEquals(true, result.passwordChangeable)
         assertNull(result.profile)
         assertEquals("company@example.com", result.email)
     }

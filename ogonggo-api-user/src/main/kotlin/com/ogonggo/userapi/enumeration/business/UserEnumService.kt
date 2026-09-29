@@ -37,6 +37,7 @@ import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -103,6 +104,7 @@ class UserEnumService {
             options<UserRole>(),
             options<UserStatus>(),
             options<UserGrade>(),
+            options<LetsCareerAuthProvider>(),
             // 광고 문의
             options<AdvertisementInquiryType>(),
             options<AdvertisementPromotionChannel>(),

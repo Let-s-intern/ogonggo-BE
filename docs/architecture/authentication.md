@@ -193,12 +193,12 @@ PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한�
 
 | 항목 | 값 | 소유 |
 | --- | --- | --- |
-| 이름·가입 이메일·휴대폰 번호·닉네임·프로필 이미지 | `name`, `email`, `phoneNum`, `nickname`, `profileImageUrl` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
+| 이름·가입 이메일·휴대폰 번호·가입 경로·닉네임·프로필 이미지 | `name`, `email`, `phoneNum`, `authProvider`, `nickname`, `profileImageUrl` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
 | 학력 | `university`, `major`, `grade` | 오공고. 사용자가 고친다 |
 | 희망 조건 | `wishField`, `wishJob`, `wishIndustry`, `wishEmploymentType`, `wishCompany` | 오공고. 사용자가 고친다 |
 | 오늘의 공고 수신 이메일 | `notificationEmail` | 오공고. 사용자가 고친다 |
 
-**같은 `user_profiles` 테이블에 두되 소유자는 나눕니다.** 소유자가 다른 값이 한 테이블에 있으므로 무엇이 무엇을 덮어쓰는지를 코드로 못 박아 둡니다. `UserProfile.sync`는 렛츠커리어에서 복제하는 다섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값만, `UserProfile.changeNotificationEmail`은 수신 이메일만 건드립니다. 두 메서드의 경계가 곧 소유권 경계이므로 한쪽에 다른 쪽 필드를 추가하지 않습니다.
+**같은 `user_profiles` 테이블에 두되 소유자는 나눕니다.** 소유자가 다른 값이 한 테이블에 있으므로 무엇이 무엇을 덮어쓰는지를 코드로 못 박아 둡니다. `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값만, `UserProfile.changeNotificationEmail`은 수신 이메일만 건드립니다. 두 메서드의 경계가 곧 소유권 경계이므로 한쪽에 다른 쪽 필드를 추가하지 않습니다.
 
 `grade`는 렛츠커리어의 `UserGrade`와 값과 `code`를 맞춰 두었습니다. 희망 조건 다섯 값은 렛츠커리어가 자유 문자열로 다루므로 오공고도 형식을 해석하지 않고 그대로 보관합니다.
 
@@ -225,7 +225,7 @@ PUT /api/v1/users/me/notification-email   { "notificationEmail": "me@example.com
 
 렛츠커리어 가입 이메일과 따로 두는 오공고 전용 값이라 `user_profiles.notification_email`에 두고 렛츠커리어에 보내지 않습니다. 빼거나 `null`로 보내면 비웁니다. 기업 회원은 기업 정보의 `notificationEmail`을 쓰므로 이 경로는 403 `GENERAL_MEMBER_REQUIRED`로 막습니다.
 
-휴대폰 번호는 마이페이지 표시용으로 `verify` 응답에 실어 로그인마다 복제합니다. 복제 대상에 나중에 추가되었으므로, `letscareer_updated_at`이 같아도 휴대폰 번호가 다르면 한 번 갱신해 기존 행을 채웁니다.
+휴대폰 번호와 가입 경로(`letscareer_auth_provider`)는 마이페이지용으로 `verify` 응답에 실어 로그인마다 복제합니다. 가입 경로는 렛츠커리어에서 바뀌지 않는 값이라 첫 로그인에 저장된 값이 그대로 유지되며, 학력처럼 최초 1회 호출(`job-profile`)에 싣지 않은 이유는 그 호출이 실패하면 값을 다시 받을 기회가 없기 때문입니다. 두 값은 복제 대상에 나중에 추가되었으므로, `letscareer_updated_at`이 같아도 둘 중 하나가 다르면 한 번 갱신해 기존 행을 채웁니다. 렛츠커리어가 오공고가 모르는 가입 경로를 보내면 그 값만 비우고 로그인은 진행합니다.
 
 ### 비밀번호 변경
 
@@ -248,6 +248,8 @@ PATCH /api/v1/users/me/password   { "currentPassword": "...", "newPassword": "..
 | 400 `INVALID_PASSWORD` (8자 이상·특수문자 포함 위반) | 400 `INVALID_NEW_PASSWORD` |
 | 400 `INVALID_AUTH_PROVIDER_*` (카카오·네이버·구글 가입) | 400 `SOCIAL_ACCOUNT_PASSWORD_UNAVAILABLE` |
 | 그 밖의 4xx, 5xx, 통신 실패 | 503 `LETSCAREER_UNAVAILABLE` |
+
+`GET /api/v1/users/me`의 `passwordChangeable`로 변경란을 보여줄지 판단합니다. 기업 회원과 이메일(`SERVICE`)로 가입한 일반 회원은 `true`, 카카오·네이버·구글 가입은 `false`입니다. 가입 경로를 아직 모르는 계정(렛츠커리어 값이 없는 과거 계정, 새 코드 배포 뒤 아직 로그인하지 않은 계정)은 `true`로 두고 렛츠커리어 판정에 맡깁니다.
 
 요청 단계에서는 두 값이 비었는지와 새 비밀번호 길이(8~64자)만 봅니다. 특수문자 규칙은 일반 회원에게만 있으므로 렛츠커리어가 판정합니다. 이미 발급된 오공고 토큰은 비밀번호를 바꿔도 그대로 유효합니다.
 
@@ -288,7 +290,7 @@ GET /api/v1/users/me
 
 모두 서버 간 호출 전용이며 브라우저에 노출하지 않습니다. `X-Internal-Api-Key` 헤더가 서버 설정값과 일치할 때만 `INTERNAL` 권한을 부여하고, 그 외에는 인가 단계에서 차단합니다. 키가 설정되지 않으면 모든 요청을 거부합니다.
 
-응답에는 연동에 필요한 최소 정보만 담습니다. 연락처는 마이페이지에 보여줄 휴대폰 번호만 `verify`에 담고, 결제와 지원 이력은 포함하지 않습니다.
+응답에는 연동에 필요한 최소 정보만 담습니다. 연락처는 마이페이지에 보여줄 휴대폰 번호만, 계정 정보는 가입 경로만 `verify`에 더 담고, 결제와 지원 이력은 포함하지 않습니다.
 
 ## 7. 설정
 
@@ -381,7 +383,6 @@ GET /api/v1/users/me
 | 렛츠커리어 로그아웃 시 오공고 동시 로그아웃 | 미정 | 오공고 세션은 유지된다 |
 | `ADMIN` 역할 부여 경로 | DB 직접 부여로 결정(2026-09-14) | 부여 API와 화면은 없다. 부여 이력·감사 기록은 미정이다. 렛츠커리어의 `isAdmin`은 반영하지 않는다 |
 | 프로필 수정 | 일부 결정(2026-09-29) | 구직 프로필과 수신 이메일은 오공고에서 고친다. 렛츠커리어에서 복제한 이름·가입 이메일·휴대폰 번호·닉네임·프로필 이미지는 조회만 하고 로그인 시 갱신된다. 기업 정보는 `PUT /api/v1/users/me/company-profile`로 고친다 |
-| 소셜 로그인 회원의 비밀번호 변경 화면 | 확인 필요 | 오공고는 가입 경로를 모른다. 카카오·네이버·구글 회원이 변경하면 400 `SOCIAL_ACCOUNT_PASSWORD_UNAVAILABLE`을 받는다. 화면에서 미리 숨기려면 `verify`에 가입 경로를 싣고 복제해야 한다 |
 
 앞의 세 가지는 서로 얽혀 있으므로 함께 결정합니다. 재발급 시점에 렛츠커리어를 재검증하는 방식(`last_synced_at`이 일정 기간을 넘겼을 때만 호출)이 전파 지연을 좁히는 후보이며, 탈퇴 정책이 정해진 뒤 함께 검토합니다.
 

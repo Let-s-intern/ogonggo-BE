@@ -445,6 +445,7 @@ class RecruitmentPostServiceTest {
         name = null,
         email = null,
         phoneNum = null,
+        letsCareerAuthProvider = null,
         notificationEmail = null,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
