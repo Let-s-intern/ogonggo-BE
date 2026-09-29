@@ -28,6 +28,8 @@ class UserProfileManager internal constructor(
                     userId = command.userId,
                     name = command.name,
                     email = command.email,
+                    phoneNum = command.phoneNum,
+                    letsCareerAuthProvider = command.letsCareerAuthProvider,
                     nickname = command.nickname,
                     profileImageUrl = command.profileImageUrl,
                     letsCareerUpdatedAt = command.letsCareerUpdatedAt,
@@ -37,13 +39,15 @@ class UserProfileManager internal constructor(
             return
         }
 
-        if (profile.letsCareerUpdatedAt == command.letsCareerUpdatedAt) {
+        if (profile.isSyncedWith(command)) {
             return
         }
 
         profile.sync(
             name = command.name,
             email = command.email,
+            phoneNum = command.phoneNum,
+            letsCareerAuthProvider = command.letsCareerAuthProvider,
             nickname = command.nickname,
             profileImageUrl = command.profileImageUrl,
             letsCareerUpdatedAt = command.letsCareerUpdatedAt,
@@ -63,39 +67,85 @@ class UserProfileManager internal constructor(
      */
     fun replaceJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) {
         val profile = userProfileRepository.findByUserId(userId)
-            ?: return createWithJobInfo(userId, command, now)
+            ?: return createWithJobInfo(userId, command, updatedAt = now, now = now)
 
-        profile.replaceJobInfo(
-            university = command.university,
-            major = command.major,
-            grade = command.grade,
-            wishField = command.wishField,
-            wishJob = command.wishJob,
-            wishIndustry = command.wishIndustry,
-            wishEmploymentType = command.wishEmploymentType,
-            wishCompany = command.wishCompany,
-        )
+        profile.replaceJobInfo(command, updatedAt = now)
         userProfileRepository.save(profile)
     }
 
-    private fun createWithJobInfo(userId: Long, command: UserProfileJobInfoDto, now: LocalDateTime) {
-        val created = UserProfile(userId = userId, lastSyncedAt = now).apply {
-            replaceJobInfo(
-                university = command.university,
-                major = command.major,
-                grade = command.grade,
-                wishField = command.wishField,
-                wishJob = command.wishJob,
-                wishIndustry = command.wishIndustry,
-                wishEmploymentType = command.wishEmploymentType,
-                wishCompany = command.wishCompany,
-            )
+    /**
+     * 렛츠커리어에서 온 학력·희망 조건을 나중에 고친 쪽 기준으로 반영한다. 반영했으면 true다.
+     * 고친 일시는 렛츠커리어의 값을 그대로 남긴다. 같은 수정을 다시 받으면 같은 일시라 반영하지 않는다.
+     * 렛츠커리어에서 온 값이므로 렛츠커리어로 다시 보낼 변경을 적재하지 않는다.
+     */
+    fun applyLetsCareerJobInfo(
+        userId: Long,
+        command: UserProfileJobInfoDto,
+        letsCareerUpdatedAt: LocalDateTime?,
+        now: LocalDateTime,
+    ): Boolean {
+        val profile = userProfileRepository.findByUserId(userId)
+        if (profile == null) {
+            createWithJobInfo(userId, command, updatedAt = letsCareerUpdatedAt, now = now)
+            return true
+        }
+        if (!profile.acceptsLetsCareerJobInfo(letsCareerUpdatedAt)) {
+            return false
         }
 
+        profile.replaceJobInfo(command, updatedAt = letsCareerUpdatedAt)
+        userProfileRepository.save(profile)
+        return true
+    }
+
+    /**
+     * 학력·희망 조건과 같이 오공고가 소유하는 값이라 재로그인의 `sync`가 덮어쓰지 않는다.
+     * 프로필 행이 없으면 만들며, 동시에 만들어진 경우는 `replaceJobInfo`와 같이 재시도할 수 있는 충돌로 알린다.
+     */
+    fun changeNotificationEmail(userId: Long, notificationEmail: String?, now: LocalDateTime) {
+        val profile = userProfileRepository.findByUserId(userId)
+            ?: return createWith(UserProfile(userId = userId, lastSyncedAt = now)) {
+                changeNotificationEmail(notificationEmail)
+            }
+
+        profile.changeNotificationEmail(notificationEmail)
+        userProfileRepository.save(profile)
+    }
+
+    private fun createWith(created: UserProfile, apply: UserProfile.() -> Unit) {
+        created.apply()
         try {
             userProfileRepository.saveAndFlush(created)
         } catch (exception: DataIntegrityViolationException) {
             throw ConflictException(UserErrorCode.USER_PROFILE_CONFLICT)
         }
     }
+
+    private fun createWithJobInfo(
+        userId: Long,
+        command: UserProfileJobInfoDto,
+        updatedAt: LocalDateTime?,
+        now: LocalDateTime,
+    ) = createWith(UserProfile(userId = userId, lastSyncedAt = now)) { replaceJobInfo(command, updatedAt) }
 }
+
+private fun UserProfile.replaceJobInfo(command: UserProfileJobInfoDto, updatedAt: LocalDateTime?) = replaceJobInfo(
+    university = command.university,
+    major = command.major,
+    grade = command.grade,
+    wishField = command.wishField,
+    wishJob = command.wishJob,
+    wishIndustry = command.wishIndustry,
+    wishEmploymentType = command.wishEmploymentType,
+    wishCompany = command.wishCompany,
+    updatedAt = updatedAt,
+)
+
+/**
+ * 휴대폰 번호와 가입 경로는 나중에 복제 대상에 추가되었다.
+ * 렛츠커리어 수정 일시가 그대로여도 이 값이 다르면 기존 행을 한 번 채워야 하므로 함께 비교한다.
+ */
+private fun UserProfile.isSyncedWith(command: UserProfileSyncDto): Boolean =
+    letsCareerUpdatedAt == command.letsCareerUpdatedAt &&
+        phoneNum == command.phoneNum &&
+        letsCareerAuthProvider == command.letsCareerAuthProvider

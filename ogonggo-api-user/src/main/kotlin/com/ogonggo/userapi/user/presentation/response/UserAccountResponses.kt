@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.user.presentation.response
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -16,6 +17,11 @@ data class MyAccountResponse(
     @Schema(description = "기업 회원은 로그인 이메일, 일반 회원은 렛츠커리어 프로필의 이메일이다.")
     val email: String?,
     val joinedAt: LocalDateTime,
+    @Schema(
+        description = "비밀번호 변경란을 보여줄지 여부. 기업 회원과 이메일로 가입한 일반 회원은 true, " +
+            "카카오·네이버·구글로 가입한 일반 회원은 false다. 가입 경로를 아직 모르면 true다.",
+    )
+    val passwordChangeable: Boolean,
     @Schema(description = "일반 회원의 렛츠커리어 프로필. 기업 회원이면 null이다.")
     val profile: MyProfileResponse?,
     @Schema(description = "기업 회원의 기업 정보. 일반 회원이면 null이다.")
@@ -28,6 +34,7 @@ data class MyAccountResponse(
             status = result.status,
             email = result.email,
             joinedAt = result.joinedAt,
+            passwordChangeable = result.passwordChangeable,
             profile = result.profile?.let(MyProfileResponse::from),
             companyProfile = result.companyProfile?.let(MyCompanyProfileResponse::from),
         )
@@ -35,11 +42,17 @@ data class MyAccountResponse(
 }
 
 @Schema(
-    description = "이름·닉네임·프로필 이미지는 렛츠커리어가 소유해 로그인마다 갱신되고, " +
-        "학력과 희망 조건은 오공고가 소유해 PUT /api/v1/users/me/profile로 고친다.",
+    description = "이름·휴대폰 번호·닉네임·프로필 이미지는 렛츠커리어가 소유해 로그인마다 갱신되고 오공고에서 바꿀 수 없다. " +
+        "학력과 희망 조건은 PUT /api/v1/users/me/profile, 수신 이메일은 PUT /api/v1/users/me/notification-email로 고친다.",
 )
 data class MyProfileResponse(
     val name: String?,
+    @Schema(description = "렛츠커리어에 등록된 휴대폰 번호. 조회만 한다.", example = "010-1234-5678")
+    val phoneNum: String?,
+    @Schema(description = "렛츠커리어 가입 경로. 렛츠커리어에 값이 없는 과거 계정은 null이다.")
+    val authProvider: LetsCareerAuthProvider?,
+    @Schema(description = "오늘의 공고 정보를 받을 이메일. 가입 이메일과 따로 두며 입력하지 않았으면 null이다.")
+    val notificationEmail: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val university: String?,
@@ -54,6 +67,9 @@ data class MyProfileResponse(
     companion object {
         internal fun from(result: MyProfileResult): MyProfileResponse = MyProfileResponse(
             name = result.name,
+            phoneNum = result.phoneNum,
+            authProvider = result.authProvider,
+            notificationEmail = result.notificationEmail,
             nickname = result.nickname,
             profileImageUrl = result.profileImageUrl,
             university = result.university,

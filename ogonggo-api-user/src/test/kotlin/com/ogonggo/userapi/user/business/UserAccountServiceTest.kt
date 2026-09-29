@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -9,6 +10,7 @@ import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.dto.CompanyProfileDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
 import com.ogonggo.core.user.implement.CompanyProfileReader
+import com.ogonggo.core.user.implement.LetsCareerJobProfileOutboxManager
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
@@ -32,6 +34,7 @@ class UserAccountServiceTest {
     private val companyProfileReader = Mockito.mock(CompanyProfileReader::class.java)
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val companyProfileManager = Mockito.mock(CompanyProfileManager::class.java)
+    private val letsCareerJobProfileOutboxManager = Mockito.mock(LetsCareerJobProfileOutboxManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = UserAccountService(
         userReader,
@@ -39,6 +42,7 @@ class UserAccountServiceTest {
         companyProfileReader,
         userProfileManager,
         companyProfileManager,
+        letsCareerJobProfileOutboxManager,
         clock,
     )
 
@@ -49,6 +53,9 @@ class UserAccountServiceTest {
             UserProfileDto(
                 name = "김렛츠",
                 email = "lets@career.co.kr",
+                phoneNum = "010-1234-5678",
+                letsCareerAuthProvider = LetsCareerAuthProvider.KAKAO,
+                notificationEmail = "today@example.com",
                 nickname = "렛츠",
                 profileImageUrl = "https://example.com/me.png",
                 university = "오공고대학교",
@@ -67,6 +74,11 @@ class UserAccountServiceTest {
         assertEquals(UserRole.USER, result.role)
         assertEquals("김렛츠", result.profile?.name)
         assertEquals("렛츠", result.profile?.nickname)
+        assertEquals("010-1234-5678", result.profile?.phoneNum)
+        assertEquals("today@example.com", result.profile?.notificationEmail)
+        assertEquals(LetsCareerAuthProvider.KAKAO, result.profile?.authProvider)
+        // 카카오로 가입해 비밀번호가 없다.
+        assertEquals(false, result.passwordChangeable)
         assertEquals("오공고대학교", result.profile?.university)
         assertEquals(UserGrade.GRADUATE, result.profile?.grade)
         assertEquals("개발", result.profile?.wishField)
@@ -93,6 +105,7 @@ class UserAccountServiceTest {
         assertEquals(UserRole.COMPANY, result.role)
         assertEquals("렛츠커리어", result.companyProfile?.organizationName)
         assertEquals("김담당", result.companyProfile?.managerName)
+        assertEquals(true, result.passwordChangeable)
         assertNull(result.profile)
         assertEquals("company@example.com", result.email)
     }
@@ -137,9 +150,23 @@ class UserAccountServiceTest {
             wishCompany = null,
         )
 
+        givenAccount(UserRole.USER, email = null)
+
         service.replaceMyProfile(USER_ID, command)
 
         Mockito.verify(userProfileManager).replaceJobInfo(USER_ID, command, NOW)
+        // 렛츠커리어에서도 고칠 수 있는 값이라 같은 트랜잭션에서 보낼 변경을 적재한다.
+        Mockito.verify(letsCareerJobProfileOutboxManager).enqueue(USER_ID, NOW)
+    }
+
+    @Test
+    fun `렛츠커리어 계정이 없으면 프로필만 고치고 보낼 변경은 적재하지 않는다`() {
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        service.replaceMyProfile(USER_ID, EMPTY_JOB_INFO)
+
+        Mockito.verify(userProfileManager).replaceJobInfo(USER_ID, EMPTY_JOB_INFO, NOW)
+        Mockito.verifyNoInteractions(letsCareerJobProfileOutboxManager)
     }
 
     @Test
@@ -184,6 +211,33 @@ class UserAccountServiceTest {
         Mockito.verifyNoInteractions(companyProfileManager)
     }
 
+    @Test
+    fun `일반 회원은 수신 이메일을 오공고 프로필에 저장한다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+
+        // when
+        service.changeMyNotificationEmail(USER_ID, "today@example.com")
+
+        // then
+        Mockito.verify(userProfileManager).changeNotificationEmail(USER_ID, "today@example.com", NOW)
+    }
+
+    @Test
+    fun `기업 회원이 수신 이메일을 고치면 GENERAL_MEMBER_REQUIRED로 막는다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        // when
+        val exception = assertThrows(ForbiddenException::class.java) {
+            service.changeMyNotificationEmail(USER_ID, "today@example.com")
+        }
+
+        // then
+        assertEquals(UserErrorCode.GENERAL_MEMBER_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(userProfileManager)
+    }
+
     companion object {
         private val COMPANY_PROFILE_COMMAND = CompanyProfileUpdateDto(
             organizationName = "오공고",
@@ -192,6 +246,7 @@ class UserAccountServiceTest {
             managerPhone = null,
             notificationEmail = null,
         )
+        private val EMPTY_JOB_INFO = UserProfileJobInfoDto(null, null, null, null, null, null, null, null)
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)

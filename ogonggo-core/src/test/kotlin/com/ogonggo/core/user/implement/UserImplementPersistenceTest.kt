@@ -3,6 +3,7 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -31,6 +32,8 @@ import org.springframework.test.context.ContextConfiguration
 @Import(
     UserReader::class,
     UserAppender::class,
+    UserManager::class,
+    LetsCareerJobProfileOutboxManager::class,
     UserProfileManager::class,
     UserProfileReader::class,
     CompanyProfileAppender::class,
@@ -40,6 +43,8 @@ import org.springframework.test.context.ContextConfiguration
 internal class UserImplementPersistenceTest @Autowired constructor(
     private val userReader: UserReader,
     private val userAppender: UserAppender,
+    private val userManager: UserManager,
+    private val outboxManager: LetsCareerJobProfileOutboxManager,
     private val userProfileManager: UserProfileManager,
     private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -345,14 +350,157 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         assertEquals(UserErrorCode.COMPANY_PROFILE_ALREADY_EXISTS, exception.errorCode)
     }
 
+    @Test
+    fun `렛츠커리어 수정 일시가 같아도 휴대폰 번호나 가입 경로가 비어 있으면 채운다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+        // 휴대폰 번호와 가입 경로를 복제하기 전에 만들어진 행이다.
+        userProfileManager.sync(
+            syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW, phoneNum = null, authProvider = null),
+        )
+
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("010-1234-5678", profile?.phoneNum)
+        assertEquals(LetsCareerAuthProvider.SERVICE, profile?.letsCareerAuthProvider)
+    }
+
+    @Test
+    fun `로그인 동기화는 사용자가 입력한 수신 이메일을 덮어쓰지 않는다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))
+        userProfileManager.changeNotificationEmail(account.userId, "today@example.com", NOW)
+
+        userProfileManager.sync(
+            syncCommand(account.userId, name = "김커리어", letsCareerUpdatedAt = NOW.plusDays(1)),
+        )
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("김커리어", profile?.name)
+        assertEquals("today@example.com", profile?.notificationEmail)
+    }
+
+    @Test
+    fun `프로필 행이 없어도 수신 이메일을 저장하면 행이 생기고 null이면 비운다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userProfileManager.changeNotificationEmail(account.userId, "today@example.com", NOW)
+        assertEquals("today@example.com", userProfileReader.read(account.userId)?.notificationEmail)
+
+        userProfileManager.changeNotificationEmail(account.userId, null, NOW)
+        assertNull(userProfileReader.read(account.userId)?.notificationEmail)
+    }
+
+    @Test
+    fun `기업 회원의 비밀번호를 바꾸면 새 값으로 로그인 자격증명이 바뀐다`() {
+        val account = userAppender.appendCompany(
+            CompanyAccountAppendDto("mock@example.com", "encoded-password", NOW),
+        )
+
+        userManager.changePassword(account.userId, "new-encoded-password")
+
+        assertEquals("new-encoded-password", userReader.readCredential(account.userId)?.encodedPassword)
+    }
+
+    @Test
+    fun `일반 회원은 비밀번호 자격증명이 없다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        assertNull(userReader.readCredential(account.userId))
+    }
+
+    @Test
+    fun `오공고에서 고치면 고친 일시를 남긴다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userProfileManager.replaceJobInfo(account.userId, jobInfo("개발"), NOW)
+
+        assertEquals(NOW, userProfileReader.read(account.userId)?.jobInfoUpdatedAt)
+    }
+
+    @Test
+    fun `렛츠커리어 값은 더 나중에 고친 것일 때만 반영하고 렛츠커리어의 일시를 남긴다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+        userProfileManager.replaceJobInfo(account.userId, jobInfo("오공고에서 고침"), NOW)
+
+        // 같은 일시(이미 받은 수정)·더 이른 일시·일시 없음은 받지 않는다.
+        listOf(NOW, NOW.minusMinutes(1), null).forEach { letsCareerUpdatedAt ->
+            assertEquals(
+                false,
+                userProfileManager.applyLetsCareerJobInfo(account.userId, jobInfo("렛츠커리어"), letsCareerUpdatedAt, NOW),
+            )
+        }
+        assertEquals("오공고에서 고침", userProfileReader.read(account.userId)?.wishField)
+
+        val later = NOW.plusMinutes(1)
+        assertEquals(true, userProfileManager.applyLetsCareerJobInfo(account.userId, jobInfo("렛츠커리어"), later, NOW))
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("렛츠커리어", profile?.wishField)
+        assertEquals(later, profile?.jobInfoUpdatedAt)
+    }
+
+    @Test
+    fun `한 번도 고친 적 없으면 렛츠커리어 값을 일시가 없어도 받는다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        assertEquals(true, userProfileManager.applyLetsCareerJobInfo(account.userId, jobInfo("렛츠커리어"), null, NOW))
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("렛츠커리어", profile?.wishField)
+        assertNull(profile?.jobInfoUpdatedAt)
+    }
+
+    @Test
+    fun `아웃박스는 사용자당 한 행이고 다시 적재하면 일시만 바뀐다`() {
+        outboxManager.enqueue(17L, NOW)
+        outboxManager.enqueue(17L, NOW.plusMinutes(1))
+
+        val pending = outboxManager.readPending()
+        assertEquals(1, pending.size)
+        assertEquals(NOW.plusMinutes(1), pending.single().requestedAt)
+    }
+
+    @Test
+    fun `보내는 사이 다시 적재됐으면 보낸 것으로 지우지 않는다`() {
+        outboxManager.enqueue(17L, NOW)
+        val sending = outboxManager.readPending().single()
+        outboxManager.enqueue(17L, NOW.plusMinutes(1))
+
+        outboxManager.markSent(sending)
+
+        assertEquals(NOW.plusMinutes(1), outboxManager.readPending().single().requestedAt)
+
+        outboxManager.markSent(outboxManager.readPending().single())
+        assertEquals(0, outboxManager.readPending().size)
+    }
+
+    @Test
+    fun `실패가 적은 행부터 보낸다`() {
+        outboxManager.enqueue(17L, NOW)
+        outboxManager.enqueue(18L, NOW.plusMinutes(1))
+        outboxManager.markFailed(outboxManager.readPending().first { it.userId == 17L })
+
+        val pending = outboxManager.readPending()
+        assertEquals(listOf(18L, 17L), pending.map { it.userId })
+        assertEquals(1, pending.last().attemptCount)
+    }
+
+    private fun jobInfo(wishField: String) =
+        UserProfileJobInfoDto(null, null, null, wishField, null, null, null, null)
+
     private fun syncCommand(
         userId: Long,
         name: String,
         letsCareerUpdatedAt: LocalDateTime,
+        phoneNum: String? = "010-1234-5678",
+        authProvider: LetsCareerAuthProvider? = LetsCareerAuthProvider.SERVICE,
     ): UserProfileSyncDto = UserProfileSyncDto(
         userId = userId,
         name = name,
         email = "lets@career.co.kr",
+        phoneNum = phoneNum,
+        letsCareerAuthProvider = authProvider,
         nickname = "렛츠",
         profileImageUrl = null,
         letsCareerUpdatedAt = letsCareerUpdatedAt,

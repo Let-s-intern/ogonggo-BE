@@ -34,6 +34,20 @@ class UserReader internal constructor(
             role = user.role,
         )
     }
+
+    /** 비밀번호 변경용 조회. 자격증명이 없는 일반 회원 계정은 null이다. */
+    fun readCredential(userId: Long): UserCredentialDto? {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
+        val encodedPassword = user.password ?: return null
+
+        return UserCredentialDto(
+            userId = user.requiredId(),
+            encodedPassword = encodedPassword,
+            status = user.status,
+            role = user.role,
+        )
+    }
 }
 
 internal fun User.toAccount(): UserAccountDto = UserAccountDto(

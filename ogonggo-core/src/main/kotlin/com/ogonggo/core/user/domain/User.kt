@@ -60,6 +60,16 @@ internal class User private constructor(
     var withdrawnAt: LocalDateTime? = null /* 탈퇴 일시 */
         protected set
 
+    /**
+     * 오공고가 비밀번호를 소유하는 기업 회원만 바꿀 수 있다.
+     * 일반 회원의 비밀번호는 렛츠커리어에 있다.
+     */
+    fun changePassword(encodedPassword: String) {
+        check(password != null) { "비밀번호가 없는 계정입니다." }
+        require(encodedPassword.isNotBlank()) { "비밀번호는 비어 있을 수 없습니다." }
+        password = encodedPassword
+    }
+
     fun withdraw(now: LocalDateTime) {
         if (status == UserStatus.WITHDRAWN) {
             return

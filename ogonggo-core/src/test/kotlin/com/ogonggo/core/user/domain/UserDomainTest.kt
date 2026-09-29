@@ -1,5 +1,6 @@
 package com.ogonggo.core.user.domain
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -92,6 +93,8 @@ class UserDomainTest {
         profile.sync(
             name = "홍길동",
             email = "user@example.com",
+            phoneNum = "010-1234-5678",
+            letsCareerAuthProvider = LetsCareerAuthProvider.KAKAO,
             nickname = "오공고",
             profileImageUrl = "https://example.com/profile.png",
             letsCareerUpdatedAt = updatedAt,
@@ -100,9 +103,33 @@ class UserDomainTest {
 
         assertEquals("홍길동", profile.name)
         assertEquals("user@example.com", profile.email)
+        assertEquals("010-1234-5678", profile.phoneNum)
         assertEquals("오공고", profile.nickname)
         assertEquals("https://example.com/profile.png", profile.profileImageUrl)
         assertEquals(updatedAt, profile.letsCareerUpdatedAt)
         assertEquals(syncedAt, profile.lastSyncedAt)
+    }
+
+    @Test
+    fun `수신 이메일은 공백일 수 없고 null이면 비운다`() {
+        val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
+
+        profile.changeNotificationEmail("today@example.com")
+        assertEquals("today@example.com", profile.notificationEmail)
+
+        assertThrows(IllegalArgumentException::class.java) { profile.changeNotificationEmail(" ") }
+
+        profile.changeNotificationEmail(null)
+        assertNull(profile.notificationEmail)
+    }
+
+    @Test
+    fun `기업 계정만 비밀번호를 바꿀 수 있다`() {
+        val company = User.ofCompany(email = "company@example.com", encodedPassword = "encoded", joinedAt = joinedAt)
+        company.changePassword("new-encoded")
+        assertEquals("new-encoded", company.password)
+
+        val letsCareer = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt)
+        assertThrows(IllegalStateException::class.java) { letsCareer.changePassword("new-encoded") }
     }
 }

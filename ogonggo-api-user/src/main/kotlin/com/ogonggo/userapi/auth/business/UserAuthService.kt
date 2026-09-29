@@ -86,7 +86,9 @@ class UserAuthService(
         val jobProfile = letsCareerUserClient.readJobProfile(letsCareerUserId) ?: return
 
         try {
-            transactionTemplate.execute { userProfileManager.replaceJobInfo(userId, jobProfile.toCommand(), now) }
+            transactionTemplate.execute {
+                userProfileManager.applyLetsCareerJobInfo(userId, jobProfile.toCommand(), jobProfile.updatedAt, now)
+            }
         } catch (exception: Exception) {
             log.warn("학력·희망 조건 복제에 실패했습니다. userId={}", userId, exception)
         }
@@ -132,6 +134,8 @@ private fun LetsCareerUser.toSyncCommand(userId: Long, now: LocalDateTime): User
         userId = userId,
         name = name,
         email = email,
+        phoneNum = phoneNum,
+        letsCareerAuthProvider = authProvider,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
         letsCareerUpdatedAt = updatedAt,

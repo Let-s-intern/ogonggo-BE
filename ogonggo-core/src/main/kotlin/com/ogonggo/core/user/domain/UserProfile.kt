@@ -19,6 +19,8 @@ internal class UserProfile(
 
     name: String? = null,
     email: String? = null,
+    phoneNum: String? = null,
+    letsCareerAuthProvider: LetsCareerAuthProvider? = null,
     nickname: String? = null,
     profileImageUrl: String? = null,
     letsCareerUpdatedAt: LocalDateTime? = null,
@@ -42,6 +44,15 @@ internal class UserProfile(
     var email: String? = email /* 사용자 이메일 */
         protected set
 
+    @Column(name = "phone_num", length = 30)
+    var phoneNum: String? = phoneNum /* 휴대폰 번호 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "letscareer_auth_provider", length = 20)
+    var letsCareerAuthProvider: LetsCareerAuthProvider? = letsCareerAuthProvider /* 렛츠커리어 가입 경로 */
+        protected set
+
     @Column(length = 100)
     var nickname: String? = nickname /* 사용자 닉네임 */
         protected set
@@ -56,6 +67,10 @@ internal class UserProfile(
 
     @Column(name = "last_synced_at", nullable = false)
     var lastSyncedAt: LocalDateTime = lastSyncedAt /* 렛츠커리어 프로필 최종 동기화 일시 */
+        protected set
+
+    @Column(name = "notification_email", length = 320)
+    var notificationEmail: String? = null /* 오늘의 공고 정보 수신용 이메일 */
         protected set
 
     @Column(length = 30)
@@ -91,13 +106,19 @@ internal class UserProfile(
     var wishCompany: String? = null /* 희망 기업 */
         protected set
 
+    @Column(name = "job_info_updated_at")
+    var jobInfoUpdatedAt: LocalDateTime? = null /* 학력·희망 조건 최종 수정 일시. 렛츠커리어와 동기화할 때 나중에 고친 쪽을 가리는 기준이다 */
+        protected set
+
     /**
      * 렛츠커리어에서 복제하는 값만 갱신한다.
-     * 학력과 희망 조건은 오공고가 소유하므로 여기서 건드리지 않는다.
+     * 학력과 희망 조건, 수신 이메일은 오공고가 소유하므로 여기서 건드리지 않는다.
      */
     fun sync(
         name: String?,
         email: String?,
+        phoneNum: String?,
+        letsCareerAuthProvider: LetsCareerAuthProvider?,
         nickname: String?,
         profileImageUrl: String?,
         letsCareerUpdatedAt: LocalDateTime?,
@@ -105,6 +126,8 @@ internal class UserProfile(
     ) {
         this.name = name
         this.email = email
+        this.phoneNum = phoneNum
+        this.letsCareerAuthProvider = letsCareerAuthProvider
         this.nickname = nickname
         this.profileImageUrl = profileImageUrl
         this.letsCareerUpdatedAt = letsCareerUpdatedAt
@@ -112,7 +135,7 @@ internal class UserProfile(
     }
 
     /**
-     * 사용자가 오공고에서 직접 입력하는 학력과 희망 조건을 함께 교체한다.
+     * 학력과 희망 조건을 함께 교체하고 고친 일시를 남긴다.
      * 보내지 않은 값은 비우는 것으로 보므로 일부만 바꾸는 용도로 쓰지 않는다.
      */
     fun replaceJobInfo(
@@ -124,7 +147,9 @@ internal class UserProfile(
         wishIndustry: String?,
         wishEmploymentType: String?,
         wishCompany: String?,
+        updatedAt: LocalDateTime?,
     ) {
+        this.jobInfoUpdatedAt = updatedAt
         this.university = university
         this.major = major
         this.grade = grade
@@ -133,5 +158,23 @@ internal class UserProfile(
         this.wishIndustry = wishIndustry
         this.wishEmploymentType = wishEmploymentType
         this.wishCompany = wishCompany
+    }
+
+    /**
+     * 오늘의 공고를 받을 이메일을 바꾼다. 렛츠커리어 가입 이메일과 따로 두며 오공고가 소유한다.
+     * null이면 비운다.
+     */
+    fun changeNotificationEmail(notificationEmail: String?) {
+        require(notificationEmail == null || notificationEmail.isNotBlank()) { "수신 이메일은 공백일 수 없습니다." }
+        this.notificationEmail = notificationEmail
+    }
+
+    /**
+     * 렛츠커리어가 보낸 값이 더 나중에 고친 것일 때만 받아들인다.
+     * 같은 일시면 이미 받은 수정이다. 렛츠커리어가 일시를 모르면(한 번도 고친 적 없는 과거 계정) 이쪽도 모를 때만 받는다.
+     */
+    fun acceptsLetsCareerJobInfo(letsCareerUpdatedAt: LocalDateTime?): Boolean {
+        val current = jobInfoUpdatedAt ?: return true
+        return letsCareerUpdatedAt != null && letsCareerUpdatedAt.isAfter(current)
     }
 }

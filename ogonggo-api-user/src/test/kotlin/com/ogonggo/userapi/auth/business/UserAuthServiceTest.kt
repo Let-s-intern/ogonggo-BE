@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.auth.business
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.domain.UserRole
@@ -97,6 +98,8 @@ class UserAuthServiceTest {
                 userId = USER_ID,
                 name = "김렛츠",
                 email = "lets@career.co.kr",
+                phoneNum = "010-1234-5678",
+                letsCareerAuthProvider = LetsCareerAuthProvider.SERVICE,
                 nickname = "렛츠",
                 profileImageUrl = null,
                 letsCareerUpdatedAt = LETSCAREER_UPDATED_AT,
@@ -170,6 +173,8 @@ class UserAuthServiceTest {
                 userId = LETSCAREER_USER_ID,
                 email = "lets@career.co.kr",
                 name = "김렛츠",
+                phoneNum = "010-1234-5678",
+                authProvider = LetsCareerAuthProvider.SERVICE,
                 nickname = "렛츠",
                 profileImageUrl = null,
                 isAdmin = false,
@@ -210,12 +215,14 @@ class UserAuthServiceTest {
                 wishIndustry = null,
                 wishEmploymentType = null,
                 wishCompany = null,
+                updatedAt = LETSCAREER_JOB_PROFILE_UPDATED_AT,
             ),
         )
 
         service.signInWithLetsCareer(LC_ACCESS_TOKEN)
 
-        Mockito.verify(userProfileManager).replaceJobInfo(
+        // 렛츠커리어에서 고친 일시를 그대로 남겨, 이후 양쪽 수정의 선후를 가릴 수 있게 한다.
+        Mockito.verify(userProfileManager).applyLetsCareerJobInfo(
             USER_ID,
             UserProfileJobInfoDto(
                 university = "오공고대학교",
@@ -227,6 +234,7 @@ class UserAuthServiceTest {
                 wishEmploymentType = null,
                 wishCompany = null,
             ),
+            LETSCAREER_JOB_PROFILE_UPDATED_AT,
             NOW,
         )
     }
@@ -241,7 +249,7 @@ class UserAuthServiceTest {
 
         Mockito.verifyNoInteractions(letsCareerUserClient)
         Mockito.verify(userProfileManager, Mockito.never())
-            .replaceJobInfo(USER_ID, EMPTY_JOB_INFO, NOW)
+            .applyLetsCareerJobInfo(USER_ID, EMPTY_JOB_INFO, null, NOW)
     }
 
     @Test
@@ -257,7 +265,7 @@ class UserAuthServiceTest {
 
         assertEquals(true, result.isNewUser)
         Mockito.verify(userProfileManager, Mockito.never())
-            .replaceJobInfo(USER_ID, EMPTY_JOB_INFO, NOW)
+            .applyLetsCareerJobInfo(USER_ID, EMPTY_JOB_INFO, null, NOW)
     }
 
     companion object {
@@ -266,6 +274,7 @@ class UserAuthServiceTest {
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private val EMPTY_JOB_INFO = UserProfileJobInfoDto(null, null, null, null, null, null, null, null)
         private val LETSCAREER_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 20, 9, 0)
+        private val LETSCAREER_JOB_PROFILE_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 10, 9, 0)
         private const val USER_ID = 17L
         private const val LETSCAREER_USER_ID = 4821L
         private const val LC_ACCESS_TOKEN = "lc-access-token"

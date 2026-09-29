@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -18,6 +19,7 @@ data class MyAccountResult(
     val status: UserStatus,
     val email: String?,
     val joinedAt: LocalDateTime,
+    val passwordChangeable: Boolean,
     val profile: MyProfileResult?,
     val companyProfile: MyCompanyProfileResult?,
 ) {
@@ -33,6 +35,9 @@ data class MyAccountResult(
             // 기업 회원은 users.email로 로그인하고 일반 회원은 렛츠커리어 프로필의 이메일만 가진다.
             email = account.email ?: profile?.email,
             joinedAt = account.joinedAt,
+            // 기업 회원은 오공고가 비밀번호를 갖는다. 일반 회원은 소셜 가입이 확인된 경우만 막고,
+            // 가입 경로를 아직 모르면 렛츠커리어 판정에 맡긴다.
+            passwordChangeable = profile?.letsCareerAuthProvider?.hasPassword ?: true,
             profile = profile?.let(MyProfileResult::from),
             companyProfile = companyProfile?.let {
                 MyCompanyProfileResult(
@@ -49,10 +54,13 @@ data class MyAccountResult(
 
 /**
  * 렛츠커리어에서 복제한 값과 오공고에서 직접 입력한 값이 함께 담긴다.
- * 이름·닉네임·프로필 이미지는 로그인마다 렛츠커리어 값으로 갱신되고, 나머지는 사용자가 고친다.
+ * 이름·휴대폰 번호·닉네임·프로필 이미지는 로그인마다 렛츠커리어 값으로 갱신되고, 나머지는 사용자가 고친다.
  */
 data class MyProfileResult(
     val name: String?,
+    val phoneNum: String?,
+    val authProvider: LetsCareerAuthProvider?,
+    val notificationEmail: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val university: String?,
@@ -67,6 +75,9 @@ data class MyProfileResult(
     companion object {
         internal fun from(profile: UserProfileDto): MyProfileResult = MyProfileResult(
             name = profile.name,
+            phoneNum = profile.phoneNum,
+            authProvider = profile.letsCareerAuthProvider,
+            notificationEmail = profile.notificationEmail,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,
             university = profile.university,

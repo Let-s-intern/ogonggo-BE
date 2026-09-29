@@ -1,6 +1,7 @@
 package com.ogonggo.core.user.implement.dto
 
 import com.ogonggo.core.user.domain.CompanyProfile
+import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserProfile
@@ -23,6 +24,8 @@ data class UserProfileSyncDto(
     val userId: Long,
     val name: String?,
     val email: String?,
+    val phoneNum: String?,
+    val letsCareerAuthProvider: LetsCareerAuthProvider?,
     val nickname: String?,
     val profileImageUrl: String?,
     val letsCareerUpdatedAt: LocalDateTime?,
@@ -62,6 +65,9 @@ data class UserProfileJobInfoDto(
 data class UserProfileDto(
     val name: String?,
     val email: String?,
+    val phoneNum: String?,
+    val letsCareerAuthProvider: LetsCareerAuthProvider?,
+    val notificationEmail: String?,
     val nickname: String?,
     val profileImageUrl: String?,
     val university: String?,
@@ -72,11 +78,15 @@ data class UserProfileDto(
     val wishIndustry: String?,
     val wishEmploymentType: String?,
     val wishCompany: String?,
+    val jobInfoUpdatedAt: LocalDateTime? = null,
 ) {
     companion object {
         internal fun from(profile: UserProfile): UserProfileDto = UserProfileDto(
             name = profile.name,
             email = profile.email,
+            phoneNum = profile.phoneNum,
+            letsCareerAuthProvider = profile.letsCareerAuthProvider,
+            notificationEmail = profile.notificationEmail,
             nickname = profile.nickname,
             profileImageUrl = profile.profileImageUrl,
             university = profile.university,
@@ -87,9 +97,17 @@ data class UserProfileDto(
             wishIndustry = profile.wishIndustry,
             wishEmploymentType = profile.wishEmploymentType,
             wishCompany = profile.wishCompany,
+            jobInfoUpdatedAt = profile.jobInfoUpdatedAt,
         )
     }
 }
+
+/** 렛츠커리어로 보낼 학력·희망 조건 변경 한 건이다. */
+data class LetsCareerJobProfileOutboxDto(
+    val userId: Long,
+    val requestedAt: LocalDateTime,
+    val attemptCount: Int,
+)
 
 data class CompanyProfileDto(
     val organizationName: String,

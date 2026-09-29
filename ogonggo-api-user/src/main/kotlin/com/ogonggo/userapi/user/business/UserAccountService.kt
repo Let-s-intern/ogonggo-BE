@@ -6,6 +6,7 @@ import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.CompanyProfileReader
+import com.ogonggo.core.user.implement.LetsCareerJobProfileOutboxManager
 import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.UserProfileManager
@@ -23,6 +24,7 @@ class UserAccountService(
     private val companyProfileReader: CompanyProfileReader,
     private val userProfileManager: UserProfileManager,
     private val companyProfileManager: CompanyProfileManager,
+    private val letsCareerJobProfileOutboxManager: LetsCareerJobProfileOutboxManager,
     private val clock: Clock,
 ) {
 
@@ -43,10 +45,29 @@ class UserAccountService(
     /**
      * 사용자가 직접 입력하는 학력과 희망 조건만 교체한다.
      * 이름·닉네임·프로필 이미지는 렛츠커리어가 소유해 로그인마다 갱신되므로 여기서 바꾸지 않는다.
+     *
+     * 학력과 희망 조건은 렛츠커리어와 양쪽에서 고칠 수 있어 렛츠커리어 계정이면 같은 트랜잭션에서 보낼 변경을 적재한다.
+     * 렛츠커리어 호출은 아웃박스가 나중에 하므로 렛츠커리어 장애가 이 요청을 실패시키지 않는다.
      */
     @Transactional
     fun replaceMyProfile(userId: Long, command: UserProfileJobInfoDto) {
-        userProfileManager.replaceJobInfo(userId, command, LocalDateTime.now(clock))
+        val now = LocalDateTime.now(clock)
+        userProfileManager.replaceJobInfo(userId, command, now)
+        if (userReader.read(userId).letsCareerUserId != null) {
+            letsCareerJobProfileOutboxManager.enqueue(userId, now)
+        }
+    }
+
+    /**
+     * 오늘의 공고를 받을 이메일은 오공고가 소유하므로 렛츠커리어에 보내지 않는다.
+     * 기업 회원은 기업 정보의 수신 이메일(PUT /api/v1/users/me/company-profile)을 쓰므로 막는다.
+     */
+    @Transactional
+    fun changeMyNotificationEmail(userId: Long, notificationEmail: String?) {
+        if (userReader.read(userId).letsCareerUserId == null) {
+            throw ForbiddenException(UserErrorCode.GENERAL_MEMBER_REQUIRED)
+        }
+        userProfileManager.changeNotificationEmail(userId, notificationEmail, LocalDateTime.now(clock))
     }
 
     /**

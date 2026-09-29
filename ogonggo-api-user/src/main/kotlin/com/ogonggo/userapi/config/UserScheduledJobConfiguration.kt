@@ -3,6 +3,7 @@ package com.ogonggo.userapi.config
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
+import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -29,5 +30,13 @@ class UserScheduledJobConfiguration {
         defaultCron = "0 30 * * * *",
         description = "게시글에 쓰이지 않은 업로드 이미지 정리 (매시 30분)",
         action = scheduler::cleanup,
+    )
+
+    @Bean
+    fun letsCareerJobProfileSyncJob(scheduler: LetsCareerJobProfileSyncScheduler) = ScheduledJobDefinition(
+        name = LetsCareerJobProfileSyncScheduler.SCHEDULER_NAME,
+        defaultCron = "*/30 * * * * *",
+        description = "오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송 (30초마다)",
+        action = scheduler::sendPending,
     )
 }
