@@ -170,7 +170,7 @@ class Bootcamp internal constructor(
     var eligibilityAndSelectionProcess: String? = eligibilityAndSelectionProcess /* 지원 자격 및 전형 안내 */
         protected set
 
-    /** 기업회원이 대표 이미지와 따로 올리는 로고다. 수집한 부트캠프는 값이 없다. */
+    /** 대표 이미지와 따로 두는 운영 회사 로고다. 기업회원이 올리거나 크롤러가 보낸다. */
     @Column(name = "logo_url", length = 2048)
     var logoUrl: String? = logoUrl /* 운영 회사 로고 이미지 URL */
         protected set

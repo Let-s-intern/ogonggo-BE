@@ -23,6 +23,8 @@ data class CrawlerBootcampCommand(
     val tuitionType: TuitionType,
     val tuitionAmount: Long?,
     val representativeImageUrl: String,
+    /** 운영 회사 로고. 대표 이미지와 따로 온다. 없으면 로고를 두지 않는다. */
+    val logoUrl: String?,
     val shortDescription: String,
     val content: String,
     val eligibilityAndSelectionProcess: String?,

@@ -80,6 +80,9 @@ class CrawlerBootcampServiceTest {
         assertEquals("오공고 교육사", appended.companyName)
         assertEquals(TuitionType.GOVERNMENT_FUNDED, appended.tuitionType)
         assertEquals("edu@example.com", appended.managerEmail)
+        // 로고는 대표 이미지와 따로 저장한다.
+        assertEquals("https://example.com/images/bootcamp.png", appended.representativeImageUrl)
+        assertEquals(LOGO_URL, appended.logoUrl)
         assertEquals(
             listOf(
                 BootcampCurriculumDto.Request(startWeek = 1, endWeek = 4, subtitle = "자바 기초", displayOrder = 0),
@@ -138,6 +141,7 @@ class CrawlerBootcampServiceTest {
 
         val updated = checkNotNull(updatedCommand)
         assertEquals("바뀐 과정", updated.title)
+        assertEquals(LOGO_URL, updated.logoUrl)
         assertEquals(listOf(BootcampCurriculumDto.Request(1, 2, "새 과정", 0)), updated.curriculums)
         assertEquals(publicationEndAt, updated.publicationEndAt)
         assertNull(updated.publicationStartAt)
@@ -239,6 +243,7 @@ class CrawlerBootcampServiceTest {
         tuitionType = TuitionType.GOVERNMENT_FUNDED,
         tuitionAmount = null,
         representativeImageUrl = "https://example.com/images/bootcamp.png",
+        logoUrl = LOGO_URL,
         shortDescription = "백엔드 개발자로 성장하는 16주",
         content = "부트캠프 상세 내용",
         eligibilityAndSelectionProcess = null,
@@ -254,6 +259,7 @@ class CrawlerBootcampServiceTest {
     companion object {
         private const val BOOTCAMP_ID = 11L
         private const val SOURCE_URL = "https://example.com/bootcamps/1"
+        private const val LOGO_URL = "https://example.com/images/logo.png"
         private val NOW = LocalDateTime.of(2026, 9, 22, 12, 0)
     }
 }

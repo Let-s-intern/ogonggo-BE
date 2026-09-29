@@ -73,6 +73,11 @@ data class CrawlerBootcampRequest(
     @field:URL(message = "대표 이미지 주소가 URL 형식이 아닙니다.")
     val representativeImageUrl: String,
 
+    @field:Schema(description = "운영 회사 로고 주소. 크롤러에 등록한 로고가 있을 때만 보낸다. 교체할 때 보내지 않으면 로고를 지운다")
+    @field:Size(max = 2048, message = "로고 주소는 2048자 이하여야 합니다.")
+    @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
+    val logoUrl: String? = null,
+
     @field:Schema(description = "공고 한 줄 소개")
     @field:NotBlank(message = "한 줄 소개는 필수입니다.")
     @field:Size(max = 500, message = "한 줄 소개는 500자 이하여야 합니다.")
@@ -137,6 +142,7 @@ data class CrawlerBootcampRequest(
             tuitionType = tuitionType,
             tuitionAmount = tuitionAmount,
             representativeImageUrl = representativeImageUrl,
+            logoUrl = logoUrl,
             shortDescription = shortDescription,
             content = content,
             eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
@@ -180,6 +186,7 @@ data class CrawlerBootcampRequest(
         }
         listOf(
             "eligibilityAndSelectionProcess" to eligibilityAndSelectionProcess,
+            "logoUrl" to logoUrl,
             "managerEmail" to managerEmail,
             "inquiryUrl" to inquiryUrl,
         ).firstOrNull { (_, value) -> value != null && value.isBlank() }?.let { (field, _) ->
