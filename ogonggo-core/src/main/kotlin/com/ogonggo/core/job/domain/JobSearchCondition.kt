@@ -13,8 +13,8 @@ data class JobSearchCondition(
     val experienceType: ExperienceType? = null,
     /** 직군. 직무까지 정한 공고도 직군이 같으면 걸린다. */
     val jobField: JobField? = null,
-    /** 직무. */
-    val jobRole: JobRole? = null,
+    /** 직무. 비어 있으면 거르지 않고, 여러 개면 그중 하나라도 맞는 공고가 걸린다. */
+    val jobRoles: Set<JobRole> = emptySet(),
     /** 근무 시·도. 시·군·구까지 정한 공고도 시·도가 같으면 걸린다. */
     val region: Region? = null,
     /** 근무 시·군·구. */

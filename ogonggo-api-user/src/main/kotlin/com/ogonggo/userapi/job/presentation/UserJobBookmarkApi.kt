@@ -41,7 +41,8 @@ interface UserJobBookmarkApi {
             북마크한 공고 중 게시 중인 공고만 반환합니다.
 
             채용공고 목록과 같은 필터를 사용할 수 있습니다.
-            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁히며 각각 하나씩 고를 수 있고,
+            employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다.
+            jobRole은 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며, 나머지는 하나씩 고를 수 있습니다.
             보내지 않으면 해당 조건을 적용하지 않습니다. jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
             jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
@@ -73,7 +74,7 @@ interface UserJobBookmarkApi {
         employmentType: EmploymentType?,
         experienceType: ExperienceType?,
         jobField: JobField?,
-        jobRole: JobRole?,
+        jobRoles: List<JobRole>?,
         region: Region?,
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)

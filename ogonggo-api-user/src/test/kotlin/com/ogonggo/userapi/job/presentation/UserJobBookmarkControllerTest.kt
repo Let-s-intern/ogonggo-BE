@@ -69,7 +69,7 @@ class UserJobBookmarkControllerTest @Autowired constructor(
             employmentType = EmploymentType.INTERN,
             experienceType = ExperienceType.NEWCOMER,
             jobField = JobField.IT_DEVELOPMENT,
-            jobRole = JobRole.IT_BACKEND,
+            jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",
         )
         Mockito.`when`(userJobBookmarkService.getBookmarks(USER_ID, condition, 0, 10)).thenReturn(bookmarkPage())

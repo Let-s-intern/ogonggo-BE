@@ -81,7 +81,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
 | `GET /api/v1/notices` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
 
-검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
+검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. `jobRole`은 `jobRole=IT_BACKEND&jobRole=IT_FRONTEND`처럼 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며, 나머지 필터는 하나씩 고릅니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
 | `sort` | 의미 | 순서 |
 | --- | --- | --- |

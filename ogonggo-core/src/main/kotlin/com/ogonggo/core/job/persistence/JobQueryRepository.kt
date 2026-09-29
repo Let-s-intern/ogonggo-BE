@@ -204,7 +204,7 @@ internal class JobQueryRepository(
         employmentTypeEq(condition.employmentType),
         experienceTypeEq(condition.experienceType),
         condition.jobField?.let(job.jobField::eq),
-        condition.jobRole?.let(job.jobRole::eq),
+        condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
         condition.region?.let(job.region::eq),
         condition.subRegion?.let(job.subRegion::eq),
         keywordContains(condition.keyword),
