@@ -18,8 +18,10 @@ data class UserJobCalendarItemResponse(
     val id: Long,
     val companyName: String,
     val title: String,
-    @field:Schema(description = "공고 대표 이미지 주소. 달력 칸과 카드의 로고 자리에 쓴다. 없으면 null")
+    @field:Schema(description = "공고 대표 이미지 주소. 없으면 null")
     val coverImageUrl: String?,
+    @field:Schema(description = "기업 로고 이미지 주소. 없으면 null")
+    val logoUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val jobField: JobField?,
@@ -35,6 +37,7 @@ data class UserJobCalendarItemResponse(
             companyName = result.companyName,
             title = result.title,
             coverImageUrl = result.coverImageUrl,
+            logoUrl = result.logoUrl,
             employmentType = result.employmentType,
             experienceType = result.experienceType,
             jobField = result.jobField,
@@ -51,6 +54,7 @@ data class UserJobSummaryResponse(
     val companyName: String,
     val title: String,
     val coverImageUrl: String?,
+    val logoUrl: String?,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
     val experienceMinYears: Int?,
@@ -72,6 +76,7 @@ data class UserJobSummaryResponse(
             companyName = result.companyName,
             title = result.title,
             coverImageUrl = result.coverImageUrl,
+            logoUrl = result.logoUrl,
             employmentType = result.employmentType,
             experienceType = result.experienceType,
             experienceMinYears = result.experienceMinYears,

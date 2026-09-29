@@ -104,7 +104,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 채용공고 달력
 
-`GET /api/v1/jobs/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`는 요청 날짜 범위와 모집 기간이 겹치는 게시 공고를 반환합니다. 달력 항목은 달력 칸과 날짜별 목록 카드를 그리는 데 필요한 `id`, `companyName`, `title`, `coverImageUrl`, `employmentType`, `experienceType`, `jobField`, `jobRole`, `recruitmentStartAt`, `recruitmentEndAt`, `bookmarked`만 포함하며 마감 임박 일수, 원문 URL, 지표는 포함하지 않습니다. 공고에는 회사 로고가 따로 없으므로 로고 자리에는 `coverImageUrl`을 씁니다. 날짜별 목록의 더보기는 받은 목록을 클라이언트가 나눠 보여 줍니다.
+`GET /api/v1/jobs/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`는 요청 날짜 범위와 모집 기간이 겹치는 게시 공고를 반환합니다. 달력 항목은 달력 칸과 날짜별 목록 카드를 그리는 데 필요한 `id`, `companyName`, `title`, `coverImageUrl`, `logoUrl`, `employmentType`, `experienceType`, `jobField`, `jobRole`, `recruitmentStartAt`, `recruitmentEndAt`, `bookmarked`만 포함하며 마감 임박 일수, 원문 URL, 지표는 포함하지 않습니다. 대표 이미지(`coverImageUrl`)와 기업 로고(`logoUrl`)를 따로 주며, 없는 값은 `null`입니다. 날짜별 목록의 더보기는 받은 목록을 클라이언트가 나눠 보여 줍니다.
 
 시작·종료 일시가 모두 있는 미삭제 `PUBLISHED` 공고만 대상으로 하고 종료 일시, 식별자 오름차순으로 정렬합니다. `ALWAYS_OPEN` 등 기간이 없는 공고는 제외합니다. D-day 문구는 클라이언트가 `recruitmentEndAt`으로 계산합니다.
 

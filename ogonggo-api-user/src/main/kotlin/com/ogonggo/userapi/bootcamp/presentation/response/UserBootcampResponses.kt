@@ -29,6 +29,8 @@ data class UserBootcampSummaryResponse(
     val tuitionAmount: Long?,
     @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
     val representativeImageUrl: String?,
+    @Schema(description = "운영 회사 로고 이미지 주소. 없으면 null")
+    val logoUrl: String?,
     val shortDescription: String,
     val status: BootcampStatus,
     val closedAt: LocalDateTime?,
@@ -53,6 +55,7 @@ data class UserBootcampSummaryResponse(
             tuitionType = result.tuitionType,
             tuitionAmount = result.tuitionAmount,
             representativeImageUrl = result.representativeImageUrl,
+            logoUrl = result.logoUrl,
             shortDescription = result.shortDescription,
             status = result.status,
             closedAt = result.closedAt,

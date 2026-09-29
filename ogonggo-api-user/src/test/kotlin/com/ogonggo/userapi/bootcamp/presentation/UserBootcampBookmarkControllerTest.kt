@@ -207,6 +207,7 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
                 tuitionType = TuitionType.FREE,
                 tuitionAmount = 0,
                 representativeImageUrl = "https://example.com/image.png",
+                logoUrl = null,
                 shortDescription = "백엔드 개발자로 성장하는 12주",
                 status = BootcampStatus.RECRUITING,
                 closedAt = null,
