@@ -71,6 +71,52 @@ class CrawlerBootcampControllerTest @Autowired constructor(
         assertEquals(listOf("자바 기초", "스프링"), command.curriculums.map { it.subtitle })
         // 모집 상태를 보내지 않으면 비워 넘기고, 모집 중으로 둘지는 서비스가 정한다.
         assertEquals(null, command.status)
+        // 로고는 선택 칸이라 보내지 않으면 비워 넘긴다.
+        assertEquals(null, command.logoUrl)
+    }
+
+    @Test
+    fun `대표 이미지와 따로 보낸 로고 주소를 등록에 넘긴다`() {
+        var registered: CrawlerBootcampCommand? = null
+        Mockito.`when`(crawlerBootcampService.register(anyCommand())).thenAnswer { invocation ->
+            registered = invocation.arguments[0] as CrawlerBootcampCommand
+            11L
+        }
+
+        mockMvc.perform(
+            post("/api/v1/internal/bootcamps")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestBody() + mapOf("logoUrl" to "https://example.com/images/logo.png"))),
+        )
+            .andExpect(status().isCreated)
+
+        val command = checkNotNull(registered)
+        assertEquals("https://example.com/images/bootcamp.png", command.representativeImageUrl)
+        assertEquals("https://example.com/images/logo.png", command.logoUrl)
+    }
+
+    @Test
+    fun `로고 주소가 비었거나 URL이 아니면 어느 칸이 틀렸는지 알린다`() {
+        mockMvc.perform(
+            post("/api/v1/internal/bootcamps")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestBody() + mapOf("logoUrl" to ""))),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[logoUrl] 공백일 수 없습니다. 값이 없으면 보내지 않습니다."))
+
+        mockMvc.perform(
+            post("/api/v1/internal/bootcamps")
+                .header(INTERNAL_API_KEY_HEADER, API_KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestBody() + mapOf("logoUrl" to "logo.png"))),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[logoUrl] 로고 주소가 URL 형식이 아닙니다."))
+
+        Mockito.verifyNoInteractions(crawlerBootcampService)
     }
 
     @Test
