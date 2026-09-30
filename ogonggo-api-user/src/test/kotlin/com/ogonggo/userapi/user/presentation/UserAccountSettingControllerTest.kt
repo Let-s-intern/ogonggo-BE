@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.config.UserSecurityConfiguration
@@ -18,6 +19,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -72,6 +74,57 @@ class UserAccountSettingControllerTest @Autowired constructor(
         }
 
         Mockito.verifyNoInteractions(userAccountService)
+    }
+
+    @Test
+    fun `업로드한 이미지 식별자를 받아 프로필 이미지를 바꾼다`() {
+        mockMvc.perform(
+            put(PROFILE_IMAGE_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"imageId":"image-id"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isEmpty)
+
+        Mockito.verify(userAccountService).replaceMyProfileImage(USER_ID, "image-id")
+    }
+
+    @Test
+    fun `이미지 식별자가 없거나 비었으면 400으로 막는다`() {
+        listOf("{}", """{"imageId":" "}""").forEach { body ->
+            mockMvc.perform(
+                put(PROFILE_IMAGE_PATH).with(authenticatedUser())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(userAccountService)
+    }
+
+    @Test
+    fun `쓸 수 없는 이미지면 400 IMAGE_ASSET_NOT_AVAILABLE로 응답한다`() {
+        Mockito.`when`(userAccountService.replaceMyProfileImage(USER_ID, "other-image"))
+            .thenThrow(InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE))
+
+        mockMvc.perform(
+            put(PROFILE_IMAGE_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"imageId":"other-image"}"""),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("IMAGE_ASSET_NOT_AVAILABLE"))
+    }
+
+    @Test
+    fun `프로필 이미지를 지운다`() {
+        mockMvc.perform(delete(PROFILE_IMAGE_PATH).with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isEmpty)
+
+        Mockito.verify(userAccountService).deleteMyProfileImage(USER_ID)
     }
 
     @Test
@@ -142,6 +195,9 @@ class UserAccountSettingControllerTest @Autowired constructor(
                 .content("""{"currentPassword":"old-password!","newPassword":"new-password!"}"""),
         )
             .andExpect(status().isUnauthorized)
+
+        mockMvc.perform(delete(PROFILE_IMAGE_PATH))
+            .andExpect(status().isUnauthorized)
     }
 
     private fun authenticatedUser() = authentication(
@@ -151,6 +207,7 @@ class UserAccountSettingControllerTest @Autowired constructor(
     companion object {
         private const val NOTIFICATION_EMAIL_PATH = "/api/v1/users/me/notification-email"
         private const val PASSWORD_PATH = "/api/v1/users/me/password"
+        private const val PROFILE_IMAGE_PATH = "/api/v1/users/me/profile-image"
         private const val USER_ID = 17L
     }
 }

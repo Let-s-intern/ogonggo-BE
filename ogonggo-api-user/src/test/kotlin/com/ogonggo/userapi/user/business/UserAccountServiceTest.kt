@@ -2,13 +2,16 @@ package com.ogonggo.userapi.user.business
 
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.dto.CompanyProfileDto
-import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
+import com.ogonggo.core.user.implement.dto.CompanyBasicInfoUpdateDto
+import com.ogonggo.core.user.implement.dto.CompanyLogoDto
+import com.ogonggo.core.user.implement.dto.CompanyManagerInfoUpdateDto
 import com.ogonggo.core.user.implement.CompanyProfileReader
 import com.ogonggo.core.user.implement.LetsCareerJobProfileOutboxManager
 import com.ogonggo.core.user.implement.dto.UserAccountDto
@@ -35,6 +38,7 @@ class UserAccountServiceTest {
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val companyProfileManager = Mockito.mock(CompanyProfileManager::class.java)
     private val letsCareerJobProfileOutboxManager = Mockito.mock(LetsCareerJobProfileOutboxManager::class.java)
+    private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = UserAccountService(
         userReader,
@@ -43,6 +47,7 @@ class UserAccountServiceTest {
         userProfileManager,
         companyProfileManager,
         letsCareerJobProfileOutboxManager,
+        imageAssetManager,
         clock,
     )
 
@@ -170,15 +175,48 @@ class UserAccountServiceTest {
     }
 
     @Test
-    fun `기업 회원은 기업 정보를 교체한다`() {
+    fun `기업 로고를 바꾸면 새 이미지를 연결하고 전에 쓰던 로고 이미지는 참조를 푼다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+        Mockito.`when`(imageAssetManager.attachProfileImage(USER_ID, "new-logo")).thenReturn(NEW_IMAGE_URL)
+        Mockito.`when`(
+            companyProfileManager.replaceBasicInfo(
+                USER_ID,
+                CompanyBasicInfoUpdateDto("오공고", CompanyLogoDto(imageId = "new-logo", url = NEW_IMAGE_URL)),
+            ),
+        ).thenReturn("old-logo")
+
+        // when
+        service.replaceMyCompanyBasicInfo(USER_ID, CompanyBasicInfoCommand("오공고", logoImageId = "new-logo"))
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-logo", NOW)
+    }
+
+    @Test
+    fun `로고를 빼고 기본 정보를 고치면 로고를 지우고 전에 쓰던 로고 이미지는 참조를 푼다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+        Mockito.`when`(companyProfileManager.replaceBasicInfo(USER_ID, CompanyBasicInfoUpdateDto("오공고", logo = null)))
+            .thenReturn("old-logo")
+
+        // when
+        service.replaceMyCompanyBasicInfo(USER_ID, CompanyBasicInfoCommand("오공고", logoImageId = null))
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-logo", NOW)
+    }
+
+    @Test
+    fun `기업 회원은 담당자 정보를 교체한다`() {
         // given
         givenAccount(UserRole.COMPANY, email = "company@example.com")
 
         // when
-        service.replaceMyCompanyProfile(USER_ID, COMPANY_PROFILE_COMMAND)
+        service.replaceMyCompanyManagerInfo(USER_ID, MANAGER_INFO_COMMAND)
 
         // then
-        Mockito.verify(companyProfileManager).replace(USER_ID, COMPANY_PROFILE_COMMAND)
+        Mockito.verify(companyProfileManager).replaceManagerInfo(USER_ID, MANAGER_INFO_COMMAND)
     }
 
     @Test
@@ -188,12 +226,12 @@ class UserAccountServiceTest {
 
         // when
         val exception = assertThrows(ForbiddenException::class.java) {
-            service.replaceMyCompanyProfile(USER_ID, COMPANY_PROFILE_COMMAND)
+            service.replaceMyCompanyBasicInfo(USER_ID, CompanyBasicInfoCommand("오공고", logoImageId = "new-logo"))
         }
 
         // then
         assertEquals(UserErrorCode.COMPANY_ROLE_REQUIRED, exception.errorCode)
-        Mockito.verifyNoInteractions(companyProfileManager)
+        Mockito.verifyNoInteractions(companyProfileManager, imageAssetManager)
     }
 
     @Test
@@ -203,7 +241,7 @@ class UserAccountServiceTest {
 
         // when
         val exception = assertThrows(ForbiddenException::class.java) {
-            service.replaceMyCompanyProfile(USER_ID, COMPANY_PROFILE_COMMAND)
+            service.replaceMyCompanyManagerInfo(USER_ID, MANAGER_INFO_COMMAND)
         }
 
         // then
@@ -238,11 +276,68 @@ class UserAccountServiceTest {
         Mockito.verifyNoInteractions(userProfileManager)
     }
 
+    @Test
+    fun `프로필 이미지를 바꾸면 새 이미지를 연결하고 전에 쓰던 이미지는 참조를 푼다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+        Mockito.`when`(imageAssetManager.attachProfileImage(USER_ID, "new-image")).thenReturn(NEW_IMAGE_URL)
+        Mockito.`when`(userProfileManager.changeOgonggoProfileImage(USER_ID, "new-image", NEW_IMAGE_URL, NOW))
+            .thenReturn("old-image")
+
+        // when
+        service.replaceMyProfileImage(USER_ID, "new-image")
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-image", NOW)
+    }
+
+    @Test
+    fun `같은 프로필 이미지를 다시 보내면 그 이미지의 참조를 풀지 않는다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+        Mockito.`when`(imageAssetManager.attachProfileImage(USER_ID, "new-image")).thenReturn(NEW_IMAGE_URL)
+        Mockito.`when`(userProfileManager.changeOgonggoProfileImage(USER_ID, "new-image", NEW_IMAGE_URL, NOW))
+            .thenReturn("new-image")
+
+        // when
+        service.replaceMyProfileImage(USER_ID, "new-image")
+
+        // then
+        Mockito.verify(imageAssetManager, Mockito.never()).unreferenceProfileImage(USER_ID, "new-image", NOW)
+    }
+
+    @Test
+    fun `기업 회원이 프로필 이미지를 바꾸면 GENERAL_MEMBER_REQUIRED로 막고 이미지를 연결하지 않는다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        // when
+        val exception = assertThrows(ForbiddenException::class.java) {
+            service.replaceMyProfileImage(USER_ID, "new-image")
+        }
+
+        // then
+        assertEquals(UserErrorCode.GENERAL_MEMBER_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(imageAssetManager, userProfileManager)
+    }
+
+    @Test
+    fun `프로필 이미지를 지우면 지운 이미지의 참조를 푼다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+        Mockito.`when`(userProfileManager.removeOgonggoProfileImage(USER_ID)).thenReturn("old-image")
+
+        // when
+        service.deleteMyProfileImage(USER_ID)
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-image", NOW)
+    }
+
     companion object {
-        private val COMPANY_PROFILE_COMMAND = CompanyProfileUpdateDto(
-            organizationName = "오공고",
+        private const val NEW_IMAGE_URL = "https://cdn.example.com/images/new-image.png"
+        private val MANAGER_INFO_COMMAND = CompanyManagerInfoUpdateDto(
             managerName = "이담당",
-            logoUrl = null,
             managerPhone = null,
             notificationEmail = null,
         )

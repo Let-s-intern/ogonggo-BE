@@ -42,8 +42,9 @@ data class MyAccountResponse(
 }
 
 @Schema(
-    description = "이름·휴대폰 번호·닉네임·프로필 이미지는 렛츠커리어가 소유해 로그인마다 갱신되고 오공고에서 바꿀 수 없다. " +
-        "학력과 희망 조건은 PUT /api/v1/users/me/profile, 수신 이메일은 PUT /api/v1/users/me/notification-email로 고친다.",
+    description = "이름·휴대폰 번호·닉네임은 렛츠커리어가 소유해 로그인마다 갱신되고 오공고에서 바꿀 수 없다. " +
+        "학력과 희망 조건은 PUT /api/v1/users/me/profile, 수신 이메일은 PUT /api/v1/users/me/notification-email, " +
+        "프로필 이미지는 PUT /api/v1/users/me/profile-image로 고친다.",
 )
 data class MyProfileResponse(
     val name: String?,
@@ -54,6 +55,7 @@ data class MyProfileResponse(
     @Schema(description = "오늘의 공고 정보를 받을 이메일. 가입 이메일과 따로 두며 입력하지 않았으면 null이다.")
     val notificationEmail: String?,
     val nickname: String?,
+    @Schema(description = "오공고에서 바꾼 프로필 이미지가 있으면 그 주소, 없으면 렛츠커리어 프로필 이미지 주소. 둘 다 없으면 null이다.")
     val profileImageUrl: String?,
     val university: String?,
     val major: String?,
@@ -87,7 +89,9 @@ data class MyProfileResponse(
 data class MyCompanyProfileResponse(
     val organizationName: String,
     val managerName: String,
-    @Schema(description = "기업 로고 이미지 주소. 입력하지 않았으면 null이다.")
+    @Schema(description = "기업 로고 이미지 식별자. 로고를 바꾸지 않고 기본 정보를 고칠 때 그대로 보낸다. 로고가 없으면 null이다.")
+    val logoImageId: String?,
+    @Schema(description = "기업 로고 이미지 주소. 로고가 없으면 null이다.")
     val logoUrl: String?,
     @Schema(description = "담당자 연락처. 입력하지 않았으면 null이다.")
     val managerPhone: String?,
@@ -98,6 +102,7 @@ data class MyCompanyProfileResponse(
         internal fun from(result: MyCompanyProfileResult): MyCompanyProfileResponse = MyCompanyProfileResponse(
             organizationName = result.organizationName,
             managerName = result.managerName,
+            logoImageId = result.logoImageId,
             logoUrl = result.logoUrl,
             managerPhone = result.managerPhone,
             notificationEmail = result.notificationEmail,

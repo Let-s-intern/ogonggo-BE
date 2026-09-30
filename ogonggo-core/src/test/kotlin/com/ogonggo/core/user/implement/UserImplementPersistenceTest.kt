@@ -10,7 +10,9 @@ import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
-import com.ogonggo.core.user.implement.dto.CompanyProfileUpdateDto
+import com.ogonggo.core.user.implement.dto.CompanyBasicInfoUpdateDto
+import com.ogonggo.core.user.implement.dto.CompanyLogoDto
+import com.ogonggo.core.user.implement.dto.CompanyManagerInfoUpdateDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
 import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
@@ -167,12 +169,17 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         )
 
         // when
-        companyProfileManager.replace(
+        companyProfileManager.replaceBasicInfo(
             companyAccount.userId,
-            CompanyProfileUpdateDto(
+            CompanyBasicInfoUpdateDto(
                 organizationName = "오공고",
+                logo = CompanyLogoDto(imageId = "logo-image", url = "https://cdn.example.com/logo.png"),
+            ),
+        )
+        companyProfileManager.replaceManagerInfo(
+            companyAccount.userId,
+            CompanyManagerInfoUpdateDto(
                 managerName = "이담당",
-                logoUrl = "https://cdn.example.com/logo.png",
                 managerPhone = "010-1234-5678",
                 notificationEmail = "hr@example.com",
             ),
@@ -182,6 +189,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         val replaced = companyProfileReader.read(companyAccount.userId)
         assertEquals("오공고", replaced?.organizationName)
         assertEquals("이담당", replaced?.managerName)
+        assertEquals("logo-image", replaced?.logoImageId)
         assertEquals("https://cdn.example.com/logo.png", replaced?.logoUrl)
         assertEquals("010-1234-5678", replaced?.managerPhone)
         assertEquals("hr@example.com", replaced?.notificationEmail)

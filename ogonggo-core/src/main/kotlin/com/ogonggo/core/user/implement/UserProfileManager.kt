@@ -112,6 +112,34 @@ class UserProfileManager internal constructor(
         userProfileRepository.save(profile)
     }
 
+    /**
+     * 오공고에서 올린 이미지를 프로필 이미지로 쓰고, 그 전에 쓰던 오공고 이미지 식별자를 돌려준다.
+     * 이전 이미지를 정리하는 것은 호출한 쪽이 한다.
+     * 프로필 행이 없으면 만들며, 동시에 만들어진 경우는 `replaceJobInfo`와 같이 재시도할 수 있는 충돌로 알린다.
+     */
+    fun changeOgonggoProfileImage(userId: Long, imageId: String, url: String, now: LocalDateTime): String? {
+        val profile = userProfileRepository.findByUserId(userId)
+        if (profile == null) {
+            createWith(UserProfile(userId = userId, lastSyncedAt = now)) { changeOgonggoProfileImage(imageId, url) }
+            return null
+        }
+
+        val previousImageId = profile.ogonggoProfileImageId
+        profile.changeOgonggoProfileImage(imageId, url)
+        userProfileRepository.save(profile)
+        return previousImageId
+    }
+
+    /** 오공고에서 올린 프로필 이미지를 지우고 지운 이미지 식별자를 돌려준다. 지울 것이 없으면 null이다. */
+    fun removeOgonggoProfileImage(userId: Long): String? {
+        val profile = userProfileRepository.findByUserId(userId) ?: return null
+        val removedImageId = profile.ogonggoProfileImageId ?: return null
+
+        profile.removeOgonggoProfileImage()
+        userProfileRepository.save(profile)
+        return removedImageId
+    }
+
     private fun createWith(created: UserProfile, apply: UserProfile.() -> Unit) {
         created.apply()
         try {

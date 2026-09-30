@@ -38,11 +38,21 @@ data class CompanyProfileAppendDto(
     val managerName: String,
 )
 
-/** 기업 회원이 가입 후 고치는 기업 정보다. 모든 값을 함께 교체하므로 null이면 비운다. */
-data class CompanyProfileUpdateDto(
+/** 기업 회원이 마이페이지에서 고치는 기본 정보다. 함께 교체하므로 로고가 null이면 지운다. */
+data class CompanyBasicInfoUpdateDto(
     val organizationName: String,
+    val logo: CompanyLogoDto?,
+)
+
+/** 기업 로고로 연결한 이미지다. 식별자는 이미지를 바꾸거나 지울 때 이전 이미지를 정리하는 데 쓴다. */
+data class CompanyLogoDto(
+    val imageId: String,
+    val url: String,
+)
+
+/** 기업 회원이 마이페이지에서 고치는 담당자 정보다. 함께 교체하므로 선택 값이 null이면 비운다. */
+data class CompanyManagerInfoUpdateDto(
     val managerName: String,
-    val logoUrl: String?,
     val managerPhone: String?,
     val notificationEmail: String?,
 )
@@ -88,7 +98,8 @@ data class UserProfileDto(
             letsCareerAuthProvider = profile.letsCareerAuthProvider,
             notificationEmail = profile.notificationEmail,
             nickname = profile.nickname,
-            profileImageUrl = profile.profileImageUrl,
+            // 오공고에서 올린 이미지가 있으면 그것을, 없으면 렛츠커리어 이미지를 보인다.
+            profileImageUrl = profile.ogonggoProfileImageUrl ?: profile.profileImageUrl,
             university = profile.university,
             major = profile.major,
             grade = profile.grade,
@@ -115,12 +126,14 @@ data class CompanyProfileDto(
     val logoUrl: String?,
     val managerPhone: String?,
     val notificationEmail: String?,
+    val logoImageId: String? = null,
 ) {
     companion object {
         internal fun from(profile: CompanyProfile): CompanyProfileDto = CompanyProfileDto(
             organizationName = profile.organizationName,
             managerName = profile.managerName,
             logoUrl = profile.logoUrl,
+            logoImageId = profile.logoImageId,
             managerPhone = profile.managerPhone,
             notificationEmail = profile.notificationEmail,
         )
