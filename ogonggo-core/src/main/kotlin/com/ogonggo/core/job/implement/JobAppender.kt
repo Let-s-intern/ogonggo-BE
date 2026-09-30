@@ -1,18 +1,27 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.review.domain.ContentSource
 import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.LocalDateTime
+import java.util.concurrent.ThreadLocalRandom
 
 @Component
 class JobAppender internal constructor(
     private val jobRepository: JobJpaRepository,
+    private val clock: Clock,
 ) {
 
-    fun append(command: JobAppendDto): Job =
-        jobRepository.save(
+    fun append(command: JobAppendDto): Job = append(command, LocalDateTime.now(clock))
+
+    /** 목록 정렬 키는 등록 시각의 날짜로 정한다. 같은 날 등록한 공고끼리 섞이도록 무작위 값을 함께 넣는다. */
+    fun append(command: JobAppendDto, now: LocalDateTime): Job {
+        val source = command.source ?: ContentSource.of(command.ownerUserId)
+        return jobRepository.save(
             Job(
                 ownerUserId = command.ownerUserId,
                 companyName = command.companyName,
@@ -48,8 +57,10 @@ class JobAppender internal constructor(
                 inquiryEmail = command.inquiryEmail,
                 sourceUrl = command.sourceUrl,
                 publicationStatus = command.publicationStatus,
-                source = command.source ?: ContentSource.of(command.ownerUserId),
+                source = source,
                 externalId = command.externalId,
+                listSortKey = JobListSortKey.of(source, now.toLocalDate(), ThreadLocalRandom.current().nextInt()),
             ),
         )
+    }
 }

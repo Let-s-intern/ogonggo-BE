@@ -35,6 +35,7 @@ import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -131,21 +132,47 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `사용자 공고 목록은 게시된 미삭제 공고를 최신순으로 페이징한다`() {
-        val first = jobAppender.append(createCommand())
-        val deleted = jobAppender.append(createCommand())
-        val latest = jobAppender.append(createCommand())
-        listOf(first, deleted, latest).forEach(jobManager::publish)
-        jobManager.delete(deleted, java.time.LocalDateTime.of(2026, 8, 27, 12, 0))
+    fun `사용자 공고 목록 최신순은 크롤러 공고를 먼저 두고 그 안에서 늦게 등록한 날의 공고를 먼저 두며 게시된 미삭제 공고만 페이징한다`() {
+        // given
+        val oldCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 28, 10, 0))
+        val newCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 29, 10, 0))
+        val deletedCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 30, 10, 0))
+        val newestWork24 = appendAndPublish(
+            createCommand().copy(source = ContentSource.WORK24, externalId = "K1"),
+            LocalDateTime.of(2026, 9, 30, 10, 0),
+        )
+        jobManager.delete(jobReader.read(deletedCrawled), NOW)
 
-        val firstPage = readPage(page = 0, size = 1, sortType = JobSortType.LATEST)
-        val secondPage = readPage(page = 1, size = 1, sortType = JobSortType.LATEST)
+        // when
+        val pages = (0..2).map { readPage(page = it, size = 1, sortType = JobSortType.LATEST) }
 
-        assertEquals(listOf(latest.id), firstPage.jobs.map { it.id })
-        assertEquals(listOf(first.id), secondPage.jobs.map { it.id })
-        assertEquals(2L, firstPage.totalElements)
-        assertEquals(true, firstPage.hasNext)
-        assertEquals(false, secondPage.hasNext)
+        // then
+        assertEquals(listOf(newCrawled, oldCrawled, newestWork24), pages.flatMap { page -> page.jobs.map { it.id } })
+        assertEquals(3L, pages.first().totalElements)
+        assertEquals(listOf(true, true, false), pages.map { it.hasNext })
+    }
+
+    @Test
+    fun `같은 날 등록한 공고는 등록 순서와 다르게 섞여도 페이지를 넘기며 빠지거나 겹치지 않는다`() {
+        // given
+        val registeredAt = LocalDateTime.of(2026, 9, 30, 10, 0)
+        val jobIds = (1..30).map { appendAndPublish(createCommand(), registeredAt) }
+
+        // when
+        val pages = (0..2).map { readPage(page = it, size = 10, sortType = JobSortType.LATEST) }
+        val listed = pages.flatMap { page -> page.jobs.map { checkNotNull(it.id) } }
+
+        // then
+        assertEquals(jobIds.toSet(), listed.toSet())
+        assertEquals(jobIds.size, listed.size)
+        // 30건이 우연히 등록 역순 그대로 나올 확률은 30!분의 1이다.
+        assertNotEquals(jobIds.reversed(), listed)
+    }
+
+    private fun appendAndPublish(command: JobAppendDto, registeredAt: LocalDateTime): Long {
+        val job = jobAppender.append(command, registeredAt)
+        jobManager.publish(job)
+        return checkNotNull(job.id)
     }
 
     @Test
@@ -796,15 +823,15 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val internExperienced = publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
 
         assertEquals(
-            listOf(internExperienced, fullTimeNewcomer, fullTimeExperienced),
+            setOf(internExperienced, fullTimeNewcomer, fullTimeExperienced),
             readIds(JobSearchCondition.NONE),
         )
         assertEquals(
-            listOf(fullTimeNewcomer, fullTimeExperienced),
+            setOf(fullTimeNewcomer, fullTimeExperienced),
             readIds(JobSearchCondition(employmentType = EmploymentType.FULL_TIME)),
         )
         assertEquals(
-            listOf(internExperienced, fullTimeExperienced),
+            setOf(internExperienced, fullTimeExperienced),
             readIds(JobSearchCondition(experienceType = ExperienceType.EXPERIENCED)),
         )
     }
@@ -848,10 +875,10 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             publishCommand(createCommand(jobField = JobField.MARKETING_ADVERTISING, jobRole = JobRole.MARKETING_PERFORMANCE))
 
         // when & then
-        assertEquals(listOf(frontend, backend), readIds(JobSearchCondition(jobField = JobField.IT_DEVELOPMENT)))
-        assertEquals(listOf(backend), readIds(JobSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND))))
+        assertEquals(setOf(frontend, backend), readIds(JobSearchCondition(jobField = JobField.IT_DEVELOPMENT)))
+        assertEquals(setOf(backend), readIds(JobSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND))))
         assertEquals(
-            listOf(marketing, backend),
+            setOf(marketing, backend),
             readIds(JobSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND, JobRole.MARKETING_PERFORMANCE))),
         )
     }
@@ -864,8 +891,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         publishCommand(createCommand(region = Region.BUSAN, subRegion = SubRegion.BUSAN_HAEUNDAE_GU))
 
         // when & then
-        assertEquals(listOf(seoulOnly, gangnam), readIds(JobSearchCondition(region = Region.SEOUL)))
-        assertEquals(listOf(gangnam), readIds(JobSearchCondition(subRegion = SubRegion.SEOUL_GANGNAM_GU)))
+        assertEquals(setOf(seoulOnly, gangnam), readIds(JobSearchCondition(region = Region.SEOUL)))
+        assertEquals(setOf(gangnam), readIds(JobSearchCondition(subRegion = SubRegion.SEOUL_GANGNAM_GU)))
     }
 
     @Test
@@ -912,7 +939,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
 
         assertEquals(
-            listOf(byCompany, byTitle),
+            setOf(byCompany, byTitle),
             readIds(JobSearchCondition(keyword = "ios")),
         )
     }
@@ -922,8 +949,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val first = publishNamed(companyName = "오공고", title = "백엔드 개발자")
         val second = publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
 
-        assertEquals(listOf(second, first), readIds(JobSearchCondition(keyword = "   ")))
-        assertEquals(listOf(second, first), readIds(JobSearchCondition(keyword = null)))
+        assertEquals(setOf(second, first), readIds(JobSearchCondition(keyword = "   ")))
+        assertEquals(setOf(second, first), readIds(JobSearchCondition(keyword = null)))
     }
 
     @Test
@@ -931,8 +958,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         publishNamed(companyName = "오공고", title = "백엔드 개발자")
         val literal = publishNamed(companyName = "오공고", title = "연봉 100% 인상 백엔드")
 
-        assertEquals(emptyList<Long>(), readIds(JobSearchCondition(keyword = "_")))
-        assertEquals(listOf(literal), readIds(JobSearchCondition(keyword = "100%")))
+        assertEquals(emptySet<Long>(), readIds(JobSearchCondition(keyword = "_")))
+        assertEquals(setOf(literal), readIds(JobSearchCondition(keyword = "100%")))
     }
 
     @Test
@@ -1068,8 +1095,9 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         return checkNotNull(job.id)
     }
 
-    private fun readIds(condition: JobSearchCondition): List<Long?> =
-        readPage(page = 0, size = 10, condition = condition).jobs.map { it.id }
+    /** 같은 날 등록한 공고는 최신순에서 무작위로 섞이므로 필터 결과는 순서 없이 비교한다. */
+    private fun readIds(condition: JobSearchCondition): Set<Long?> =
+        readPage(page = 0, size = 10, condition = condition).jobs.map { it.id }.toSet()
 
     private fun readPage(
         page: Int,
