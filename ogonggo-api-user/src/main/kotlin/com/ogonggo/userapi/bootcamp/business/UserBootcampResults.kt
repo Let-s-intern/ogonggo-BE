@@ -7,6 +7,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
@@ -137,6 +138,7 @@ data class UserBootcampResult(
     val commentCount: Long,
     val partners: List<UserBootcampPartnerResult>,
     val curriculums: List<UserBootcampCurriculumResult>,
+    val images: List<UserBootcampImageResult>,
 ) {
     companion object {
         internal fun from(
@@ -144,6 +146,7 @@ data class UserBootcampResult(
             bookmarked: Boolean,
             partners: List<BootcampPartnerDto.Response>,
             curriculums: List<BootcampCurriculumDto.Response>,
+            images: List<BootcampImageDto.Response>,
             metric: BootcampMetricDto,
         ): UserBootcampResult = UserBootcampResult(
             id = bootcamp.requiredId(),
@@ -184,12 +187,19 @@ data class UserBootcampResult(
             curriculums = curriculums.map {
                 UserBootcampCurriculumResult(it.startWeek, it.endWeek, it.subtitle, it.displayOrder)
             },
+            images = images.map { UserBootcampImageResult(it.url, it.caption, it.displayOrder) },
         )
     }
 }
 
 data class UserBootcampPartnerResult(
     val name: String,
+    val displayOrder: Int,
+)
+
+data class UserBootcampImageResult(
+    val url: String,
+    val caption: String?,
     val displayOrder: Int,
 )
 

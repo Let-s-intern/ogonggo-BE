@@ -5,6 +5,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
+import com.ogonggo.core.bootcamp.domain.BootcampImage
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
@@ -266,6 +267,10 @@ internal interface BootcampPartnerJpaRepository : JpaRepository<BootcampPartner,
     fun findAllByBootcampId(bootcampId: Long): List<BootcampPartner>
     fun findAllByBootcampIdAndDeletedAtIsNullOrderByDisplayOrderAsc(bootcampId: Long): List<BootcampPartner>
     fun findAllByBootcampIdOrderByDisplayOrderAsc(bootcampId: Long): List<BootcampPartner>
+}
+
+internal interface BootcampImageJpaRepository : JpaRepository<BootcampImage, Long> {
+    fun findAllByBootcampIdAndDeletedAtIsNullOrderByDisplayOrderAsc(bootcampId: Long): List<BootcampImage>
 }
 
 internal interface BootcampCurriculumJpaRepository : JpaRepository<BootcampCurriculum, Long> {

@@ -24,6 +24,7 @@ import com.ogonggo.core.region.domain.Region
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
+import com.ogonggo.userapi.bootcamp.business.UserBootcampImageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
@@ -185,6 +186,8 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.partners[0].name").value("파트너사"))
             .andExpect(jsonPath("$.data.curriculums[0].subtitle").value("Spring 기초"))
+            .andExpect(jsonPath("$.data.images[0].url").value("https://cdn.ogonggo.test/room.jpg"))
+            .andExpect(jsonPath("$.data.images[0].caption").value("강의실"))
             .andExpect(jsonPath("$.data.viewCount").value(21))
             .andExpect(jsonPath("$.data.bookmarkCount").value(5))
             .andExpect(jsonPath("$.data.bookmarked").value(true))
@@ -825,6 +828,7 @@ class UserReadControllerTest @Autowired constructor(
         commentCount = 0,
         partners = listOf(UserBootcampPartnerResult("파트너사", 0)),
         curriculums = listOf(UserBootcampCurriculumResult(1, 4, "Spring 기초", 0)),
+        images = listOf(UserBootcampImageResult("https://cdn.ogonggo.test/room.jpg", "강의실", 0)),
     )
 
     companion object {

@@ -17,6 +17,8 @@ import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.review.domain.ContentSource
 import java.time.DayOfWeek
 import java.time.LocalDateTime
@@ -29,11 +31,14 @@ import java.time.temporal.TemporalAdjusters
  *
  * 등록 경로를 고용24로, 과정 ID와 회차(`trprId-trprDegr`)를 외부 식별값으로 두고 모집 중으로 곧바로 게시한다.
  * 고용24에 없는 값은 다음처럼 채운다.
- * - 대표 이미지·로고: Open API는 과정 이미지를 주지 않고 훈련기관 로고(`filePath`)는 다운로드 주소라 이미지로 열리지 않는다.
- *   훈련기관 소개 화면의 로고와 사진 첫 장을 오공고 저장소로 옮긴 주소([Work24InstitutionImagesDto])를 넣는다.
- *   옮기지 못했으면 비우고, 비어 있으면 클라이언트가 기본 이미지를 그린다.
+ * - 로고·사진: Open API는 과정 이미지를 주지 않고 훈련기관 로고(`filePath`)는 다운로드 주소라 이미지로 열리지 않는다.
+ *   훈련기관 소개 화면의 로고와 사진을 오공고 저장소로 옮긴 주소([Work24InstitutionImagesDto])를 넣는다.
+ *   사진은 상세에서만 보여 주는 사진 칸에 넣는다.
+ * - 대표 이미지: 비운다. 훈련기관 사진에는 사람이 찍힌 행사 사진이나 로고가 섞여 있어 목록에 자동으로 걸지 않는다.
+ *   비어 있으면 클라이언트가 기본 이미지를 그린다.
  * - 모집 기간: 목록에 없어 수집한 시각부터 개강일 끝까지로 둔다.
  * - 수강료: 교육생이 내는 본인부담액(`tgcrGnrlTrneOwepAllt`)을 쓴다. 목록의 수강비(`courseMan`)는 정부 지원금을 포함한 총 훈련비다.
+ * - 파트너사: 과정명 앞 괄호의 기업 이름이 [Work24PartnerCompanies] 표에 있으면 그 기업 하나를 넣는다. 고용24에는 연계 기업 항목이 없다.
  * - 진행 방식: 훈련방법 코드(`traingMthCd`)로 정한다. M1005 인터넷은 온라인, M1010 혼합·M1014 스마트혼합은 온·오프라인, 그 밖은 오프라인이다.
  *
  * Open API에 없는 값은 과정 상세 화면([Work24CoursePageDto])에서 채운다. 화면을 못 읽었으면 비워 둔다.
@@ -92,7 +97,7 @@ internal object Work24BootcampMapper {
             capacity = number(item.text("yardMan"))?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
             tuitionType = TuitionType.GOVERNMENT_FUNDED,
             tuitionAmount = number(detailInfo.text("tgcrGnrlTrneOwepAllt")),
-            representativeImageUrl = images?.representativeImageUrl,
+            representativeImageUrl = null,
             shortDescription = listOfNotNull(base.text("ncsNm"), totalHours?.let { "총 ${it}시간" })
                 .joinToString(" · ")
                 .ifBlank { title }
@@ -130,7 +135,11 @@ internal object Work24BootcampMapper {
             publicationStatus = BootcampPublicationStatus.PUBLISHED,
             source = ContentSource.WORK24,
             externalId = externalId,
+            partners = listOfNotNull(Work24PartnerCompanies.of(title)).map { BootcampPartnerDto.Request(partnerName = it) },
             curriculums = page?.lessons?.let(::curriculums).orEmpty(),
+            images = images?.photos.orEmpty().mapIndexed { index, photo ->
+                BootcampImageDto.Request(url = photo.url, caption = photo.caption?.limit(IMAGE_CAPTION_MAX), displayOrder = index)
+            },
         )
     }
 
@@ -215,6 +224,7 @@ internal object Work24BootcampMapper {
     private const val SHORT_DESCRIPTION_MAX = 500
     private const val EMAIL_MAX = 320
     private const val CURRICULUM_SUBTITLE_MAX = 255
+    private const val IMAGE_CAPTION_MAX = 255
     private const val GOAL = "훈련목표"
     private const val TARGET = "훈련대상"
     private const val TARGET_PREFIX = "훈련대상 요건"

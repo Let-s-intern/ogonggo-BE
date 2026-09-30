@@ -9,6 +9,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
@@ -112,6 +113,7 @@ data class AdminBootcampResult(
     val sourceUrl: String?,
     val partners: List<BootcampPartnerDto.Response>,
     val curriculums: List<BootcampCurriculumDto.Response>,
+    val images: List<BootcampImageDto.Response>,
 ) {
     companion object {
         internal fun from(
@@ -119,6 +121,7 @@ data class AdminBootcampResult(
             metric: BootcampMetricDto,
             partners: List<BootcampPartnerDto.Response>,
             curriculums: List<BootcampCurriculumDto.Response>,
+            images: List<BootcampImageDto.Response>,
         ): AdminBootcampResult = AdminBootcampResult(
             summary = AdminBootcampSummary.from(bootcamp, metric),
             content = bootcamp.content,
@@ -136,6 +139,7 @@ data class AdminBootcampResult(
             sourceUrl = bootcamp.sourceUrl,
             partners = partners,
             curriculums = curriculums,
+            images = images,
         )
     }
 }

@@ -107,7 +107,7 @@ ogonggo:
 
 키 이름은 배포 로그 마스킹이 가리도록 모두 `-auth-key`로 끝냅니다. 응답 계약은 [API 성공 응답](docs/architecture/api-response.md#고용24-open-api-조회)을 읽습니다.
 
-관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보와 일학습병행 훈련과정을 채용공고로, K-디지털 트레이닝 조건의 국민내일배움카드 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 고용24 Open API는 과정 이미지를 주지 않아, 훈련기관 소개 화면의 로고와 사진을 관리자 API가 이미지 저장소(`ogonggo.storage.s3`)로 옮겨 넣습니다. 저장소 설정이 없거나 옮기지 못하면 이미지를 비워 두고 클라이언트가 기본 이미지를 그립니다. 훈련목표·교과편성·주차별 커리큘럼과 일학습병행의 학습기업·훈련 편성은 Open API에 없어 고용24 과정 상세 화면과 시간표 엑셀에서 읽으며, 화면을 못 읽으면 Open API 값만으로 등록합니다. 수집한 콘텐츠는 등록 경로 `WORK24`와 고용24 식별값(`external_id`)을 남기므로, 배포 전에 `docs/schema/2026-09-29-content-source.sql`을 적용합니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
+관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보와 일학습병행 훈련과정을 채용공고로, K-디지털 트레이닝 조건의 국민내일배움카드 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 고용24 Open API는 과정 이미지를 주지 않아, 훈련기관 소개 화면의 로고와 사진을 관리자 API가 이미지 저장소(`ogonggo.storage.s3`)로 옮겨 넣습니다. 로고는 로고 칸에, 사진은 상세에서만 보여 주는 `bootcamp_images`에 들어가며 대표 이미지는 비워 두어 클라이언트가 기본 이미지를 그립니다. 저장소 설정이 없거나 옮기지 못하면 이미지를 넣지 않습니다. 배포 전에 `docs/schema/2026-09-30-bootcamp-images.sql`을 적용합니다. 훈련목표·교과편성·주차별 커리큘럼과 일학습병행의 학습기업·훈련 편성은 Open API에 없어 고용24 과정 상세 화면과 시간표 엑셀에서 읽으며, 화면을 못 읽으면 Open API 값만으로 등록합니다. 수집한 콘텐츠는 등록 경로 `WORK24`와 고용24 식별값(`external_id`)을 남기므로, 배포 전에 `docs/schema/2026-09-29-content-source.sql`을 적용합니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
 
 ## Scheduled jobs
 

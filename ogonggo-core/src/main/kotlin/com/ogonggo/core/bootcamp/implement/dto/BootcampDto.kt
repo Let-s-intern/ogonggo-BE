@@ -44,6 +44,8 @@ data class BootcampAppendDto(
     val sourceUrl: String? = null,
     val partners: List<BootcampPartnerDto.Request> = emptyList(),
     val curriculums: List<BootcampCurriculumDto.Request> = emptyList(),
+    /** 상세에서만 보여 주는 사진이다. 고용24 수집만 넣으며, 수정([BootcampUpdateDto])으로는 바뀌지 않는다. */
+    val images: List<BootcampImageDto.Request> = emptyList(),
     val status: BootcampStatus = BootcampStatus.DRAFT,
     val closedAt: LocalDateTime? = null,
     val publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
@@ -124,6 +126,21 @@ object BootcampPartnerDto {
 
     data class Response(
         val name: String,
+        val displayOrder: Int,
+    )
+}
+
+/** 부트캠프 상세에서만 보여 주는 사진. 등록에 넣는 값과 조회로 받는 값이 같아도 다른 하위 항목과 모양을 맞춘다. */
+object BootcampImageDto {
+    data class Request(
+        val url: String,
+        val caption: String? = null,
+        val displayOrder: Int = 0,
+    )
+
+    data class Response(
+        val url: String,
+        val caption: String?,
         val displayOrder: Int,
     )
 }

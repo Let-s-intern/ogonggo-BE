@@ -13,6 +13,7 @@ import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
@@ -191,6 +192,26 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         assertEquals(listOf("첫 번째"), bootcampContentReader.readPartners(bootcampId).map { it.name })
         assertEquals(listOf("프로젝트"), bootcampContentReader.readCurriculums(bootcampId).map { it.subtitle })
+    }
+
+    @Test
+    fun `ContentReader는 등록한 사진을 노출 순서대로 조회한다`() {
+        val savedBootcamp = bootcampAppender.append(
+            createCommand().copy(
+                images = listOf(
+                    BootcampImageDto.Request("https://cdn.ogonggo.test/room.jpg", "강의실", 1),
+                    BootcampImageDto.Request("https://cdn.ogonggo.test/desk.jpg", null, 0),
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                BootcampImageDto.Response("https://cdn.ogonggo.test/desk.jpg", null, 0),
+                BootcampImageDto.Response("https://cdn.ogonggo.test/room.jpg", "강의실", 1),
+            ),
+            bootcampContentReader.readImages(checkNotNull(savedBootcamp.id)),
+        )
     }
 
     @Test

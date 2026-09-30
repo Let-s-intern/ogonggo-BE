@@ -44,6 +44,7 @@ class AdminBootcampService(
             metric = bootcampMetricReader.read(bootcampId),
             partners = bootcampContentReader.readPartners(bootcampId),
             curriculums = bootcampContentReader.readCurriculums(bootcampId),
+            images = bootcampContentReader.readImages(bootcampId),
         )
     }
 

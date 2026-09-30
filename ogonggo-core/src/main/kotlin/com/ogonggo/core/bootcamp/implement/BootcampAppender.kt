@@ -2,11 +2,14 @@ package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
+import com.ogonggo.core.bootcamp.domain.BootcampImage
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
+import com.ogonggo.core.bootcamp.persistence.BootcampImageJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
 import com.ogonggo.core.review.domain.ContentSource
@@ -17,6 +20,7 @@ class BootcampAppender internal constructor(
     private val bootcampRepository: BootcampJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
+    private val bootcampImageRepository: BootcampImageJpaRepository,
 ) {
 
     fun append(command: BootcampAppendDto): Bootcamp {
@@ -61,6 +65,7 @@ class BootcampAppender internal constructor(
 
         bootcampPartnerRepository.saveAll(command.partners.map { it.toEntity(bootcampId) })
         bootcampCurriculumRepository.saveAll(command.curriculums.map { it.toEntity(bootcampId) })
+        bootcampImageRepository.saveAll(command.images.map { it.toEntity(bootcampId) })
 
         return bootcamp
     }
@@ -69,6 +74,13 @@ class BootcampAppender internal constructor(
 private fun BootcampPartnerDto.Request.toEntity(bootcampId: Long): BootcampPartner = BootcampPartner(
     bootcampId = bootcampId,
     partnerName = partnerName,
+    displayOrder = displayOrder,
+)
+
+private fun BootcampImageDto.Request.toEntity(bootcampId: Long): BootcampImage = BootcampImage(
+    bootcampId = bootcampId,
+    imageUrl = url,
+    caption = caption,
     displayOrder = displayOrder,
 )
 

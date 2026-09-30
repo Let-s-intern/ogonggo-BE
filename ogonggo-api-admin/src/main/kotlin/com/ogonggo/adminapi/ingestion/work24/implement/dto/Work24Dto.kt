@@ -59,9 +59,12 @@ data class Work24WorkStudyPageDto(
 
 /**
  * 고용24 훈련기관 소개 화면의 이미지를 오공고 저장소로 옮긴 뒤의 주소다.
- * 대표 이미지는 훈련기관 사진의 첫 장이다. 옮기지 못한 이미지는 null이다.
+ * [photos]는 훈련기관 사진이며 화면 순서대로다. 옮기지 못한 이미지는 빠진다.
  */
 data class Work24InstitutionImagesDto(
     val logoUrl: String? = null,
-    val representativeImageUrl: String? = null,
-)
+    val photos: List<Photo> = emptyList(),
+) {
+    /** [caption]은 훈련기관이 붙인 설명이다(강의실, 안내데스크 등). */
+    data class Photo(val url: String, val caption: String?)
+}

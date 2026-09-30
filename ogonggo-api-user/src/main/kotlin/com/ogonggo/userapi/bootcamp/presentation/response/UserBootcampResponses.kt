@@ -6,6 +6,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
+import com.ogonggo.userapi.bootcamp.business.UserBootcampImageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
@@ -105,6 +106,8 @@ data class UserBootcampDetailResponse(
     val commentCount: Long,
     val partners: List<UserBootcampPartnerResponse>,
     val curriculums: List<UserBootcampCurriculumResponse>,
+    @Schema(description = "상세에서만 보여 주는 사진입니다. 고용24에서 수집한 과정은 훈련기관 시설 사진이 들어 있고, 그 밖에는 빈 배열입니다.")
+    val images: List<UserBootcampImageResponse>,
 ) {
     companion object {
         internal fun from(result: UserBootcampResult): UserBootcampDetailResponse = UserBootcampDetailResponse(
@@ -144,7 +147,20 @@ data class UserBootcampDetailResponse(
             commentCount = result.commentCount,
             partners = result.partners.map(UserBootcampPartnerResponse::from),
             curriculums = result.curriculums.map(UserBootcampCurriculumResponse::from),
+            images = result.images.map(UserBootcampImageResponse::from),
         )
+    }
+}
+
+data class UserBootcampImageResponse(
+    val url: String,
+    @Schema(description = "사진 설명입니다. 예: 강의실, 안내데스크", nullable = true)
+    val caption: String?,
+    val displayOrder: Int,
+) {
+    companion object {
+        internal fun from(result: UserBootcampImageResult): UserBootcampImageResponse =
+            UserBootcampImageResponse(url = result.url, caption = result.caption, displayOrder = result.displayOrder)
     }
 }
 

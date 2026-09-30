@@ -13,7 +13,7 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 고용24 훈련기관 소개 화면의 로고와 훈련기관 사진 첫 장을 오공고 이미지 저장소(S3)로 옮긴다.
+ * 고용24 훈련기관 소개 화면의 로고와 훈련기관 사진을 오공고 이미지 저장소(S3)로 옮긴다.
  *
  * Open API는 이미지를 주지 않고 과정·기관정보의 로고 주소(`filePath`)는 이미지로 열리지 않는다.
  * 훈련기관 소개 화면(목록의 `subTitleLink`, `selectTrainInstitution.do`)의 이미지는 로그인 없이 받아지지만
@@ -48,13 +48,17 @@ class Work24InstitutionImageImporter(
         } ?: return null
 
         val logo = page.selectFirst("img[alt=$LOGO_ALT]")?.attr("src")
-        val photo = page.selectFirst(".thumbnailIntroList .swiper-slide img")?.attr("src")
         val images = Work24InstitutionImagesDto(
             logoUrl = logo?.let { move(pageUri, it) },
-            representativeImageUrl = photo?.let { move(pageUri, it) },
+            photos = page.select(".thumbnailIntroList .swiper-slide").take(MAX_PHOTOS).mapNotNull { slide ->
+                val source = slide.selectFirst("img")?.attr("src")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                move(pageUri, source)?.let { url ->
+                    Work24InstitutionImagesDto.Photo(url, slide.selectFirst("p")?.text()?.trim()?.takeIf { it.isNotEmpty() })
+                }
+            },
         )
         // 하나도 옮기지 못했으면 기억하지 않고 다음 과정에서 다시 시도한다.
-        if (images.logoUrl != null || images.representativeImageUrl != null) {
+        if (images.logoUrl != null || images.photos.isNotEmpty()) {
             imported[institutionId] = images
         }
         return images
@@ -88,6 +92,9 @@ class Work24InstitutionImageImporter(
         /** 사용자가 올린 이미지와 같은 `images/` 아래에 두어 같은 공개 경로로 읽힌다. */
         private const val KEY_PREFIX = "images/work24/"
         private const val MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024
+
+        /** 확인한 훈련기관은 모두 사진이 5장이었다. 화면이 달라져 많이 오더라도 이만큼만 옮긴다. */
+        private const val MAX_PHOTOS = 10
         private val log = LoggerFactory.getLogger(Work24InstitutionImageImporter::class.java)
 
         private fun institutionPageUri(url: String): URI? =

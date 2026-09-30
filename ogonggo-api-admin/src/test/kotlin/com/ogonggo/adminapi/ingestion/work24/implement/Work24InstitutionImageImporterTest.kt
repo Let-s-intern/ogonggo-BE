@@ -29,13 +29,15 @@ class Work24InstitutionImageImporterTest {
     }
 
     @Test
-    fun `훈련기관 소개 화면의 로고와 첫 사진을 저장소로 옮기고 같은 기관은 다시 받지 않는다`() {
+    fun `훈련기관 소개 화면의 로고와 사진을 저장소로 옮기고 같은 기관은 다시 받지 않는다`() {
         // given
         server.expect(requestTo(INSTITUTION_URL)).andRespond(withSuccess(WORK24_INSTITUTION_PAGE_HTML, MediaType.TEXT_HTML))
         server.expect(requestTo("$SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=LOGO&athfilSeqNo=2"))
             .andRespond(withSuccess(work24TestImage(152, 90, "png"), MediaType.APPLICATION_OCTET_STREAM))
         server.expect(requestTo("$SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=DESK&athfilSeqNo=2"))
             .andRespond(withSuccess(work24TestImage(1600, 1200, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
+        server.expect(requestTo("$SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=ROOM&athfilSeqNo=2"))
+            .andRespond(withSuccess(work24TestImage(800, 600, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
         val importer = importer(bucket = "ogonggo")
 
         // when
@@ -45,13 +47,16 @@ class Work24InstitutionImageImporterTest {
         // then: 두 번째 과정은 고용24를 부르지 않는다.
         server.verify()
         assertEquals(images, again)
-        assertEquals(2, uploadedKeys.size)
+        assertEquals(3, uploadedKeys.size)
         assertTrue(uploadedKeys[0].matches(Regex("""images/work24/[0-9a-f]{40}\.png""")), uploadedKeys[0])
         assertTrue(uploadedKeys[1].matches(Regex("""images/work24/[0-9a-f]{40}\.jpg""")), uploadedKeys[1])
         assertEquals(
             Work24InstitutionImagesDto(
                 logoUrl = "https://cdn.ogonggo.test/${uploadedKeys[0]}",
-                representativeImageUrl = "https://cdn.ogonggo.test/${uploadedKeys[1]}",
+                photos = listOf(
+                    Work24InstitutionImagesDto.Photo("https://cdn.ogonggo.test/${uploadedKeys[1]}", "안내데스크"),
+                    Work24InstitutionImagesDto.Photo("https://cdn.ogonggo.test/${uploadedKeys[2]}", "강의실"),
+                ),
             ),
             images,
         )
@@ -65,11 +70,15 @@ class Work24InstitutionImageImporterTest {
             .andRespond(withSuccess("<script>alert('오류');</script>", MediaType.TEXT_HTML))
         server.expect(requestTo("$SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=DESK&athfilSeqNo=2"))
             .andRespond(withSuccess(work24TestImage(800, 600, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
+        server.expect(requestTo("$SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=ROOM&athfilSeqNo=2")).andRespond(withServerError())
 
         val images = requireNotNull(importer(bucket = "ogonggo").import("ORG", INSTITUTION_URL))
 
         assertNull(images.logoUrl)
-        assertEquals("https://cdn.ogonggo.test/${uploadedKeys.single()}", images.representativeImageUrl)
+        assertEquals(
+            listOf(Work24InstitutionImagesDto.Photo("https://cdn.ogonggo.test/${uploadedKeys.single()}", "안내데스크")),
+            images.photos,
+        )
     }
 
     @Test

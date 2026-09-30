@@ -200,7 +200,7 @@ class Work24CollectorTest {
                     """
                     <HRDNet>
                       <inst_base_info>
-                        <inoNm>오공고 아카데미</inoNm><trprNm>자바 백엔드 과정</trprNm><trtm>600</trtm>
+                        <inoNm>오공고 아카데미</inoNm><trprNm>[LG전자] 자바 백엔드 과정</trprNm><trtm>600</trtm>
                         <ncsNm>응용SW엔지니어링</ncsNm><trprChapEmail>edu@ogonggo.test</trprChapEmail>
                         <traingMthCd>M1005</traingMthCd><instPerTrco>22687500</instPerTrco>
                         <filePath>http://hrd.work24.go.kr/comm/com/fileDownload.do?athfilId=1&amp;athfilSeqNo=1</filePath>
@@ -232,12 +232,14 @@ class Work24CollectorTest {
                     MediaType.APPLICATION_OCTET_STREAM,
                 ),
             )
-        // 훈련기관 소개 화면의 로고와 첫 사진을 오공고 저장소로 옮긴다.
+        // 훈련기관 소개 화면의 로고와 사진을 오공고 저장소로 옮긴다.
         server.expect(requestTo(INSTITUTION)).andRespond(withSuccess(WORK24_INSTITUTION_PAGE_HTML, MediaType.TEXT_HTML))
         server.expect(requestTo("$WORK24_SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=LOGO&athfilSeqNo=2"))
             .andRespond(withSuccess(work24TestImage(152, 90, "png"), MediaType.APPLICATION_OCTET_STREAM))
         server.expect(requestTo("$WORK24_SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=DESK&athfilSeqNo=2"))
             .andRespond(withSuccess(work24TestImage(800, 600, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
+        server.expect(requestTo("$WORK24_SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=ROOM&athfilSeqNo=2"))
+            .andRespond(withSuccess(work24TestImage(640, 480, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
 
         // when
         val result = collector().collect(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES, NOW)
@@ -248,14 +250,19 @@ class Work24CollectorTest {
         assertEquals(100, result.skippedCount)
         val bootcamp = appendedBootcamps.single()
         assertEquals("오공고 아카데미", bootcamp.companyName)
-        assertEquals("자바 백엔드 과정", bootcamp.title)
+        assertEquals("[LG전자] 자바 백엔드 과정", bootcamp.title)
+        // 과정명 앞 괄호의 기업이 파트너사로 들어간다.
+        assertEquals(listOf("LG전자"), bootcamp.partners.map { it.partnerName })
         assertEquals(LocalDate.of(2026, 10, 5), bootcamp.programStartDate)
         assertEquals(BootcampRecruitmentType.PERIOD, bootcamp.recruitmentType)
         assertEquals(NOW, bootcamp.recruitmentStartAt)
         assertEquals(LocalDateTime.of(2026, 10, 5, 23, 59, 59), bootcamp.recruitmentEndAt)
         // 고용24는 과정 이미지를 주지 않고 훈련기관 로고는 이미지로 열리지 않는 다운로드 주소라 비운다.
         assertTrue(requireNotNull(bootcamp.logoUrl).matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.png""")))
-        assertTrue(requireNotNull(bootcamp.representativeImageUrl).matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.jpg""")))
+        // 훈련기관 사진은 목록의 대표 이미지로 쓰지 않고 상세에서만 보여 주는 사진으로 넣는다.
+        assertNull(bootcamp.representativeImageUrl)
+        assertEquals(listOf("안내데스크" to 0, "강의실" to 1), bootcamp.images.map { it.caption to it.displayOrder })
+        assertTrue(bootcamp.images.all { it.url.matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.jpg""")) })
         // 고용24는 K-디지털 트레이닝 조건에 다른 훈련유형도 함께 주므로 목록의 훈련유형 이름을 쓴다.
         assertEquals("국가기간전략산업직종", bootcamp.programType)
         assertEquals(OperationType.ONLINE, bootcamp.operationType)
@@ -409,7 +416,7 @@ class Work24CollectorTest {
         val bootcamp = appendedBootcamps.single()
         assertEquals("목록 과정명", bootcamp.title)
         assertNull(bootcamp.eligibilityAndSelectionProcess)
-        assertNull(bootcamp.representativeImageUrl)
+        assertTrue(bootcamp.images.isEmpty())
         assertTrue(bootcamp.curriculums.isEmpty())
     }
 

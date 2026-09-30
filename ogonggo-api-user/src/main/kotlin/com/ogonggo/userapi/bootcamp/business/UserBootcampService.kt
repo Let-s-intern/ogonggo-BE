@@ -50,6 +50,7 @@ class UserBootcampService(
             bookmarked = id in readBookmarkedBootcampIds(userId, listOf(id)),
             partners = bootcampContentReader.readPartners(id),
             curriculums = bootcampContentReader.readCurriculums(id),
+            images = bootcampContentReader.readImages(id),
             metric = bootcampMetricReader.read(id),
         )
         eventPublisher.publishEvent(BootcampViewedEvent(id))
