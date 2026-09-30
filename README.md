@@ -85,6 +85,8 @@ Before deploying the job region enums (`region`, `subRegion`), apply `docs/schem
 
 Before deploying the job field and role enums (`jobField`, `jobRole`), apply `docs/schema/2026-09-28-job-field-role-enum.sql`.
 
+Before deploying the job list sort key (crawled jobs first, same-day jobs shuffled), apply `docs/schema/2026-09-30-job-list-sort-key.sql`.
+
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
 ## Work24 (고용24) Open API

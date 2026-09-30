@@ -298,5 +298,6 @@ class JobDomainTest {
         sourceUrl = "https://example.com/jobs/1",
         source = source,
         externalId = externalId,
+        listSortKey = 0L,
     )
 }

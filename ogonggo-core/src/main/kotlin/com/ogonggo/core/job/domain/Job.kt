@@ -24,7 +24,8 @@ import java.time.LocalDateTime
 
 /**
  * 목록 조회는 게시 상태와 미삭제를 항상 등가로 고정하므로 두 컬럼을 모든 인덱스의 앞에 둔다.
- * 그 뒤에는 InnoDB가 기본 키를 붙이므로 최신순 정렬이 인덱스 순서로 해결되고 LIMIT에서 조기에 끝난다.
+ * 최신순 인덱스는 그 뒤에 목록 정렬 키를 두므로, 필터 없는 최신순이 인덱스 순서로 해결되고 LIMIT에서 조기에 끝난다.
+ * 필터 인덱스 뒤에는 InnoDB가 기본 키를 붙이므로 조회수순의 식별자 보조 정렬과 관리 목록의 식별자순이 인덱스를 따른다.
  *
  * 필터 조합용 인덱스는 만들지 않고 필터마다 하나씩만 둔다.
  * 조합 인덱스는 필터 컬럼 뒤에 다른 필터가 끼어 식별자 정렬이 깨지므로,
@@ -39,8 +40,8 @@ import java.time.LocalDateTime
     ],
     indexes = [
         Index(
-            name = "idx_jobs_published_latest",
-            columnList = "publication_status, deleted_at",
+            name = "idx_jobs_published_list_sort",
+            columnList = "publication_status, deleted_at, list_sort_key",
         ),
         Index(
             name = "idx_jobs_published_employment",
@@ -117,6 +118,7 @@ class Job internal constructor(
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     source: ContentSource = ContentSource.of(ownerUserId),
     externalId: String? = null,
+    listSortKey: Long,
 ) : BaseTimeEntity() {
 
     init {
@@ -317,6 +319,11 @@ class Job internal constructor(
     /** 수집한 곳에서 쓰는 식별값이다. 고용24 수집분만 있으며, 같은 공고를 다시 등록하지 않는 데 쓴다. */
     @Column(name = "external_id", length = ContentSource.EXTERNAL_ID_MAX_LENGTH)
     var externalId: String? = externalId /* 외부 식별값 */
+        protected set
+
+    /** 공개 목록 최신순의 정렬 키다. 규칙은 [JobListSortKey]에 있고, 등록할 때 정해져 바뀌지 않는다. */
+    @Column(name = "list_sort_key", nullable = false, updatable = false)
+    var listSortKey: Long = listSortKey /* 목록 정렬 키 */
         protected set
 
     @Enumerated(EnumType.STRING)
