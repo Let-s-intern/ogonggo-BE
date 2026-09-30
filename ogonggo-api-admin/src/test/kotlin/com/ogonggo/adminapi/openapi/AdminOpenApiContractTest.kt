@@ -63,6 +63,8 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf(
             "/paths/~1api~1v1~1admin~1jobs~1{jobId}/patch",
             "/paths/~1api~1v1~1admin~1jobs~1{jobId}/delete",
+            "/paths/~1api~1v1~1admin~1jobs~1today/get",
+            "/paths/~1api~1v1~1admin~1jobs~1today/put",
             "/paths/~1api~1v1~1admin~1bootcamps/get",
             "/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/patch",
             "/paths/~1api~1v1~1admin~1review-queue/get",

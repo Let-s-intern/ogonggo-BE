@@ -128,6 +128,25 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `오늘의 공고는 페이지 정보 없이 목록으로 응답하고 로그인 없이도 조회한다`() {
+        Mockito.`when`(userJobService.getTodayJobs(USER_ID)).thenReturn(listOf(jobSummary()))
+        Mockito.`when`(userJobService.getTodayJobs(null)).thenReturn(listOf(jobSummary(bookmarked = false)))
+
+        mockMvc.perform(get("/api/v1/jobs/today").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].id").value(1))
+            .andExpect(jsonPath("$.data[0].bookmarked").value(true))
+            .andExpect(jsonPath("$.data[0].viewCount").value(12))
+
+        mockMvc.perform(get("/api/v1/jobs/today"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].bookmarked").value(false))
+    }
+
+    @Test
     fun `인기 공고는 고용 형태로 좁혀 조회한다`() {
         Mockito.`when`(userJobService.getPopularJobs(USER_ID, EmploymentType.INTERN)).thenReturn(listOf(jobSummary()))
 

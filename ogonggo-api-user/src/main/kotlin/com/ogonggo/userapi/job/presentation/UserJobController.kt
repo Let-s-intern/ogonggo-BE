@@ -85,6 +85,12 @@ class UserJobController(
     ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>> =
         SuccessResponse.ok(userJobService.getPopularJobs(userId, employmentType).map(UserJobSummaryResponse::from))
 
+    @GetMapping("/today")
+    override fun getTodayJobs(
+        @AuthenticationPrincipal userId: Long?,
+    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>> =
+        SuccessResponse.ok(userJobService.getTodayJobs(userId).map(UserJobSummaryResponse::from))
+
     @GetMapping("/similar")
     override fun getSimilarJobs(
         @AuthenticationPrincipal userId: Long,

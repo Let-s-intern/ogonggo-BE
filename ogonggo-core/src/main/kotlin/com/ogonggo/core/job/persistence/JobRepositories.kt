@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSourceUrlClick
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
+import com.ogonggo.core.job.domain.TodayJob
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.persistence.LockModeType
@@ -22,6 +23,8 @@ import java.time.LocalDateTime
 
 internal interface JobJpaRepository : JpaRepository<Job, Long> {
     fun findByIdAndDeletedAtIsNull(id: Long): Job?
+
+    fun countByIdInAndDeletedAtIsNull(ids: Collection<Long>): Long
 
     fun existsBySourceUrlAndDeletedAtIsNull(sourceUrl: String): Boolean
 
@@ -238,4 +241,23 @@ internal interface TagJpaRepository : JpaRepository<Tag, Long> {
 
 internal interface JobTagJpaRepository : JpaRepository<JobTag, Long> {
     fun findAllByJobId(jobId: Long): List<JobTag>
+}
+
+internal interface TodayJobJpaRepository : JpaRepository<TodayJob, Long> {
+
+    /**
+     * 지금의 오늘의 공고를 모두 뺀다.
+     * 조회한 행을 지우지 않고 조건을 UPDATE에 넣어, 동시에 들어온 교체가 서로의 목록을 남기지 않게 한다.
+     * 벌크 연산은 Auditing을 거치지 않으므로 수정 일시를 함께 기록한다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update TodayJob todayJob
+        set todayJob.deletedAt = :now,
+            todayJob.updatedAt = :now
+        where todayJob.deletedAt is null
+        """,
+    )
+    fun softDeleteAllActive(@Param("now") now: LocalDateTime): Int
 }

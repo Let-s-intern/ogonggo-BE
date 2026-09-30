@@ -1,13 +1,23 @@
 package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.core.job.domain.EducationLevel
+import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobContentField
+import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
+import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
@@ -20,8 +30,9 @@ class AdminJobServiceTest {
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val jobManager = Mockito.mock(JobManager::class.java)
     private val jobMetricReader = Mockito.mock(JobMetricReader::class.java)
+    private val todayJobManager = Mockito.mock(TodayJobManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-27T03:00:00Z"), ZoneId.of("Asia/Seoul"))
-    private val service = AdminJobService(jobReader, jobManager, jobMetricReader, clock)
+    private val service = AdminJobService(jobReader, jobManager, jobMetricReader, todayJobManager, clock)
 
     @Test
     fun `승인과 숨김을 함께 보내면 승인한 뒤 숨긴다`() {
@@ -86,6 +97,41 @@ class AdminJobServiceTest {
         service.deleteJob(JOB_ID)
 
         Mockito.verify(jobManager).delete(job, NOW)
+    }
+
+    @Test
+    fun `오늘의 공고는 고른 순서를 유지하고 지표가 없는 공고는 0으로 채운다`() {
+        val first = todayJob(id = 5L)
+        val second = todayJob(id = 2L)
+        Mockito.`when`(jobReader.readToday()).thenReturn(listOf(first, second))
+        Mockito.`when`(jobMetricReader.readAll(listOf(5L, 2L)))
+            .thenReturn(mapOf(2L to JobMetricDto(viewCount = 9, bookmarkCount = 1, commentCount = 0)))
+
+        val result = service.getTodayJobs()
+
+        assertEquals(listOf(5L, 2L), result.map { it.id })
+        assertEquals(listOf(0L, 9L), result.map { it.viewCount })
+    }
+
+    @Test
+    fun `오늘의 공고 설정은 받은 순서 그대로 현재 시각과 함께 넘긴다`() {
+        service.replaceTodayJobs(listOf(7L, 3L))
+
+        Mockito.verify(todayJobManager).replace(listOf(7L, 3L), NOW)
+    }
+
+    private fun todayJob(id: Long): Job = Mockito.mock(Job::class.java).also { job ->
+        Mockito.`when`(job.id).thenReturn(id)
+        Mockito.`when`(job.title).thenReturn("백엔드 개발자")
+        Mockito.`when`(job.companyName).thenReturn("오공고")
+        Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
+        Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
+        Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
+        Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.ALWAYS_OPEN)
+        Mockito.`when`(job.publicationStatus).thenReturn(JobPublicationStatus.PUBLISHED)
+        Mockito.`when`(job.source).thenReturn(ContentSource.CRAWLER)
+        Mockito.`when`(job.recruitmentStatus(NOW)).thenReturn(JobRecruitmentStatus.RECRUITING)
+        Mockito.`when`(job.createdAt).thenReturn(NOW)
     }
 
     private fun lockedJob(reviewStatus: ReviewStatus?): Job {

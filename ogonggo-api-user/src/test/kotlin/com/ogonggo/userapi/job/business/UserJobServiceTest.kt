@@ -175,6 +175,23 @@ class UserJobServiceTest {
     }
 
     @Test
+    fun `오늘의 공고는 운영자가 고른 순서를 유지하고 북마크 여부와 지표를 채운다`() {
+        val first = createJobMock(id = 5L)
+        val second = createJobMock(id = 2L)
+        Mockito.`when`(jobReader.readPublishedToday()).thenReturn(listOf(first, second))
+        Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(5L, 2L))).thenReturn(setOf(2L))
+        Mockito.`when`(jobMetricReader.readAll(listOf(5L, 2L))).thenReturn(
+            mapOf(5L to JobMetricDto(viewCount = 3, bookmarkCount = 1, commentCount = 0)),
+        )
+
+        val result = service.getTodayJobs(USER_ID)
+
+        assertEquals(listOf(5L, 2L), result.map { it.id })
+        assertEquals(listOf(false, true), result.map { it.bookmarked })
+        assertEquals(listOf(3L, 0L), result.map { it.viewCount })
+    }
+
+    @Test
     fun `직무와 산업 일치 다음 직무만 다음 산업만 순으로 네 건까지 채운다`() {
         givenProfile(wishJob = "마케팅기획·전략", wishIndustry = "뷰티")
         // 공고 mock도 내부에서 stub을 걸므로 thenReturn 인자 안에서 만들지 않고 먼저 만든다.
