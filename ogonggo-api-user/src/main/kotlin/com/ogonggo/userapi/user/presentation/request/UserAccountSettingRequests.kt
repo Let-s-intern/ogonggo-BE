@@ -23,6 +23,13 @@ data class ReplaceMyNotificationEmailRequest(
     }
 }
 
+data class ReplaceMyProfileImageRequest(
+    @field:NotBlank
+    @field:Size(max = 36)
+    @Schema(description = "이미지 업로드(POST /api/v1/images) 응답의 이미지 식별자", example = "7f3c2a1e-9b4d-4c8e-a6f1-2d5b8e0c9a47")
+    val imageId: String,
+)
+
 /**
  * 새 비밀번호의 형식은 비밀번호를 가진 쪽이 검사한다.
  * 일반 회원은 렛츠커리어 규칙(8자 이상, 특수문자 포함)을, 기업 회원은 가입 때와 같은 길이 규칙을 따른다.

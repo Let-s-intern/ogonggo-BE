@@ -5,9 +5,11 @@ import com.ogonggo.userapi.user.business.UserAccountService
 import com.ogonggo.userapi.user.business.UserPasswordService
 import com.ogonggo.userapi.user.presentation.request.ChangeMyPasswordRequest
 import com.ogonggo.userapi.user.presentation.request.ReplaceMyNotificationEmailRequest
+import com.ogonggo.userapi.user.presentation.request.ReplaceMyProfileImageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -28,6 +30,23 @@ class UserAccountSettingController(
         @RequestBody request: ReplaceMyNotificationEmailRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
         userAccountService.changeMyNotificationEmail(userId, request.toNotificationEmail())
+        return SuccessResponse.ok()
+    }
+
+    @PutMapping("/profile-image")
+    override fun replaceMyProfileImage(
+        @AuthenticationPrincipal userId: Long,
+        @RequestBody request: ReplaceMyProfileImageRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userAccountService.replaceMyProfileImage(userId, request.imageId)
+        return SuccessResponse.ok()
+    }
+
+    @DeleteMapping("/profile-image")
+    override fun deleteMyProfileImage(
+        @AuthenticationPrincipal userId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userAccountService.deleteMyProfileImage(userId)
         return SuccessResponse.ok()
     }
 

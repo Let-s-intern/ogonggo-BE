@@ -10,7 +10,7 @@ private const val MAX_WISH_LENGTH = 1000
 
 /**
  * 사용자가 오공고에서 직접 고치는 값만 담는다.
- * 이름·닉네임·프로필 이미지는 렛츠커리어가 소유하므로 여기서 바꾸지 않는다.
+ * 이름·닉네임은 렛츠커리어가 소유하므로 여기서 바꾸지 않는다. 프로필 이미지는 따로 바꾼다.
  */
 data class ReplaceMyProfileRequest(
     @field:Size(max = MAX_SCHOOL_LENGTH)

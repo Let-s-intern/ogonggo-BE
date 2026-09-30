@@ -380,14 +380,19 @@ class UserOpenApiContractTest @Autowired constructor(
         ).forEach { field -> assertTrue(profileProperties.has(field)) }
 
         // 기업 정보도 조회는 내 정보에 담고 수정만 따로 연다.
-        val replaceCompanyProfile = document.at("/paths/~1api~1v1~1users~1me~1company-profile/put")
-        assertTrue(replaceCompanyProfile.at("/security/0/BearerAuth").isArray)
-        assertTrue(
-            replaceCompanyProfile.at("/responses/403/description").asText().startsWith("COMPANY_ROLE_REQUIRED"),
-        )
-        val companyProfileRequest = document.at("/components/schemas/ReplaceMyCompanyProfileRequest")
-        assertEquals(150, companyProfileRequest.at("/properties/organizationName/maxLength").asInt())
-        assertEquals(100, companyProfileRequest.at("/properties/managerName/maxLength").asInt())
+        // 마이페이지가 기본 정보와 담당자 정보를 따로 저장하므로 수정도 나눠 연다.
+        listOf("basic-info", "manager-info").forEach { path ->
+            val replaceCompanyProfile = document.at("/paths/~1api~1v1~1users~1me~1company-profile~1$path/put")
+            assertTrue(replaceCompanyProfile.at("/security/0/BearerAuth").isArray)
+            assertTrue(
+                replaceCompanyProfile.at("/responses/403/description").asText().startsWith("COMPANY_ROLE_REQUIRED"),
+            )
+        }
+        val basicInfoRequest = document.at("/components/schemas/ReplaceMyCompanyBasicInfoRequest")
+        assertEquals(150, basicInfoRequest.at("/properties/organizationName/maxLength").asInt())
+        assertEquals(36, basicInfoRequest.at("/properties/logoImageId/maxLength").asInt())
+        val managerInfoRequest = document.at("/components/schemas/ReplaceMyCompanyManagerInfoRequest")
+        assertEquals(100, managerInfoRequest.at("/properties/managerName/maxLength").asInt())
 
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
         // 스크랩 공고만 거를 때 토큰이 필요하므로 Swagger UI에서 토큰을 보낼 수 있어야 한다.

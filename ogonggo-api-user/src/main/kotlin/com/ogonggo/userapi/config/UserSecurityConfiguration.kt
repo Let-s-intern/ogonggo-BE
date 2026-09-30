@@ -75,8 +75,14 @@ class UserSecurityConfiguration {
                 // 역할은 토큰에 없으므로 클라이언트는 이 경로로 자기 역할과 프로필을 읽는다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
-                it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/company-profile").authenticated()
+                it.requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/v1/users/me/company-profile/basic-info",
+                    "/api/v1/users/me/company-profile/manager-info",
+                ).authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/notification-email").authenticated()
+                it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile-image").authenticated()
+                it.requestMatchers(HttpMethod.DELETE, "/api/v1/users/me/profile-image").authenticated()
                 it.requestMatchers(HttpMethod.PATCH, "/api/v1/users/me/password").authenticated()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
                 it.requestMatchers("/api/v1/users/me/jobs", "/api/v1/users/me/jobs/**").authenticated()

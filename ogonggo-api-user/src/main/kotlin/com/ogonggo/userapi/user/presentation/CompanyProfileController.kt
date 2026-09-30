@@ -2,7 +2,8 @@ package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.userapi.response.SuccessResponse
 import com.ogonggo.userapi.user.business.UserAccountService
-import com.ogonggo.userapi.user.presentation.request.ReplaceMyCompanyProfileRequest
+import com.ogonggo.userapi.user.presentation.request.ReplaceMyCompanyBasicInfoRequest
+import com.ogonggo.userapi.user.presentation.request.ReplaceMyCompanyManagerInfoRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
@@ -18,12 +19,21 @@ class CompanyProfileController(
     private val userAccountService: UserAccountService,
 ) : CompanyProfileApi {
 
-    @PutMapping
-    override fun replaceMyCompanyProfile(
+    @PutMapping("/basic-info")
+    override fun replaceMyCompanyBasicInfo(
         @AuthenticationPrincipal userId: Long,
-        @RequestBody request: ReplaceMyCompanyProfileRequest,
+        @RequestBody request: ReplaceMyCompanyBasicInfoRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        userAccountService.replaceMyCompanyProfile(userId, request.toCommand())
+        userAccountService.replaceMyCompanyBasicInfo(userId, request.toCommand())
+        return SuccessResponse.ok()
+    }
+
+    @PutMapping("/manager-info")
+    override fun replaceMyCompanyManagerInfo(
+        @AuthenticationPrincipal userId: Long,
+        @RequestBody request: ReplaceMyCompanyManagerInfoRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        userAccountService.replaceMyCompanyManagerInfo(userId, request.toCommand())
         return SuccessResponse.ok()
     }
 }

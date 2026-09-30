@@ -43,6 +43,7 @@ data class MyAccountResult(
                 MyCompanyProfileResult(
                     organizationName = it.organizationName,
                     managerName = it.managerName,
+                    logoImageId = it.logoImageId,
                     logoUrl = it.logoUrl,
                     managerPhone = it.managerPhone,
                     notificationEmail = it.notificationEmail,
@@ -54,7 +55,8 @@ data class MyAccountResult(
 
 /**
  * 렛츠커리어에서 복제한 값과 오공고에서 직접 입력한 값이 함께 담긴다.
- * 이름·휴대폰 번호·닉네임·프로필 이미지는 로그인마다 렛츠커리어 값으로 갱신되고, 나머지는 사용자가 고친다.
+ * 이름·휴대폰 번호·닉네임은 로그인마다 렛츠커리어 값으로 갱신되고, 나머지는 사용자가 고친다.
+ * 프로필 이미지는 오공고에서 바꾼 이미지가 있으면 그것을, 없으면 렛츠커리어 이미지를 담는다.
  */
 data class MyProfileResult(
     val name: String?,
@@ -95,7 +97,14 @@ data class MyProfileResult(
 data class MyCompanyProfileResult(
     val organizationName: String,
     val managerName: String,
+    val logoImageId: String?,
     val logoUrl: String?,
     val managerPhone: String?,
     val notificationEmail: String?,
+)
+
+/** 기업 회원이 고치는 기본 정보다. 로고는 업로드한 이미지 식별자로 받으며 null이면 지운다. */
+data class CompanyBasicInfoCommand(
+    val organizationName: String,
+    val logoImageId: String?,
 )

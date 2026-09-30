@@ -126,7 +126,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
 | `PUT /api/v1/users/me/profile` | 필수 | 자기 학력과 희망 조건을 고친다 |
-| `PUT /api/v1/users/me/company-profile` | 필수 | 기업 회원이 자기 기업 정보(기관명·담당자 이름·로고·연락처·수신 이메일)를 고친다 |
+| `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)를 고친다 |
+| `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)를 고친다 |
 | `PUT /api/v1/users/me/notification-email` | 필수 | 일반 회원이 오늘의 공고 수신 이메일을 고친다 |
 | `PATCH /api/v1/users/me/password` | 필수 | 자기 비밀번호를 바꾼다 |
 
@@ -166,7 +167,7 @@ POST /api/v1/auth/company/signin
 → 200 { "accessToken": "...", "refreshToken": "..." }
 ```
 
-**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 받는 기업 정보는 기관명과 담당자 이름 두 가지입니다. 기업 로고, 담당자 연락처, 정보 수신용 이메일은 선택 값으로 가입 후 `PUT /api/v1/users/me/company-profile`에서 채웁니다.
+**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 받는 기업 정보는 기관명과 담당자 이름 두 가지입니다. 기업 로고는 가입 후 `PUT /api/v1/users/me/company-profile/basic-info`에서, 담당자 연락처와 정보 수신용 이메일은 `PUT /api/v1/users/me/company-profile/manager-info`에서 선택 값으로 채웁니다.
 
 | 상황 | 응답 |
 | --- | --- |
@@ -191,12 +192,13 @@ PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한�
 
 | 항목 | 값 | 소유 |
 | --- | --- | --- |
-| 이름·가입 이메일·휴대폰 번호·가입 경로·닉네임·프로필 이미지 | `name`, `email`, `phoneNum`, `authProvider`, `nickname`, `profileImageUrl` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
+| 이름·가입 이메일·휴대폰 번호·가입 경로·닉네임 | `name`, `email`, `phoneNum`, `authProvider`, `nickname` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
+| 프로필 이미지 | `profileImageUrl` | 렛츠커리어 이미지를 로그인마다 복제하고, 오공고에서 바꾼 이미지가 있으면 그것을 먼저 보인다. [프로필 이미지](#프로필-이미지) 참고 |
 | 학력 | `university`, `major`, `grade` | 양쪽. 나중에 고친 쪽이 이긴다 |
 | 희망 조건 | `wishField`, `wishJob`, `wishIndustry`, `wishEmploymentType`, `wishCompany` | 양쪽. 나중에 고친 쪽이 이긴다 |
 | 오늘의 공고 수신 이메일 | `notificationEmail` | 오공고. 사용자가 고친다 |
 
-**같은 `user_profiles` 테이블에 두되 무엇이 무엇을 덮어쓰는지는 코드로 못 박아 둡니다.** `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값과 그 수정 일시만, `UserProfile.changeNotificationEmail`은 수신 이메일만 건드립니다. 한쪽 메서드에 다른 쪽 필드를 추가하지 않습니다.
+**같은 `user_profiles` 테이블에 두되 무엇이 무엇을 덮어쓰는지는 코드로 못 박아 둡니다.** `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값과 그 수정 일시만, `UserProfile.changeNotificationEmail`은 수신 이메일만, `UserProfile.changeOgonggoProfileImage`·`removeOgonggoProfileImage`는 오공고 프로필 이미지 두 칸만 건드립니다. 한쪽 메서드에 다른 쪽 필드를 추가하지 않습니다.
 
 `grade`는 렛츠커리어의 `UserGrade`와 값과 `code`를 맞춰 두었습니다. 희망 조건 다섯 값은 렛츠커리어가 자유 문자열로 다루므로 오공고도 형식을 해석하지 않고 그대로 보관합니다.
 
@@ -257,6 +259,23 @@ PUT /api/v1/users/me/notification-email   { "notificationEmail": "me@example.com
 렛츠커리어 가입 이메일과 따로 두는 오공고 전용 값이라 `user_profiles.notification_email`에 두고 렛츠커리어에 보내지 않습니다. 빼거나 `null`로 보내면 비웁니다. 기업 회원은 기업 정보의 `notificationEmail`을 쓰므로 이 경로는 403 `GENERAL_MEMBER_REQUIRED`로 막습니다.
 
 휴대폰 번호와 가입 경로(`letscareer_auth_provider`)는 마이페이지용으로 `verify` 응답에 실어 로그인마다 복제합니다. 가입 경로는 렛츠커리어에서 바뀌지 않는 값이라 첫 로그인에 저장된 값이 그대로 유지되며, 학력처럼 최초 1회 호출(`job-profile`)에 싣지 않은 이유는 그 호출이 실패하면 값을 다시 받을 기회가 없기 때문입니다. 두 값은 복제 대상에 나중에 추가되었으므로, `letscareer_updated_at`이 같아도 둘 중 하나가 다르면 한 번 갱신해 기존 행을 채웁니다. 렛츠커리어가 오공고가 모르는 가입 경로를 보내면 그 값만 비우고 로그인은 진행합니다.
+
+### 프로필 이미지
+
+> 오공고에서 바꾼 이미지는 오공고가 소유하고 렛츠커리어에 보내지 않는다. (2026-09-30 결정, 팀 리뷰 필요)
+
+```text
+POST   /api/v1/images                     파일을 올리고 imageId를 받는다
+PUT    /api/v1/users/me/profile-image     { "imageId": "..." }로 바꾼다
+DELETE /api/v1/users/me/profile-image     지워 렛츠커리어 이미지로 되돌린다
+```
+
+렛츠커리어에도 프로필 이미지가 있고 `verify` 응답의 `profileImageUrl`을 로그인마다 `user_profiles.profile_image_url`에 복제합니다. 이 칸을 오공고에서 고치면 렛츠커리어 프로필이 바뀐 뒤 다시 로그인할 때 덮어써지므로, 오공고에서 바꾼 이미지는 `ogonggo_profile_image_id`·`ogonggo_profile_image_url`에 따로 둡니다. 조회(`GET /users/me`의 `profile.profileImageUrl`, 모집글·댓글 작성자, 관리자 회원 목록)는 오공고 이미지가 있으면 그것을, 없으면 렛츠커리어 이미지를 보입니다. 렛츠커리어 쪽 이미지를 바꾸는 내부 API는 없어 렛츠커리어 화면에는 반영되지 않습니다.
+
+- 일반 회원만 씁니다. 기업 회원은 403 `GENERAL_MEMBER_REQUIRED`입니다. 기업 회원의 프로필 이미지는 기업 로고이며, 기본 정보 수정(`PUT /users/me/company-profile/basic-info`)의 `logoImageId`로 같은 방식으로 연결합니다(`company_profiles.logo_image_id`·`logo_url`).
+- 연결한 이미지(기업 로고 포함)는 `image_assets`에서 게시글 없이 `ATTACHED`로 두어 24시간 정리 대상에서 빠집니다. 바꾸거나 지우면 이전 이미지를 `UNREFERENCED`로 돌려 보존 기간(24시간) 뒤 S3에서 지웁니다.
+- 내가 올린 임시 또는 참조 해제된 이미지만 연결할 수 있습니다. 남의 이미지, 게시글에 쓰는 이미지, 이미 정리된 이미지는 400 `IMAGE_ASSET_NOT_AVAILABLE`입니다. 반대로 프로필 이미지는 게시글에 연결할 수 없습니다.
+- 같은 사용자가 동시에 두 번 바꾸면 먼저 끝난 쪽의 이미지가 정리되지 않고 남을 수 있습니다. 드문 경우라 잠금을 두지 않았습니다.
 
 ### 비밀번호 변경
 
@@ -420,7 +439,7 @@ GET /api/v1/users/me
 | 탈퇴 사용자의 재로그인 | 확인 필요 | 403으로 막는다. 현재 도메인은 탈퇴를 되돌릴 수 없다고 선언하고 있다 |
 | 렛츠커리어 로그아웃 시 오공고 동시 로그아웃 | 미정 | 오공고 세션은 유지된다 |
 | `ADMIN` 역할 부여 경로 | DB 직접 부여로 결정(2026-09-14) | 부여 API와 화면은 없다. 부여 이력·감사 기록은 미정이다. 렛츠커리어의 `isAdmin`은 반영하지 않는다 |
-| 프로필 수정 | 일부 결정(2026-09-29) | 구직 프로필과 수신 이메일은 오공고에서 고친다. 렛츠커리어에서 복제한 이름·가입 이메일·휴대폰 번호·닉네임·프로필 이미지는 조회만 하고 로그인 시 갱신된다. 기업 정보는 `PUT /api/v1/users/me/company-profile`로 고친다 |
+| 프로필 수정 | 일부 결정(2026-09-29) | 구직 프로필과 수신 이메일은 오공고에서 고친다. 렛츠커리어에서 복제한 이름·가입 이메일·휴대폰 번호·닉네임은 조회만 하고 로그인 시 갱신된다. 프로필 이미지는 오공고 전용 이미지로 바꿀 수 있다(2026-09-30). 기업 정보는 `PUT /api/v1/users/me/company-profile/basic-info`·`manager-info`로 고친다 |
 
 앞의 세 가지는 서로 얽혀 있으므로 함께 결정합니다. 재발급 시점에 렛츠커리어를 재검증하는 방식(`last_synced_at`이 일정 기간을 넘겼을 때만 호출)이 전파 지연을 좁히는 후보이며, 탈퇴 정책이 정해진 뒤 함께 검토합니다.
 

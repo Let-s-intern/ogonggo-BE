@@ -1,6 +1,7 @@
 package com.ogonggo.core.user.domain
 
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
+import com.ogonggo.core.user.implement.dto.UserProfileDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -121,6 +122,31 @@ class UserDomainTest {
 
         profile.changeNotificationEmail(null)
         assertNull(profile.notificationEmail)
+    }
+
+    @Test
+    fun `오공고에서 바꾼 프로필 이미지는 재로그인 동기화가 덮어쓰지 않고 렛츠커리어 이미지보다 먼저 보인다`() {
+        // given
+        val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
+        profile.changeOgonggoProfileImage("image-id", "https://cdn.example.com/images/image-id.png")
+
+        // when
+        profile.sync(
+            name = null,
+            email = null,
+            phoneNum = null,
+            letsCareerAuthProvider = null,
+            nickname = null,
+            profileImageUrl = "https://letscareer.example.com/profile.png",
+            letsCareerUpdatedAt = joinedAt.plusDays(1),
+            syncedAt = joinedAt.plusDays(1),
+        )
+
+        // then
+        assertEquals("https://cdn.example.com/images/image-id.png", UserProfileDto.from(profile).profileImageUrl)
+
+        profile.removeOgonggoProfileImage()
+        assertEquals("https://letscareer.example.com/profile.png", UserProfileDto.from(profile).profileImageUrl)
     }
 
     @Test

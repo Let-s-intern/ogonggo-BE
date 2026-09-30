@@ -43,13 +43,15 @@ class ConnectionEntityValidationTest {
     fun `기업 프로필의 로고·연락처·수신 이메일은 비워 둘 수 있지만 공백일 수 없다`() {
         val profile = CompanyProfile(userId = 1L, organizationName = "렛츠커리어", managerName = "김담당")
 
-        listOf(
-            Triple(" ", null, null),
-            Triple(null, " ", null),
-            Triple(null, null, " "),
-        ).forEach { (logoUrl, managerPhone, notificationEmail) ->
+        listOf(" " to "https://cdn.example.com/logo.png", "logo-image" to " ", "logo-image" to null)
+            .forEach { (logoImageId, logoUrl) ->
+                assertThrows(IllegalArgumentException::class.java) {
+                    profile.replaceBasicInfo("렛츠커리어", logoImageId, logoUrl)
+                }
+            }
+        listOf(" " to null, null to " ").forEach { (managerPhone, notificationEmail) ->
             assertThrows(IllegalArgumentException::class.java) {
-                profile.replace("렛츠커리어", "김담당", logoUrl, managerPhone, notificationEmail)
+                profile.replaceManagerInfo("김담당", managerPhone, notificationEmail)
             }
         }
     }

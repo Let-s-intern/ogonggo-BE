@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.time.LocalDateTime
 
 internal interface ImageAssetJpaRepository : JpaRepository<ImageAsset, String> {
+    fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: String, ownerUserId: Long): ImageAsset?
+
     fun findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(
         ids: Collection<String>,
         ownerUserId: Long,

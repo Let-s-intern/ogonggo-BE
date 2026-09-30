@@ -69,6 +69,14 @@ internal class UserProfile(
     var lastSyncedAt: LocalDateTime = lastSyncedAt /* 렛츠커리어 프로필 최종 동기화 일시 */
         protected set
 
+    @Column(name = "ogonggo_profile_image_id", length = 36)
+    var ogonggoProfileImageId: String? = null /* 오공고에서 올린 프로필 이미지 식별자(image_assets.id) */
+        protected set
+
+    @Column(name = "ogonggo_profile_image_url", length = 2048)
+    var ogonggoProfileImageUrl: String? = null /* 오공고에서 올린 프로필 이미지 URL. 있으면 렛츠커리어 이미지 대신 보인다 */
+        protected set
+
     @Column(name = "notification_email", length = 320)
     var notificationEmail: String? = null /* 오늘의 공고 정보 수신용 이메일 */
         protected set
@@ -112,7 +120,7 @@ internal class UserProfile(
 
     /**
      * 렛츠커리어에서 복제하는 값만 갱신한다.
-     * 학력과 희망 조건, 수신 이메일은 오공고가 소유하므로 여기서 건드리지 않는다.
+     * 학력과 희망 조건, 수신 이메일, 오공고에서 올린 프로필 이미지는 오공고가 소유하므로 여기서 건드리지 않는다.
      */
     fun sync(
         name: String?,
@@ -167,6 +175,23 @@ internal class UserProfile(
     fun changeNotificationEmail(notificationEmail: String?) {
         require(notificationEmail == null || notificationEmail.isNotBlank()) { "수신 이메일은 공백일 수 없습니다." }
         this.notificationEmail = notificationEmail
+    }
+
+    /**
+     * 오공고에서 올린 이미지를 프로필 이미지로 쓴다. 오공고가 소유하며 렛츠커리어에 보내지 않는다.
+     * 렛츠커리어에서 복제하는 `profileImageUrl`과 칸을 나눠 두어 재로그인의 `sync`가 덮어쓰지 않는다.
+     */
+    fun changeOgonggoProfileImage(imageId: String, url: String) {
+        require(imageId.isNotBlank()) { "프로필 이미지 식별자는 비어 있을 수 없습니다." }
+        require(url.isNotBlank()) { "프로필 이미지 URL은 비어 있을 수 없습니다." }
+        this.ogonggoProfileImageId = imageId
+        this.ogonggoProfileImageUrl = url
+    }
+
+    /** 오공고에서 올린 프로필 이미지를 지운다. 그러면 다시 렛츠커리어 이미지가 보인다. */
+    fun removeOgonggoProfileImage() {
+        this.ogonggoProfileImageId = null
+        this.ogonggoProfileImageUrl = null
     }
 
     /**

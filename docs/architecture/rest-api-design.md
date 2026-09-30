@@ -100,18 +100,23 @@ POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
 ### 내 정보
 
 ```text
-GET   /api/v1/users/me
-PUT   /api/v1/users/me/profile
-PUT   /api/v1/users/me/company-profile
-PUT   /api/v1/users/me/notification-email
-PATCH /api/v1/users/me/password
+GET    /api/v1/users/me
+PUT    /api/v1/users/me/profile
+PUT    /api/v1/users/me/company-profile/basic-info
+PUT    /api/v1/users/me/company-profile/manager-info
+PUT    /api/v1/users/me/notification-email
+PUT    /api/v1/users/me/profile-image
+DELETE /api/v1/users/me/profile-image
+PATCH  /api/v1/users/me/password
 ```
 
 `/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`, `/users/me/profile`이 그 하위에 있습니다. 프로필은 사용자마다 하나뿐인 단일 리소스여서 목록이 아니므로 단수 명사를 사용합니다. 복수 명사 규칙은 여러 항목을 담는 컬렉션에 적용합니다.
 
-조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기관명·담당자 이름도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile`로 엽니다. 화면이 두 값을 한 폼으로 함께 보내므로 PATCH가 아니라 PUT으로 전체를 교체하며, 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다.
+조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기업 정보도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile` 아래에 엽니다. 마이페이지가 기본 정보(기관명·로고)와 담당자 정보(이름·연락처·수신 이메일)를 서로 다른 버튼으로 저장하므로 `basic-info`와 `manager-info` 두 단일 리소스로 나누고, 각 폼의 값을 PUT으로 함께 교체합니다(2026-09-30, 팀 리뷰 필요. 이전에는 `PUT /users/me/company-profile` 하나가 모든 값을 교체했습니다). 로고는 `POST /api/v1/images`로 올린 이미지의 `logoImageId`로 받으며, 로고를 바꾸지 않을 때도 `/users/me`의 `companyProfile.logoImageId`를 그대로 보내야 합니다. 빼면 로고를 지웁니다. 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다.
 
-일반 회원의 오늘의 공고 수신 이메일은 값 하나짜리 단일 리소스로 보고 `PUT /users/me/notification-email`로 교체합니다. 빼거나 `null`이면 비웁니다. 비밀번호 변경은 기존 비밀번호 확인이 따르는 명령이라 조회 대상이 아니므로 `PATCH /users/me/password`로 두고 200과 `data: null`로 응답합니다. 두 경로의 소유권과 오류 규칙은 [사용자 인증 문서](authentication.md#오늘의-공고-수신-이메일)를 따릅니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
+일반 회원의 오늘의 공고 수신 이메일은 값 하나짜리 단일 리소스로 보고 `PUT /users/me/notification-email`로 교체합니다. 빼거나 `null`이면 비웁니다. 비밀번호 변경은 기존 비밀번호 확인이 따르는 명령이라 조회 대상이 아니므로 `PATCH /users/me/password`로 두고 200과 `data: null`로 응답합니다. 두 경로의 소유권과 오류 규칙은 [사용자 인증 문서](authentication.md#오늘의-공고-수신-이메일)를 따릅니다.
+
+일반 회원의 프로필 이미지도 값 하나짜리 단일 리소스로 보고 `PUT /users/me/profile-image`가 `{ "imageId": "..." }`로 교체하며, `DELETE`는 지워 렛츠커리어 이미지로 되돌립니다(2026-09-30, 팀 리뷰 필요). 파일은 게시글 이미지와 같은 `POST /api/v1/images`로 먼저 올리고 받은 식별자로 연결합니다. 같은 식별자를 다시 보내거나 지운 뒤 다시 지워도 200입니다. 소유권과 이미지 정리는 [사용자 인증 문서](authentication.md#프로필-이미지)를 따릅니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
 
 ### 부트캠프 북마크
 

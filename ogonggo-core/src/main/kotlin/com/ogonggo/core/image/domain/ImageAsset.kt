@@ -93,6 +93,25 @@ class ImageAsset internal constructor(
         this.status = ImageAssetStatus.ATTACHED
     }
 
+    /**
+     * 프로필 이미지로 연결한다. 게시글 식별자 없이 ATTACHED로 두므로 정리 대상에서 빠지고 게시글에는 연결할 수 없다.
+     * 이미 프로필 이미지로 연결된 이미지를 다시 연결해도 그대로다.
+     */
+    fun attachToProfile() {
+        check(deletedAt == null) { "삭제된 이미지는 연결할 수 없습니다." }
+        check(isAttachableToProfile()) { "임시 또는 참조 해제된 이미지만 프로필에 연결할 수 있습니다." }
+        this.postId = null
+        this.unreferencedAt = null
+        this.status = ImageAssetStatus.ATTACHED
+    }
+
+    fun isAttachableToProfile(): Boolean =
+        status == ImageAssetStatus.TEMPORARY ||
+            status == ImageAssetStatus.UNREFERENCED ||
+            isAttachedToProfile()
+
+    fun isAttachedToProfile(): Boolean = status == ImageAssetStatus.ATTACHED && postId == null
+
     fun unreference(now: LocalDateTime) {
         if (status == ImageAssetStatus.ATTACHED) {
             postId = null

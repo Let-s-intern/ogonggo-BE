@@ -141,6 +141,31 @@ class ImageAssetManager internal constructor(
         imageAssetRepository.saveAll(assets)
     }
 
+    /**
+     * 사용자가 올린 이미지를 프로필 이미지(일반 회원 프로필 이미지, 기업 로고)로 연결하고 URL을 돌려준다.
+     * 남의 이미지, 게시글에 쓰는 이미지, 아직 올리는 중이거나 정리된 이미지는 쓸 수 없다.
+     */
+    @Transactional
+    fun attachProfileImage(ownerUserId: Long, imageId: String): String {
+        val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId)
+        if (asset == null || !asset.isAttachableToProfile()) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+        asset.attachToProfile()
+        imageAssetRepository.save(asset)
+        return asset.url
+    }
+
+    /** 더 쓰지 않는 프로필 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
+    @Transactional
+    fun unreferenceProfileImage(ownerUserId: Long, imageId: String, now: LocalDateTime) {
+        val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId) ?: return
+        if (asset.isAttachedToProfile()) {
+            asset.unreference(now)
+            imageAssetRepository.save(asset)
+        }
+    }
+
     fun cleanup(now: LocalDateTime, retention: java.time.Duration, batchSize: Int = 100): Int {
         val cutoff = now.minus(retention)
         val candidates = linkedSetOf<ImageAsset>().apply {
