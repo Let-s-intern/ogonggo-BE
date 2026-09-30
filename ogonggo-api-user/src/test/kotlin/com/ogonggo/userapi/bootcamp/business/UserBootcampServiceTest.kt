@@ -12,6 +12,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampApplicationUrlClickAppender
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
@@ -51,6 +52,9 @@ class UserBootcampServiceTest {
         Mockito.`when`(bootcampContentReader.readCurriculums(1L)).thenReturn(
             listOf(BootcampCurriculumDto.Response(1, 4, "Spring 기초", 0)),
         )
+        Mockito.`when`(bootcampContentReader.readImages(1L)).thenReturn(
+            listOf(BootcampImageDto.Response("https://cdn.ogonggo.test/room.jpg", "강의실", 0)),
+        )
         Mockito.`when`(bootcampMetricReader.read(1L)).thenReturn(
             BootcampMetricDto(viewCount = 9, bookmarkCount = 4, commentCount = 0),
         )
@@ -66,6 +70,7 @@ class UserBootcampServiceTest {
         assertEquals("백엔드 부트캠프", result.title)
         assertEquals("파트너사", result.partners.single().name)
         assertEquals("Spring 기초", result.curriculums.single().subtitle)
+        assertEquals("강의실", result.images.single().caption)
         assertEquals(9L, result.viewCount)
         assertEquals(4L, result.bookmarkCount)
         assertEquals(0L, result.commentCount)

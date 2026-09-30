@@ -9,6 +9,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
@@ -118,6 +119,8 @@ data class AdminBootcampDetailResponse(
     val sourceUrl: String?,
     val partners: List<AdminBootcampPartnerResponse>,
     val curriculums: List<AdminBootcampCurriculumResponse>,
+    @Schema(description = "상세에서만 보여 주는 사진입니다. 고용24에서 수집한 과정은 훈련기관 시설 사진이 들어 있고, 그 밖에는 빈 배열입니다.")
+    val images: List<AdminBootcampImageResponse>,
 ) {
     companion object {
         internal fun from(result: AdminBootcampResult): AdminBootcampDetailResponse {
@@ -162,8 +165,21 @@ data class AdminBootcampDetailResponse(
                 sourceUrl = result.sourceUrl,
                 partners = result.partners.map(AdminBootcampPartnerResponse::from),
                 curriculums = result.curriculums.map(AdminBootcampCurriculumResponse::from),
+                images = result.images.map(AdminBootcampImageResponse::from),
             )
         }
+    }
+}
+
+data class AdminBootcampImageResponse(
+    val url: String,
+    @Schema(description = "사진 설명입니다. 예: 강의실, 안내데스크", nullable = true)
+    val caption: String?,
+    val displayOrder: Int,
+) {
+    companion object {
+        internal fun from(image: BootcampImageDto.Response): AdminBootcampImageResponse =
+            AdminBootcampImageResponse(url = image.url, caption = image.caption, displayOrder = image.displayOrder)
     }
 }
 

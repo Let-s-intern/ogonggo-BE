@@ -14,10 +14,11 @@ enum class Work24Paging(
     PAGE_NUM("pageNum", "pageSize", "scn_cnt"),
 }
 
-/** 수집한 항목을 넣을 곳이다. */
+/** 수집한 항목을 넣을 곳이다. 일학습병행 훈련과정은 채용정보와 항목이 달라 따로 둔다. */
 enum class Work24Destination {
     JOB,
     BOOTCAMP,
+    WORK_STUDY_JOB,
 }
 
 /**
@@ -26,7 +27,6 @@ enum class Work24Destination {
  *
  * - [itemPath]: 최상위 요소를 벗긴 목록 응답에서 항목 요소까지의 경로
  * - [idFields]: 같은 항목을 구별하는 필드. 여러 개면 `-`로 잇는다. 등록한 콘텐츠의 외부 식별값(`external_id`)이 된다.
- * - [programType]: 부트캠프로 넣을 때의 프로그램 유형 이름
  * - [excludes]: 목록 조건으로 거를 수 없어 목록 항목을 보고 빼는 조건. 해당하면 상세를 부르지 않는다.
  * - [parameters]: 수집일을 받아 고정 검색 조건을 만든다. 날짜 조건은 빠진 날을 메우도록 며칠 겹치게 잡는다.
  */
@@ -38,7 +38,6 @@ enum class Work24CollectionTarget(
     val itemPath: List<String>,
     val idFields: List<String>,
     val parameters: (LocalDate) -> Map<String, String>,
-    val programType: String? = null,
     val excludes: (JsonNode) -> Boolean = { false },
 ) {
     /**
@@ -61,24 +60,28 @@ enum class Work24CollectionTarget(
     ),
 
     /**
-     * 국민내일배움카드 훈련과정 중 K-디지털 트레이닝(훈련유형 `C0104`)만 받는다. 오늘부터 90일 안에 시작하는 과정이다.
+     * 국민내일배움카드 훈련과정을 K-디지털 트레이닝 조건(훈련유형 `C0104`)으로 받는다. 오늘부터 90일 안에 시작하는 과정이다.
      * 국민내일배움카드 전체는 90일 안 개강만 11만 건이 넘고 대부분 재직자·원격·단기 자격증 과정이라,
      * 20대 취업준비생을 위한 부트캠프에 맞는 유형만 고른다. 과정 ID와 회차가 같아야 같은 과정이다.
+     *
+     * 고용24는 이 조건에 K-디지털 트레이닝이 아닌 과정도 함께 준다(2026-09-30 기준 717건 중 국가기간전략산업직종 295건,
+     * 과정평가형훈련 44건 등). 그래서 프로그램 유형에는 목록 항목의 훈련유형 이름(`trainTarget`)을 쓴다.
      */
     K_DIGITAL_TRAINING_COURSES(
         Work24Api.TOMORROW_LEARNING_CARD_COURSES, Work24Api.TOMORROW_LEARNING_CARD_COURSE_DETAIL,
         Work24Destination.BOOTCAMP, Work24Paging.PAGE_NUM,
         listOf("srchList", "scn_list"), listOf("trprId", "trprDegr"),
         { today -> trainingCourseParameters(today) + ("crseTracseSe" to K_DIGITAL_TRAINING) },
-        programType = "K-디지털 트레이닝",
     ),
 
-    /** 일학습병행 훈련과정 전체를 받는다. 오늘부터 90일 안에 시작하는 과정이다. */
+    /**
+     * 일학습병행 훈련과정 전체를 받는다. 오늘부터 90일 안에 시작하는 과정이다.
+     * 학습기업에 채용되어 일하면서 받는 훈련이라 부트캠프가 아니라 고용 형태가 일학습병행인 채용공고로 넣는다.
+     */
     WORK_STUDY_COURSES(
         Work24Api.WORK_STUDY_COURSES, Work24Api.WORK_STUDY_COURSE_DETAIL,
-        Work24Destination.BOOTCAMP, Work24Paging.PAGE_NUM,
+        Work24Destination.WORK_STUDY_JOB, Work24Paging.PAGE_NUM,
         listOf("srchList", "scn_list"), listOf("trprId", "trprDegr"), ::trainingCourseParameters,
-        programType = "일학습병행",
     ),
 }
 

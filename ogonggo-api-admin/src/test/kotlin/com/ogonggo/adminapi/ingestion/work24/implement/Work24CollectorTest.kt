@@ -19,6 +19,8 @@ import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.storage.s3.S3ImageStorage
+import com.ogonggo.core.storage.s3.S3ImageStorageProperties
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -26,12 +28,16 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.content
+import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
 import org.springframework.test.web.client.response.MockRestResponseCreators.withServerError
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
+import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -169,7 +175,7 @@ class Work24CollectorTest {
     }
 
     @Test
-    fun `K-디지털 트레이닝만 전체 건수만큼 페이지를 넘기며 받아 개강일까지 모집하는 부트캠프로 게시한다`() {
+    fun `K-디지털 트레이닝 조건의 과정을 전체 건수만큼 페이지를 넘기며 받아 개강일까지 모집하는 부트캠프로 게시한다`() {
         // given
         server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L01.do")))
             .andExpect(queryParam("crseTracseSe", "C0104"))
@@ -183,7 +189,7 @@ class Work24CollectorTest {
         server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L01.do")))
             .andExpect(queryParam("pageNum", "2"))
             // 마지막 페이지에 항목이 하나뿐이면 배열이 아니라 객체로 온다.
-            .andRespond(xml(trainingPage(total = 101, ids = listOf("C101"))))
+            .andRespond(xml(trainingPage(total = 101, ids = listOf("C101"), institutionLink = true)))
         server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L02.do")))
             .andExpect(queryParam("outType", "2"))
             .andExpect(queryParam("srchTrprId", "C101"))
@@ -194,7 +200,7 @@ class Work24CollectorTest {
                     """
                     <HRDNet>
                       <inst_base_info>
-                        <inoNm>오공고 아카데미</inoNm><trprNm>자바 백엔드 과정</trprNm><trtm>600</trtm>
+                        <inoNm>오공고 아카데미</inoNm><trprNm>[LG전자] 자바 백엔드 과정</trprNm><trtm>600</trtm>
                         <ncsNm>응용SW엔지니어링</ncsNm><trprChapEmail>edu@ogonggo.test</trprChapEmail>
                         <traingMthCd>M1005</traingMthCd><instPerTrco>22687500</instPerTrco>
                         <filePath>http://hrd.work24.go.kr/comm/com/fileDownload.do?athfilId=1&amp;athfilSeqNo=1</filePath>
@@ -205,6 +211,35 @@ class Work24CollectorTest {
                     """.trimIndent(),
                 ),
             )
+        // Open API에 없는 값은 과정 상세 화면, 교과편성 화면, 시간표 엑셀에서 읽는다.
+        server.expect(requestTo("$HRD/C101")).andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(WORK24_COURSE_PAGE_HTML, MediaType.TEXT_HTML))
+        server.expect(requestTo("$WORK24_SITE/hr/a/a/3100/selectCurriculum.do")).andExpect(method(HttpMethod.POST))
+            .andExpect(content().formData(form("hpgYn" to "Y", "tracseId" to "C101", "tracseTme" to "1", "ncsYn" to "N")))
+            .andRespond(withSuccess(WORK24_CURRICULUM_HTML, MediaType.TEXT_HTML))
+        server.expect(requestTo("$WORK24_SITE/hr/a/a/3100/selectTimeTableExcelDownload.do")).andExpect(method(HttpMethod.POST))
+            .andExpect(content().formData(form("tracseId" to "C101", "tracseTme" to "1")))
+            .andRespond(
+                withSuccess(
+                    work24TimetableXlsx(
+                        // 2026-10-05는 월요일이다. 자바는 1~2주차, 프로젝트는 2주차와 4주차에 수업이 있다.
+                        listOf("2026-10-05", "훈련", "09:00", "10:00", "60.0", "민*식", "501강의실", "(비NCS)자바", ""),
+                        listOf("2026-10-05", "점심", "13:00", "14:00", "60.0", "", "-", "", ""),
+                        listOf("2026-10-13", "훈련", "09:00", "10:00", "60.0", "민*식", "501강의실", "(비NCS)자바", ""),
+                        listOf("2026-10-16", "훈련", "09:00", "10:00", "60.0", "민*식", "501강의실", "(비NCS)프로젝트", ""),
+                        listOf("2026-10-26", "훈련", "09:00", "10:00", "60.0", "민*식", "501강의실", "(비NCS)프로젝트", ""),
+                    ),
+                    MediaType.APPLICATION_OCTET_STREAM,
+                ),
+            )
+        // 훈련기관 소개 화면의 로고와 사진을 오공고 저장소로 옮긴다.
+        server.expect(requestTo(INSTITUTION)).andRespond(withSuccess(WORK24_INSTITUTION_PAGE_HTML, MediaType.TEXT_HTML))
+        server.expect(requestTo("$WORK24_SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=LOGO&athfilSeqNo=2"))
+            .andRespond(withSuccess(work24TestImage(152, 90, "png"), MediaType.APPLICATION_OCTET_STREAM))
+        server.expect(requestTo("$WORK24_SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=DESK&athfilSeqNo=2"))
+            .andRespond(withSuccess(work24TestImage(800, 600, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
+        server.expect(requestTo("$WORK24_SITE/hr/z/z/0000/hrdFileDownLoad.do?athfilId=ROOM&athfilSeqNo=2"))
+            .andRespond(withSuccess(work24TestImage(640, 480, "jpg"), MediaType.APPLICATION_OCTET_STREAM))
 
         // when
         val result = collector().collect(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES, NOW)
@@ -215,15 +250,22 @@ class Work24CollectorTest {
         assertEquals(100, result.skippedCount)
         val bootcamp = appendedBootcamps.single()
         assertEquals("오공고 아카데미", bootcamp.companyName)
-        assertEquals("자바 백엔드 과정", bootcamp.title)
+        assertEquals("[LG전자] 자바 백엔드 과정", bootcamp.title)
+        // 과정명 앞 괄호의 기업이 파트너사로 들어가고 기업 연계 과정으로 표시된다.
+        assertEquals(listOf("LG전자"), bootcamp.partners.map { it.partnerName })
+        assertTrue(bootcamp.enterpriseLinked)
         assertEquals(LocalDate.of(2026, 10, 5), bootcamp.programStartDate)
         assertEquals(BootcampRecruitmentType.PERIOD, bootcamp.recruitmentType)
         assertEquals(NOW, bootcamp.recruitmentStartAt)
         assertEquals(LocalDateTime.of(2026, 10, 5, 23, 59, 59), bootcamp.recruitmentEndAt)
         // 고용24는 과정 이미지를 주지 않고 훈련기관 로고는 이미지로 열리지 않는 다운로드 주소라 비운다.
-        assertNull(bootcamp.logoUrl)
+        assertTrue(requireNotNull(bootcamp.logoUrl).matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.png""")))
+        // 훈련기관 사진은 목록의 대표 이미지로 쓰지 않고 상세에서만 보여 주는 사진으로 넣는다.
         assertNull(bootcamp.representativeImageUrl)
-        assertEquals("K-디지털 트레이닝", bootcamp.programType)
+        assertEquals(listOf("안내데스크" to 0, "강의실" to 1), bootcamp.images.map { it.caption to it.displayOrder })
+        assertTrue(bootcamp.images.all { it.url.matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.jpg""")) })
+        // 고용24는 K-디지털 트레이닝 조건에 다른 훈련유형도 함께 주므로 목록의 훈련유형 이름을 쓴다.
+        assertEquals("국가기간전략산업직종", bootcamp.programType)
         assertEquals(OperationType.ONLINE, bootcamp.operationType)
         // 총 훈련비가 아니라 교육생이 내는 본인부담액이다.
         assertEquals(600_000L, bootcamp.tuitionAmount)
@@ -232,6 +274,153 @@ class Work24CollectorTest {
         assertEquals("응용SW엔지니어링 · 총 600시간", bootcamp.shortDescription)
         assertEquals("$HRD/C101", bootcamp.applicationUrl)
         assertEquals("edu@ogonggo.test", bootcamp.managerEmail)
+        // 교과목은 교과편성 화면 순서가 아니라 수업 순서로 적는다.
+        assertTrue(
+            bootcamp.content.endsWith(
+                """
+                [훈련목표]
+                - 웹 서비스를 구현할 수 있다.
+                - 배포할 수 있다.
+
+                [교과목]
+                ■ 자바 (139 시간)
+                - 기초 문법
+                ■ 프로젝트 (200 시간)
+                ① 주제1
+                - 맛집 리뷰 서비스
+
+                [훈련교재]
+                - 쉽게 시작하는 쿠버네티스
+                """.trimIndent(),
+            ),
+            bootcamp.content,
+        )
+        assertEquals("선수학습: 특별한 선수학습 없음", bootcamp.eligibilityAndSelectionProcess)
+        assertEquals("■ 프로젝트 기반 학습", bootcamp.programFeatures)
+        assertEquals("민*식 (전기정보공): 정보처리기사", bootcamp.instructorInfo)
+        // 수업이 없는 주가 끼면 구간을 나눈다.
+        assertEquals(
+            listOf(Triple(1, 2, "자바"), Triple(2, 2, "프로젝트"), Triple(4, 4, "프로젝트")),
+            bootcamp.curriculums.map { Triple(it.startWeek, it.endWeek, it.subtitle) },
+        )
+    }
+
+    @Test
+    fun `일학습병행 훈련과정은 학습기업을 회사로 하는 일학습병행 채용공고로 게시한다`() {
+        // given
+        server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo313L01.do")))
+            .andExpect(queryParam("srchTraStDt", "20260927"))
+            .andRespond(
+                xml(
+                    """
+                    <HRDNet><scn_cnt>1</scn_cnt><srchList><scn_list>
+                      <trprId>ABF1</trprId><trprDegr>2</trprDegr><trainstCstId>ORG</trainstCstId>
+                      <title>2026년_공동훈련센터형_선박도장_L2_25V1_거제대학교_주식회사화인기업</title><subTitle>거제대학교</subTitle>
+                      <titleLink>$WORK_STUDY/ABF1</titleLink><trainTarget>공동훈련센터형</trainTarget>
+                      <traStartDate>2026-09-30</traStartDate><traEndDate>2027-09-29</traEndDate>
+                      <address>경남 거제시</address><trngAreaCd>48310</trngAreaCd><yardMan>0</yardMan><telNo>055-631-9579</telNo>
+                    </scn_list></srchList></HRDNet>
+                    """.trimIndent(),
+                ),
+            )
+        server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo313D01.do")))
+            .andExpect(queryParam("srchTrprId", "ABF1"))
+            .andExpect(queryParam("srchTrprDegr", "2"))
+            .andRespond(
+                xml("<HRDNet><inst_base_info><inoNm>거제대학교</inoNm><ncsNm>선박도장</ncsNm></inst_base_info></HRDNet>"),
+            )
+        // 학습기업 이름과 훈련목적, 현장 교육훈련 편성은 과정 상세 화면에서 읽는다.
+        server.expect(requestTo("$WORK_STUDY/ABF1")).andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(WORK24_WORK_STUDY_PAGE_HTML, MediaType.TEXT_HTML))
+
+        // when
+        val result = collector().collect(Work24CollectionTarget.WORK_STUDY_COURSES, NOW)
+
+        // then
+        server.verify()
+        assertEquals(1, result.appendedCount)
+        assertTrue(appendedBootcamps.isEmpty())
+        val job = appendedJobs.single()
+        // 과정명의 표기(주식회사화인기업)가 아니라 화면의 학습기업 이름을 쓴다.
+        assertEquals("(주)화인기업", job.companyName)
+        assertEquals(
+            """
+            훈련 분야: 선박도장
+            훈련 유형: 공동훈련센터형
+            훈련 기간: 2026-09-30 ~ 2027-09-29
+            현장 교육훈련(OJT): 12개월 / 360일 / 총600시간
+            사업장 외 교육훈련(Off-JT): 12개월 / 360일 / 총200시간
+
+            [훈련목적]
+            선박도장에 필요한 능력을 함양한다.
+
+            [현장 교육훈련(OJT) 편성]
+            - 선박도장실무 1: 선박도장 터치업 도장 (필수, 80 시간)
+            - SQL활용 (선택, 40 시간)
+            """.trimIndent(),
+            job.responsibilities,
+        )
+        assertNull(job.qualifications)
+        assertEquals("2026년_공동훈련센터형_선박도장_L2_25V1_거제대학교_주식회사화인기업", job.title)
+        assertEquals(EmploymentType.WORK_STUDY, job.employmentType)
+        assertEquals(ExperienceType.IRRELEVANT, job.experienceType)
+        assertEquals(Region.GYEONGNAM, job.region)
+        assertEquals(JobRecruitmentType.PERIOD, job.recruitmentType)
+        assertEquals(NOW, job.recruitmentStartAt)
+        assertEquals(LocalDateTime.of(2026, 9, 30, 23, 59, 59), job.recruitmentEndAt)
+        assertNull(job.recruitmentHeadcount)
+        assertEquals("$WORK_STUDY/ABF1", job.sourceUrl)
+        assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
+        assertEquals(ContentSource.WORK24, job.source)
+        assertEquals("ABF1-2", job.externalId)
+    }
+
+    @Test
+    fun `일학습병행 상세 화면을 읽지 못하면 과정명의 마지막 부분을 회사명으로 쓴다`() {
+        // given
+        server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo313L01.do")))
+            .andRespond(
+                xml(
+                    "<HRDNet><scn_cnt>1</scn_cnt><srchList><scn_list><trprId>ABF1</trprId><trprDegr>1</trprDegr>" +
+                        "<trainstCstId>ORG</trainstCstId><title>2026년_선박도장_거제대학교_주식회사화인기업</title>" +
+                        "<subTitle>거제대학교</subTitle><titleLink>$WORK_STUDY/ABF1</titleLink></scn_list></srchList></HRDNet>",
+                ),
+            )
+        server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo313D01.do"))).andRespond(xml("<HRDNet><a>1</a></HRDNet>"))
+        server.expect(requestTo("$WORK_STUDY/ABF1")).andRespond(withServerError())
+
+        // when
+        val result = collector().collect(Work24CollectionTarget.WORK_STUDY_COURSES, NOW)
+
+        // then
+        server.verify()
+        assertEquals(1, result.appendedCount)
+        assertEquals("주식회사화인기업", appendedJobs.single().companyName)
+    }
+
+    @Test
+    fun `과정 상세 화면을 읽지 못해도 Open API 값만으로 부트캠프를 등록한다`() {
+        // given
+        server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L01.do")))
+            .andRespond(xml(trainingPage(total = 1, ids = listOf("C1"))))
+        server.expect(requestTo(startsWith("$BASE_URL/hr/callOpenApiSvcInfo310L02.do")))
+            .andRespond(xml("<HRDNet><inst_base_info><inoNm>오공고 아카데미</inoNm></inst_base_info></HRDNet>"))
+        server.expect(requestTo("$HRD/C1")).andRespond(withServerError())
+
+        // when
+        val result = collector().collect(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES, NOW)
+
+        // then
+        server.verify()
+        assertEquals(1, result.appendedCount)
+        assertEquals(0, result.failedCount)
+        val bootcamp = appendedBootcamps.single()
+        assertEquals("목록 과정명", bootcamp.title)
+        assertNull(bootcamp.eligibilityAndSelectionProcess)
+        assertTrue(bootcamp.images.isEmpty())
+        assertTrue(bootcamp.curriculums.isEmpty())
+        assertTrue(bootcamp.partners.isEmpty())
+        assertEquals(false, bootcamp.enterpriseLinked)
     }
 
     @Test
@@ -335,14 +524,26 @@ class Work24CollectorTest {
             jobAppender,
             bootcampReader,
             bootcampAppender,
+            Work24CoursePageReader(restClientBuilder.build()),
+            Work24InstitutionImageImporter(
+                restClientBuilder.build(),
+                // S3 대신 저장 키로 공개 주소를 만들어 돌려준다.
+                Mockito.mock(S3ImageStorage::class.java) { invocation -> "$CDN/${invocation.getArgument<String>(0)}" },
+                S3ImageStorageProperties(bucket = "ogonggo"),
+            ),
         )
     }
 
-    private fun trainingPage(total: Int, ids: List<String>): String =
+    private fun form(vararg fields: Pair<String, String>) =
+        LinkedMultiValueMap<String, String>().apply { fields.forEach { (name, value) -> add(name, value) } }
+
+    private fun trainingPage(total: Int, ids: List<String>, institutionLink: Boolean = false): String =
         "<HRDNet><scn_cnt>$total</scn_cnt><srchList>" +
             ids.joinToString("") { id ->
                 "<scn_list><trprId>$id</trprId><trprDegr>1</trprDegr><trainstCstId>ORG</trainstCstId>" +
                     "<title>목록 과정명</title><subTitle>목록 기관명</subTitle><titleLink>$HRD/$id</titleLink>" +
+                    "<trainTarget>국가기간전략산업직종</trainTarget>" +
+                    (if (institutionLink) "<subTitleLink>$INSTITUTION</subTitleLink>" else "") +
                     "<traStartDate>2026-10-05</traStartDate><traEndDate>2027-03-31</traEndDate></scn_list>"
             } +
             "</srchList></HRDNet>"
@@ -352,7 +553,11 @@ class Work24CollectorTest {
     private companion object {
         const val BASE_URL = "https://work24.test/cm/openApi/call"
         const val WORKNET = "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo="
-        const val HRD = "https://www.work24.go.kr/hr/a/a/3100/selectTracseDetl.do?tracseId="
+        const val WORK24_SITE = "https://www.work24.go.kr"
+        const val CDN = "https://cdn.ogonggo.test"
+        const val INSTITUTION = "$WORK24_SITE/hr/a/a/3200/selectTrainInstitution.do?trainstCstmrId=ORG"
+        const val HRD = "$WORK24_SITE/hr/a/a/3100/selectTracseDetl.do?tracseId="
+        const val WORK_STUDY = "$WORK24_SITE/hr/a/a/3100/selectJobAndStudyTracseDetail.do?tracseId="
         val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 27, 4, 0)
     }
 }

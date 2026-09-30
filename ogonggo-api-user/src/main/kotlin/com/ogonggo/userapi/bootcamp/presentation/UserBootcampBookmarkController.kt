@@ -3,9 +3,8 @@ package com.ogonggo.userapi.bootcamp.presentation
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampBookmarkService
 import com.ogonggo.userapi.bootcamp.presentation.request.UpdateBootcampApplicationStatusRequest
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
@@ -37,19 +36,13 @@ class UserBootcampBookmarkController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
-        @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
-        @RequestParam(name = "status", required = false) status: BootcampStatus?,
+        @RequestParam(name = "category", required = false) category: BootcampCategory?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "applicationStatus", required = false) applicationStatus: BootcampApplicationStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
-        validatePublicStatus(status)
         val result = userBootcampBookmarkService.getBookmarks(
             userId = userId,
-            condition = BootcampSearchCondition(
-                tuitionType = tuitionType,
-                status = status,
-                keyword = keyword,
-            ),
+            condition = BootcampSearchCondition(category = category, keyword = keyword),
             page = page - 1,
             size = size,
             bookmarkCondition = BootcampBookmarkSearchCondition(applicationStatus = applicationStatus, sortType = sortType),

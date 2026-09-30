@@ -44,12 +44,16 @@ data class BootcampAppendDto(
     val sourceUrl: String? = null,
     val partners: List<BootcampPartnerDto.Request> = emptyList(),
     val curriculums: List<BootcampCurriculumDto.Request> = emptyList(),
+    /** 상세에서만 보여 주는 사진이다. 고용24 수집만 넣으며, 수정([BootcampUpdateDto])으로는 바뀌지 않는다. */
+    val images: List<BootcampImageDto.Request> = emptyList(),
     val status: BootcampStatus = BootcampStatus.DRAFT,
     val closedAt: LocalDateTime? = null,
     val publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
     /** 비우면 저장할 때 소유자 유무로 정한다. `copy(ownerUserId = ...)`로 만든 값도 소유자와 어긋나지 않게 하기 위해서다. */
     val source: ContentSource? = null,
     val externalId: String? = null,
+    /** 기업과 함께 운영하는 과정이면 공개 목록에서 앞에 둔다. */
+    val enterpriseLinked: Boolean = false,
 )
 
 /** 운영자가 고치는 제목과 본문 칸이다. 넘어온 칸만 바꾸며 본문 값이 null이면 그 칸을 비운다. */
@@ -124,6 +128,21 @@ object BootcampPartnerDto {
 
     data class Response(
         val name: String,
+        val displayOrder: Int,
+    )
+}
+
+/** 부트캠프 상세에서만 보여 주는 사진. 등록에 넣는 값과 조회로 받는 값이 같아도 다른 하위 항목과 모양을 맞춘다. */
+object BootcampImageDto {
+    data class Request(
+        val url: String,
+        val caption: String? = null,
+        val displayOrder: Int = 0,
+    )
+
+    data class Response(
+        val url: String,
+        val caption: String?,
         val displayOrder: Int,
     )
 }

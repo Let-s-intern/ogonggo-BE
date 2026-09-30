@@ -3,6 +3,7 @@ package com.ogonggo.core.bootcamp.persistence
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
@@ -11,7 +12,6 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.QBootcamp.bootcamp
 import com.ogonggo.core.bootcamp.domain.QBootcampBookmark.bootcampBookmark
 import com.ogonggo.core.bootcamp.domain.QBootcampMetric.bootcampMetric
-import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.core.review.domain.ContentSource
 import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
@@ -41,7 +41,7 @@ internal class BootcampQueryRepository(
         publicStatuses: Collection<BootcampStatus>,
         now: LocalDateTime,
         pageable: Pageable,
-    ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable)
+    ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable, enterpriseFirst = true)
 
     /**
      * 북마크한 부트캠프 중 지금 공개된 것만 읽는다. 선택 필터는 공개 목록과 같고, 신청 단계로 더 좁힐 수 있다.
@@ -88,10 +88,15 @@ internal class BootcampQueryRepository(
         condition: BootcampManagementSearchCondition,
         sortType: BootcampSortType,
         pageable: Pageable,
-    ): Page<Bootcamp> = findPage(managementPredicates(condition), sortType, pageable)
+    ): Page<Bootcamp> = findPage(managementPredicates(condition), sortType, pageable, enterpriseFirst = false)
 
-    private fun findPage(predicates: Array<Predicate?>, sortType: BootcampSortType, pageable: Pageable): Page<Bootcamp> {
-        val content = sorted(queryFactory.selectFrom(bootcamp).where(*predicates), sortType)
+    private fun findPage(
+        predicates: Array<Predicate?>,
+        sortType: BootcampSortType,
+        pageable: Pageable,
+        enterpriseFirst: Boolean,
+    ): Page<Bootcamp> {
+        val content = sorted(queryFactory.selectFrom(bootcamp).where(*predicates), sortType, enterpriseFirst)
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
             .fetch()
@@ -115,8 +120,7 @@ internal class BootcampQueryRepository(
         bootcamp.deletedAt.isNull,
         bootcamp.publicationStartAt.isNull.or(bootcamp.publicationStartAt.loe(now)),
         bootcamp.publicationEndAt.isNull.or(bootcamp.publicationEndAt.goe(now)),
-        tuitionTypeEq(condition.tuitionType),
-        statusEq(condition.status),
+        categoryEq(condition.category),
         keywordContains(condition.keyword),
     )
 
@@ -129,10 +133,14 @@ internal class BootcampQueryRepository(
         keywordContains(condition.keyword),
     )
 
-    private fun tuitionTypeEq(tuitionType: TuitionType?): BooleanExpression? =
-        tuitionType?.let(bootcamp.tuitionType::eq)
+    /** 분류는 저장하지 않고 등록 경로와 프로그램 유형으로 가른다. 기준은 [BootcampCategory]에 있다. */
+    private fun categoryEq(category: BootcampCategory?): BooleanExpression? = when (category) {
+        null -> null
+        BootcampCategory.KDT -> bootcamp.source.eq(ContentSource.WORK24)
+            .and(bootcamp.programType.eq(BootcampCategory.KDT_PROGRAM_TYPE))
+        BootcampCategory.SESAC -> bootcamp.source.eq(ContentSource.CRAWLER)
+    }
 
-    /** 공개 목록은 고정 조건이 이미 공개 상태로 좁혀 두므로 그 안에서 한 상태만 더 고른다. */
     private fun statusEq(status: BootcampStatus?): BooleanExpression? =
         status?.let(bootcamp.status::eq)
 
@@ -162,13 +170,23 @@ internal class BootcampQueryRepository(
      * 최신순까지 조인하면 정렬을 인덱스로 해결할 수 없다.
      * 지표 행은 첫 지표 발생 시점에 생기므로 아직 없는 부트캠프는 0으로 본다.
      * 조회 수가 같을 때 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
+     *
+     * 공개 목록은 어느 정렬이든 기업 연계 과정을 먼저 두고([enterpriseFirst]) 그 안에서 고른 정렬을 따른다.
+     * 관리 목록은 운영자가 등록 순서대로 봐야 하므로 앞에 두지 않는다.
      */
-    private fun sorted(query: JPAQuery<Bootcamp>, sortType: BootcampSortType): JPAQuery<Bootcamp> = when (sortType) {
-        BootcampSortType.LATEST -> query.orderBy(bootcamp.id.desc())
+    private fun sorted(
+        query: JPAQuery<Bootcamp>,
+        sortType: BootcampSortType,
+        enterpriseFirst: Boolean,
+    ): JPAQuery<Bootcamp> {
+        val first: Array<OrderSpecifier<*>> = if (enterpriseFirst) arrayOf(bootcamp.enterpriseLinked.desc()) else emptyArray()
+        return when (sortType) {
+            BootcampSortType.LATEST -> query.orderBy(*first, bootcamp.id.desc())
 
-        BootcampSortType.VIEW_COUNT -> query
-            .leftJoin(bootcampMetric).on(bootcampMetric.bootcampId.eq(bootcamp.id))
-            .orderBy(VIEW_COUNT_OR_ZERO.desc(), bootcamp.id.desc())
+            BootcampSortType.VIEW_COUNT -> query
+                .leftJoin(bootcampMetric).on(bootcampMetric.bootcampId.eq(bootcamp.id))
+                .orderBy(*first, VIEW_COUNT_OR_ZERO.desc(), bootcamp.id.desc())
+        }
     }
 
     companion object {

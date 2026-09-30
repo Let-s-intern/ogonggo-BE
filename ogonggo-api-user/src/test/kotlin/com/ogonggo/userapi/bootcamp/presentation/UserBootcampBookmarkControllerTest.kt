@@ -2,6 +2,7 @@ package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
@@ -62,19 +63,14 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
     @Test
     fun `내 북마크 목록의 필터와 검색어는 조회 조건으로 전달된다`() {
         // given
-        val condition = BootcampSearchCondition(
-            tuitionType = TuitionType.FREE,
-            status = BootcampStatus.RECRUITING,
-            keyword = "백엔드",
-        )
+        val condition = BootcampSearchCondition(category = BootcampCategory.SESAC, keyword = "백엔드")
         Mockito.`when`(userBootcampBookmarkService.getBookmarks(USER_ID, condition, 0, 10))
             .thenReturn(bookmarkPage())
 
         // when
         mockMvc.perform(
             get("/api/v1/bootcamp-bookmarks")
-                .param("tuitionType", "FREE")
-                .param("status", "RECRUITING")
+                .param("category", "SESAC")
                 .param("keyword", "백엔드")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
@@ -84,11 +80,10 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `내 북마크 목록에서 고를 수 없는 모집 상태는 파라미터명이 포함된 400을 반환한다`() {
-        mockMvc.perform(get("/api/v1/bootcamp-bookmarks").param("status", "DRAFT").with(authenticatedUser()))
+    fun `내 북마크 목록에 정의되지 않은 분류를 보내면 400으로 응답한다`() {
+        mockMvc.perform(get("/api/v1/bootcamp-bookmarks").param("category", "UNKNOWN").with(authenticatedUser()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
-            .andExpect(jsonPath("$.message").value(startsWith("[status] ")))
 
         Mockito.verifyNoInteractions(userBootcampBookmarkService)
     }

@@ -16,6 +16,8 @@ import java.time.LocalDateTime
  *
  * 항목마다 고용24 식별값(구인인증번호, 과정 ID+회차)으로 이미 등록됐는지 보고, 있으면 내용이 바뀌었어도 건너뛴다.
  * 운영자가 지운 콘텐츠도 등록한 것으로 봐서 다시 넣지 않는다. 새 항목만 상세 API를 불러 본문을 채운다.
+ * 훈련과정(부트캠프, 일학습병행 채용공고)은 고용24 과정 상세 화면도 읽어 Open API에 없는 칸을 채운다. 화면을 못 읽어도 Open API 값만으로 등록한다.
+ * 부트캠프는 훈련기관 소개 화면의 로고와 사진도 오공고 이미지 저장소로 옮겨 넣는다.
  * 한 항목이 실패해도 다음 항목으로 넘어가지만, 연달아 [MAX_CONSECUTIVE_FAILURES]번 실패하면 고용24 장애로 보고 이 대상을 멈춘다.
  *
  * 페이지를 넘기다 다음 중 하나면 멈춘다.
@@ -33,6 +35,8 @@ class Work24Collector(
     private val jobAppender: JobAppender,
     private val bootcampReader: BootcampReader,
     private val bootcampAppender: BootcampAppender,
+    private val work24CoursePageReader: Work24CoursePageReader,
+    private val work24InstitutionImageImporter: Work24InstitutionImageImporter,
 ) {
 
     /** 인증키가 설정되어 수집할 수 있는 대상인지 알려 준다. */
@@ -88,6 +92,7 @@ class Work24Collector(
                 when (target.destination) {
                     Work24Destination.JOB -> importJob(target, item)
                     Work24Destination.BOOTCAMP -> importBootcamp(target, item, now)
+                    Work24Destination.WORK_STUDY_JOB -> importWorkStudyJob(target, item, now)
                 }
             }
         } catch (exception: Exception) {
@@ -111,6 +116,20 @@ class Work24Collector(
         return Outcome.APPENDED
     }
 
+    /** 일학습병행 훈련과정을 채용공고로 넣는다. 과정 ID와 회차로 이미 등록했으면 건너뛴다. */
+    private fun importWorkStudyJob(target: Work24CollectionTarget, item: JsonNode, now: LocalDateTime): Outcome {
+        val externalId = requireNotNull(id(target, item)) { "훈련과정 ID나 회차가 없습니다." }
+        val sourceUrl = requireNotNull(Work24WorkStudyJobMapper.sourceUrl(item)) { "훈련과정 링크가 없습니다." }
+        if (jobReader.existsByExternalId(ContentSource.WORK24, externalId) || jobReader.existsBySourceUrl(sourceUrl)) {
+            return Outcome.SKIPPED
+        }
+
+        val detail = work24Client.fetch(target.detailApi, Work24WorkStudyJobMapper.detailParameters(item))
+        val page = work24CoursePageReader.readWorkStudy(sourceUrl)
+        jobAppender.append(Work24WorkStudyJobMapper.toAppendDto(item, detail, page, sourceUrl, externalId, now))
+        return Outcome.APPENDED
+    }
+
     /** 과정 ID와 회차로 이미 등록했으면 건너뛴다. 공고와 같은 규칙이다. */
     private fun importBootcamp(target: Work24CollectionTarget, item: JsonNode, now: LocalDateTime): Outcome {
         val externalId = requireNotNull(id(target, item)) { "훈련과정 ID나 회차가 없습니다." }
@@ -127,6 +146,11 @@ class Work24Collector(
                 target = target,
                 item = item,
                 detail = detail,
+                page = work24CoursePageReader.read(sourceUrl),
+                images = work24InstitutionImageImporter.import(
+                    institutionId = Work24BootcampMapper.institutionId(item),
+                    institutionUrl = Work24BootcampMapper.institutionUrl(item),
+                ),
                 sourceUrl = sourceUrl,
                 externalId = externalId,
                 now = now,

@@ -2,8 +2,10 @@ package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
+import com.ogonggo.core.bootcamp.persistence.BootcampImageJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
 import org.springframework.stereotype.Component
 
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Component
 class BootcampContentReader internal constructor(
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
+    private val bootcampImageRepository: BootcampImageJpaRepository,
 ) {
 
     fun readPartners(bootcampId: Long): List<BootcampPartnerDto.Response> {
@@ -25,6 +28,14 @@ class BootcampContentReader internal constructor(
         return bootcampCurriculumRepository
             .findAllByBootcampIdAndDeletedAtIsNullOrderByDisplayOrderAsc(bootcampId)
             .map { it.toResponse() }
+    }
+
+    /** 상세에서만 보여 주는 사진이다. 없으면 빈 목록이다. */
+    fun readImages(bootcampId: Long): List<BootcampImageDto.Response> {
+        require(bootcampId > 0) { "부트캠프 식별자는 양수여야 합니다." }
+        return bootcampImageRepository
+            .findAllByBootcampIdAndDeletedAtIsNullOrderByDisplayOrderAsc(bootcampId)
+            .map { BootcampImageDto.Response(url = it.imageUrl, caption = it.caption, displayOrder = it.displayOrder) }
     }
 
     /** 여러 부트캠프를 한 번에 보여 줄 때 N+1을 피하려고 한 번에 읽는다. 커리큘럼이 없으면 빈 목록이다. */

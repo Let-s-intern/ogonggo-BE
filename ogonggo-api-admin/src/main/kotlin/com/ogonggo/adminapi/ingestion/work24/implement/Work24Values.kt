@@ -52,4 +52,8 @@ internal object Work24Values {
         lines.filter { !it.second.isNullOrBlank() }
             .joinToString("\n") { (label, value) -> "$label: $value" }
             .ifBlank { null }
+
+    /** 제목 줄 아래에 글을 둔다. 글이 없으면 null이다. */
+    fun block(title: String, body: String?): String? =
+        body?.takeIf { it.isNotBlank() }?.let { "[$title]\n$it" }
 }

@@ -3,6 +3,7 @@ package com.ogonggo.userapi.enumeration.business
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
@@ -84,6 +85,7 @@ class UserEnumService {
             options<BootcampApplicationStatus>(),
             options<BootcampPublicationStatus>(),
             options<BootcampSortType>(),
+            options<BootcampCategory>(),
             // 기업회원 등록 콘텐츠의 검수
             options<ReviewStatus>(),
             // 북마크
