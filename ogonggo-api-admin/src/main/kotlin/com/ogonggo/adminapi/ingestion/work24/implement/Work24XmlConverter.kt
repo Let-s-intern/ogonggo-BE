@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
@@ -27,12 +28,10 @@ internal object Work24XmlConverter {
 
     private val nodeFactory = JsonNodeFactory.instance
 
-    fun toJson(xml: String): JsonNode {
-        val document = newDocumentBuilderFactory()
-            .newDocumentBuilder()
-            .parse(InputSource(StringReader(xml)))
-        return convert(document.documentElement)
-    }
+    fun toJson(xml: String): JsonNode = convert(parse(InputSource(StringReader(xml))).documentElement)
+
+    /** 외부에서 받은 XML은 모두 이 설정으로 읽는다. 시간표 엑셀 안의 XML도 같다. */
+    fun parse(source: InputSource): Document = newDocumentBuilderFactory().newDocumentBuilder().parse(source)
 
     private fun convert(element: Element): JsonNode {
         val children = childElements(element)

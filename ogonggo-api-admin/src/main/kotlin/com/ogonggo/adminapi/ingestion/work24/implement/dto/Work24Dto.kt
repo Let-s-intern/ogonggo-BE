@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.ingestion.work24.implement.dto
 
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionTarget
+import java.time.LocalDate
 
 /**
  * 수집 대상 하나를 받아 온 결과다.
@@ -14,4 +15,53 @@ data class Work24CollectDto(
     val skippedCount: Int,
     val excludedCount: Int,
     val failedCount: Int,
+)
+
+/**
+ * 고용24 훈련과정 상세 화면에서 읽은 값이다. Open API가 주지 않는 항목만 담는다.
+ *
+ * - [overview]: 훈련과정 개요 표의 제목과 글. 과정마다 제목 구성이 다르다(훈련목표, 훈련대상자요건, 훈련대상 요건 선수학습 등).
+ * - [subjects]: 교과편성의 교과목. NCS를 적용한 과정은 세부내용이 없어 비어 있다.
+ * - [lessons]: 시간표의 수업 시간 한 칸씩이다. 주차별 커리큘럼을 만드는 데 쓴다.
+ */
+data class Work24CoursePageDto(
+    val overview: Map<String, String> = emptyMap(),
+    val instructors: List<Instructor> = emptyList(),
+    val textbooks: List<String> = emptyList(),
+    val subjects: List<Subject> = emptyList(),
+    val lessons: List<Lesson> = emptyList(),
+) {
+    /** 화면이 이름을 `민*식`처럼 가려 보여 주며, 가려진 그대로 담는다. */
+    data class Instructor(val name: String, val major: String?, val qualifications: String?)
+
+    data class Subject(val name: String, val detail: String?, val hours: String?)
+
+    data class Lesson(val date: LocalDate, val subject: String)
+}
+
+/**
+ * 고용24 일학습병행 훈련과정 상세 화면에서 읽은 값이다. Open API가 주지 않는 항목만 담는다.
+ *
+ * 화면은 도제식 현장 교육훈련(OJT)과 사업장 외 교육훈련(Off-JT)을 따로 보여 준다.
+ * 2026-09-30에 본 과정 6개는 모두 Off-JT 쪽 훈련내용과 편성이 비어 있고 훈련시간만 있어, 훈련내용과 편성은 OJT 것만 담는다.
+ */
+data class Work24WorkStudyPageDto(
+    val company: String? = null,
+    val purpose: String? = null,
+    val mainContent: String? = null,
+    val requirement: String? = null,
+    val ojtHours: String? = null,
+    val offJtHours: String? = null,
+    val ojtSubjects: List<Subject> = emptyList(),
+) {
+    data class Subject(val name: String, val unit: String?, val required: String?, val hours: String?)
+}
+
+/**
+ * 고용24 훈련기관 소개 화면의 이미지를 오공고 저장소로 옮긴 뒤의 주소다.
+ * 대표 이미지는 훈련기관 사진의 첫 장이다. 옮기지 못한 이미지는 null이다.
+ */
+data class Work24InstitutionImagesDto(
+    val logoUrl: String? = null,
+    val representativeImageUrl: String? = null,
 )

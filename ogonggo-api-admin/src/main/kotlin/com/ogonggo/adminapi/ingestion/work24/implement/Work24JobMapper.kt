@@ -45,7 +45,7 @@ internal object Work24JobMapper {
         val end = closeTexts.firstNotNullOfOrNull(::date)?.atTime(LocalTime.of(23, 59, 59))
         val hasPeriod = start != null && end != null && !start.isAfter(end)
 
-        val subRegion = subRegion(item)
+        val subRegion = subRegion(item.text("strtnmCd"), item.text("region"))
         val jobRole = Work24JobRoles.of(item.text("jobsCd"))
 
         return JobAppendDto(
@@ -59,7 +59,7 @@ internal object Work24JobMapper {
             employmentType = employmentType(info.text("empTpCd") ?: item.text("empTpCd")),
             experienceType = experienceType(info.text("enterTpCd"), item.text("career")),
             educationLevel = educationLevel(info.text("minEdubgIcd")),
-            region = subRegion?.region ?: region(item),
+            region = subRegion?.region ?: region(item.text("strtnmCd"), item.text("region")),
             subRegion = subRegion,
             recruitmentType = if (hasPeriod) JobRecruitmentType.PERIOD else JobRecruitmentType.ALWAYS_OPEN,
             recruitmentHeadcount = number(info.text("collectPsncnt"))?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
@@ -114,20 +114,21 @@ internal object Work24JobMapper {
         )
     }
 
-    private fun subRegion(item: JsonNode): SubRegion? {
-        item.text("strtnmCd")?.let { return SubRegion.fromAdministrativeCode(it) }
-        val (regionName, subRegionName) = regionNames(item) ?: return null
-        return SubRegion.entries.firstOrNull { it.region == regionOf(regionName) && it.desc == subRegionName }
+    /** 행정구역 코드가 있으면 코드로, 없으면 지역명으로 시·군·구를 찾는다. 일학습병행 과정도 같은 방법을 쓴다. */
+    fun subRegion(administrativeCode: String?, regionName: String?): SubRegion? {
+        administrativeCode?.let { return SubRegion.fromAdministrativeCode(it) }
+        val (region, subRegion) = regionNames(regionName) ?: return null
+        return SubRegion.entries.firstOrNull { it.region == regionOf(region) && it.desc == subRegion }
     }
 
-    private fun region(item: JsonNode): Region? {
-        item.text("strtnmCd")?.let { return Region.fromAdministrativeCode(it) }
-        return regionNames(item)?.first?.let(::regionOf)
+    fun region(administrativeCode: String?, regionName: String?): Region? {
+        administrativeCode?.let { return Region.fromAdministrativeCode(it) }
+        return regionNames(regionName)?.first?.let(::regionOf)
     }
 
     /** 지역명은 `서울 강남구`, `경기도 화성시 동탄구`처럼 시·도와 시·군·구를 공백으로 잇는다. */
-    private fun regionNames(item: JsonNode): Pair<String, String?>? {
-        val words = item.text("region")?.split(' ')?.filter(String::isNotBlank).orEmpty()
+    private fun regionNames(regionName: String?): Pair<String, String?>? {
+        val words = regionName?.split(' ')?.filter(String::isNotBlank).orEmpty()
         return words.firstOrNull()?.let { it to words.getOrNull(1) }
     }
 
