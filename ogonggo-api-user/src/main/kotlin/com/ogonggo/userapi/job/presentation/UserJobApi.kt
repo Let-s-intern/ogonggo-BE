@@ -39,7 +39,9 @@ interface UserJobApi {
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
             보내지 않으면 항상 false입니다.
 
-            sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
+            sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 등록 역순입니다.
+            LATEST는 크롤러가 수집한 공고를 먼저 보이고, 그 안에서 늦게 등록한 날의 공고를 먼저 보입니다.
+            같은 날 등록한 공고끼리는 한 회사 공고가 몰리지 않도록 섞되, 순서는 요청마다 같습니다.
 
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다.
             jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.

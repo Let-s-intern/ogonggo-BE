@@ -6,6 +6,7 @@ import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRole
@@ -43,7 +44,7 @@ internal class JobQueryRepository(
         condition: JobSearchCondition,
         sortType: JobSortType,
         pageable: Pageable,
-    ): Page<Job> = findPage(publishedPredicates(condition), sortType, pageable)
+    ): Page<Job> = findPage(publishedPredicates(condition), sortType, PUBLISHED_LATEST, pageable)
 
     /**
      * 북마크한 공고 중 게시된 것만 읽는다. 선택 필터는 공개 목록과 같고, 지원 단계와 모집 상태로 더 좁힐 수 있다.
@@ -134,10 +135,15 @@ internal class JobQueryRepository(
         sortType: JobSortType,
         now: LocalDateTime,
         pageable: Pageable,
-    ): Page<Job> = findPage(managementPredicates(condition, now), sortType, pageable)
+    ): Page<Job> = findPage(managementPredicates(condition, now), sortType, REGISTERED_LATEST, pageable)
 
-    private fun findPage(predicates: Array<Predicate?>, sortType: JobSortType, pageable: Pageable): Page<Job> {
-        val content = sorted(queryFactory.selectFrom(job).where(*predicates), sortType)
+    private fun findPage(
+        predicates: Array<Predicate?>,
+        sortType: JobSortType,
+        latestOrders: Array<OrderSpecifier<*>>,
+        pageable: Pageable,
+    ): Page<Job> {
+        val content = sorted(queryFactory.selectFrom(job).where(*predicates), sortType, latestOrders)
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
             .fetch()
@@ -263,9 +269,14 @@ internal class JobQueryRepository(
      * 최신순까지 조인하면 정렬을 인덱스로 해결할 수 없다.
      * 지표 행은 첫 지표 발생 시점에 생기므로 아직 없는 공고는 0으로 본다.
      * 조회 수가 같을 때 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
+     * 최신순은 목록마다 기준이 달라 호출하는 쪽이 정한다.
      */
-    private fun sorted(query: JPAQuery<Job>, sortType: JobSortType): JPAQuery<Job> = when (sortType) {
-        JobSortType.LATEST -> query.orderBy(job.id.desc())
+    private fun sorted(
+        query: JPAQuery<Job>,
+        sortType: JobSortType,
+        latestOrders: Array<OrderSpecifier<*>>,
+    ): JPAQuery<Job> = when (sortType) {
+        JobSortType.LATEST -> query.orderBy(*latestOrders)
 
         JobSortType.VIEW_COUNT -> query
             .leftJoin(jobMetric).on(jobMetric.jobId.eq(job.id))
@@ -273,6 +284,15 @@ internal class JobQueryRepository(
     }
 
     companion object {
+        /**
+         * 공개 목록의 최신순은 크롤러 공고를 앞에 두고 같은 날 등록한 공고를 섞은 정렬 키를 따른다([JobListSortKey]).
+         * 정렬 키가 같으면 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
+         */
+        private val PUBLISHED_LATEST: Array<OrderSpecifier<*>> = arrayOf(job.listSortKey.desc(), job.id.desc())
+
+        /** 관리 목록은 등록한 순서를 그대로 보여야 하므로 식별자 역순이다. */
+        private val REGISTERED_LATEST: Array<OrderSpecifier<*>> = arrayOf(job.id.desc())
+
         /** 지표 행이 없는 공고를 조회 수 0으로 취급한다. */
         private val VIEW_COUNT_OR_ZERO = Expressions.numberTemplate(
             Long::class.javaObjectType,
