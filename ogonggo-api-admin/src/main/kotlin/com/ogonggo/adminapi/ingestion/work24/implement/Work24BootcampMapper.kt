@@ -39,6 +39,7 @@ import java.time.temporal.TemporalAdjusters
  * - 모집 기간: 목록에 없어 수집한 시각부터 개강일 끝까지로 둔다.
  * - 수강료: 교육생이 내는 본인부담액(`tgcrGnrlTrneOwepAllt`)을 쓴다. 목록의 수강비(`courseMan`)는 정부 지원금을 포함한 총 훈련비다.
  * - 파트너사: 과정명 앞 괄호의 기업 이름이 [Work24PartnerCompanies] 표에 있으면 그 기업 하나를 넣는다. 고용24에는 연계 기업 항목이 없다.
+ *   이런 과정은 기업 연계 과정으로 표시해 공개 목록에서 앞에 오게 한다.
  * - 진행 방식: 훈련방법 코드(`traingMthCd`)로 정한다. M1005 인터넷은 온라인, M1010 혼합·M1014 스마트혼합은 온·오프라인, 그 밖은 오프라인이다.
  *
  * Open API에 없는 값은 과정 상세 화면([Work24CoursePageDto])에서 채운다. 화면을 못 읽었으면 비워 둔다.
@@ -81,6 +82,7 @@ internal object Work24BootcampMapper {
         val recruitmentEndAt = programStartDate.atTime(LocalTime.of(23, 59, 59))
         val hasPeriod = !now.isAfter(recruitmentEndAt)
         val totalHours = base.text("trtm") ?: detailInfo.text("totTraingTime")
+        val partner = Work24PartnerCompanies.of(title)
 
         return BootcampAppendDto(
             companyName = requireNotNull(base.text("inoNm") ?: item.text("subTitle")) { "훈련기관명이 없습니다." }
@@ -135,7 +137,8 @@ internal object Work24BootcampMapper {
             publicationStatus = BootcampPublicationStatus.PUBLISHED,
             source = ContentSource.WORK24,
             externalId = externalId,
-            partners = listOfNotNull(Work24PartnerCompanies.of(title)).map { BootcampPartnerDto.Request(partnerName = it) },
+            partners = listOfNotNull(partner).map { BootcampPartnerDto.Request(partnerName = it) },
+            enterpriseLinked = partner != null,
             curriculums = page?.lessons?.let(::curriculums).orEmpty(),
             images = images?.photos.orEmpty().mapIndexed { index, photo ->
                 BootcampImageDto.Request(url = photo.url, caption = photo.caption?.limit(IMAGE_CAPTION_MAX), displayOrder = index)

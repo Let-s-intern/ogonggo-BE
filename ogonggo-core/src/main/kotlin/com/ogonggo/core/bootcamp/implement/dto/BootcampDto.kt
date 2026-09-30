@@ -52,6 +52,8 @@ data class BootcampAppendDto(
     /** 비우면 저장할 때 소유자 유무로 정한다. `copy(ownerUserId = ...)`로 만든 값도 소유자와 어긋나지 않게 하기 위해서다. */
     val source: ContentSource? = null,
     val externalId: String? = null,
+    /** 기업과 함께 운영하는 과정이면 공개 목록에서 앞에 둔다. */
+    val enterpriseLinked: Boolean = false,
 )
 
 /** 운영자가 고치는 제목과 본문 칸이다. 넘어온 칸만 바꾸며 본문 값이 null이면 그 칸을 비운다. */

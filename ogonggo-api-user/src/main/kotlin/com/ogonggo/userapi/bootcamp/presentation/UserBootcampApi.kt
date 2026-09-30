@@ -1,8 +1,7 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -34,10 +33,10 @@ interface UserBootcampApi {
             보내지 않으면 항상 false입니다.
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 최신순입니다.
+            어느 정렬이든 기업과 함께 운영하는 과정이 먼저 오고, 그 안에서 고른 정렬을 따릅니다.
 
-            tuitionType과 status로 목록을 좁힙니다. 각각 하나씩 고를 수 있고,
-            보내지 않으면 해당 조건을 적용하지 않습니다. status는 공개 목록이 다루는
-            RECRUITING(모집중)과 CLOSED(모집 마감)만 받으며 그 밖의 값은 400입니다.
+            category로 목록을 좁힙니다. KDT는 고용24에서 수집한 K-디지털 트레이닝 과정, SESAC은 새싹 과정이며
+            보내지 않으면 전체입니다.
 
             keyword는 운영 회사명 또는 프로그램명에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
@@ -45,16 +44,6 @@ interface UserBootcampApi {
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
-            ApiResponse(
-                responseCode = "400",
-                description = "BAD_REQUEST: 공개 목록에서 고를 수 없는 모집 상태입니다.",
-                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-            ),
-        ],
-    )
     fun getBootcamps(
         @Parameter(hidden = true)
         userId: Long?,
@@ -64,8 +53,7 @@ interface UserBootcampApi {
         @Max(100)
         size: Int,
         sortType: BootcampSortType,
-        tuitionType: TuitionType?,
-        status: BootcampStatus?,
+        category: BootcampCategory?,
         @Size(min = 2, max = 100)
         keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>

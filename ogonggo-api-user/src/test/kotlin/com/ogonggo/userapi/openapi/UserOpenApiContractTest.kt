@@ -302,11 +302,8 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1bootcamps~1{bootcampId}/get/security/0/BearerAuth").isArray)
         assertPageParameter(bootcampList, "page", defaultValue = "1", minimum = 1, maximum = null)
         assertPageParameter(bootcampList, "size", defaultValue = "10", minimum = 1, maximum = 100)
-        listOf("sort", "tuitionType", "status", "keyword")
+        listOf("sort", "category", "keyword")
             .forEach { name -> assertTrue(bootcampList.parameter(name).isObject) }
-        assertTrue(
-            bootcampList.at("/responses/400/description").asText().startsWith("BAD_REQUEST"),
-        )
 
         val sourceUrlClick = document.at("/paths/~1api~1v1~1jobs~1{jobId}~1source-url-clicks/post")
         assertTrue(sourceUrlClick.at("/security/0/BearerAuth").isArray)
@@ -337,12 +334,9 @@ class UserOpenApiContractTest @Autowired constructor(
 
         val bootcampBookmarks = document.at("/paths/~1api~1v1~1bootcamp-bookmarks/get")
         assertTrue(bootcampBookmarks.at("/security/0/BearerAuth").isArray)
-        listOf("status", "keyword", "applicationStatus", "sort")
+        listOf("category", "keyword", "applicationStatus", "sort")
             .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }
         assertPageParameter(bootcampBookmarks, "page", defaultValue = "1", minimum = 1, maximum = null)
-        listOf("tuitionType", "status", "keyword")
-            .forEach { name -> assertTrue(bootcampBookmarks.parameter(name).isObject) }
-        assertTrue(bootcampBookmarks.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         val addBootcampBookmark = document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/post")
         assertTrue(addBootcampBookmark.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(

@@ -3,6 +3,7 @@ package com.ogonggo.core.bootcamp.implement
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
@@ -27,6 +28,7 @@ import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -275,34 +277,45 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `수강료 유형과 모집 상태와 검색어로 목록을 좁힌다`() {
+    fun `분류로 목록을 좁힌다`() {
         val now = LocalDateTime.of(2026, 9, 15, 12, 0)
-        val freeRecruiting = bootcampAppender.append(
-            createCommand(companyName = "오공고 교육사", title = "백엔드 부트캠프", tuitionType = TuitionType.FREE),
-        )
-        val paidRecruiting = bootcampAppender.append(
-            createCommand(companyName = "다른 교육사", title = "데이터 부트캠프", tuitionType = TuitionType.PAID),
-        )
-        val freeClosed = bootcampAppender.append(
-            createCommand(companyName = "오공고 교육사", title = "프론트 부트캠프", tuitionType = TuitionType.FREE),
-        )
-        listOf(freeRecruiting, paidRecruiting, freeClosed).forEach(bootcampManager::startRecruitment)
-        bootcampManager.close(bootcampReader.readForUpdate(checkNotNull(freeClosed.id)), now)
+        val kdt = bootcampAppender.append(work24Command("A-1", programType = BootcampCategory.KDT_PROGRAM_TYPE))
+        // 고용24가 같은 조건으로 함께 주는 다른 훈련유형은 KDT가 아니다.
+        val otherWork24 = bootcampAppender.append(work24Command("B-1", programType = "국가기간전략산업직종"))
+        // 크롤러가 등록한 부트캠프는 새싹이다.
+        val sesac = bootcampAppender.append(createCommand())
+        listOf(kdt, otherWork24, sesac).forEach(bootcampManager::startRecruitment)
 
         assertEquals(
-            listOf(freeClosed.id, freeRecruiting.id),
-            publicPage(condition = BootcampSearchCondition(tuitionType = TuitionType.FREE), now = now)
-                .bootcamps.map { it.id },
+            listOf(kdt.id),
+            publicPage(condition = BootcampSearchCondition(category = BootcampCategory.KDT), now = now).bootcamps.map { it.id },
         )
         assertEquals(
-            listOf(paidRecruiting.id, freeRecruiting.id),
-            publicPage(condition = BootcampSearchCondition(status = BootcampStatus.RECRUITING), now = now)
-                .bootcamps.map { it.id },
+            listOf(sesac.id),
+            publicPage(condition = BootcampSearchCondition(category = BootcampCategory.SESAC), now = now).bootcamps.map { it.id },
         )
+        assertEquals(3L, publicPage(now = now).totalElements)
+    }
+
+    @Test
+    fun `공개 목록은 기업 연계 과정을 먼저 두고 그 안에서 고른 정렬을 따른다`() {
+        val now = LocalDateTime.of(2026, 9, 15, 12, 0)
+        val linkedOld = bootcampAppender.append(work24Command("A-1", enterpriseLinked = true))
+        val plainPopular = bootcampAppender.append(createCommand())
+        val linkedPopular = bootcampAppender.append(work24Command("B-1", enterpriseLinked = true))
+        val plainLatest = bootcampAppender.append(createCommand())
+        listOf(linkedOld, plainPopular, linkedPopular, plainLatest).forEach(bootcampManager::startRecruitment)
+        repeat(3) { bootcampMetricManager.increaseViewCount(checkNotNull(plainPopular.id), NOW) }
+        bootcampMetricManager.increaseViewCount(checkNotNull(linkedOld.id), NOW)
+
         assertEquals(
-            listOf(freeClosed.id),
-            publicPage(condition = BootcampSearchCondition(status = BootcampStatus.CLOSED), now = now)
-                .bootcamps.map { it.id },
+            listOf(linkedPopular.id, linkedOld.id, plainLatest.id, plainPopular.id),
+            publicPage(now = now).bootcamps.map { it.id },
+        )
+        // 조회 수가 가장 많아도 기업 연계 과정 뒤에 온다.
+        assertEquals(
+            listOf(linkedOld.id, linkedPopular.id, plainPopular.id, plainLatest.id),
+            publicPage(sortType = BootcampSortType.VIEW_COUNT, now = now).bootcamps.map { it.id },
         )
     }
 
@@ -313,7 +326,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
             createCommand(companyName = "다른 교육사", title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE),
         )
         val byCompany = bootcampAppender.append(
-            createCommand(companyName = "SPRING 교육사", title = "데이터 부트캠프", tuitionType = TuitionType.PAID),
+            work24Command("A-1").copy(companyName = "SPRING 교육사", title = "데이터 부트캠프"),
         )
         val unrelated = bootcampAppender.append(
             createCommand(companyName = "다른 교육사", title = "디자인 부트캠프", tuitionType = TuitionType.FREE),
@@ -328,7 +341,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         assertEquals(
             listOf(byTitle.id),
             publicPage(
-                condition = BootcampSearchCondition(tuitionType = TuitionType.FREE, keyword = "spring"),
+                condition = BootcampSearchCondition(category = BootcampCategory.SESAC, keyword = "spring"),
                 now = now,
             ).bootcamps.map { it.id },
         )
@@ -356,6 +369,18 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
             bootcampApplicationUrlClickRepository.existsByBootcampIdAndUserId(otherBootcampId, OTHER_USER_ID),
         )
     }
+
+    /** 고용24에서 수집한 부트캠프다. 외부 식별값이 있어야 한다. */
+    private fun work24Command(
+        externalId: String,
+        programType: String = BootcampCategory.KDT_PROGRAM_TYPE,
+        enterpriseLinked: Boolean = false,
+    ): BootcampAppendDto = createCommand().copy(
+        programType = programType,
+        source = ContentSource.WORK24,
+        externalId = externalId,
+        enterpriseLinked = enterpriseLinked,
+    )
 
     private fun publicPage(
         condition: BootcampSearchCondition = BootcampSearchCondition.NONE,
@@ -690,24 +715,20 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         val target = startedRecruitmentBootcampId(
             createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE),
         )
-        val paid = startedRecruitmentBootcampId(
-            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.PAID),
+        val otherCategory = startedRecruitmentBootcampId(
+            work24Command("A-1").copy(title = "Spring 백엔드 부트캠프"),
         )
         val otherTitle = startedRecruitmentBootcampId(
             createCommand(title = "디자인 부트캠프", tuitionType = TuitionType.FREE),
         )
-        listOf(target, paid, otherTitle).forEach { bootcampBookmarkManager.append(USER_ID, it, NOW) }
+        listOf(target, otherCategory, otherTitle).forEach { bootcampBookmarkManager.append(USER_ID, it, NOW) }
         // 북마크하지 않은 부트캠프는 조건에 맞아도 나오지 않는다.
         startedRecruitmentBootcampId(createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE))
 
         // when
         val page = bootcampBookmarkReader.readBookmarkedPublicPage(
             userId = USER_ID,
-            condition = BootcampSearchCondition(
-                tuitionType = TuitionType.FREE,
-                status = BootcampStatus.RECRUITING,
-                keyword = "spring",
-            ),
+            condition = BootcampSearchCondition(category = BootcampCategory.SESAC, keyword = "spring"),
             page = 0,
             size = 10,
             now = NOW,

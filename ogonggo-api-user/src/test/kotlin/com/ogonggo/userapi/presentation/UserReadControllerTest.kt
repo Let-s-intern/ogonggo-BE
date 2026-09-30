@@ -2,6 +2,7 @@ package com.ogonggo.userapi.presentation
 
 import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
@@ -312,19 +313,14 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `부트캠프 수강료 유형과 모집 상태와 검색어는 조회 조건으로 전달된다`() {
-        val condition = BootcampSearchCondition(
-            tuitionType = TuitionType.FREE,
-            status = BootcampStatus.RECRUITING,
-            keyword = "백엔드",
-        )
+    fun `부트캠프 분류와 검색어는 조회 조건으로 전달된다`() {
+        val condition = BootcampSearchCondition(category = BootcampCategory.KDT, keyword = "백엔드")
         Mockito.`when`(userBootcampService.getBootcamps(USER_ID, condition, BootcampSortType.VIEW_COUNT, 0, 10))
             .thenReturn(bootcampPageResult())
 
         mockMvc.perform(
             get("/api/v1/bootcamps")
-                .param("tuitionType", "FREE")
-                .param("status", "RECRUITING")
+                .param("category", "KDT")
                 .param("keyword", "백엔드")
                 .param("sort", "VIEW_COUNT")
                 .with(authenticatedUser()),
@@ -336,12 +332,11 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `공개 목록에서 고를 수 없는 모집 상태는 파라미터명이 포함된 400을 반환한다`() {
-        mockMvc.perform(get("/api/v1/bootcamps").param("status", "DRAFT").with(authenticatedUser()))
+    fun `정의되지 않은 부트캠프 분류는 400으로 응답한다`() {
+        mockMvc.perform(get("/api/v1/bootcamps").param("category", "UNKNOWN").with(authenticatedUser()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.status").value(400))
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
-            .andExpect(jsonPath("$.message").value(startsWith("[status] ")))
 
         Mockito.verifyNoInteractions(userBootcampService)
     }

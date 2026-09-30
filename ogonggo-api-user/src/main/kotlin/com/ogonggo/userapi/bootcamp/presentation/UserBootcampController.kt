@@ -1,9 +1,8 @@
 package com.ogonggo.userapi.bootcamp.presentation
 
+import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.TuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
@@ -32,18 +31,12 @@ class UserBootcampController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: BootcampSortType,
-        @RequestParam(name = "tuitionType", required = false) tuitionType: TuitionType?,
-        @RequestParam(name = "status", required = false) status: BootcampStatus?,
+        @RequestParam(name = "category", required = false) category: BootcampCategory?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
-        validatePublicStatus(status)
         val result = userBootcampService.getBootcamps(
             userId = userId,
-            condition = BootcampSearchCondition(
-                tuitionType = tuitionType,
-                status = status,
-                keyword = keyword,
-            ),
+            condition = BootcampSearchCondition(category = category, keyword = keyword),
             sortType = sortType,
             page = page - 1,
             size = size,

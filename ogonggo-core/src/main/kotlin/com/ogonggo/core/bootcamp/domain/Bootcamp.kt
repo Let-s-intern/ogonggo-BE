@@ -63,6 +63,7 @@ class Bootcamp internal constructor(
     publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
     source: ContentSource = ContentSource.of(ownerUserId),
     externalId: String? = null,
+    enterpriseLinked: Boolean = false,
 ) : BaseTimeEntity() {
 
     init {
@@ -251,6 +252,14 @@ class Bootcamp internal constructor(
         protected set
 
     /** 기업회원이 올린 부트캠프만 검수하므로 등록할 때 검수 대기로 시작한다. 소유자가 없으면 값이 없다. */
+    /**
+     * 기업과 함께 운영하는 과정인지 나타낸다. 공개 목록에서 이런 과정을 앞에 둔다.
+     * 등록할 때 정해지며 수정으로는 바뀌지 않는다. 지금은 고용24 수집이 과정명의 기업 이름으로 정한다.
+     */
+    @Column(name = "enterprise_linked", nullable = false)
+    var enterpriseLinked: Boolean = enterpriseLinked /* 기업 연계 과정 여부 */
+        protected set
+
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", length = 20)
     var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */

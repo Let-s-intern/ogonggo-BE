@@ -251,8 +251,9 @@ class Work24CollectorTest {
         val bootcamp = appendedBootcamps.single()
         assertEquals("오공고 아카데미", bootcamp.companyName)
         assertEquals("[LG전자] 자바 백엔드 과정", bootcamp.title)
-        // 과정명 앞 괄호의 기업이 파트너사로 들어간다.
+        // 과정명 앞 괄호의 기업이 파트너사로 들어가고 기업 연계 과정으로 표시된다.
         assertEquals(listOf("LG전자"), bootcamp.partners.map { it.partnerName })
+        assertTrue(bootcamp.enterpriseLinked)
         assertEquals(LocalDate.of(2026, 10, 5), bootcamp.programStartDate)
         assertEquals(BootcampRecruitmentType.PERIOD, bootcamp.recruitmentType)
         assertEquals(NOW, bootcamp.recruitmentStartAt)
@@ -418,6 +419,8 @@ class Work24CollectorTest {
         assertNull(bootcamp.eligibilityAndSelectionProcess)
         assertTrue(bootcamp.images.isEmpty())
         assertTrue(bootcamp.curriculums.isEmpty())
+        assertTrue(bootcamp.partners.isEmpty())
+        assertEquals(false, bootcamp.enterpriseLinked)
     }
 
     @Test
