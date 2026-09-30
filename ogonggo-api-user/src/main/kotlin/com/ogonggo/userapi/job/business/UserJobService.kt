@@ -46,6 +46,9 @@ class UserJobService(
     fun getPopularJobs(userId: Long?, employmentType: EmploymentType?): List<UserJobSummary> =
         toSummaries(userId, jobReader.readPopularRecruiting(employmentType, POPULAR_JOB_LIMIT))
 
+    /** 운영자가 관리자 콘솔에서 고른 공고를 고른 순서대로 보여 준다. 개수는 운영자가 정한다. */
+    fun getTodayJobs(userId: Long?): List<UserJobSummary> = toSummaries(userId, jobReader.readPublishedToday())
+
     /**
      * 희망 직무와 산업이 모두 맞는 공고부터 직무만, 산업만 맞는 공고 순으로 채운다.
      * 앞 단계에서 담은 공고는 다음 단계에서 빼고, 네 건이 차면 더 조회하지 않는다.
@@ -126,7 +129,7 @@ class UserJobService(
         jobSourceUrlClickAppender.append(userId, jobId)
     }
 
-    /** 인기·비슷한 공고도 목록과 같은 항목으로 보여 주므로 북마크 여부와 지표를 목록과 같은 방식으로 채운다. */
+    /** 오늘의·인기·비슷한 공고도 목록과 같은 항목으로 보여 주므로 북마크 여부와 지표를 목록과 같은 방식으로 채운다. */
     private fun toSummaries(userId: Long?, jobs: List<Job>): List<UserJobSummary> {
         if (jobs.isEmpty()) {
             return emptyList()

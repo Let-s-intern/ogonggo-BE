@@ -11,10 +11,12 @@ import com.ogonggo.adminapi.job.business.AdminJobService
 import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.adminapi.job.business.AdminJobUpdateCommand
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
@@ -32,6 +34,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -179,6 +182,84 @@ class AdminJobControllerTest @Autowired constructor(
 
         Mockito.verify(adminJobService).deleteJob(693L)
     }
+
+    @Test
+    fun `오늘의 공고는 페이지 정보 없이 고른 순서대로 응답한다`() {
+        Mockito.`when`(adminJobService.getTodayJobs())
+            .thenReturn(listOf(AdminJobFixtures.summary(7L), AdminJobFixtures.summary(3L)))
+
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/today")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data[0].id").value(7))
+            .andExpect(jsonPath("$.data[1].id").value(3))
+            .andExpect(jsonPath("$.data[0].visibility").value("HIDDEN"))
+    }
+
+    @Test
+    fun `오늘의 공고를 보낸 순서대로 바꾸고 바뀐 목록을 돌려준다`() {
+        Mockito.`when`(adminJobService.getTodayJobs())
+            .thenReturn(listOf(AdminJobFixtures.summary(7L), AdminJobFixtures.summary(3L)))
+
+        mockMvc.perform(admin(putTodayJobs("""{"jobIds": [7, 3]}""")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].id").value(7))
+            .andExpect(jsonPath("$.data[1].id").value(3))
+
+        Mockito.verify(adminJobService).replaceTodayJobs(listOf(7L, 3L))
+    }
+
+    @Test
+    fun `빈 배열을 보내면 오늘의 공고를 비운다`() {
+        Mockito.`when`(adminJobService.getTodayJobs()).thenReturn(emptyList())
+
+        mockMvc.perform(admin(putTodayJobs("""{"jobIds": []}""")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isEmpty)
+
+        Mockito.verify(adminJobService).replaceTodayJobs(emptyList())
+    }
+
+    @Test
+    fun `오늘의 공고에 같은 공고를 두 번 넣거나 양수가 아닌 식별자를 넣거나 목록을 빼면 400으로 응답한다`() {
+        mockMvc.perform(admin(putTodayJobs("""{"jobIds": [7, 7]}""")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[jobIds] 같은 공고를 두 번 넣을 수 없습니다."))
+
+        listOf("""{"jobIds": [0]}""", """{"jobIds": [null]}""").forEach { body ->
+            mockMvc.perform(admin(putTodayJobs(body)))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.message").value("[jobIds] 채용공고 식별자는 양수여야 합니다."))
+        }
+
+        mockMvc.perform(admin(putTodayJobs("{}")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(adminJobService)
+    }
+
+    @Test
+    fun `오늘의 공고에 없는 공고를 넣으면 404로 응답한다`() {
+        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND))
+            .`when`(adminJobService)
+            .replaceTodayJobs(listOf(999L))
+
+        mockMvc.perform(admin(putTodayJobs("""{"jobIds": [999]}""")))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("JOB_NOT_FOUND"))
+    }
+
+    @Test
+    fun `관리자 토큰 없이는 오늘의 공고를 설정할 수 없다`() {
+        mockMvc.perform(putTodayJobs("""{"jobIds": [7]}"""))
+            .andExpect(status().isUnauthorized)
+
+        Mockito.verifyNoInteractions(adminJobService)
+    }
+
+    private fun putTodayJobs(body: String): MockHttpServletRequestBuilder =
+        put("/api/v1/admin/jobs/today").contentType(MediaType.APPLICATION_JSON).content(body)
 
     private fun patchJson(body: Map<String, Any>): MockHttpServletRequestBuilder =
         patch("/api/v1/admin/jobs/693")

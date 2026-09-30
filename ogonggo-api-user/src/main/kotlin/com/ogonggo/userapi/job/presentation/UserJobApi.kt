@@ -104,6 +104,27 @@ interface UserJobApi {
     ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
 
     @Operation(
+        operationId = "listPublicTodayJobs",
+        summary = "오늘의 채용공고 조회",
+        description = """
+            운영자가 관리자 콘솔에서 고른 오늘의 공고를 고른 순서대로 반환합니다. 페이지 정보는 없습니다.
+            개수는 운영자가 정하며 고른 공고가 없으면 빈 목록입니다.
+
+            로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
+            보내지 않으면 항상 false입니다.
+
+            게시 중인 공고만 반환합니다. 고른 뒤에 숨기거나 삭제한 공고는 빠집니다.
+            마감 처리됐거나 모집 종료 일시가 지난 공고는 운영자가 뺄 때까지 그대로 나오며,
+            closedAt과 recruitmentEndAt으로 마감 여부를 알 수 있습니다.
+        """,
+    )
+    @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
+    fun getTodayJobs(
+        @Parameter(hidden = true)
+        userId: Long?,
+    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
+
+    @Operation(
         operationId = "listMySimilarJobs",
         summary = "비슷한 채용공고 조회",
         description = """

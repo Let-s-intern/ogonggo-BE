@@ -266,6 +266,12 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(popularJobs.at("/security/0/BearerAuth").isArray)
         assertEquals(listOf("employmentType"), popularJobs.at("/parameters").map { it.at("/name").asText() })
 
+        // 오늘의 공고도 토큰을 보내면 북마크 여부가 채워지는 선택적 인증이며 받는 파라미터가 없다.
+        val todayJobs = document.at("/paths/~1api~1v1~1jobs~1today/get")
+        assertTrue(todayJobs.isObject)
+        assertTrue(todayJobs.at("/security/0/BearerAuth").isArray)
+        assertTrue(todayJobs.at("/parameters").isMissingNode)
+
         // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 인증이 필수다.
         val similarJobs = document.at("/paths/~1api~1v1~1jobs~1similar/get")
         assertTrue(similarJobs.at("/security/0/BearerAuth").isArray)

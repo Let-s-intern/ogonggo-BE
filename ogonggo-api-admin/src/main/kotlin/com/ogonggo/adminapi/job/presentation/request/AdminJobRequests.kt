@@ -38,3 +38,19 @@ data class UpdateAdminJobRequest(
         )
     }
 }
+
+/** 배열 순서가 노출 순서다. 빈 배열은 오늘의 공고를 비우라는 뜻이다. */
+data class ReplaceAdminTodayJobsRequest(
+    val jobIds: List<Long?>,
+) {
+    /** 배열 요소의 제약은 Bean Validation으로 선언할 수 없어 여기서 확인한다. 요소에 null이 와도 500이 되지 않게 한다. */
+    fun toJobIds(): List<Long> {
+        val ids = jobIds.map { id ->
+            id?.takeIf { it > 0 } ?: throw InvalidRequestFieldException("jobIds", "채용공고 식별자는 양수여야 합니다.")
+        }
+        if (ids.distinct().size != ids.size) {
+            throw InvalidRequestFieldException("jobIds", "같은 공고를 두 번 넣을 수 없습니다.")
+        }
+        return ids
+    }
+}

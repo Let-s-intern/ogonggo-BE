@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobService
+import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsRequest
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
 import com.ogonggo.adminapi.job.presentation.response.AdminJobDetailResponse
 import com.ogonggo.adminapi.job.presentation.response.AdminJobSummaryResponse
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -63,6 +65,19 @@ class AdminJobController(
                 totalPages = result.totalPages,
             ),
         )
+    }
+
+    @GetMapping("/today")
+    override fun getTodayJobs(): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>> =
+        SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminJobSummaryResponse::from))
+
+    /** 교체가 커밋된 뒤의 목록을 다시 읽어 응답한다. */
+    @PutMapping("/today")
+    override fun replaceTodayJobs(
+        @RequestBody request: ReplaceAdminTodayJobsRequest,
+    ): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>> {
+        adminJobService.replaceTodayJobs(request.toJobIds())
+        return SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminJobSummaryResponse::from))
     }
 
     @GetMapping("/{jobId}")
