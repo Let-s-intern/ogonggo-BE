@@ -115,6 +115,12 @@ class AdminSecurityConfiguration {
             "https://admin.ogonggo.co.kr",
             // 로컬 개발 서버는 프레임워크와 사람마다 포트가 달라 전부 연다.
             "http://localhost:[*]",
+            /*
+             * 관리자 API의 API Gateway 주소. 여기서 Swagger UI 를 띄워 API 를 호출한다.
+             * 브라우저는 GET/HEAD 가 아닌 요청에는 동일 오리진에도 Origin 헤더를 붙이므로,
+             * 목록에 없으면 Swagger 의 PUT·PATCH·POST 가 403 Invalid CORS request 로 막힌다.
+             */
+            "https://p5itn5nbm4.execute-api.ap-northeast-2.amazonaws.com",
         )
 
         private const val PREFLIGHT_MAX_AGE_SECONDS = 3600L

@@ -67,6 +67,18 @@ class AdminCorsConfigurationTest @Autowired constructor(
             .andExpect(status().isForbidden)
     }
 
+    /** Swagger UI가 API Gateway 주소에 있어 GET이 아닌 요청에는 같은 주소가 Origin으로 붙는다. */
+    @Test
+    fun `API Gateway 주소의 Swagger에서 보낸 PUT preflight는 통과한다`() {
+        mockMvc.perform(
+            options("/api/v1/admin/jobs/today")
+                .header("Origin", API_GATEWAY_ORIGIN)
+                .header("Access-Control-Request-Method", "PUT"),
+        )
+            .andExpect(status().isOk)
+            .andExpect(header().string("Access-Control-Allow-Origin", API_GATEWAY_ORIGIN))
+    }
+
     /** 로컬은 포트를 열어두었으므로 목록에 없던 포트도 그대로 통과해야 한다. */
     @ParameterizedTest
     @ValueSource(strings = ["http://localhost:3000", "http://localhost:5173", "http://localhost:64321"])
@@ -91,5 +103,6 @@ class AdminCorsConfigurationTest @Autowired constructor(
 
     companion object {
         private const val ALLOWED_ORIGIN = "https://www.ogonggo.co.kr"
+        private const val API_GATEWAY_ORIGIN = "https://p5itn5nbm4.execute-api.ap-northeast-2.amazonaws.com"
     }
 }
