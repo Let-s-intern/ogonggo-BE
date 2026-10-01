@@ -110,7 +110,7 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `여러 건 잠금 조회는 같은 식별자를 한 번만 읽고 없거나 삭제된 공고가 섞이면 거절한다`() {
+    fun `여러 건 잠금 조회는 같은 식별자를 한 번만 읽고 없거나 삭제된 공고가 섞이면 그 식별자를 알려 거절한다`() {
         val first = checkNotNull(jobAppender.append(command()).id)
         val second = checkNotNull(jobAppender.append(command()).id)
         val deleted = jobAppender.append(command())
@@ -122,7 +122,12 @@ internal class JobManagementPersistenceTest @Autowired constructor(
                 jobReader.readAllForUpdate(listOf(first, invalidJobId))
             }
             assertEquals(JobErrorCode.JOB_NOT_FOUND, exception.errorCode)
+            assertEquals("일자리 공고를 찾을 수 없습니다. (id: $invalidJobId)", exception.message)
         }
+        val exception = assertThrows(EntityNotFoundException::class.java) {
+            jobReader.readAllForUpdate(listOf(999_999L, first, checkNotNull(deleted.id)))
+        }
+        assertEquals("일자리 공고를 찾을 수 없습니다. (id: ${deleted.id}, 999999)", exception.message)
     }
 
     private fun ids(condition: JobManagementSearchCondition): List<Long?> =

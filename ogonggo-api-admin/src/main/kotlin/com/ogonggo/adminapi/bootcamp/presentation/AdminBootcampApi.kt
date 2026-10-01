@@ -95,7 +95,7 @@ interface AdminBootcampApi {
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "BOOTCAMP_NOT_FOUND: 없거나 삭제된 부트캠프가 들어 있습니다.",
+                description = "BOOTCAMP_NOT_FOUND: 없거나 삭제된 부트캠프가 들어 있습니다. 예: 부트캠프를 찾을 수 없습니다. (id: 7, 999)",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

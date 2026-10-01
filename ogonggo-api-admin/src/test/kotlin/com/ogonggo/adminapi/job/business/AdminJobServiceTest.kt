@@ -90,9 +90,9 @@ class AdminJobServiceTest {
     }
 
     @Test
-    fun `노출 일괄 변경은 잠가 읽은 공고를 모두 같은 노출로 바꾸고 검수 상태는 건드리지 않는다`() {
-        val first = Mockito.mock(Job::class.java)
-        val second = Mockito.mock(Job::class.java)
+    fun `노출 일괄 변경은 잠가 읽은 공고를 같은 노출로 바꾸고 검수 상태는 건드리지 않는다`() {
+        val first = jobWithStatus(JobPublicationStatus.PUBLISHED)
+        val second = jobWithStatus(JobPublicationStatus.PUBLISHED)
         Mockito.`when`(jobReader.readAllForUpdate(listOf(3L, 1L))).thenReturn(listOf(first, second))
 
         service.changeVisibilities(AdminJobVisibilityChangeCommand(listOf(3L, 1L), AdminContentVisibility.HIDDEN))
@@ -100,6 +100,18 @@ class AdminJobServiceTest {
         Mockito.verify(jobManager).hide(first)
         Mockito.verify(jobManager).hide(second)
         Mockito.verifyNoMoreInteractions(jobManager)
+    }
+
+    @Test
+    fun `노출 일괄 변경은 이미 같은 노출인 공고를 건드리지 않아 보관 공고를 숨겨도 실패하지 않는다`() {
+        val archived = jobWithStatus(JobPublicationStatus.ARCHIVED)
+        val draft = jobWithStatus(JobPublicationStatus.DRAFT)
+        val hidden = jobWithStatus(JobPublicationStatus.HIDDEN)
+        Mockito.`when`(jobReader.readAllForUpdate(listOf(1L, 2L, 3L))).thenReturn(listOf(archived, draft, hidden))
+
+        service.changeVisibilities(AdminJobVisibilityChangeCommand(listOf(1L, 2L, 3L), AdminContentVisibility.HIDDEN))
+
+        Mockito.verifyNoInteractions(jobManager)
     }
 
     @Test
@@ -145,6 +157,10 @@ class AdminJobServiceTest {
         Mockito.`when`(job.source).thenReturn(ContentSource.CRAWLER)
         Mockito.`when`(job.recruitmentStatus(NOW)).thenReturn(JobRecruitmentStatus.RECRUITING)
         Mockito.`when`(job.createdAt).thenReturn(NOW)
+    }
+
+    private fun jobWithStatus(publicationStatus: JobPublicationStatus): Job = Mockito.mock(Job::class.java).also { job ->
+        Mockito.`when`(job.publicationStatus).thenReturn(publicationStatus)
     }
 
     private fun lockedJob(reviewStatus: ReviewStatus?): Job {

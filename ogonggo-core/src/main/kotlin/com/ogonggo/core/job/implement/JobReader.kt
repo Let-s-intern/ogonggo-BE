@@ -147,13 +147,20 @@ class JobReader internal constructor(
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    /** 하나라도 없거나 삭제됐으면 일부만 바뀌지 않도록 모두 거절한다. 같은 식별자가 여러 번 와도 한 번만 읽는다. */
+    /**
+     * 하나라도 없거나 삭제됐으면 일부만 바뀌지 않도록 모두 거절하고, 운영자가 고를 수 있게 그 식별자를 메시지에 담는다.
+     * 같은 식별자가 여러 번 와도 한 번만 읽는다.
+     */
     fun readAllForUpdate(jobIds: Collection<Long>): List<Job> {
         val distinctIds = jobIds.toSet()
         require(distinctIds.isNotEmpty()) { "잠글 채용공고 식별자가 없습니다." }
         val jobs = jobRepository.findAllByIdInForUpdate(distinctIds)
-        if (jobs.size != distinctIds.size) {
-            throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+        val missingIds = distinctIds - jobs.mapNotNullTo(HashSet()) { it.id }
+        if (missingIds.isNotEmpty()) {
+            throw EntityNotFoundException(
+                JobErrorCode.JOB_NOT_FOUND,
+                "${JobErrorCode.JOB_NOT_FOUND.message} (id: ${missingIds.sorted().joinToString()})",
+            )
         }
         return jobs
     }

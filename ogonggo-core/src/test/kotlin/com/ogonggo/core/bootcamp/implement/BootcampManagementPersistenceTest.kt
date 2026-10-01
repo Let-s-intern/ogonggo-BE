@@ -133,7 +133,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `여러 건 잠금 조회는 같은 식별자를 한 번만 읽고 없거나 삭제된 부트캠프가 섞이면 거절한다`() {
+    fun `여러 건 잠금 조회는 같은 식별자를 한 번만 읽고 없거나 삭제된 부트캠프가 섞이면 그 식별자를 알려 거절한다`() {
         val first = checkNotNull(bootcampAppender.append(command()).id)
         val second = checkNotNull(bootcampAppender.append(command()).id)
         val deleted = bootcampAppender.append(command())
@@ -148,6 +148,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
                 bootcampReader.readAllForUpdate(listOf(first, invalidBootcampId))
             }
             assertEquals(BootcampErrorCode.BOOTCAMP_NOT_FOUND, exception.errorCode)
+            assertEquals("부트캠프를 찾을 수 없습니다. (id: $invalidBootcampId)", exception.message)
         }
     }
 

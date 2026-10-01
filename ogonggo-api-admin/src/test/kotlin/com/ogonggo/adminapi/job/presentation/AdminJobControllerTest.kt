@@ -291,14 +291,15 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `노출 일괄 변경에 없는 공고가 섞이면 404로 응답한다`() {
-        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND))
+    fun `노출 일괄 변경에 없는 공고가 섞이면 그 식별자를 메시지에 담아 404로 응답한다`() {
+        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND, "일자리 공고를 찾을 수 없습니다. (id: 999)"))
             .`when`(adminJobService)
             .changeVisibilities(AdminJobVisibilityChangeCommand(listOf(7L, 999L), AdminContentVisibility.VISIBLE))
 
         mockMvc.perform(admin(patchVisibility("""{"ids": [7, 999], "visibility": "VISIBLE"}""")))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("JOB_NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("일자리 공고를 찾을 수 없습니다. (id: 999)"))
     }
 
     private fun patchVisibility(body: String): MockHttpServletRequestBuilder =
