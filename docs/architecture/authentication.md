@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-29
+- 최종 변경일: 2026-10-01
 - 적용 범위: `ogonggo-api-user`, `ogonggo-core`, `lets-career-server`
 - 예상 독자: 오공고 서버와 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -385,7 +385,7 @@ GET /api/v1/users/me
 | 사용자 API | `UserSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
 | 관리자 API | `AdminSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
 
-사용자 API에는 아래의 API Gateway 주소가 하나 더 있고, 나머지는 두 목록이 같습니다.
+두 API에는 각자의 Swagger UI를 띄우는 API Gateway 주소가 하나씩 더 있고, 나머지는 두 목록이 같습니다.
 
 | 오리진 | 모듈 | 용도 |
 | --- | --- | --- |
@@ -393,6 +393,7 @@ GET /api/v1/users/me
 | `https://ogonggo.co.kr` | 공통 | apex 도메인 직접 접속 |
 | `http://localhost:[*]` | 공통 | 로컬 개발 서버. 포트는 사람과 프레임워크마다 달라 전부 연다 |
 | `https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com` | 사용자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |
+| `https://p5itn5nbm4.execute-api.ap-northeast-2.amazonaws.com` | 관리자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |
 
 공통 설정은 `allowedMethods = *`, `allowedHeaders = *`, `allowCredentials = true`, `maxAge = 3600`입니다.
 
