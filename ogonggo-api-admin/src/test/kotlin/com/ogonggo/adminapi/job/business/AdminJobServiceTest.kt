@@ -90,6 +90,19 @@ class AdminJobServiceTest {
     }
 
     @Test
+    fun `노출 일괄 변경은 잠가 읽은 공고를 모두 같은 노출로 바꾸고 검수 상태는 건드리지 않는다`() {
+        val first = Mockito.mock(Job::class.java)
+        val second = Mockito.mock(Job::class.java)
+        Mockito.`when`(jobReader.readAllForUpdate(listOf(3L, 1L))).thenReturn(listOf(first, second))
+
+        service.changeVisibilities(AdminJobVisibilityChangeCommand(listOf(3L, 1L), AdminContentVisibility.HIDDEN))
+
+        Mockito.verify(jobManager).hide(first)
+        Mockito.verify(jobManager).hide(second)
+        Mockito.verifyNoMoreInteractions(jobManager)
+    }
+
+    @Test
     fun `삭제는 이미 삭제된 공고까지 잠가 찾아 멱등하게 처리한다`() {
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(jobReader.readForDelete(JOB_ID)).thenReturn(job)

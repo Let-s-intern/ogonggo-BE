@@ -59,11 +59,7 @@ class AdminBootcampService(
         command.reviewStatus
             ?.takeIf { it != bootcamp.reviewStatus }
             ?.let { changeReview(bootcamp, it, now) }
-        when (command.visibility) {
-            AdminContentVisibility.VISIBLE -> bootcampManager.publish(bootcamp)
-            AdminContentVisibility.HIDDEN -> bootcampManager.hide(bootcamp)
-            null -> Unit
-        }
+        command.visibility?.let { changeVisibility(bootcamp, it) }
         if (command.title != null || command.contents.isNotEmpty()) {
             bootcampManager.editContent(
                 bootcamp,
@@ -72,10 +68,24 @@ class AdminBootcampService(
         }
     }
 
+    /** 채용공고 일괄 노출 변경과 같이 한 트랜잭션에서 모두 바꾸고, 하나라도 실패하면 아무것도 바꾸지 않는다. */
+    @Transactional
+    fun changeVisibilities(command: AdminBootcampVisibilityChangeCommand) {
+        bootcampReader.readAllForUpdate(command.bootcampIds)
+            .forEach { bootcamp -> changeVisibility(bootcamp, command.visibility) }
+    }
+
     /** 반려 기록은 지우지 않는다. 반려 보관에서 "반려하고 지웠다"는 기록으로 남는다. */
     @Transactional
     fun deleteBootcamp(bootcampId: Long) {
         bootcampManager.delete(bootcampReader.readForDelete(bootcampId), LocalDateTime.now(clock))
+    }
+
+    private fun changeVisibility(bootcamp: Bootcamp, visibility: AdminContentVisibility) {
+        when (visibility) {
+            AdminContentVisibility.VISIBLE -> bootcampManager.publish(bootcamp)
+            AdminContentVisibility.HIDDEN -> bootcampManager.hide(bootcamp)
+        }
     }
 
     private fun changeReview(bootcamp: Bootcamp, reviewStatus: ReviewStatus, now: LocalDateTime) {

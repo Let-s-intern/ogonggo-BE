@@ -3,9 +3,13 @@ package com.ogonggo.adminapi.job.presentation.request
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.AdminJobUpdateCommand
+import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.validation.constraints.Size
+
+/** 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고, 한 트랜잭션의 잠금이 지나치게 길어지지 않을 만큼으로 둔다. */
+private const val MAX_VISIBILITY_CHANGE_IDS = 1000
 
 /**
  * 모든 값이 선택이며 넘어온 값만 바꾼다. 등록 경로(`source`)는 바꿀 수 없어 받지 않는다.
@@ -53,4 +57,22 @@ data class ReplaceAdminTodayJobsRequest(
         }
         return ids
     }
+}
+
+/**
+ * 관리자 콘솔에서 검색해 고른 공고들의 노출을 한꺼번에 바꾼다.
+ * 노출 변경은 반복해도 결과가 같으므로 같은 식별자가 여러 번 와도 거절하지 않는다.
+ */
+data class ChangeAdminJobVisibilityRequest(
+    @field:Size(min = 1, max = MAX_VISIBILITY_CHANGE_IDS) val ids: List<Long?>,
+    val visibility: AdminContentVisibility,
+) {
+    /** 배열 요소의 제약은 Bean Validation으로 선언할 수 없어 여기서 확인한다. 요소에 null이 와도 500이 되지 않게 한다. */
+    fun toCommand(): AdminJobVisibilityChangeCommand =
+        AdminJobVisibilityChangeCommand(
+            jobIds = ids.map { id ->
+                id?.takeIf { it > 0 } ?: throw InvalidRequestFieldException("ids", "채용공고 식별자는 양수여야 합니다.")
+            },
+            visibility = visibility,
+        )
 }

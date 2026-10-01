@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.bootcamp.presentation
 
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampService
+import com.ogonggo.adminapi.bootcamp.presentation.request.ChangeAdminBootcampVisibilityRequest
 import com.ogonggo.adminapi.bootcamp.presentation.request.UpdateAdminBootcampRequest
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampDetailResponse
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampSummaryResponse
@@ -68,6 +69,14 @@ class AdminBootcampController(
                 totalPages = result.totalPages,
             ),
         )
+    }
+
+    @PatchMapping("/visibility")
+    override fun changeBootcampVisibilities(
+        @RequestBody request: ChangeAdminBootcampVisibilityRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminBootcampService.changeVisibilities(request.toCommand())
+        return SuccessResponse.ok()
     }
 
     @GetMapping("/{bootcampId}")

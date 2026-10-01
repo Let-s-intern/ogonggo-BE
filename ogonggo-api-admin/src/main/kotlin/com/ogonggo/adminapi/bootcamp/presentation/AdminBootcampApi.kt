@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.bootcamp.presentation
 
+import com.ogonggo.adminapi.bootcamp.presentation.request.ChangeAdminBootcampVisibilityRequest
 import com.ogonggo.adminapi.bootcamp.presentation.request.UpdateAdminBootcampRequest
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampDetailResponse
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampSummaryResponse
@@ -74,6 +75,39 @@ interface AdminBootcampApi {
         reviewStatus: ReviewStatus?,
         status: BootcampStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminBootcampSummaryResponse>>>
+
+    @Operation(
+        operationId = "updateBootcampVisibilities",
+        summary = "부트캠프 노출 일괄 변경",
+        description = """
+            ids의 부트캠프를 모두 visibility로 바꿉니다. 규칙은 채용공고 노출 일괄 변경과 같습니다.
+            한 번에 1~1000건을 보낼 수 있고, 하나라도 바꿀 수 없으면 아무것도 바꾸지 않습니다.
+            VISIBLE이어도 모집 상태와 공개 기간이 맞아야 사용자 목록에 나옵니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "변경 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: ids가 비었거나 1000건을 넘거나 양수가 아닌 값이 있거나 visibility가 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "BOOTCAMP_NOT_FOUND: 없거나 삭제된 부트캠프가 들어 있습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "REVIEW_NOT_APPROVED: 승인 전 기업회원 부트캠프를 노출하려 했습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun changeBootcampVisibilities(
+        @Valid request: ChangeAdminBootcampVisibilityRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(operationId = "getBootcamp", summary = "부트캠프 상세 조회")
     @ApiResponses(

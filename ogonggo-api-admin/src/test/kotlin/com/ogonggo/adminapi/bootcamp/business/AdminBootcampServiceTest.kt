@@ -62,6 +62,21 @@ class AdminBootcampServiceTest {
     }
 
     @Test
+    fun `노출 일괄 변경은 잠가 읽은 부트캠프를 모두 같은 노출로 바꾼다`() {
+        val first = Mockito.mock(Bootcamp::class.java)
+        val second = Mockito.mock(Bootcamp::class.java)
+        Mockito.`when`(bootcampReader.readAllForUpdate(listOf(3L, 1L))).thenReturn(listOf(first, second))
+
+        service.changeVisibilities(
+            AdminBootcampVisibilityChangeCommand(listOf(3L, 1L), AdminContentVisibility.VISIBLE),
+        )
+
+        Mockito.verify(bootcampManager).publish(first)
+        Mockito.verify(bootcampManager).publish(second)
+        Mockito.verifyNoMoreInteractions(bootcampManager)
+    }
+
+    @Test
     fun `삭제는 이미 삭제된 부트캠프까지 잠가 찾아 멱등하게 처리한다`() {
         val bootcamp = Mockito.mock(Bootcamp::class.java)
         Mockito.`when`(bootcampReader.readForDelete(BOOTCAMP_ID)).thenReturn(bootcamp)

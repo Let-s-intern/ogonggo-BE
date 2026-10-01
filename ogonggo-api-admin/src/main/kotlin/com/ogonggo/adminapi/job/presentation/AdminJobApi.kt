@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.job.presentation.request.ChangeAdminJobVisibilityRequest
 import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsRequest
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
 import com.ogonggo.adminapi.job.presentation.response.AdminJobDetailResponse
@@ -122,6 +123,42 @@ interface AdminJobApi {
     fun replaceTodayJobs(
         @Valid request: ReplaceAdminTodayJobsRequest,
     ): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>>
+
+    @Operation(
+        operationId = "updateJobVisibilities",
+        summary = "채용공고 노출 일괄 변경",
+        description = """
+            ids의 채용공고를 모두 visibility로 바꿉니다. 한 번에 1~1000건을 보낼 수 있고 같은 식별자가 여러 번 와도 한 번만 바꿉니다.
+            성공하면 data 없이 응답합니다. 이미 그 노출 상태인 공고도 성공으로 보며, 같은 요청을 반복해도 결과가 같습니다.
+
+            하나라도 바꿀 수 없으면 아무것도 바꾸지 않습니다. 없거나 삭제된 공고가 있으면 404,
+            승인 전 기업회원 공고를 VISIBLE로 바꾸려 하거나 보관된 공고가 있으면 409입니다.
+            검수 상태는 바꾸지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "변경 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: ids가 비었거나 1000건을 넘거나 양수가 아닌 값이 있거나 visibility가 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "JOB_NOT_FOUND: 없거나 삭제된 채용공고가 들어 있습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "REVIEW_NOT_APPROVED 또는 JOB_ARCHIVED",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun changeJobVisibilities(
+        @Valid request: ChangeAdminJobVisibilityRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(operationId = "getJob", summary = "채용공고 상세 조회")
     @ApiResponses(

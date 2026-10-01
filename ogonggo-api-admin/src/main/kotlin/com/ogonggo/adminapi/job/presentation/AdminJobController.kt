@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobService
+import com.ogonggo.adminapi.job.presentation.request.ChangeAdminJobVisibilityRequest
 import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsRequest
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
 import com.ogonggo.adminapi.job.presentation.response.AdminJobDetailResponse
@@ -78,6 +79,14 @@ class AdminJobController(
     ): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>> {
         adminJobService.replaceTodayJobs(request.toJobIds())
         return SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminJobSummaryResponse::from))
+    }
+
+    @PatchMapping("/visibility")
+    override fun changeJobVisibilities(
+        @RequestBody request: ChangeAdminJobVisibilityRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminJobService.changeVisibilities(request.toCommand())
+        return SuccessResponse.ok()
     }
 
     @GetMapping("/{jobId}")

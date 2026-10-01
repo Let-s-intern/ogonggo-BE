@@ -10,6 +10,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
@@ -128,6 +129,25 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
                 bootcamp,
                 BootcampContentEditDto(contents = mapOf(BootcampContentField.CONTENT to null)),
             )
+        }
+    }
+
+    @Test
+    fun `여러 건 잠금 조회는 같은 식별자를 한 번만 읽고 없거나 삭제된 부트캠프가 섞이면 거절한다`() {
+        val first = checkNotNull(bootcampAppender.append(command()).id)
+        val second = checkNotNull(bootcampAppender.append(command()).id)
+        val deleted = bootcampAppender.append(command())
+        bootcampManager.delete(deleted, NOW)
+
+        assertEquals(
+            listOf(first, second),
+            bootcampReader.readAllForUpdate(listOf(second, first, second)).map { it.id },
+        )
+        listOf(checkNotNull(deleted.id), 999_999L).forEach { invalidBootcampId ->
+            val exception = assertThrows(EntityNotFoundException::class.java) {
+                bootcampReader.readAllForUpdate(listOf(first, invalidBootcampId))
+            }
+            assertEquals(BootcampErrorCode.BOOTCAMP_NOT_FOUND, exception.errorCode)
         }
     }
 

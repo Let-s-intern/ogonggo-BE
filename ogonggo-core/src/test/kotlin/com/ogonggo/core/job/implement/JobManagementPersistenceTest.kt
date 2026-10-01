@@ -1,6 +1,7 @@
 package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
@@ -8,6 +9,7 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.review.domain.ContentSource
@@ -15,6 +17,7 @@ import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -104,6 +107,22 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         jobManager.delete(jobReader.readForDelete(jobId), NOW.plusDays(1))
 
         assertEquals(NOW, jobReader.readIncludingDeleted(jobId).deletedAt)
+    }
+
+    @Test
+    fun `여러 건 잠금 조회는 같은 식별자를 한 번만 읽고 없거나 삭제된 공고가 섞이면 거절한다`() {
+        val first = checkNotNull(jobAppender.append(command()).id)
+        val second = checkNotNull(jobAppender.append(command()).id)
+        val deleted = jobAppender.append(command())
+        jobManager.delete(deleted, NOW)
+
+        assertEquals(listOf(first, second), jobReader.readAllForUpdate(listOf(second, first, second)).map { it.id })
+        listOf(checkNotNull(deleted.id), 999_999L).forEach { invalidJobId ->
+            val exception = assertThrows(EntityNotFoundException::class.java) {
+                jobReader.readAllForUpdate(listOf(first, invalidJobId))
+            }
+            assertEquals(JobErrorCode.JOB_NOT_FOUND, exception.errorCode)
+        }
     }
 
     private fun ids(condition: JobManagementSearchCondition): List<Long?> =

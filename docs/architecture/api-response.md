@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-30
+- 최종 변경일: 2026-10-01
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -252,7 +252,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 채용공고 `recruitmentStatus`도 저장하지 않습니다. 마감 처리 일시가 있거나 모집 종료 일시가 지났으면 `CLOSED`, 그 밖에는 `RECRUITING`입니다. 상시 채용은 모집 종료 일시를 둘 수 없습니다.
 - 목록에는 본문 칸을 싣지 않고 상세에서만 줍니다.
 - 검수 대기(`GET /api/v1/admin/review-queue`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
-- 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다.
+- 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다. 노출 일괄 변경(`PATCH /visibility`)은 여러 건이라 `data: null`로 응답합니다([REST API 설계](rest-api-design.md#관리자-콘솔-노출-일괄-변경)).
 - 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.
 
 ### 관리자 회원 조회
