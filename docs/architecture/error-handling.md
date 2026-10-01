@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-08-28
+- 최종 변경일: 2026-10-01
 - 적용 범위: `ogonggo-server`
 - 예상 독자: 오공고 서버와 API 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -22,7 +22,7 @@
 - `status`는 HTTP 응답 상태와 같은 숫자다.
 - `code`는 클라이언트가 분기에 사용하는 안정적인 식별자다.
 - `message`는 사용자 또는 개발자가 이해할 수 있는 설명이다.
-- 식별자, stack trace, 내부 예외 메시지는 응답에 포함하지 않는다.
+- 식별자, stack trace, 내부 예외 메시지는 응답에 포함하지 않는다. 클라이언트가 보낸 식별자를 되돌려 주는 경우만 3절의 예외로 둔다.
 - `errors`, `traceId`, `timestamp`, `path` 같은 추가 필드는 사용하지 않는다.
 
 ## 2. 책임과 위치
@@ -53,7 +53,10 @@ HTTP status + ErrorResponse
 | 낙관적 락 충돌 | 409 | `OPTIMISTIC_LOCK_CONFLICT` |
 | 예상하지 못한 예외 | 500 | `INTERNAL_SERVER_ERROR` |
 
-예상 가능한 실패는 상황에 맞는 도메인 ErrorCode와 `InvalidValueException`, `EntityNotFoundException`, `ConflictException`, `UnauthorizedException`, `ForbiddenException`, `InternalServerException`을 사용한다. 모든 예외 생성자는 ErrorCode를 명시적으로 받아야 하며 기본 전역 코드를 제공하지 않는다. Handler는 예외의 자체 메시지가 아니라 ErrorCode의 상태, 코드, 메시지로 응답한다.
+예상 가능한 실패는 상황에 맞는 도메인 ErrorCode와 `InvalidValueException`, `EntityNotFoundException`, `ConflictException`, `UnauthorizedException`, `ForbiddenException`, `InternalServerException`을 사용한다. 모든 예외 생성자는 ErrorCode를 명시적으로 받아야 하며 기본 전역 코드를 제공하지 않는다. Handler는 ErrorCode의 상태와 코드, 예외의 메시지로 응답한다. 예외 메시지의 기본값은 ErrorCode의 메시지다.
+
+- `EntityNotFoundException`만 메시지를 바꿀 수 있으며, 클라이언트가 보낸 값 중 무엇이 문제인지 알려 줘야 할 때만 쓴다. 메시지는 ErrorCode의 메시지 뒤에 그 값을 붙이고, 내부 예외 메시지나 클라이언트가 보내지 않은 식별자는 담지 않는다. 클라이언트는 여전히 `code`로 분기한다.
+- 지금은 관리자 노출 일괄 변경이 없는 항목의 식별자를 붙인다: `일자리 공고를 찾을 수 없습니다. (id: 7, 999)`. ([REST API 설계](rest-api-design.md#관리자-콘솔-노출-일괄-변경), 2026-10-01, 팀 리뷰 필요)
 
 도메인별 코드는 해당 도메인의 `error` 패키지에 둔다. 클라이언트의 대응 방식이 다르면 같은 HTTP 상태여도 별도 코드를 사용한다.
 

@@ -80,6 +80,14 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId and bootcamp.deletedAt is null")
     fun findByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
 
+    /** 여러 요청이 같은 부트캠프들을 잠글 때 순서가 엇갈려 교착되지 않도록 식별자 순으로 잠근다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        "select bootcamp from Bootcamp bootcamp " +
+            "where bootcamp.id in :bootcampIds and bootcamp.deletedAt is null order by bootcamp.id",
+    )
+    fun findAllByIdInForUpdate(@Param("bootcampIds") bootcampIds: Collection<Long>): List<Bootcamp>
+
     /** 북마크 해제는 이미 삭제된 부트캠프에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId")
     fun findIncludingDeletedById(@Param("bootcampId") bootcampId: Long): Bootcamp?

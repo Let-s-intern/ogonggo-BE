@@ -5,7 +5,9 @@ import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampPageResult
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampService
+import com.ogonggo.adminapi.bootcamp.business.AdminBootcampVisibilityChangeCommand
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
+import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
@@ -79,6 +81,22 @@ class AdminBootcampControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.message").value("[fields.content] 상세 내용은 비울 수 없습니다."))
 
         Mockito.verifyNoInteractions(adminBootcampService)
+    }
+
+    @Test
+    fun `고른 부트캠프의 노출을 한꺼번에 바꾸고 data 없이 응답한다`() {
+        mockMvc.perform(
+            admin(
+                patch("/api/v1/admin/bootcamps/visibility")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"ids": [5, 2], "visibility": "VISIBLE"}"""),
+            ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").doesNotExist())
+
+        Mockito.verify(adminBootcampService)
+            .changeVisibilities(AdminBootcampVisibilityChangeCommand(listOf(5L, 2L), AdminContentVisibility.VISIBLE))
     }
 
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =

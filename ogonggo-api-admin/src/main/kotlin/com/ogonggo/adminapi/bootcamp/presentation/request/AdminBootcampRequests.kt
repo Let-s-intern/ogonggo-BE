@@ -1,11 +1,15 @@
 package com.ogonggo.adminapi.bootcamp.presentation.request
 
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampUpdateCommand
+import com.ogonggo.adminapi.bootcamp.business.AdminBootcampVisibilityChangeCommand
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
 import com.ogonggo.core.review.domain.ReviewStatus
 import jakarta.validation.constraints.Size
+
+/** 채용공고 일괄 노출 변경과 같은 상한이다. */
+private const val MAX_VISIBILITY_CHANGE_IDS = 1000
 
 /**
  * 채용공고 수정과 같은 계약이다. 모든 값이 선택이며 넘어온 값만 바꾼다.
@@ -40,4 +44,19 @@ data class UpdateAdminBootcampRequest(
             contents = contents,
         )
     }
+}
+
+/** 채용공고 일괄 노출 변경과 같은 계약이다. 같은 식별자가 여러 번 와도 거절하지 않는다. */
+data class ChangeAdminBootcampVisibilityRequest(
+    @field:Size(min = 1, max = MAX_VISIBILITY_CHANGE_IDS) val ids: List<Long?>,
+    val visibility: AdminContentVisibility,
+) {
+    /** 배열 요소의 제약은 Bean Validation으로 선언할 수 없어 여기서 확인한다. 요소에 null이 와도 500이 되지 않게 한다. */
+    fun toCommand(): AdminBootcampVisibilityChangeCommand =
+        AdminBootcampVisibilityChangeCommand(
+            bootcampIds = ids.map { id ->
+                id?.takeIf { it > 0 } ?: throw InvalidRequestFieldException("ids", "부트캠프 식별자는 양수여야 합니다.")
+            },
+            visibility = visibility,
+        )
 }

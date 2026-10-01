@@ -85,7 +85,8 @@ class AdminApiExceptionHandler {
     @ExceptionHandler(BusinessException::class)
     fun handleBusiness(exception: BusinessException): ResponseEntity<ErrorResponse> {
         log.error("handle: BusinessException", exception)
-        return ErrorResponse.from(exception.errorCode).toResponseEntity()
+        return ErrorResponse.from(exception.errorCode, exception.message ?: exception.errorCode.message)
+            .toResponseEntity()
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)

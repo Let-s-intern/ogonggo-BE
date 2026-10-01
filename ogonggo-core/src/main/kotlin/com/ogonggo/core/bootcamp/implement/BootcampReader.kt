@@ -142,6 +142,24 @@ class BootcampReader internal constructor(
         bootcampRepository.findByIdForUpdate(bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
+    /**
+     * 하나라도 없거나 삭제됐으면 일부만 바뀌지 않도록 모두 거절하고, 운영자가 고를 수 있게 그 식별자를 메시지에 담는다.
+     * 같은 식별자가 여러 번 와도 한 번만 읽는다.
+     */
+    fun readAllForUpdate(bootcampIds: Collection<Long>): List<Bootcamp> {
+        val distinctIds = bootcampIds.toSet()
+        require(distinctIds.isNotEmpty()) { "잠글 부트캠프 식별자가 없습니다." }
+        val bootcamps = bootcampRepository.findAllByIdInForUpdate(distinctIds)
+        val missingIds = distinctIds - bootcamps.mapNotNullTo(HashSet()) { it.id }
+        if (missingIds.isNotEmpty()) {
+            throw EntityNotFoundException(
+                BootcampErrorCode.BOOTCAMP_NOT_FOUND,
+                "${BootcampErrorCode.BOOTCAMP_NOT_FOUND.message} (id: ${missingIds.sorted().joinToString()})",
+            )
+        }
+        return bootcamps
+    }
+
     /** 삭제는 멱등해야 하므로 이미 삭제된 부트캠프도 잠가 찾는다. */
     fun readForDelete(bootcampId: Long): Bootcamp =
         bootcampRepository.findIncludingDeletedByIdForUpdate(bootcampId)

@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.bootcamp.business
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
@@ -62,6 +63,20 @@ class AdminBootcampServiceTest {
     }
 
     @Test
+    fun `노출 일괄 변경은 잠가 읽은 부트캠프를 같은 노출로 바꾸고 이미 같은 노출이면 건드리지 않는다`() {
+        val hidden = bootcampWithStatus(BootcampPublicationStatus.HIDDEN)
+        val published = bootcampWithStatus(BootcampPublicationStatus.PUBLISHED)
+        Mockito.`when`(bootcampReader.readAllForUpdate(listOf(3L, 1L))).thenReturn(listOf(hidden, published))
+
+        service.changeVisibilities(
+            AdminBootcampVisibilityChangeCommand(listOf(3L, 1L), AdminContentVisibility.VISIBLE),
+        )
+
+        Mockito.verify(bootcampManager).publish(hidden)
+        Mockito.verifyNoMoreInteractions(bootcampManager)
+    }
+
+    @Test
     fun `삭제는 이미 삭제된 부트캠프까지 잠가 찾아 멱등하게 처리한다`() {
         val bootcamp = Mockito.mock(Bootcamp::class.java)
         Mockito.`when`(bootcampReader.readForDelete(BOOTCAMP_ID)).thenReturn(bootcamp)
@@ -70,6 +85,11 @@ class AdminBootcampServiceTest {
 
         Mockito.verify(bootcampManager).delete(bootcamp, NOW)
     }
+
+    private fun bootcampWithStatus(publicationStatus: BootcampPublicationStatus): Bootcamp =
+        Mockito.mock(Bootcamp::class.java).also { bootcamp ->
+            Mockito.`when`(bootcamp.publicationStatus).thenReturn(publicationStatus)
+        }
 
     private fun lockedBootcamp(reviewStatus: ReviewStatus?): Bootcamp {
         val bootcamp = Mockito.mock(Bootcamp::class.java)

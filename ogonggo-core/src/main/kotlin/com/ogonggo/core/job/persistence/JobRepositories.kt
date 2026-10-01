@@ -55,6 +55,11 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     @Query("select job from Job job where job.id = :jobId and job.deletedAt is null")
     fun findByIdForUpdate(@Param("jobId") jobId: Long): Job?
 
+    /** 여러 요청이 같은 공고들을 잠글 때 순서가 엇갈려 교착되지 않도록 식별자 순으로 잠근다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select job from Job job where job.id in :jobIds and job.deletedAt is null order by job.id")
+    fun findAllByIdInForUpdate(@Param("jobIds") jobIds: Collection<Long>): List<Job>
+
     /** 북마크 해제는 이미 삭제된 공고에도 허용하므로 삭제 여부를 가리지 않고 조회한다. */
     @Query("select job from Job job where job.id = :jobId")
     fun findIncludingDeletedById(@Param("jobId") jobId: Long): Job?

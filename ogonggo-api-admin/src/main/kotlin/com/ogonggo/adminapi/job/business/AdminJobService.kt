@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.business
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
+import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -56,14 +57,22 @@ class AdminJobService(
         command.reviewStatus
             ?.takeIf { it != job.reviewStatus }
             ?.let { changeReview(job, it, now) }
-        when (command.visibility) {
-            AdminContentVisibility.VISIBLE -> jobManager.publish(job)
-            AdminContentVisibility.HIDDEN -> jobManager.hide(job)
-            null -> Unit
-        }
+        command.visibility?.let { changeVisibility(job, it) }
         if (command.title != null || command.contents.isNotEmpty()) {
             jobManager.editContent(job, JobContentEditDto(title = command.title, contents = command.contents))
         }
+    }
+
+    /**
+     * 한 트랜잭션에서 모두 바꾼다. 없거나 삭제된 공고, 승인 전 기업회원 공고의 노출처럼 하나라도 실패하면 아무것도 바꾸지 않는다.
+     * 일부만 바뀌면 운영자가 어느 공고가 바뀌었는지 다시 찾아야 하기 때문이다.
+     * 이미 같은 노출인 공고는 건드리지 않는다. 보관 공고도 비노출로 보이므로 비노출 요청이 실패하지 않고, 초안도 초안으로 남는다.
+     */
+    @Transactional
+    fun changeVisibilities(command: AdminJobVisibilityChangeCommand) {
+        jobReader.readAllForUpdate(command.jobIds)
+            .filter { job -> job.visibility() != command.visibility }
+            .forEach { job -> changeVisibility(job, command.visibility) }
     }
 
     /** 반려 기록은 지우지 않는다. 반려 보관에서 "반려하고 지웠다"는 기록으로 남는다. */
@@ -83,6 +92,16 @@ class AdminJobService(
     @Transactional
     fun replaceTodayJobs(jobIds: List<Long>) {
         todayJobManager.replace(jobIds, LocalDateTime.now(clock))
+    }
+
+    private fun Job.visibility(): AdminContentVisibility =
+        AdminContentVisibility.of(publicationStatus == JobPublicationStatus.PUBLISHED)
+
+    private fun changeVisibility(job: Job, visibility: AdminContentVisibility) {
+        when (visibility) {
+            AdminContentVisibility.VISIBLE -> jobManager.publish(job)
+            AdminContentVisibility.HIDDEN -> jobManager.hide(job)
+        }
     }
 
     private fun changeReview(job: Job, reviewStatus: ReviewStatus, now: LocalDateTime) {

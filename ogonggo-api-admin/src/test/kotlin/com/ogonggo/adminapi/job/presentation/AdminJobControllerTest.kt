@@ -10,6 +10,7 @@ import com.ogonggo.adminapi.job.business.AdminJobPageResult
 import com.ogonggo.adminapi.job.business.AdminJobService
 import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.adminapi.job.business.AdminJobUpdateCommand
+import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobContentField
@@ -20,6 +21,7 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
+import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -257,6 +259,51 @@ class AdminJobControllerTest @Autowired constructor(
 
         Mockito.verifyNoInteractions(adminJobService)
     }
+
+    @Test
+    fun `고른 공고의 노출을 한꺼번에 바꾸고 data 없이 응답한다`() {
+        mockMvc.perform(admin(patchVisibility("""{"ids": [7, 3, 7], "visibility": "HIDDEN"}""")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").doesNotExist())
+
+        Mockito.verify(adminJobService)
+            .changeVisibilities(AdminJobVisibilityChangeCommand(listOf(7L, 3L, 7L), AdminContentVisibility.HIDDEN))
+    }
+
+    @Test
+    fun `노출 일괄 변경에 식별자가 없거나 너무 많거나 양수가 아니거나 노출 값이 없으면 400으로 응답한다`() {
+        val tooMany = (1..1001).joinToString(prefix = "[", postfix = "]")
+        listOf("[]", tooMany).forEach { ids ->
+            mockMvc.perform(admin(patchVisibility("""{"ids": $ids, "visibility": "HIDDEN"}""")))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.message").value(startsWith("[ids]")))
+        }
+        listOf("[0]", "[null]").forEach { ids ->
+            mockMvc.perform(admin(patchVisibility("""{"ids": $ids, "visibility": "HIDDEN"}""")))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.message").value("[ids] 채용공고 식별자는 양수여야 합니다."))
+        }
+        mockMvc.perform(admin(patchVisibility("""{"ids": [7]}""")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(adminJobService)
+    }
+
+    @Test
+    fun `노출 일괄 변경에 없는 공고가 섞이면 그 식별자를 메시지에 담아 404로 응답한다`() {
+        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND, "일자리 공고를 찾을 수 없습니다. (id: 999)"))
+            .`when`(adminJobService)
+            .changeVisibilities(AdminJobVisibilityChangeCommand(listOf(7L, 999L), AdminContentVisibility.VISIBLE))
+
+        mockMvc.perform(admin(patchVisibility("""{"ids": [7, 999], "visibility": "VISIBLE"}""")))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("JOB_NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("일자리 공고를 찾을 수 없습니다. (id: 999)"))
+    }
+
+    private fun patchVisibility(body: String): MockHttpServletRequestBuilder =
+        patch("/api/v1/admin/jobs/visibility").contentType(MediaType.APPLICATION_JSON).content(body)
 
     private fun putTodayJobs(body: String): MockHttpServletRequestBuilder =
         put("/api/v1/admin/jobs/today").contentType(MediaType.APPLICATION_JSON).content(body)
