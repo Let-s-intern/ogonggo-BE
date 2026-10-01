@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient
 import java.net.URI
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 고용24 훈련기관 소개 화면의 로고와 훈련기관 사진을 오공고 이미지 저장소(S3)로 옮긴다.
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
  * - 저장 키는 원본 주소의 해시라 같은 이미지를 다시 옮겨도 같은 자리에 덮어쓴다. 사용자가 올린 이미지(`image_assets`)가 아니라
  *   행을 만들지 않으며, 고아 이미지 정리 대상도 아니다.
  * - 같은 훈련기관의 과정이 여럿이라 기관별 결과를 기억해 두고 다시 받지 않는다. 기억은 애플리케이션이 떠 있는 동안만 유지한다.
- * - 저장소(bucket)가 설정되지 않았으면 고용24를 부르지 않고 null을 돌려준다.
+ * - 저장소(`cloud.aws.s3.bucket`)가 설정되지 않았으면 고용24를 부르지 않고 null을 돌려준다. 설정이 빠진 것을 알 수 있게 경고를 한 번 남긴다.
  * - 화면은 명세가 없고 고용24가 바꿀 수 있어, 실패하면 예외를 내지 않고 옮긴 데까지만 돌려준다.
  */
 @Component
@@ -34,10 +35,17 @@ class Work24InstitutionImageImporter(
 ) {
 
     private val imported = ConcurrentHashMap<String, Work24InstitutionImagesDto>()
+    private val storageMissingLogged = AtomicBoolean(false)
 
     /** [institutionId]는 목록의 훈련기관 ID(`trainstCstId`), [institutionUrl]은 훈련기관 소개 화면 주소(`subTitleLink`)다. */
     fun import(institutionId: String?, institutionUrl: String?): Work24InstitutionImagesDto? {
-        if (institutionId == null || institutionUrl == null || s3ImageStorageProperties.bucket.isBlank()) {
+        if (s3ImageStorageProperties.bucket.isBlank()) {
+            if (storageMissingLogged.compareAndSet(false, true)) {
+                log.warn("이미지 저장소(cloud.aws.s3.bucket)가 설정되지 않아 고용24 훈련기관 로고와 사진을 넣지 않습니다.")
+            }
+            return null
+        }
+        if (institutionId == null || institutionUrl == null) {
             return null
         }
         imported[institutionId]?.let { return it }
