@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
+import com.ogonggo.userapi.bootcamp.implement.BootcampAutoCloseScheduler
 import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler
@@ -22,6 +23,14 @@ class UserScheduledJobConfiguration {
         defaultCron = "0 0 * * * *",
         description = "모집 기간이 끝난 사이드·스터디 모집글 자동 마감 (매시 정각)",
         action = scheduler::closeExpiredRecruitmentPosts,
+    )
+
+    @Bean
+    fun bootcampAutoCloseJob(scheduler: BootcampAutoCloseScheduler) = ScheduledJobDefinition(
+        name = BootcampAutoCloseScheduler.SCHEDULER_NAME,
+        defaultCron = "0 0 * * * *",
+        description = "모집 종료 일시가 지난 부트캠프 자동 마감 (매시 정각)",
+        action = scheduler::closeExpiredBootcamps,
     )
 
     @Bean

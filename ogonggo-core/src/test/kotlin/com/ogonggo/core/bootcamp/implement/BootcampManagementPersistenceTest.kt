@@ -152,6 +152,41 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun `모집 종료 일시가 지난 모집 중 부트캠프만 자동 마감하고 종료 일시와 같은 시각은 남긴다`() {
+        val expired = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusSeconds(1)))
+        val endsNow = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW))
+        val alwaysOpen = bootcampAppender.append(command(status = BootcampStatus.RECRUITING))
+        val alreadyClosed = bootcampAppender.append(
+            periodCommand(recruitmentEndAt = NOW.minusDays(1), status = BootcampStatus.CLOSED, closedAt = CLOSED_AT),
+        )
+        val draft = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusDays(1), status = BootcampStatus.DRAFT))
+        val deleted = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusDays(1)))
+        bootcampManager.delete(deleted, NOW)
+
+        val closedCount = bootcampManager.closeExpired(NOW)
+
+        assertEquals(1, closedCount)
+        bootcampReader.read(checkNotNull(expired.id)).let {
+            assertEquals(BootcampStatus.CLOSED, it.status)
+            assertEquals(NOW, it.closedAt)
+        }
+        assertEquals(BootcampStatus.RECRUITING, bootcampReader.read(checkNotNull(endsNow.id)).status)
+        assertEquals(BootcampStatus.RECRUITING, bootcampReader.read(checkNotNull(alwaysOpen.id)).status)
+        assertEquals(CLOSED_AT, bootcampReader.read(checkNotNull(alreadyClosed.id)).closedAt)
+        assertEquals(BootcampStatus.DRAFT, bootcampReader.read(checkNotNull(draft.id)).status)
+    }
+
+    private fun periodCommand(
+        recruitmentEndAt: LocalDateTime,
+        status: BootcampStatus = BootcampStatus.RECRUITING,
+        closedAt: LocalDateTime? = null,
+    ): BootcampAppendDto = command(status = status, closedAt = closedAt).copy(
+        recruitmentType = BootcampRecruitmentType.PERIOD,
+        recruitmentStartAt = recruitmentEndAt.minusDays(30),
+        recruitmentEndAt = recruitmentEndAt,
+    )
+
     private fun publicPage() =
         bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10, NOW)
 
@@ -189,5 +224,6 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
         private const val OWNER_ID = 7L
         private const val USER_ID = 11L
         private val NOW = LocalDateTime.of(2026, 9, 14, 12, 0)
+        private val CLOSED_AT = LocalDateTime.of(2026, 9, 1, 0, 0)
     }
 }
