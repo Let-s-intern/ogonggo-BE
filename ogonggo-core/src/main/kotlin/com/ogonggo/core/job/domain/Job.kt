@@ -31,6 +31,8 @@ import java.time.LocalDateTime
  * 조합 인덱스는 필터 컬럼 뒤에 다른 필터가 끼어 식별자 정렬이 깨지므로,
  * 선택도가 높은 값에서 조건에 맞는 행을 전부 읽은 뒤에야 상위 몇 건을 고르게 된다.
  * 필터를 여러 개 지정한 조회는 그중 한 인덱스로 좁히고 나머지는 행 조건으로 거른다.
+ *
+ * 관리 목록은 게시 상태를 고정하지 않아 위 인덱스를 쓸 수 없으므로, 관리 필터 인덱스는 필터 컬럼과 미삭제만 둔다.
  */
 @Entity
 @Table(
@@ -78,6 +80,14 @@ import java.time.LocalDateTime
         Index(
             name = "idx_jobs_review",
             columnList = "review_status, deleted_at",
+        ),
+        Index(
+            name = "idx_jobs_job_field",
+            columnList = "job_field, deleted_at",
+        ),
+        Index(
+            name = "idx_jobs_job_role",
+            columnList = "job_role, deleted_at",
         ),
     ],
 )

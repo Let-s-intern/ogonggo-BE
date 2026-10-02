@@ -5,9 +5,11 @@ import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
@@ -47,6 +49,8 @@ data class AdminJobSummary(
     val companyName: String,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val educationLevel: EducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
@@ -70,6 +74,8 @@ data class AdminJobSummary(
             companyName = job.companyName,
             employmentType = job.employmentType,
             experienceType = job.experienceType,
+            jobField = job.jobField,
+            jobRole = job.jobRole,
             educationLevel = job.educationLevel,
             recruitmentType = job.recruitmentType,
             recruitmentStartAt = job.recruitmentStartAt,

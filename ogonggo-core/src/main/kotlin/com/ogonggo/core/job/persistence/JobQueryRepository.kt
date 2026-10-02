@@ -240,6 +240,8 @@ internal class JobQueryRepository(
             sourceEq(condition.source),
             condition.reviewStatus?.let(job.reviewStatus::eq),
             recruitmentStatusEq(condition.recruitmentStatus, now),
+            condition.jobField?.let(job.jobField::eq),
+            condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
             keywordContains(condition.keyword),
         )
 

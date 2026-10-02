@@ -10,8 +10,10 @@ import com.ogonggo.adminapi.job.presentation.response.AdminJobDetailResponse
 import com.ogonggo.adminapi.job.presentation.response.AdminJobSummaryResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import org.springframework.http.ResponseEntity
@@ -43,6 +45,8 @@ class AdminJobController(
         @RequestParam(name = "source", required = false) source: ContentSource?,
         @RequestParam(name = "reviewStatus", required = false) reviewStatus: ReviewStatus?,
         @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
+        @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminJobSummaryResponse>>> {
         val result = adminJobService.getJobs(
             condition = JobManagementSearchCondition(
@@ -50,6 +54,8 @@ class AdminJobController(
                 source = source,
                 reviewStatus = reviewStatus,
                 recruitmentStatus = recruitmentStatus,
+                jobField = jobField,
+                jobRoles = jobRoles.orEmpty().toSet(),
                 // 프런트는 빈 필터를 보내지 않지만, 빈 값이 와도 전체로 본다.
                 keyword = keyword?.takeIf { it.isNotBlank() },
             ),

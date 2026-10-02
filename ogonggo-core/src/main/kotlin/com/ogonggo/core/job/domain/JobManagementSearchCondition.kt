@@ -13,6 +13,10 @@ data class JobManagementSearchCondition(
     val source: ContentSource? = null,
     val reviewStatus: ReviewStatus? = null,
     val recruitmentStatus: JobRecruitmentStatus? = null,
+    /** 직군. 직무까지 정한 공고도 직군이 같으면 걸린다. */
+    val jobField: JobField? = null,
+    /** 직무. 비어 있으면 거르지 않고, 여러 개면 그중 하나라도 맞는 공고가 걸린다. */
+    val jobRoles: Set<JobRole> = emptySet(),
     /** 회사명 또는 공고 제목에 포함되는지로 찾는다. 비어 있으면 검색하지 않는다. */
     val keyword: String? = null,
 ) {

@@ -239,7 +239,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 | 목록 | 필터 | 검색어 |
 | --- | --- | --- |
-| `GET /api/v1/admin/jobs` | `visibility`, `source`, `reviewStatus`, `recruitmentStatus` | 제목, 회사명 |
+| `GET /api/v1/admin/jobs` | `visibility`, `source`, `reviewStatus`, `recruitmentStatus`, `jobField`, `jobRole` | 제목, 회사명 |
 | `GET /api/v1/admin/bootcamps` | `visibility`, `source`, `reviewStatus`, `status`(`RECRUITING`·`CLOSED`) | 과정명, 운영사 |
 | `GET /api/v1/admin/rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
 | `GET /api/v1/admin/notices` | `visibility`, `pinned` | 제목 |
@@ -275,6 +275,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
 - 값과 순서는 기획의 직군·직무 분류(직군 25개, 직무 296개)를 따릅니다. 직무 이름은 `직군_직무`(예: `IT_BACKEND`)이고, `JobRole`의 `parent`가 속한 직군입니다.
 - 둘 다 선택 값입니다. 직무를 보내면 같은 직군이어야 하며 어긋나면 400 `BAD_REQUEST`(`[jobRole]`)입니다.
+- 사용자 채용공고 목록·상세·달력·북마크 목록과 관리자 채용공고 목록·상세 응답에 `jobField`, `jobRole`을 싣습니다. 정하지 않은 공고는 `null`입니다.
+- 관리자 목록 필터도 사용자 목록과 같습니다. `jobField`만 보내면 그 직군의 직무 공고도 걸리고, `jobRole`은 여러 번 보내 그중 하나라도 맞는 공고를 고릅니다.
 - 크롤러와 기업회원 공고 등록은 enum 이름으로 보냅니다.
 - 고용24 채용정보는 직종코드(`jobsCd`)를 `Work24JobRoles` 표로 직무에 옮기고, 직군은 그 직무의 직군입니다. 표는 고용24 직종 분류와 오공고 분류가 달라 세분류마다 가장 가까운 직무를 고른 것이며, 분류에 맞는 자리가 없는 농림어업·군인 등은 가까운 직군의 "기타" 직무에 둡니다. **기획 검토 필요.**
 - 비슷한 공고 추천은 렛츠커리어 프로필의 희망 직무 문자열이 직무 라벨(`desc`)과 같을 때만 그 직무로 봅니다. 렛츠커리어 희망 직무 값이 이 라벨과 같은 형식인지는 **확인 필요**입니다.

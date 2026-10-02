@@ -6,8 +6,10 @@ import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
@@ -21,6 +23,8 @@ data class AdminJobSummaryResponse(
     val companyName: String,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val educationLevel: EducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
@@ -46,6 +50,8 @@ data class AdminJobSummaryResponse(
             companyName = result.companyName,
             employmentType = result.employmentType,
             experienceType = result.experienceType,
+            jobField = result.jobField,
+            jobRole = result.jobRole,
             educationLevel = result.educationLevel,
             recruitmentType = result.recruitmentType,
             recruitmentStartAt = result.recruitmentStartAt,
@@ -71,6 +77,8 @@ data class AdminJobDetailResponse(
     val companyName: String,
     val employmentType: EmploymentType,
     val experienceType: ExperienceType,
+    val jobField: JobField?,
+    val jobRole: JobRole?,
     val educationLevel: EducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
@@ -106,6 +114,8 @@ data class AdminJobDetailResponse(
                 companyName = summary.companyName,
                 employmentType = summary.employmentType,
                 experienceType = summary.experienceType,
+                jobField = summary.jobField,
+                jobRole = summary.jobRole,
                 educationLevel = summary.educationLevel,
                 recruitmentType = summary.recruitmentType,
                 recruitmentStartAt = summary.recruitmentStartAt,
