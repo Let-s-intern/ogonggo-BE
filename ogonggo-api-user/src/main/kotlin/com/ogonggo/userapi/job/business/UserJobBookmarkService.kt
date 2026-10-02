@@ -36,7 +36,6 @@ class UserJobBookmarkService(
             condition = condition,
             page = page,
             size = size,
-            now = LocalDateTime.now(clock),
             bookmarkCondition = bookmarkCondition,
         )
         val jobIds = result.jobs.map(Job::requiredId)

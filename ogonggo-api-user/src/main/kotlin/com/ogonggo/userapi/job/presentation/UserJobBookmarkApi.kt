@@ -56,7 +56,7 @@ interface UserJobBookmarkApi {
             보내면 그 단계의 북마크만 반환하고, 보내지 않으면 모든 단계를 반환합니다.
 
             recruitmentStatus는 RECRUITING(모집 중), CLOSED(모집 마감) 중 하나입니다.
-            마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING이며 상시 채용은 마감 처리 전까지 RECRUITING입니다.
+            마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING이며 상시 채용은 마감 처리 전까지 RECRUITING입니다. 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.
 
             sort로 정렬을 고릅니다. 지금은 RECENTLY_SAVED(최근 저장순)만 있으며 보내지 않으면 RECENTLY_SAVED입니다.
             북마크를 등록·재등록하거나 지원 단계를 옮긴 시각이 최근인 순서입니다.

@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobSourceUrlClick
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
@@ -72,6 +73,24 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ReviewStatus): List<Job>
 
     fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
+
+    /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. `Job`의 모집 상태 계산과 경계를 맞춘다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Job job
+        set job.recruitmentStatus = :closedStatus,
+            job.updatedAt = :now
+        where job.recruitmentStatus = :recruitingStatus
+          and job.recruitmentEndAt < :now
+          and job.deletedAt is null
+        """,
+    )
+    fun closeExpired(
+        @Param("now") now: LocalDateTime,
+        @Param("recruitingStatus") recruitingStatus: JobRecruitmentStatus = JobRecruitmentStatus.RECRUITING,
+        @Param("closedStatus") closedStatus: JobRecruitmentStatus = JobRecruitmentStatus.CLOSED,
+    ): Int
 
     fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Job?
 

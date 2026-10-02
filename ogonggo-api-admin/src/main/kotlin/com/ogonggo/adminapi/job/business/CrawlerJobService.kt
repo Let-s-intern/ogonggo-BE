@@ -53,7 +53,7 @@ class CrawlerJobService(
             throw ConflictException(JobErrorCode.JOB_ALREADY_EXISTS)
         }
 
-        jobManager.update(job, command.toUpdateDto())
+        jobManager.update(job, command.toUpdateDto(), LocalDateTime.now(clock))
     }
 
     /** 직무별로 나뉘어 새 공고로 등록된 원래 공고처럼 더는 쓰지 않는 공고를 지운다. 이미 지운 공고를 다시 지워도 성공한다. */

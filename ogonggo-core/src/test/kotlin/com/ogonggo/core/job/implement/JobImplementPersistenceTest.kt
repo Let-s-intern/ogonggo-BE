@@ -305,7 +305,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `마감 공고를 제외한 달력은 조회 시각에 모집 중인 공고만 반환한다`() {
+    fun `마감 공고를 제외한 달력은 저장된 모집 상태가 모집 중인 공고만 반환한다`() {
         // given
         val now = LocalDateTime.of(2026, 8, 15, 12, 0)
         val recruiting = publishCommand(
@@ -313,12 +313,14 @@ internal class JobImplementPersistenceTest @Autowired constructor(
                 recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
                 recruitmentEndAt = now,
             ),
+            now,
         )
         publishCommand(
             createCommand(
                 recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
                 recruitmentEndAt = now.minusSeconds(1),
             ),
+            now,
         )
         val closedEarly = jobAppender.append(
             createCommand(
@@ -335,7 +337,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             calendarCondition = JobCalendarSearchCondition(excludeClosed = true),
             rangeStart = LocalDateTime.of(2026, 8, 1, 0, 0),
             rangeEndExclusive = LocalDateTime.of(2026, 9, 1, 0, 0),
-            now = now,
         )
 
         // then
@@ -622,8 +623,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val draft = jobAppender.append(createCommand())
         val deleted = jobAppender.append(createCommand())
         val closed = jobAppender.append(createCommand())
-        val expired = jobAppender.append(createCommand(recruitmentEndAt = NOW.minusSeconds(1)))
-        val endsNow = jobAppender.append(createCommand(recruitmentEndAt = NOW))
+        val expired = jobAppender.append(createCommand(recruitmentEndAt = NOW.minusSeconds(1)), NOW)
+        val endsNow = jobAppender.append(createCommand(recruitmentEndAt = NOW), NOW)
         val alwaysOpen = jobAppender.append(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
         listOf(deleted, closed, expired, endsNow, alwaysOpen).forEach(jobManager::publish)
         jobManager.delete(deleted, NOW)
@@ -634,7 +635,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         view(endsNow, times = 2)
         view(alwaysOpen, times = 1)
 
-        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 4, now = NOW)
+        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 4)
 
         assertEquals(listOf(endsNow.id, alwaysOpen.id), jobs.map { it.id })
     }
@@ -651,7 +652,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         view(tiedNewer, times = 2)
         view(least, times = 1)
 
-        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 3, now = NOW)
+        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 3)
 
         assertEquals(listOf(popular.id, tiedNewer.id, tiedOlder.id), jobs.map { it.id })
     }
@@ -663,7 +664,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(viewed, unviewed).forEach(jobManager::publish)
         view(viewed, times = 1)
 
-        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 4, now = NOW)
+        val jobs = jobReader.readPopularRecruiting(employmentType = null, limit = 4)
 
         assertEquals(listOf(viewed.id), jobs.map { it.id })
     }
@@ -680,8 +681,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         view(intern, times = 1)
 
         // when
-        val fullTimeJobs = jobReader.readPopularRecruiting(EmploymentType.FULL_TIME, limit = 4, now = NOW)
-        val internJobs = jobReader.readPopularRecruiting(EmploymentType.INTERN, limit = 4, now = NOW)
+        val fullTimeJobs = jobReader.readPopularRecruiting(EmploymentType.FULL_TIME, limit = 4)
+        val internJobs = jobReader.readPopularRecruiting(EmploymentType.INTERN, limit = 4)
 
         // then
         assertEquals(listOf(fullTime.id), fullTimeJobs.map { it.id })
@@ -690,8 +691,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `인기 공고 개수 범위를 검증한다`() {
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(employmentType = null, limit = 0, now = NOW) }
-        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(employmentType = null, limit = 101, now = NOW) }
+        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(employmentType = null, limit = 0) }
+        assertThrows(IllegalArgumentException::class.java) { jobReader.readPopularRecruiting(employmentType = null, limit = 101) }
     }
 
     @Test
@@ -715,7 +716,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             industries = listOf("뷰티", "패션"),
             excludedJobIds = emptyList(),
             limit = 4,
-            now = NOW,
         )
 
         // 조회된 적 없는 공고도 조회 수 0으로 포함한다.
@@ -735,7 +735,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             industries = emptyList(),
             excludedJobIds = listOf(checkNotNull(excluded.id)),
             limit = 2,
-            now = NOW,
         )
 
         assertEquals(listOf(newest.id, newer.id), jobs.map { it.id })
@@ -749,7 +748,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
                 industries = emptyList(),
                 excludedJobIds = emptyList(),
                 limit = 4,
-                now = NOW,
             )
         }
     }
@@ -810,7 +808,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobBookmarkManager.append(USER_ID, checkNotNull(published.id), NOW)
         jobBookmarkManager.append(USER_ID, checkNotNull(draft.id), NOW)
 
-        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10, now = NOW)
+        val result = jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, page = 0, size = 10)
 
         assertEquals(listOf(published.id), result.jobs.map { it.id })
         assertEquals(1L, result.totalElements)
@@ -858,7 +856,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             ),
             page = 0,
             size = 10,
-            now = NOW,
         )
 
         // then
@@ -1060,7 +1057,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val job = jobAppender.append(createCommand())
         val withEmails = sameUpdateCommand().copy(applyEmail = "recruit@example.com", inquiryEmail = "hr@example.com")
 
-        jobManager.update(job, withEmails)
+        jobManager.update(job, withEmails, NOW)
         val saved = jobReader.read(checkNotNull(job.id))
         assertEquals("recruit@example.com", saved.applyEmail)
         assertEquals("hr@example.com", saved.inquiryEmail)
@@ -1086,11 +1083,11 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         page = 0,
         size = 10,
         bookmarkCondition = bookmarkCondition,
-        now = NOW,
     )
 
-    private fun publishCommand(command: JobAppendDto): Long {
-        val job = jobAppender.append(command)
+    /** 모집 상태는 등록 시각으로 정해지므로 기준 시각을 넘겨 등록한다. */
+    private fun publishCommand(command: JobAppendDto, now: LocalDateTime = NOW): Long {
+        val job = jobAppender.append(command, now)
         jobManager.publish(job)
         return checkNotNull(job.id)
     }

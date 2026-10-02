@@ -18,14 +18,12 @@ import com.ogonggo.core.review.domain.ReviewStatus
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
-import java.time.Clock
 import java.time.LocalDateTime
 
 @Component
 class JobReader internal constructor(
     private val jobRepository: JobJpaRepository,
     private val jobQueryRepository: JobQueryRepository,
-    private val clock: Clock,
 ) {
 
     fun read(jobId: Long): Job =
@@ -85,16 +83,13 @@ class JobReader internal constructor(
         )
     }
 
-    fun readPopularRecruiting(employmentType: EmploymentType?, limit: Int): List<Job> =
-        readPopularRecruiting(employmentType, limit, LocalDateTime.now(clock))
-
     /**
-     * 마감됐거나 모집 종료 일시가 지난 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다.
+     * 마감된 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다.
      * 고용 형태를 주면 그 고용 형태의 공고만 읽는다.
      */
-    fun readPopularRecruiting(employmentType: EmploymentType?, limit: Int, now: LocalDateTime): List<Job> {
+    fun readPopularRecruiting(employmentType: EmploymentType?, limit: Int): List<Job> {
         require(limit in 1..100) { "인기 공고 개수는 1 이상 100 이하여야 합니다." }
-        return jobQueryRepository.findPopularRecruiting(employmentType, limit, now)
+        return jobQueryRepository.findPopularRecruiting(employmentType, limit)
     }
 
     /** 운영자가 고른 오늘의 공고 중 게시 중인 공고를 고른 순서대로 읽는다. 마감된 공고도 운영자가 뺄 때까지 남는다. */
@@ -103,44 +98,27 @@ class JobReader internal constructor(
     /** 운영자가 고른 오늘의 공고를 게시 상태와 무관하게 고른 순서대로 읽는다. 삭제된 공고는 뺀다. */
     fun readToday(): List<Job> = jobQueryRepository.findToday(publishedOnly = false)
 
-    fun readRecruitingMatched(
-        jobRoles: Collection<JobRole>,
-        industries: Collection<String>,
-        excludedJobIds: Collection<Long>,
-        limit: Int,
-    ): List<Job> =readRecruitingMatched(jobRoles, industries, excludedJobIds, limit, LocalDateTime.now(clock))
-
     /** 직무와 산업이 모두 비면 조건 없이 모든 공고를 읽게 되므로 둘 중 하나는 있어야 한다. */
     fun readRecruitingMatched(
         jobRoles: Collection<JobRole>,
         industries: Collection<String>,
         excludedJobIds: Collection<Long>,
         limit: Int,
-        now: LocalDateTime,
     ): List<Job> {
         require(limit in 1..100) { "조회 개수는 1 이상 100 이하여야 합니다." }
         require(jobRoles.isNotEmpty() || industries.isNotEmpty()) { "직무나 산업 중 하나는 있어야 합니다." }
-        return jobQueryRepository.findRecruitingMatched(jobRoles, industries, excludedJobIds, limit, now)
+        return jobQueryRepository.findRecruitingMatched(jobRoles, industries, excludedJobIds, limit)
     }
 
+    /** 마감 공고 제외는 저장된 모집 상태로 판단한다. */
     fun readPublishedCalendar(
         condition: JobSearchCondition,
         calendarCondition: JobCalendarSearchCondition,
         rangeStart: LocalDateTime,
         rangeEndExclusive: LocalDateTime,
-    ): List<Job> =
-        readPublishedCalendar(condition, calendarCondition, rangeStart, rangeEndExclusive, LocalDateTime.now(clock))
-
-    /** 마감 공고 제외는 저장된 상태가 아니라 기준 시각으로 판단한다. */
-    fun readPublishedCalendar(
-        condition: JobSearchCondition,
-        calendarCondition: JobCalendarSearchCondition,
-        rangeStart: LocalDateTime,
-        rangeEndExclusive: LocalDateTime,
-        now: LocalDateTime,
     ): List<Job> {
         require(rangeStart.isBefore(rangeEndExclusive)) { "달력 조회 시작 일시는 종료 일시보다 빨라야 합니다." }
-        return jobQueryRepository.findPublishedCalendar(condition, calendarCondition, rangeStart, rangeEndExclusive, now)
+        return jobQueryRepository.findPublishedCalendar(condition, calendarCondition, rangeStart, rangeEndExclusive)
     }
 
     fun readForUpdate(jobId: Long): Job =
@@ -170,26 +148,17 @@ class JobReader internal constructor(
         jobRepository.findIncludingDeletedByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
+    /** 게시 상태와 무관하게 미삭제 공고를 읽는다. */
     fun readManagementPage(
         condition: JobManagementSearchCondition,
         sortType: JobSortType,
         page: Int,
         size: Int,
-    ): JobPageDto = readManagementPage(condition, sortType, page, size, LocalDateTime.now(clock))
-
-    /** 게시 상태와 무관하게 미삭제 공고를 읽는다. 모집 상태는 저장하지 않으므로 기준 시각으로 계산한다. */
-    fun readManagementPage(
-        condition: JobManagementSearchCondition,
-        sortType: JobSortType,
-        page: Int,
-        size: Int,
-        now: LocalDateTime,
     ): JobPageDto {
         validatePageRequest(page, size)
         val result = jobQueryRepository.findManagementPage(
             condition = condition,
             sortType = sortType,
-            now = now,
             pageable = PageRequest.of(page, size),
         )
         return JobPageDto(

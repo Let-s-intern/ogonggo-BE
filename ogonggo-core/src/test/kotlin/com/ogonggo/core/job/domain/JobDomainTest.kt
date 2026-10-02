@@ -56,6 +56,7 @@ class JobDomainTest {
             applyEmail = "recruit@example.com",
             inquiryEmail = "hr@example.com",
             sourceUrl = "https://example.com/jobs/2",
+            now = startAt,
         )
 
         assertEquals("변경 회사", job.companyName)
@@ -199,17 +200,18 @@ class JobDomainTest {
     }
 
     @Test
-    fun `모집 상태는 마감 처리와 종료 일시로 계산하며 종료 시각까지는 모집 중이다`() {
+    fun `모집 상태는 등록 시각의 마감 처리와 종료 일시로 정하며 종료 시각까지는 모집 중이다`() {
         val endAt = LocalDateTime.of(2026, 9, 14, 23, 59)
-        val job = createJob(recruitmentStartAt = endAt.minusDays(7), recruitmentEndAt = endAt)
 
-        assertEquals(JobRecruitmentStatus.RECRUITING, job.recruitmentStatus(endAt))
-        assertEquals(JobRecruitmentStatus.CLOSED, job.recruitmentStatus(endAt.plusNanos(1)))
+        val endsNow = createJob(recruitmentStartAt = endAt.minusDays(7), recruitmentEndAt = endAt, now = endAt)
+        val expired = createJob(recruitmentStartAt = endAt.minusDays(7), recruitmentEndAt = endAt, now = endAt.plusNanos(1))
+        val alwaysOpen = createJob(recruitmentType = JobRecruitmentType.ALWAYS_OPEN, now = endAt)
 
-        val alwaysOpen = createJob(recruitmentType = JobRecruitmentType.ALWAYS_OPEN)
-        assertEquals(JobRecruitmentStatus.RECRUITING, alwaysOpen.recruitmentStatus(endAt))
+        assertEquals(JobRecruitmentStatus.RECRUITING, endsNow.recruitmentStatus)
+        assertEquals(JobRecruitmentStatus.CLOSED, expired.recruitmentStatus)
+        assertEquals(JobRecruitmentStatus.RECRUITING, alwaysOpen.recruitmentStatus)
         alwaysOpen.close(endAt)
-        assertEquals(JobRecruitmentStatus.CLOSED, alwaysOpen.recruitmentStatus(endAt))
+        assertEquals(JobRecruitmentStatus.CLOSED, alwaysOpen.recruitmentStatus)
     }
 
     @Test
@@ -268,6 +270,7 @@ class JobDomainTest {
         // 상시 채용은 종료 일시를 둘 수 없으므로 기본값도 모집 유형을 따른다.
         recruitmentEndAt: LocalDateTime? =
             if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN) null else LocalDateTime.of(2026, 8, 31, 23, 59),
+        now: LocalDateTime = LocalDateTime.of(2026, 8, 1, 0, 0),
     ): Job = Job(
         ownerUserId = ownerUserId,
         publicationStatus = publicationStatus,
@@ -299,5 +302,6 @@ class JobDomainTest {
         source = source,
         externalId = externalId,
         listSortKey = 0L,
+        now = now,
     )
 }

@@ -7,7 +7,6 @@ import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
-import java.time.LocalDateTime
 
 @Component
 class JobBookmarkReader internal constructor(
@@ -17,14 +16,12 @@ class JobBookmarkReader internal constructor(
 
     /**
      * 정렬은 조회 쿼리가 북마크 정렬 기준으로 정하므로 Pageable에는 페이지 범위만 넘긴다.
-     * 모집 상태는 저장하지 않고 마감 처리 일시와 모집 종료 일시로 계산하므로 기준 시각이 필요하다.
      */
     fun readBookmarkedPublishedPage(
         userId: Long,
         condition: JobSearchCondition,
         page: Int,
         size: Int,
-        now: LocalDateTime,
         bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
     ): JobPageDto {
         validateBookmarkPageRequest(page, size)
@@ -32,7 +29,6 @@ class JobBookmarkReader internal constructor(
             userId = userId,
             condition = condition,
             bookmarkCondition = bookmarkCondition,
-            now = now,
             pageable = PageRequest.of(page, size),
         )
         return JobPageDto(

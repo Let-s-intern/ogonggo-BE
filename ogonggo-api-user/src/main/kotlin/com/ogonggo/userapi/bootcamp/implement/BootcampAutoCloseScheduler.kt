@@ -8,10 +8,7 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDateTime
 
-/**
- * 부트캠프의 모집 상태는 칼럼에 저장하므로 모집 종료 일시가 지나도 저절로 바뀌지 않는다.
- * 채용공고는 마감 처리 일시와 모집 종료 일시로 상태를 계산하므로 이 작업이 필요 없다.
- */
+/** 부트캠프의 모집 상태는 칼럼에 저장하므로 모집 종료 일시가 지나도 저절로 바뀌지 않는다. */
 @Component
 class BootcampAutoCloseScheduler(
     private val bootcampManager: BootcampManager,

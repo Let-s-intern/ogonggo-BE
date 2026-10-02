@@ -60,6 +60,7 @@ class JobAppender internal constructor(
                 source = source,
                 externalId = command.externalId,
                 listSortKey = JobListSortKey.of(source, now.toLocalDate(), ThreadLocalRandom.current().nextInt()),
+                now = now,
             ),
         )
     }

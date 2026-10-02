@@ -9,7 +9,7 @@ import com.ogonggo.core.bookmark.domain.BookmarkSortType
 data class JobBookmarkSearchCondition(
     /** 지원·신청 관리 단계. */
     val applicationStatus: JobApplicationStatus? = null,
-    /** 모집 상태. 저장하지 않고 조회 시각 기준으로 계산한다. */
+    /** 저장된 모집 상태로 거른다. */
     val recruitmentStatus: JobRecruitmentStatus? = null,
     val sortType: BookmarkSortType = BookmarkSortType.RECENTLY_SAVED,
 ) {

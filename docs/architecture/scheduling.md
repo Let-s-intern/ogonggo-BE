@@ -32,7 +32,8 @@ scheduled_jobs (name, cron, enabled)
 | 이름 | API | 기본 cron | 내용 |
 | --- | --- | --- | --- |
 | `communityRecruitmentPostAutoClose` | 사용자 | `0 0 * * * *` | 기간이 끝난 모집글 자동 마감 |
-| `bootcampAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 부트캠프 자동 마감. 채용공고는 모집 상태를 종료 일시로 계산하므로 대상이 아니다 |
+| `jobAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 채용공고 자동 마감. 직접 마감한 것이 아니므로 `closed_at`은 남기지 않는다 |
+| `bootcampAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 부트캠프 자동 마감 |
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
 | `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |

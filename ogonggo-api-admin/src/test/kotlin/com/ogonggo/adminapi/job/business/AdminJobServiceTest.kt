@@ -155,7 +155,7 @@ class AdminJobServiceTest {
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.ALWAYS_OPEN)
         Mockito.`when`(job.publicationStatus).thenReturn(JobPublicationStatus.PUBLISHED)
         Mockito.`when`(job.source).thenReturn(ContentSource.CRAWLER)
-        Mockito.`when`(job.recruitmentStatus(NOW)).thenReturn(JobRecruitmentStatus.RECRUITING)
+        Mockito.`when`(job.recruitmentStatus).thenReturn(JobRecruitmentStatus.RECRUITING)
         Mockito.`when`(job.createdAt).thenReturn(NOW)
     }
 

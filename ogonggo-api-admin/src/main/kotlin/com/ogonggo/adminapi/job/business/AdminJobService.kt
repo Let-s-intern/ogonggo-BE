@@ -26,24 +26,21 @@ class AdminJobService(
     private val clock: Clock,
 ) {
 
-    /** 모집 상태 필터와 응답의 모집 상태가 같은 기준 시각을 쓰도록 한 번만 만든다. */
     fun getJobs(
         condition: JobManagementSearchCondition,
         sortType: JobSortType,
         page: Int,
         size: Int,
     ): AdminJobPageResult {
-        val now = LocalDateTime.now(clock)
-        val result = jobReader.readManagementPage(condition, sortType, page, size, now)
+        val result = jobReader.readManagementPage(condition, sortType, page, size)
         return AdminJobPageResult.from(
             result = result,
             metrics = jobMetricReader.readAll(result.jobs.map { it.requiredId() }),
-            now = now,
         )
     }
 
     fun getJob(jobId: Long): AdminJobResult =
-        AdminJobResult.from(jobReader.read(jobId), jobMetricReader.read(jobId), LocalDateTime.now(clock))
+        AdminJobResult.from(jobReader.read(jobId), jobMetricReader.read(jobId))
 
     /**
      * 검수 상태를 먼저 바꾸고 노출을 바꾼다. 승인은 곧 노출이므로 승인과 숨김을 함께 보내면 숨김이 남아야 한다.
@@ -83,10 +80,9 @@ class AdminJobService(
 
     /** 숨긴 공고도 운영자가 알아보고 뺄 수 있도록 게시 상태와 무관하게 고른 순서대로 보여 준다. */
     fun getTodayJobs(): List<AdminJobSummary> {
-        val now = LocalDateTime.now(clock)
         val jobs = jobReader.readToday()
         val metrics = jobMetricReader.readAll(jobs.map { it.requiredId() })
-        return jobs.map { job -> AdminJobSummary.from(job, metrics[job.requiredId()] ?: JobMetricDto.EMPTY, now) }
+        return jobs.map { job -> AdminJobSummary.from(job, metrics[job.requiredId()] ?: JobMetricDto.EMPTY) }
     }
 
     @Transactional
