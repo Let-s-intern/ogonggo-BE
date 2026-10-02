@@ -516,8 +516,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         listOf(recruiting, always, expired, closed).forEach { jobBookmarkManager.append(USER_ID, it, NOW) }
 
         // when
-        val recruitingPage = readBookmarks(JobBookmarkSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING))
-        val closedPage = readBookmarks(JobBookmarkSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED))
+        val recruitingPage = readBookmarks(condition = JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING))
+        val closedPage = readBookmarks(condition = JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED))
 
         // then
         assertEquals(setOf(recruiting, always), recruitingPage.jobs.map { it.id }.toSet())
@@ -835,6 +835,26 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `공개 목록은 저장된 모집 상태로 좁힌다`() {
+        val recruiting = publishCommand(createCommand(recruitmentEndAt = NOW.plusDays(1)))
+        val alwaysOpen = publishCommand(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        val expired = publishCommand(createCommand(recruitmentEndAt = NOW.minusDays(1)))
+        val closedJob = jobAppender.append(createCommand(recruitmentType = JobRecruitmentType.ALWAYS_OPEN), NOW)
+        jobManager.publish(closedJob)
+        jobManager.close(closedJob, NOW)
+
+        assertEquals(
+            setOf(recruiting, alwaysOpen),
+            readIds(JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING)),
+        )
+        assertEquals(
+            setOf(expired, closedJob.id),
+            readIds(JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED)),
+        )
+        assertEquals(4, readIds(JobSearchCondition.NONE).size)
+    }
+
+    @Test
     fun `북마크 목록은 공개 목록과 같은 필터와 검색어로 좁히고 최근 북마크 순을 유지한다`() {
         // given
         val firstBookmarked = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
@@ -1077,9 +1097,10 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     private fun readBookmarks(
         bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
+        condition: JobSearchCondition = JobSearchCondition.NONE,
     ): JobPageDto = jobBookmarkReader.readBookmarkedPublishedPage(
         userId = USER_ID,
-        condition = JobSearchCondition.NONE,
+        condition = condition,
         page = 0,
         size = 10,
         bookmarkCondition = bookmarkCondition,

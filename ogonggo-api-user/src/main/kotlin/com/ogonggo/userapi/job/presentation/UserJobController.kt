@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -51,6 +52,7 @@ class UserJobController(
         @RequestParam(name = "region", required = false) region: Region?,
         @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
+        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
             userId = userId,
@@ -62,6 +64,7 @@ class UserJobController(
                 region = region,
                 subRegion = subRegion,
                 keyword = keyword,
+                recruitmentStatus = recruitmentStatus,
             ),
             sortType = sortType,
             page = page - 1,

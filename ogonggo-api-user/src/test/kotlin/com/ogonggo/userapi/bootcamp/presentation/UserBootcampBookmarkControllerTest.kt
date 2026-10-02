@@ -80,6 +80,22 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `내 북마크 목록의 모집 상태는 조회 조건으로 전달되고 임시저장은 400으로 응답한다`() {
+        val condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.RECRUITING)
+        Mockito.`when`(userBootcampBookmarkService.getBookmarks(USER_ID, condition, 0, 10))
+            .thenReturn(bookmarkPage())
+
+        mockMvc.perform(get("/api/v1/bootcamp-bookmarks").param("recruitmentStatus", "RECRUITING").with(authenticatedUser()))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/v1/bootcamp-bookmarks").param("recruitmentStatus", "DRAFT").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verify(userBootcampBookmarkService).getBookmarks(USER_ID, condition, 0, 10)
+        Mockito.verifyNoMoreInteractions(userBootcampBookmarkService)
+    }
+
+    @Test
     fun `내 북마크 목록에 정의되지 않은 분류를 보내면 400으로 응답한다`() {
         mockMvc.perform(get("/api/v1/bootcamp-bookmarks").param("category", "UNKNOWN").with(authenticatedUser()))
             .andExpect(status().isBadRequest)

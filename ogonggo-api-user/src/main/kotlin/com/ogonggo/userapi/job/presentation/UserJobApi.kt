@@ -3,6 +3,7 @@ package com.ogonggo.userapi.job.presentation
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.region.domain.Region
@@ -55,6 +56,10 @@ interface UserJobApi {
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
             검색도 필터·정렬과 함께 사용할 수 있습니다.
+
+            recruitmentStatus는 RECRUITING(모집 중), CLOSED(모집 마감) 중 하나이며 보내지 않으면 둘 다 반환합니다.
+            마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING이며 상시 채용은 마감 처리 전까지 RECRUITING입니다.
+            종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀌므로 그 전까지는 RECRUITING으로 걸릴 수 있습니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -75,6 +80,7 @@ interface UserJobApi {
         subRegion: SubRegion?,
         @Size(min = 2, max = 100)
         keyword: String?,
+        recruitmentStatus: JobRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>>
 
     @Operation(

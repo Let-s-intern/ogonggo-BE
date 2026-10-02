@@ -3,6 +3,7 @@ package com.ogonggo.userapi.bootcamp.presentation
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.userapi.bootcamp.presentation.request.UpdateBootcampApplicationStatusRequest
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -45,6 +46,9 @@ interface UserBootcampBookmarkApi {
             IN_PROGRESS(활동 중), COMPLETED(활동 완료) 중 하나입니다.
             보내면 그 단계의 북마크만 반환하고, 보내지 않으면 모든 단계를 반환합니다.
 
+            recruitmentStatus는 RECRUITING(모집 중), CLOSED(모집 마감) 중 하나이며 보내지 않으면 둘 다 반환합니다.
+            DRAFT를 보내면 400입니다. 모집 종료 일시가 지난 부트캠프는 매시 정각에 CLOSED로 바뀌므로 그 전까지는 RECRUITING으로 걸릴 수 있습니다.
+
             sort로 정렬을 고릅니다. 지금은 RECENTLY_SAVED(최근 저장순)만 있으며 보내지 않으면 RECENTLY_SAVED입니다.
             북마크를 등록·재등록하거나 신청 단계를 옮긴 시각이 최근인 순서입니다.
         """,
@@ -62,6 +66,7 @@ interface UserBootcampBookmarkApi {
         @Size(min = 2, max = 100)
         keyword: String?,
         applicationStatus: BootcampApplicationStatus?,
+        recruitmentStatus: BootcampStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(operationId = "createBootcampBookmark", summary = "부트캠프 북마크 등록")
