@@ -61,7 +61,6 @@ internal class JobQueryRepository(
             jobBookmark.userId.eq(userId),
             jobBookmark.deletedAt.isNull,
             bookmarkCondition.applicationStatus?.let { jobBookmark.applicationStatus.eq(it) },
-            bookmarkCondition.recruitmentStatus?.let(job.recruitmentStatus::eq),
             *publishedPredicates(condition),
         )
         val content = queryFactory.select(job)
@@ -227,6 +226,7 @@ internal class JobQueryRepository(
         condition.region?.let(job.region::eq),
         condition.subRegion?.let(job.subRegion::eq),
         keywordContains(condition.keyword),
+        condition.recruitmentStatus?.let(job.recruitmentStatus::eq),
     )
 
     private fun managementPredicates(condition: JobManagementSearchCondition): Array<Predicate?> =

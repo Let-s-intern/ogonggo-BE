@@ -62,12 +62,12 @@ class UserJobBookmarkController(
                 region = region,
                 subRegion = subRegion,
                 keyword = keyword,
+                recruitmentStatus = recruitmentStatus,
             ),
             page = page - 1,
             size = size,
             bookmarkCondition = JobBookmarkSearchCondition(
                 applicationStatus = applicationStatus,
-                recruitmentStatus = recruitmentStatus,
                 sortType = sortType,
             ),
         )

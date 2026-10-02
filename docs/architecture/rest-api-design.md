@@ -134,7 +134,7 @@ DELETE /api/v1/bootcamp-bookmarks/{bootcampId}
 GET  /api/v1/job-bookmarks?applicationStatus={단계}&recruitmentStatus={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
 PUT  /api/v1/job-bookmarks/{jobId}/application-status
 
-GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&status={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
+GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&recruitmentStatus={모집 상태}&keyword={검색어}&sort=RECENTLY_SAVED
 PUT  /api/v1/bootcamp-bookmarks/{bootcampId}/application-status
 
 GET  /api/v1/recruitment-post-bookmarks?recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}&sort=RECENTLY_SAVED
@@ -154,7 +154,7 @@ POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
 
 - 채용공고·부트캠프는 단계를 북마크 행이 가지며, 등록하거나 해제 후 다시 등록하면 스크랩에서 시작합니다. 각 단계 목록은 북마크 목록에 `applicationStatus`를 주어 조회하고, 단계별 건수는 그 응답의 전체 건수를 씁니다. 한 단계만 모아 보는 필터도 같은 `applicationStatus`를 씁니다.
 - 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/me/recruitment-applications/{postId}`를 씁니다.
-- 마감 상태는 채용공고 `recruitmentStatus`, 부트캠프 `status`, 사이드·스터디 `recruitmentStatus`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
+- 마감 상태는 채용공고·부트캠프·사이드·스터디 모두 `recruitmentStatus`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 사용자 공개 목록(`GET /api/v1/jobs`, `GET /api/v1/bootcamps`)도 같은 파라미터를 받습니다. 부트캠프는 `DRAFT`를 보내면 400 `BAD_REQUEST`입니다. 관리자 부트캠프 목록은 응답 필드 이름을 따라 계속 `status`를 씁니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
 - 북마크 목록 정렬은 `sort`로 고르며 지금은 최근 저장순(`RECENTLY_SAVED`)만 있고 기본값입니다. 등록·재등록하거나 단계를 옮긴 시각이 최근인 순서입니다. 다른 정렬은 필요할 때 값을 추가합니다.
 - 채용공고·부트캠프 단계에는 선후 관계가 없어 어느 단계에서든 다른 어느 단계로든 옮길 수 있습니다. 그래서 이동마다 명령 경로를 두지 않고 `PUT .../application-status`가 `{ "applicationStatus": "INTERVIEWING" }`처럼 목표 단계를 받습니다. 4절의 명령별 경로 원칙은 전이 규칙이 행위마다 다를 때를 위한 것이라, 전이 규칙이 없는 이 경우에는 적용하지 않습니다.
   - 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요. 이전(2026-09-21)에는 스크랩과 지원 준비 중(부트캠프는 신청 전) 사이만 옮길 수 있어 `POST .../prepare`, `POST .../cancel-preparation`을 두었습니다. 화면에서 모든 단계를 서로 옮길 수 있게 정해져 두 경로를 없애고 하나로 바꿨습니다. 영향 범위는 채용공고·부트캠프 북마크 단계 이동 API이며 사이드·스터디는 바뀌지 않습니다.

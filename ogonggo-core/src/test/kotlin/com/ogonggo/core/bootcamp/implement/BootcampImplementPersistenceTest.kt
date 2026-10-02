@@ -298,6 +298,27 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `모집 상태로 목록을 좁힌다`() {
+        val now = LocalDateTime.of(2026, 9, 15, 12, 0)
+        val recruiting = bootcampAppender.append(createCommand())
+        val closed = bootcampAppender.append(createCommand())
+        listOf(recruiting, closed).forEach(bootcampManager::startRecruitment)
+        bootcampManager.close(closed, now)
+        // 임시저장은 공개 목록에 보이지 않는다.
+        bootcampAppender.append(createCommand())
+
+        assertEquals(
+            listOf(recruiting.id),
+            publicPage(condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.RECRUITING), now = now).bootcamps.map { it.id },
+        )
+        assertEquals(
+            listOf(closed.id),
+            publicPage(condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.CLOSED), now = now).bootcamps.map { it.id },
+        )
+        assertEquals(2L, publicPage(now = now).totalElements)
+    }
+
+    @Test
     fun `공개 목록은 기업 연계 과정을 먼저 두고 그 안에서 고른 정렬을 따른다`() {
         val now = LocalDateTime.of(2026, 9, 15, 12, 0)
         val linkedOld = bootcampAppender.append(work24Command("A-1", enterpriseLinked = true))

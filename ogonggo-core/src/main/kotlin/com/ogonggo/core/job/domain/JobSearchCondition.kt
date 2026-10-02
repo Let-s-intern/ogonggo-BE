@@ -21,6 +21,8 @@ data class JobSearchCondition(
     val subRegion: SubRegion? = null,
     /** 회사명 또는 공고 제목에 포함되는지로 찾는다. 비어 있으면 검색하지 않는다. */
     val keyword: String? = null,
+    /** 저장된 모집 상태로 거른다. */
+    val recruitmentStatus: JobRecruitmentStatus? = null,
 ) {
     companion object {
         val NONE = JobSearchCondition()

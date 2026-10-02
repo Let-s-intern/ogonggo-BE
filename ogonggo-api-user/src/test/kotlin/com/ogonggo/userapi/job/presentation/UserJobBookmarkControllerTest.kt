@@ -156,13 +156,10 @@ class UserJobBookmarkControllerTest @Autowired constructor(
         Mockito.`when`(
             userJobBookmarkService.getBookmarks(
                 USER_ID,
-                JobSearchCondition.NONE,
+                JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED),
                 0,
                 10,
-                JobBookmarkSearchCondition(
-                    recruitmentStatus = JobRecruitmentStatus.CLOSED,
-                    sortType = BookmarkSortType.RECENTLY_SAVED,
-                ),
+                JobBookmarkSearchCondition(sortType = BookmarkSortType.RECENTLY_SAVED),
             ),
         ).thenReturn(bookmarkPage())
 
@@ -174,13 +171,10 @@ class UserJobBookmarkControllerTest @Autowired constructor(
         // then
         Mockito.verify(userJobBookmarkService).getBookmarks(
             USER_ID,
-            JobSearchCondition.NONE,
+            JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED),
             0,
             10,
-            JobBookmarkSearchCondition(
-                recruitmentStatus = JobRecruitmentStatus.CLOSED,
-                sortType = BookmarkSortType.RECENTLY_SAVED,
-            ),
+            JobBookmarkSearchCondition(sortType = BookmarkSortType.RECENTLY_SAVED),
         )
     }
 

@@ -16,6 +16,7 @@ import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
@@ -333,6 +334,34 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
         Mockito.verifyNoInteractions(userBootcampService)
+    }
+
+    @Test
+    fun `모집 상태는 조회 조건으로 전달된다`() {
+        val condition = JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING)
+        Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.LATEST, 0, 10))
+            .thenReturn(jobPageResult())
+
+        mockMvc.perform(get("/api/v1/jobs").param("recruitmentStatus", "RECRUITING").with(authenticatedUser()))
+            .andExpect(status().isOk)
+
+        Mockito.verify(userJobService).getJobs(USER_ID, condition, JobSortType.LATEST, 0, 10)
+    }
+
+    @Test
+    fun `부트캠프 모집 상태는 조회 조건으로 전달되고 임시저장은 400으로 응답한다`() {
+        val condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.CLOSED)
+        Mockito.`when`(userBootcampService.getBootcamps(USER_ID, condition, BootcampSortType.LATEST, 0, 10))
+            .thenReturn(bootcampPageResult())
+
+        mockMvc.perform(get("/api/v1/bootcamps").param("recruitmentStatus", "CLOSED").with(authenticatedUser()))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/v1/bootcamps").param("recruitmentStatus", "DRAFT").with(authenticatedUser()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verify(userBootcampService).getBootcamps(USER_ID, condition, BootcampSortType.LATEST, 0, 10)
+        Mockito.verifyNoMoreInteractions(userBootcampService)
     }
 
     @Test

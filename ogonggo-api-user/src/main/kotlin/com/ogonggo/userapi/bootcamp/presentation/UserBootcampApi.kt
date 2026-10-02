@@ -2,6 +2,7 @@ package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
+import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -41,6 +42,9 @@ interface UserBootcampApi {
             keyword는 운영 회사명 또는 프로그램명에 포함되는지로 찾으며 대소문자를 가리지 않습니다.
             2자 이상 100자 이하여야 하며, 검색하지 않을 때는 보내지 않습니다.
             검색도 필터·정렬과 함께 사용할 수 있습니다.
+
+            recruitmentStatus는 RECRUITING(모집 중), CLOSED(모집 마감) 중 하나이며 보내지 않으면 둘 다 반환합니다.
+            DRAFT를 보내면 400입니다. 모집 종료 일시가 지난 부트캠프는 매시 정각에 CLOSED로 바뀌므로 그 전까지는 RECRUITING으로 걸릴 수 있습니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
@@ -56,6 +60,7 @@ interface UserBootcampApi {
         category: BootcampCategory?,
         @Size(min = 2, max = 100)
         keyword: String?,
+        recruitmentStatus: BootcampStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(

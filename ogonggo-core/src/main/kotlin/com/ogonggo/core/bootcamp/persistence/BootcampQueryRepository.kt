@@ -122,6 +122,7 @@ internal class BootcampQueryRepository(
         bootcamp.publicationEndAt.isNull.or(bootcamp.publicationEndAt.goe(now)),
         categoryEq(condition.category),
         keywordContains(condition.keyword),
+        statusEq(condition.recruitmentStatus),
     )
 
     private fun managementPredicates(condition: BootcampManagementSearchCondition): Array<Predicate?> = arrayOf(
