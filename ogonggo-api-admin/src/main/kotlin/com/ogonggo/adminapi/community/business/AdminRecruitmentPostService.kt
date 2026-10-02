@@ -20,6 +20,8 @@ class AdminRecruitmentPostService(
     private val userProfileReader: UserProfileReader,
 ) {
 
+    /** 포지션·기술 스택은 지연 로딩 컬렉션이라 결과로 옮길 때까지 영속성 컨텍스트를 연다. 사용자 목록과 같다. */
+    @Transactional(readOnly = true)
     fun getRecruitmentPosts(
         condition: RecruitmentPostConsoleSearchCondition,
         sortType: RecruitmentPostSortType,
