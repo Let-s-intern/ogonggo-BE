@@ -2,6 +2,7 @@ package com.ogonggo.userapi.community.presentation
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.community.domain.ProgressMethod
+import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
@@ -176,6 +177,7 @@ class RecruitmentPostBookmarkControllerTest @Autowired constructor(
                 capacity = 4,
                 activityDurationMonths = 3,
                 technologyStacks = listOf("Kotlin"),
+                positions = listOf(RecruitmentPosition.BACKEND),
                 recruitmentStartDate = LocalDate.of(2026, 9, 1),
                 recruitmentEndDate = LocalDate.of(2026, 9, 30),
                 bookmarked = true,

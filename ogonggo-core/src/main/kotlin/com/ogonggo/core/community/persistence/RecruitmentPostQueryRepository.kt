@@ -3,6 +3,7 @@ package com.ogonggo.core.community.persistence
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.community.domain.RecruitmentPost
 import com.ogonggo.core.community.domain.RecruitmentPostBookmarkSearchCondition
+import com.ogonggo.core.community.domain.RecruitmentPostConsoleSearchCondition
 import com.ogonggo.core.community.domain.RecruitmentPostApplicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.community.domain.RecruitmentPostManagementStatus
@@ -54,6 +55,26 @@ internal class RecruitmentPostQueryRepository(
             .where(*predicates.toTypedArray())
             .fetchOne() ?: 0L
         val pageable = PageRequest.of(page, size)
+        return PageImpl(content, pageable, total)
+    }
+
+    fun findConsolePage(
+        condition: RecruitmentPostConsoleSearchCondition,
+        sortType: RecruitmentPostSortType,
+        pageable: Pageable,
+    ): Page<RecruitmentPost> {
+        val predicates = consolePredicates(condition)
+        val content = queryFactory.selectFrom(recruitmentPost)
+            .leftJoin(postMetric).on(postMetric.postId.eq(recruitmentPost.id))
+            .where(*predicates)
+            .orderBy(*sortType.toOrder())
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+        val total = queryFactory.select(recruitmentPost.count())
+            .from(recruitmentPost)
+            .where(*predicates)
+            .fetchOne() ?: 0L
         return PageImpl(content, pageable, total)
     }
 
@@ -168,6 +189,18 @@ internal class RecruitmentPostQueryRepository(
     private fun RecruitmentPostManagementSortType.toOrder() = when (this) {
         RecruitmentPostManagementSortType.LATEST_SAVED -> arrayOf(recruitmentPost.updatedAt.desc(), recruitmentPost.id.desc())
     }
+
+    private fun consolePredicates(condition: RecruitmentPostConsoleSearchCondition): Array<Predicate?> = arrayOf(
+        recruitmentPost.deletedAt.isNull,
+        when (condition.published) {
+            null -> recruitmentPost.publicationStatus.`in`(PublicationStatus.PUBLISHED, PublicationStatus.HIDDEN)
+            true -> recruitmentPost.publicationStatus.eq(PublicationStatus.PUBLISHED)
+            false -> recruitmentPost.publicationStatus.eq(PublicationStatus.HIDDEN)
+        },
+        condition.recruitmentType?.let(recruitmentPost.recruitmentType::eq),
+        condition.recruitmentStatus?.let(recruitmentPost.recruitmentStatus::eq),
+        condition.keyword?.takeIf(String::isNotBlank)?.let(recruitmentPost.title::containsIgnoreCase),
+    )
 
     private fun publishedPredicates(filter: RecruitmentPostListFilter): Array<Predicate?> = arrayOf(
         recruitmentPost.publicationStatus.eq(PublicationStatus.PUBLISHED),

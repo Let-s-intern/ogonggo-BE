@@ -218,6 +218,20 @@ class RecruitmentPost internal constructor(
         publicationStatus = PublicationStatus.PUBLISHED
     }
 
+    /** 운영자가 게시된 모집글을 사용자에게서 내린다. 작성자는 [publish]로 되돌릴 수 없다. */
+    fun hide() {
+        checkNotDeleted()
+        check(publicationStatus != PublicationStatus.DRAFT) { "임시저장 모집글은 숨길 수 없습니다." }
+        publicationStatus = PublicationStatus.HIDDEN
+    }
+
+    /** 운영자가 숨긴 모집글을 다시 내놓는다. 게시된 적이 있어 게시 조건은 다시 확인하지 않는다. */
+    fun unhide() {
+        checkNotDeleted()
+        check(publicationStatus != PublicationStatus.DRAFT) { "임시저장 모집글은 운영자가 게시할 수 없습니다." }
+        publicationStatus = PublicationStatus.PUBLISHED
+    }
+
     fun delete(deletedAt: LocalDateTime) {
         if (this.deletedAt == null) {
             this.deletedAt = deletedAt

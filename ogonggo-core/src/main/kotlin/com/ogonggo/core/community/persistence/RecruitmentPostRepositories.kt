@@ -56,6 +56,23 @@ internal interface RecruitmentPostJpaRepository : JpaRepository<RecruitmentPost,
         @Param("publicationStatus") publicationStatus: PublicationStatus,
     ): RecruitmentPost?
 
+    /** 여러 요청이 같은 모집글들을 잠글 때 순서가 엇갈려 교착되지 않도록 식별자 순으로 잠근다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id in :postIds
+          and post.publicationStatus <> :draftStatus
+          and post.deletedAt is null
+        order by post.id
+        """,
+    )
+    fun findAllPostedByIdInForUpdate(
+        @Param("postIds") postIds: Collection<Long>,
+        @Param("draftStatus") draftStatus: PublicationStatus = PublicationStatus.DRAFT,
+    ): List<RecruitmentPost>
+
     @Query(
         """
         select post

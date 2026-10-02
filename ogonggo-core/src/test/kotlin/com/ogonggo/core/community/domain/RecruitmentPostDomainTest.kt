@@ -324,6 +324,35 @@ class RecruitmentPostDomainTest {
     }
 
     @Test
+    @DisplayName("운영자가 숨긴 모집글은 작성자가 게시로 되돌릴 수 없고 운영자가 다시 공개한다")
+    fun hiddenPostIsRestoredOnlyByUnhide() {
+        // given
+        val post = createPostFixture()
+        post.hide()
+
+        // when
+        assertThrows(IllegalStateException::class.java) { post.publish() }
+        val statusAfterPublish = post.publicationStatus
+        post.unhide()
+
+        // then
+        assertEquals(PublicationStatus.HIDDEN, statusAfterPublish)
+        assertEquals(PublicationStatus.PUBLISHED, post.publicationStatus)
+    }
+
+    @Test
+    @DisplayName("임시저장 모집글은 운영자가 숨기거나 공개할 수 없다")
+    fun draftCannotBeHiddenOrUnhidden() {
+        // given
+        val post = createPostFixture().copyAsDraft()
+
+        // when & then
+        assertThrows(IllegalStateException::class.java) { post.hide() }
+        assertThrows(IllegalStateException::class.java) { post.unhide() }
+        assertEquals(PublicationStatus.DRAFT, post.publicationStatus)
+    }
+
+    @Test
     @DisplayName("모집글을 삭제하면 최초 삭제 시각을 유지한다")
     fun deletePost() {
         // given
