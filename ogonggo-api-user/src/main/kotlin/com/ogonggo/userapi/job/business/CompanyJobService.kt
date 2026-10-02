@@ -52,8 +52,9 @@ class CompanyJobService(
     fun update(userId: Long, jobId: Long, command: JobUpdateDto) {
         verifyCompany(userId)
         val job = jobReader.readOwnedForUpdate(userId, jobId)
-        jobManager.update(job, command)
-        jobManager.requestReview(job, LocalDateTime.now(clock))
+        val now = LocalDateTime.now(clock)
+        jobManager.update(job, command, now)
+        jobManager.requestReview(job, now)
     }
 
     /**

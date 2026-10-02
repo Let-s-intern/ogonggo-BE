@@ -101,6 +101,25 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
 
     fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
 
+    /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. 채용공고의 모집 상태 계산과 경계를 맞춘다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Bootcamp bootcamp
+        set bootcamp.status = :closedStatus,
+            bootcamp.closedAt = :now,
+            bootcamp.updatedAt = :now
+        where bootcamp.status = :recruitingStatus
+          and bootcamp.recruitmentEndAt < :now
+          and bootcamp.deletedAt is null
+        """,
+    )
+    fun closeExpired(
+        @Param("now") now: LocalDateTime,
+        @Param("recruitingStatus") recruitingStatus: BootcampStatus = BootcampStatus.RECRUITING,
+        @Param("closedStatus") closedStatus: BootcampStatus = BootcampStatus.CLOSED,
+    ): Int
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         "select bootcamp from Bootcamp bootcamp " +

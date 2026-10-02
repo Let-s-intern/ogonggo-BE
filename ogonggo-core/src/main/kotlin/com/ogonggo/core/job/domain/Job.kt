@@ -89,6 +89,10 @@ import java.time.LocalDateTime
             name = "idx_jobs_job_role",
             columnList = "job_role, deleted_at",
         ),
+        Index(
+            name = "idx_jobs_recruitment_status_end",
+            columnList = "recruitment_status, recruitment_end_at",
+        ),
     ],
 )
 class Job internal constructor(
@@ -129,6 +133,7 @@ class Job internal constructor(
     source: ContentSource = ContentSource.of(ownerUserId),
     externalId: String? = null,
     listSortKey: Long,
+    now: LocalDateTime,
 ) : BaseTimeEntity() {
 
     init {
@@ -350,8 +355,18 @@ class Job internal constructor(
     var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
         protected set
 
+    /** 운영자나 기업회원이 직접 마감한 일시다. 모집 종료 일시가 지나 자동으로 마감하면 값을 남기지 않는다. */
     @Column(name = "closed_at")
     var closedAt: LocalDateTime? = null /* 공고 마감 처리 일시 */
+        protected set
+
+    /**
+     * 직접 마감했거나 모집 종료 일시가 지났으면 마감이다. 등록·수정·마감할 때 다시 정하고,
+     * 종료 일시가 지나는 것은 매시 자동 마감 작업(`jobAutoClose`)이 반영하므로 그 사이에는 모집 중으로 남을 수 있다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recruitment_status", nullable = false, length = 20)
+    var recruitmentStatus: JobRecruitmentStatus = recruitmentStatusAt(now) /* 모집 상태 */
         protected set
 
     @Column(name = "deleted_at")
@@ -391,6 +406,7 @@ class Job internal constructor(
         applyEmail: String?,
         inquiryEmail: String?,
         sourceUrl: String?,
+        now: LocalDateTime,
     ) {
         checkModifiable()
         validateJobValues(
@@ -445,6 +461,7 @@ class Job internal constructor(
         this.applyEmail = applyEmail
         this.inquiryEmail = inquiryEmail
         this.sourceUrl = sourceUrl
+        this.recruitmentStatus = recruitmentStatusAt(now)
     }
 
     /**
@@ -480,8 +497,8 @@ class Job internal constructor(
         JobContentField.HIRING_PROCESS -> hiringProcess
     }
 
-    /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. 목록의 모집 중 조건과 경계를 맞춘다. */
-    fun recruitmentStatus(now: LocalDateTime): JobRecruitmentStatus {
+    /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. 자동 마감 작업과 경계를 맞춘다. */
+    private fun recruitmentStatusAt(now: LocalDateTime): JobRecruitmentStatus {
         val expired = recruitmentEndAt?.isBefore(now) == true
         return if (closedAt != null || expired) JobRecruitmentStatus.CLOSED else JobRecruitmentStatus.RECRUITING
     }
@@ -511,6 +528,7 @@ class Job internal constructor(
         if (closedAt == null) {
             closedAt = now
         }
+        recruitmentStatus = JobRecruitmentStatus.CLOSED
     }
 
     fun delete(now: LocalDateTime) {

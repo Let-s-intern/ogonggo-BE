@@ -15,6 +15,7 @@ import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 
 @Component
 class BootcampManager internal constructor(
@@ -108,6 +109,10 @@ class BootcampManager internal constructor(
         change(bootcamp) { requestReview() }
         contentRejectionManager.clear(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), now)
     }
+
+    /** 모집 종료 일시가 지난 모집 중 부트캠프를 마감하고 마감한 건수를 돌려준다. */
+    @Transactional
+    fun closeExpired(now: LocalDateTime): Int = bootcampRepository.closeExpired(now)
 
     private fun change(bootcamp: Bootcamp, change: Bootcamp.() -> Unit) {
         bootcamp.change()

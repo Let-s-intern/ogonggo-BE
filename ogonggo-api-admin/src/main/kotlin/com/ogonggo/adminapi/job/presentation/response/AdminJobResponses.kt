@@ -39,7 +39,7 @@ data class AdminJobSummaryResponse(
     val source: ContentSource,
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ReviewStatus?,
-    @Schema(description = "저장하지 않고 마감 처리 일시와 모집 종료 일시로 계산한 값입니다.")
+    @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
 ) {
@@ -93,7 +93,7 @@ data class AdminJobDetailResponse(
     val source: ContentSource,
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ReviewStatus?,
-    @Schema(description = "저장하지 않고 마감 처리 일시와 모집 종료 일시로 계산한 값입니다.")
+    @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
     val companyAndTeamIntroduction: String?,

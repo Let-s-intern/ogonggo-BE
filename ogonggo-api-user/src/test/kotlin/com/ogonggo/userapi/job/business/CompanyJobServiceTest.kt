@@ -101,7 +101,7 @@ class CompanyJobServiceTest {
         service.update(USER_ID, JOB_ID, update)
 
         val order = Mockito.inOrder(jobManager)
-        order.verify(jobManager).update(job, update)
+        order.verify(jobManager).update(job, update, NOW)
         order.verify(jobManager).requestReview(job, NOW)
     }
 

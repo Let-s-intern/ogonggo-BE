@@ -48,7 +48,7 @@ interface AdminJobApi {
             keyword는 제목과 회사명에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
             visibility는 게시 중이면 VISIBLE, 초안·숨김·보관이면 HIDDEN입니다.
             source는 등록 경로입니다. COMPANY 비즈니스 등록, CRAWLER 크롤링, WORK24 고용24 수집입니다.
-            recruitmentStatus는 마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING입니다.
+            recruitmentStatus는 마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING입니다. 종료 일시가 지난 공고는 매시 정각 자동 마감 작업이 CLOSED로 바꾸므로 그 전까지는 RECRUITING일 수 있습니다.
             jobField(직군), jobRole(직무)은 GET /api/v1/enums(사용자 API)의 JobField·JobRole 값을 보냅니다.
             jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.

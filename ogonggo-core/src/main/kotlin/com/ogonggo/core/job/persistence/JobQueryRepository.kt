@@ -55,14 +55,13 @@ internal class JobQueryRepository(
         userId: Long,
         condition: JobSearchCondition,
         bookmarkCondition: JobBookmarkSearchCondition,
-        now: LocalDateTime,
         pageable: Pageable,
     ): Page<Job> {
         val predicates = arrayOf(
             jobBookmark.userId.eq(userId),
             jobBookmark.deletedAt.isNull,
             bookmarkCondition.applicationStatus?.let { jobBookmark.applicationStatus.eq(it) },
-            recruitmentStatusEq(bookmarkCondition.recruitmentStatus, now),
+            bookmarkCondition.recruitmentStatus?.let(job.recruitmentStatus::eq),
             *publishedPredicates(condition),
         )
         val content = queryFactory.select(job)
@@ -94,7 +93,6 @@ internal class JobQueryRepository(
         calendarCondition: JobCalendarSearchCondition,
         rangeStart: LocalDateTime,
         rangeEndExclusive: LocalDateTime,
-        now: LocalDateTime,
     ): List<Job> =
         queryFactory.selectFrom(job)
             .where(
@@ -107,7 +105,7 @@ internal class JobQueryRepository(
                 } else {
                     job.recruitmentStartAt.lt(rangeEndExclusive)
                 },
-                recruiting(now).takeIf { calendarCondition.excludeClosed },
+                recruiting().takeIf { calendarCondition.excludeClosed },
                 calendarCondition.bookmarkedUserId?.let(::bookmarkedBy),
             )
             .orderBy(job.recruitmentEndAt.asc(), job.id.asc())
@@ -134,9 +132,8 @@ internal class JobQueryRepository(
     fun findManagementPage(
         condition: JobManagementSearchCondition,
         sortType: JobSortType,
-        now: LocalDateTime,
         pageable: Pageable,
-    ): Page<Job> = findPage(managementPredicates(condition, now), sortType, REGISTERED_LATEST, pageable)
+    ): Page<Job> = findPage(managementPredicates(condition), sortType, REGISTERED_LATEST, pageable)
 
     private fun findPage(
         predicates: Array<Predicate?>,
@@ -164,11 +161,11 @@ internal class JobQueryRepository(
      * 지표 행은 첫 조회 시점에 생기므로 한 번도 조회되지 않은 공고는 대상이 아니다.
      * 고용 형태가 없으면 모든 고용 형태를 대상으로 한다.
      */
-    fun findPopularRecruiting(employmentType: EmploymentType?, limit: Int, now: LocalDateTime): List<Job> =
+    fun findPopularRecruiting(employmentType: EmploymentType?, limit: Int): List<Job> =
         queryFactory.select(job)
             .from(jobMetric)
             .join(job).on(job.id.eq(jobMetric.jobId))
-            .where(*recruitingPredicates(now), employmentTypeEq(employmentType))
+            .where(*recruitingPredicates(), employmentTypeEq(employmentType))
             .orderBy(jobMetric.viewCount.desc(), jobMetric.jobId.desc())
             .limit(limit.toLong())
             .fetch()
@@ -183,12 +180,11 @@ internal class JobQueryRepository(
         industries: Collection<String>,
         excludedJobIds: Collection<Long>,
         limit: Int,
-        now: LocalDateTime,
     ): List<Job> =
         queryFactory.selectFrom(job)
             .leftJoin(jobMetric).on(jobMetric.jobId.eq(job.id))
             .where(
-                *recruitingPredicates(now),
+                *recruitingPredicates(),
                 jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
                 industries.takeIf { it.isNotEmpty() }?.let { job.industry.`in`(it) },
                 excludedJobIds.takeIf { it.isNotEmpty() }?.let { job.id.notIn(it) },
@@ -214,10 +210,10 @@ internal class JobQueryRepository(
             .fetch()
 
     /** 마감 처리됐거나 모집 종료 일시가 지난 공고는 지원할 수 없으므로 추천 목록에서 뺀다. */
-    private fun recruitingPredicates(now: LocalDateTime): Array<Predicate> = arrayOf(
+    private fun recruitingPredicates(): Array<Predicate> = arrayOf(
         job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
         job.deletedAt.isNull,
-        recruiting(now),
+        recruiting(),
     )
 
     /** 게시 상태와 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */
@@ -233,13 +229,13 @@ internal class JobQueryRepository(
         keywordContains(condition.keyword),
     )
 
-    private fun managementPredicates(condition: JobManagementSearchCondition, now: LocalDateTime): Array<Predicate?> =
+    private fun managementPredicates(condition: JobManagementSearchCondition): Array<Predicate?> =
         arrayOf(
             job.deletedAt.isNull,
             publishedEq(condition.published),
             sourceEq(condition.source),
             condition.reviewStatus?.let(job.reviewStatus::eq),
-            recruitmentStatusEq(condition.recruitmentStatus, now),
+            condition.recruitmentStatus?.let(job.recruitmentStatus::eq),
             condition.jobField?.let(job.jobField::eq),
             condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
             keywordContains(condition.keyword),
@@ -259,16 +255,8 @@ internal class JobQueryRepository(
 
     private fun sourceEq(source: ContentSource?): BooleanExpression? = source?.let { job.source.eq(it) }
 
-    /** `Job.recruitmentStatus`와 같은 경계를 쓴다. 종료 일시와 같은 시각까지는 모집 중이다. */
-    private fun recruitmentStatusEq(status: JobRecruitmentStatus?, now: LocalDateTime): BooleanExpression? =
-        when (status) {
-            null -> null
-            JobRecruitmentStatus.RECRUITING -> recruiting(now)
-            JobRecruitmentStatus.CLOSED -> job.closedAt.isNotNull.or(job.recruitmentEndAt.lt(now))
-        }
-
-    private fun recruiting(now: LocalDateTime): BooleanExpression =
-        job.closedAt.isNull.and(job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)))
+    /** 저장된 모집 상태로 거른다. 종료 일시가 지난 공고는 매시 자동 마감 작업 전까지 모집 중으로 남는다. */
+    private fun recruiting(): BooleanExpression = job.recruitmentStatus.eq(JobRecruitmentStatus.RECRUITING)
 
     /**
      * 검색어는 인덱스로 좁힐 수 없어 다른 조건으로 고른 행을 차례로 확인한다.

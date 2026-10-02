@@ -13,12 +13,14 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -87,13 +89,13 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `모집 상태는 마감 처리와 종료 일시로 계산해 거르며 종료 시각까지는 모집 중이다`() {
-        val endsNow = jobAppender.append(command(recruitmentEndAt = NOW))
+    fun `등록할 때 종료 일시가 지났으면 마감으로 저장하고 종료 시각까지는 모집 중이다`() {
+        val endsNow = jobAppender.append(command(recruitmentEndAt = NOW), NOW)
         // DB 일시 칼럼은 마이크로초까지만 저장하므로 나노초 차이로는 경계를 확인할 수 없다.
-        val expired = jobAppender.append(command(recruitmentEndAt = NOW.minusSeconds(1)))
-        val closed = jobAppender.append(command(recruitmentEndAt = NOW.plusDays(7)))
+        val expired = jobAppender.append(command(recruitmentEndAt = NOW.minusSeconds(1)), NOW)
+        val closed = jobAppender.append(command(recruitmentEndAt = NOW.plusDays(7)), NOW)
         jobManager.close(closed, NOW.minusDays(1))
-        val alwaysOpen = jobAppender.append(command(recruitmentType = JobRecruitmentType.ALWAYS_OPEN))
+        val alwaysOpen = jobAppender.append(command(recruitmentType = JobRecruitmentType.ALWAYS_OPEN), NOW)
 
         assertEquals(
             listOf(alwaysOpen.id, endsNow.id),
@@ -106,6 +108,47 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `자동 마감은 종료 일시가 지난 모집 중 공고만 마감하고 직접 마감한 것이 아니므로 마감 처리 일시를 남기지 않는다`() {
+        val registeredAt = NOW.minusDays(1)
+        val expired = jobAppender.append(command(recruitmentEndAt = NOW.minusSeconds(1)), registeredAt)
+        val endsNow = jobAppender.append(command(recruitmentEndAt = NOW), registeredAt)
+        val alwaysOpen = jobAppender.append(command(recruitmentType = JobRecruitmentType.ALWAYS_OPEN), registeredAt)
+        val deleted = jobAppender.append(command(recruitmentEndAt = NOW.minusSeconds(1)), registeredAt)
+        jobManager.delete(deleted, registeredAt)
+        assertEquals(
+            listOf(alwaysOpen.id, endsNow.id, expired.id),
+            ids(JobManagementSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING)),
+        )
+
+        val closedCount = jobManager.closeExpired(NOW)
+
+        assertEquals(1, closedCount)
+        jobReader.read(checkNotNull(expired.id)).let {
+            assertEquals(JobRecruitmentStatus.CLOSED, it.recruitmentStatus)
+            assertNull(it.closedAt)
+        }
+        assertEquals(
+            listOf(alwaysOpen.id, endsNow.id),
+            ids(JobManagementSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING)),
+        )
+        assertEquals(JobRecruitmentStatus.RECRUITING, jobReader.readIncludingDeleted(checkNotNull(deleted.id)).recruitmentStatus)
+    }
+
+    @Test
+    fun `수정하면 모집 상태를 다시 정해 종료 일시를 늘린 공고는 모집 중이 되고 직접 마감한 공고는 마감으로 남는다`() {
+        val expired = jobAppender.append(command(recruitmentEndAt = NOW.minusDays(1)), NOW)
+        val closed = jobAppender.append(command(recruitmentEndAt = NOW.plusDays(1)), NOW)
+        jobManager.close(closed, NOW)
+        val extended = updateCommand(recruitmentEndAt = NOW.plusDays(7))
+
+        jobManager.update(expired, extended, NOW)
+        jobManager.update(closed, extended, NOW)
+
+        assertEquals(JobRecruitmentStatus.RECRUITING, jobReader.read(checkNotNull(expired.id)).recruitmentStatus)
+        assertEquals(JobRecruitmentStatus.CLOSED, jobReader.read(checkNotNull(closed.id)).recruitmentStatus)
+    }
+
+    @Test
     fun `검색어는 제목과 회사명을 대소문자 없이 찾고 마지막 페이지를 넘으면 빈 목록이다`() {
         val byTitle = jobAppender.append(command(title = "iOS 개발자"))
         val byCompany = jobAppender.append(command(companyName = "IOS컴퍼니"))
@@ -113,7 +156,7 @@ internal class JobManagementPersistenceTest @Autowired constructor(
 
         assertEquals(listOf(byCompany.id, byTitle.id), ids(JobManagementSearchCondition(keyword = "ios")))
 
-        val beyond = jobReader.readManagementPage(JobManagementSearchCondition.NONE, JobSortType.LATEST, 5, 20, NOW)
+        val beyond = jobReader.readManagementPage(JobManagementSearchCondition.NONE, JobSortType.LATEST, 5, 20)
         assertEquals(emptyList<Long>(), beyond.jobs.map { it.id })
         assertEquals(3L, beyond.totalElements)
     }
@@ -151,7 +194,7 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     }
 
     private fun ids(condition: JobManagementSearchCondition): List<Long?> =
-        jobReader.readManagementPage(condition, JobSortType.LATEST, 0, 20, NOW).jobs.map { it.id }
+        jobReader.readManagementPage(condition, JobSortType.LATEST, 0, 20).jobs.map { it.id }
 
     private fun command(
         ownerUserId: Long? = null,
@@ -173,6 +216,15 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         recruitmentType = recruitmentType,
         recruitmentEndAt = recruitmentEndAt,
         publicationStatus = publicationStatus,
+    )
+
+    private fun updateCommand(recruitmentEndAt: LocalDateTime): JobUpdateDto = JobUpdateDto(
+        companyName = "오공고",
+        title = "백엔드 개발자",
+        employmentType = EmploymentType.FULL_TIME,
+        experienceType = ExperienceType.EXPERIENCED,
+        recruitmentType = JobRecruitmentType.PERIOD,
+        recruitmentEndAt = recruitmentEndAt,
     )
 
     companion object {

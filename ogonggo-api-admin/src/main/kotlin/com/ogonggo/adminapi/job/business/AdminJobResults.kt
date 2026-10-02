@@ -29,10 +29,9 @@ data class AdminJobPageResult(
         internal fun from(
             result: JobPageDto,
             metrics: Map<Long, JobMetricDto>,
-            now: LocalDateTime,
         ): AdminJobPageResult = AdminJobPageResult(
             items = result.jobs.map { job ->
-                AdminJobSummary.from(job, metrics[job.requiredId()] ?: JobMetricDto.EMPTY, now)
+                AdminJobSummary.from(job, metrics[job.requiredId()] ?: JobMetricDto.EMPTY)
             },
             page = result.page,
             size = result.size,
@@ -68,7 +67,7 @@ data class AdminJobSummary(
     val registeredAt: LocalDateTime,
 ) {
     companion object {
-        internal fun from(job: Job, metric: JobMetricDto, now: LocalDateTime): AdminJobSummary = AdminJobSummary(
+        internal fun from(job: Job, metric: JobMetricDto): AdminJobSummary = AdminJobSummary(
             id = job.requiredId(),
             title = job.title,
             companyName = job.companyName,
@@ -89,7 +88,7 @@ data class AdminJobSummary(
             visibility = AdminContentVisibility.of(job.publicationStatus == JobPublicationStatus.PUBLISHED),
             source = job.source,
             reviewStatus = job.reviewStatus,
-            recruitmentStatus = job.recruitmentStatus(now),
+            recruitmentStatus = job.recruitmentStatus,
             registeredAt = job.createdAt,
         )
     }
@@ -108,8 +107,8 @@ data class AdminJobResult(
     val sourceUrl: String?,
 ) {
     companion object {
-        internal fun from(job: Job, metric: JobMetricDto, now: LocalDateTime): AdminJobResult = AdminJobResult(
-            summary = AdminJobSummary.from(job, metric, now),
+        internal fun from(job: Job, metric: JobMetricDto): AdminJobResult = AdminJobResult(
+            summary = AdminJobSummary.from(job, metric),
             companyAndTeamIntroduction = job.companyAndTeamIntroduction,
             responsibilities = job.responsibilities,
             qualifications = job.qualifications,
