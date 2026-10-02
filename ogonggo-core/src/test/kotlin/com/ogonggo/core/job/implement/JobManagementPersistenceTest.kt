@@ -4,10 +4,12 @@ import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAppendDto
@@ -63,6 +65,24 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         assertEquals(
             listOf(crawledHidden.id),
             ids(JobManagementSearchCondition(source = ContentSource.CRAWLER, published = false)),
+        )
+    }
+
+    @Test
+    fun `직군만 거르면 그 직군의 직무 공고도 걸리고 직무는 여러 개 중 하나라도 맞으면 걸린다`() {
+        val backend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_BACKEND))
+        val frontend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND))
+        val fieldOnly = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT))
+        jobAppender.append(command(jobField = JobField.DESIGN, jobRole = JobRole.DESIGN_WEB))
+        jobAppender.append(command())
+
+        assertEquals(
+            listOf(fieldOnly.id, frontend.id, backend.id),
+            ids(JobManagementSearchCondition(jobField = JobField.IT_DEVELOPMENT)),
+        )
+        assertEquals(
+            listOf(frontend.id, backend.id),
+            ids(JobManagementSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND))),
         )
     }
 
@@ -140,10 +160,14 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         recruitmentEndAt: LocalDateTime? = null,
         title: String = "백엔드 개발자",
         companyName: String = "오공고",
+        jobField: JobField? = null,
+        jobRole: JobRole? = null,
     ): JobAppendDto = JobAppendDto(
         ownerUserId = ownerUserId,
         companyName = companyName,
         title = title,
+        jobField = jobField,
+        jobRole = jobRole,
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
         recruitmentType = recruitmentType,

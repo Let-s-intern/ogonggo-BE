@@ -89,6 +89,8 @@ Before deploying the job list sort key (crawled jobs first, same-day jobs shuffl
 
 Before deploying today's jobs (`GET /api/v1/jobs/today`, picked in the admin console), apply `docs/schema/2026-09-30-today-jobs.sql`.
 
+Before deploying the admin job list `jobField`·`jobRole` filters, apply `docs/schema/2026-10-02-job-admin-field-role-index.sql`.
+
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
 ## Work24 (고용24) Open API

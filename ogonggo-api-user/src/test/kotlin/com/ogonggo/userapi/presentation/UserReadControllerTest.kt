@@ -84,6 +84,8 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(1))
             .andExpect(jsonPath("$.data.items[0].coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.items[0].logoUrl").value("https://example.com/logo.png"))
+            .andExpect(jsonPath("$.data.items[0].jobField").value("IT_DEVELOPMENT"))
+            .andExpect(jsonPath("$.data.items[0].jobRole").value("IT_BACKEND"))
             .andExpect(jsonPath("$.data.items[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data.items[0].viewCount").value(12))
             .andExpect(jsonPath("$.data.items[0].bookmarkCount").value(3))
@@ -102,6 +104,8 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.title").value("백엔드 개발자"))
             .andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/cover.png"))
+            .andExpect(jsonPath("$.data.jobField").value("IT_DEVELOPMENT"))
+            .andExpect(jsonPath("$.data.jobRole").value("IT_BACKEND"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
             .andExpect(jsonPath("$.data.qualifications").value("자격 요건"))
             .andExpect(jsonPath("$.data.applyEmail").value("recruit@example.com"))
@@ -722,6 +726,8 @@ class UserReadControllerTest @Autowired constructor(
         logoUrl = "https://example.com/logo.png",
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
+        jobField = JobField.IT_DEVELOPMENT,
+        jobRole = JobRole.IT_BACKEND,
         experienceMinYears = 1,
         educationLevel = EducationLevel.ANY,
         region = Region.SEOUL,
@@ -744,6 +750,8 @@ class UserReadControllerTest @Autowired constructor(
         logoUrl = null,
         employmentType = EmploymentType.FULL_TIME,
         experienceType = ExperienceType.EXPERIENCED,
+        jobField = JobField.IT_DEVELOPMENT,
+        jobRole = JobRole.IT_BACKEND,
         experienceMinYears = 1,
         educationLevel = EducationLevel.ANY,
         region = Region.SEOUL,

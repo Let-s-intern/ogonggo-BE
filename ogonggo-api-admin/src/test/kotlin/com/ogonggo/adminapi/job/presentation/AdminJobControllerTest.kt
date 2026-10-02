@@ -14,8 +14,10 @@ import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobContentField
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.review.domain.ContentSource
@@ -60,6 +62,8 @@ class AdminJobControllerTest @Autowired constructor(
             source = ContentSource.COMPANY,
             reviewStatus = ReviewStatus.PENDING,
             recruitmentStatus = JobRecruitmentStatus.RECRUITING,
+            jobField = JobField.DESIGN,
+            jobRoles = setOf(JobRole.DESIGN_SPACE_INTERIOR_VMD, JobRole.DESIGN_GRAPHIC_VISUAL),
             keyword = "후지",
         )
         Mockito.`when`(adminJobService.getJobs(condition, JobSortType.VIEW_COUNT, 1, 20))
@@ -74,6 +78,8 @@ class AdminJobControllerTest @Autowired constructor(
                     .param("source", "COMPANY")
                     .param("reviewStatus", "PENDING")
                     .param("recruitmentStatus", "RECRUITING")
+                    .param("jobField", "DESIGN")
+                    .param("jobRole", "DESIGN_SPACE_INTERIOR_VMD", "DESIGN_GRAPHIC_VISUAL")
                     .param("sort", "VIEW_COUNT"),
             ),
         )
@@ -81,6 +87,8 @@ class AdminJobControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(693))
             .andExpect(jsonPath("$.data.items[0].visibility").value("HIDDEN"))
             .andExpect(jsonPath("$.data.items[0].source").value("COMPANY"))
+            .andExpect(jsonPath("$.data.items[0].jobField").value("DESIGN"))
+            .andExpect(jsonPath("$.data.items[0].jobRole").value("DESIGN_SPACE_INTERIOR_VMD"))
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
             .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-09-10T10:48:00"))
             .andExpect(jsonPath("$.data.items[0].responsibilities").doesNotExist())
@@ -101,11 +109,25 @@ class AdminJobControllerTest @Autowired constructor(
                     .param("source", "")
                     .param("reviewStatus", "")
                     .param("recruitmentStatus", "")
+                    .param("jobField", "")
+                    .param("jobRole", "")
                     .param("sort", ""),
             ),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items").isEmpty)
+    }
+
+    @Test
+    fun `상세는 직군과 직무와 본문 칸을 함께 응답한다`() {
+        Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
+
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/693")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.id").value(693))
+            .andExpect(jsonPath("$.data.jobField").value("DESIGN"))
+            .andExpect(jsonPath("$.data.jobRole").value("DESIGN_SPACE_INTERIOR_VMD"))
+            .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
     }
 
     @Test

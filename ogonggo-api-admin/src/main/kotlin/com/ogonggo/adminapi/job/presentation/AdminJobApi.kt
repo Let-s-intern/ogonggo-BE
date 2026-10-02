@@ -11,7 +11,9 @@ import com.ogonggo.adminapi.job.presentation.response.AdminJobSummaryResponse
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
 import io.swagger.v3.oas.annotations.Operation
@@ -47,6 +49,9 @@ interface AdminJobApi {
             visibility는 게시 중이면 VISIBLE, 초안·숨김·보관이면 HIDDEN입니다.
             source는 등록 경로입니다. COMPANY 비즈니스 등록, CRAWLER 크롤링, WORK24 고용24 수집입니다.
             recruitmentStatus는 마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING입니다.
+            jobField(직군), jobRole(직무)은 GET /api/v1/enums(사용자 API)의 JobField·JobRole 값을 보냅니다.
+            jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
+            jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.
 
             정렬 기본값은 REGISTERED_AT(등록일 역순)이며, VIEW_COUNT는 조회 수가 같으면 등록일 역순입니다.
             마지막 페이지를 넘는 page는 빈 items를 반환합니다.
@@ -81,6 +86,8 @@ interface AdminJobApi {
         source: ContentSource?,
         reviewStatus: ReviewStatus?,
         recruitmentStatus: JobRecruitmentStatus?,
+        jobField: JobField?,
+        jobRoles: List<JobRole>?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminJobSummaryResponse>>>
 
     @Operation(

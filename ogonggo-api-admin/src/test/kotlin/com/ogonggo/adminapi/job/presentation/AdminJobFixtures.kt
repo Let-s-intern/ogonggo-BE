@@ -6,8 +6,10 @@ import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.core.job.domain.EducationLevel
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus
@@ -21,6 +23,8 @@ internal object AdminJobFixtures {
         companyName = "한국후지필름",
         employmentType = EmploymentType.CONTRACT,
         experienceType = ExperienceType.EXPERIENCED,
+        jobField = JobField.DESIGN,
+        jobRole = JobRole.DESIGN_SPACE_INTERIOR_VMD,
         educationLevel = EducationLevel.ANY,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 8, 0, 0),

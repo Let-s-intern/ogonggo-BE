@@ -248,6 +248,8 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 logoUrl = null,
                 employmentType = EmploymentType.FULL_TIME,
                 experienceType = ExperienceType.EXPERIENCED,
+                jobField = null,
+                jobRole = null,
                 experienceMinYears = 1,
                 educationLevel = EducationLevel.ANY,
                 region = Region.SEOUL,
