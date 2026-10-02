@@ -67,6 +67,10 @@ class RecruitmentPostManager internal constructor(
 
     fun publish(post: RecruitmentPost) = change(post) { publish() }
 
+    fun hide(post: RecruitmentPost) = change(post) { hide() }
+
+    fun unhide(post: RecruitmentPost) = change(post) { unhide() }
+
     @Transactional
     fun closeExpired(today: LocalDate, closedAt: LocalDateTime): Int =
         postRepository.closeExpired(today = today, closedAt = closedAt)

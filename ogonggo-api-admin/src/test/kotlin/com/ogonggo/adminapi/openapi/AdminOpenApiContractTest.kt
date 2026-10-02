@@ -67,6 +67,8 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1jobs~1today/put",
             "/paths/~1api~1v1~1admin~1bootcamps/get",
             "/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/patch",
+            "/paths/~1api~1v1~1admin~1recruitment-posts/get",
+            "/paths/~1api~1v1~1admin~1recruitment-posts~1visibility/patch",
             "/paths/~1api~1v1~1admin~1review-queue/get",
             "/paths/~1api~1v1~1admin~1review-queue~1{type}~1{id}/patch",
             "/paths/~1api~1v1~1admin~1review-queue~1{type}~1{id}~1undo/patch",
