@@ -1,10 +1,10 @@
 package com.ogonggo.core.image.implement.dto
 
-data class ImageUploadCommand(
+data class ImageUploadDto(
     val content: ByteArray,
 )
 
-data class ImageUploadResult(
+data class ImageUploadResultDto(
     val id: String,
     val url: String,
     val mimeType: String,

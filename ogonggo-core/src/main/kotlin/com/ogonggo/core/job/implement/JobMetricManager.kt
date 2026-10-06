@@ -16,7 +16,7 @@ import java.time.LocalDateTime
  * 실패한 쪽은 상대가 만든 행을 읽지도, 이어서 갱신하지도 못한다.
  */
 @Component
-internal class JobMetricRegistrar(
+internal class JobMetricAppender(
     private val jobMetricRepository: JobMetricJpaRepository,
 ) {
 
@@ -29,7 +29,7 @@ internal class JobMetricRegistrar(
 @Component
 class JobMetricManager internal constructor(
     private val jobMetricRepository: JobMetricJpaRepository,
-    private val jobMetricRegistrar: JobMetricRegistrar,
+    private val jobMetricAppender: JobMetricAppender,
 ) {
 
     fun increaseViewCount(jobId: Long, now: LocalDateTime) {
@@ -57,7 +57,7 @@ class JobMetricManager internal constructor(
             return
         }
         try {
-            jobMetricRegistrar.create(jobId)
+            jobMetricAppender.create(jobId)
         } catch (exception: DataIntegrityViolationException) {
             return
         }

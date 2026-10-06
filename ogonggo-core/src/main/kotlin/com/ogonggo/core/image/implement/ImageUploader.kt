@@ -1,7 +1,7 @@
 package com.ogonggo.core.image.implement
 
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
-import com.ogonggo.core.image.implement.dto.ImageUploadResult
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
+import com.ogonggo.core.image.implement.dto.ImageUploadResultDto
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -17,7 +17,7 @@ class ImageUploader internal constructor(
     private val s3ObjectClient: S3ObjectClient,
 ) {
 
-    fun upload(ownerUserId: Long, command: ImageUploadCommand): ImageUploadResult {
+    fun upload(ownerUserId: Long, command: ImageUploadDto): ImageUploadResultDto {
         val image = imageFileValidator.validate(command)
         val imageId = UUID.randomUUID().toString()
         val key = "images/$imageId.${image.extension}"
@@ -37,7 +37,7 @@ class ImageUploader internal constructor(
         )
         imageAssetManager.markUploaded(imageId)
 
-        return ImageUploadResult(
+        return ImageUploadResultDto(
             id = imageId,
             url = url,
             mimeType = image.mimeType,

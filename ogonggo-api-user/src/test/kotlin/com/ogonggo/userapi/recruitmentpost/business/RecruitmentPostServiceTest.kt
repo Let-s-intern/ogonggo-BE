@@ -18,10 +18,10 @@ import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationRead
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostPage
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostListFilter
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -122,17 +122,17 @@ class RecruitmentPostServiceTest {
             page = 0,
             size = 10,
             sortType = RecruitmentPostSortType.LATEST,
-            filter = RecruitmentPostListFilter(),
+            filter = RecruitmentPostListFilterDto(),
         )
         Mockito.`when`(
             postReader.readPublishedPage(
                 page = 0,
                 size = 10,
-                filter = RecruitmentPostListFilter(),
+                filter = RecruitmentPostListFilterDto(),
                 sortType = RecruitmentPostSortType.LATEST,
             ),
         ).thenReturn(
-            RecruitmentPostPage(
+            RecruitmentPostPageDto(
                 posts = listOf(firstPost, secondPost),
                 page = 0,
                 size = 10,

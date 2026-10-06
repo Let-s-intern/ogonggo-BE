@@ -1,32 +1,30 @@
 package com.ogonggo.userapi.recruitmentpost.business
 
-import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostAppendDto
-import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostDraftAppendDto
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostAppender
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
-import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
+import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
-import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
-import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.image.implement.ImageAssetManager
-import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostAppender
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostDraftAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class RecruitmentPostService(
@@ -193,10 +191,6 @@ class RecruitmentPostService(
     }
 
     private fun verifyActiveUser(userId: Long) {
-        when (userReader.read(userId).status) {
-            UserStatus.ACTIVE -> Unit
-            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
-            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
-        }
+        userReader.read(userId).status.requireActive()
     }
 }

@@ -1,4 +1,4 @@
-package com.ogonggo.adminapi.internal.implement
+package com.ogonggo.adminapi.auth.implement
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

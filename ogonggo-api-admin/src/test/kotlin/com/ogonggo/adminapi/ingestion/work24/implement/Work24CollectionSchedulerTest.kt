@@ -1,9 +1,8 @@
-package com.ogonggo.adminapi.ingestion.work24.business
+package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.ogonggo.adminapi.ingestion.work24.error.Work24ErrorCode
-import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionTarget
-import com.ogonggo.adminapi.ingestion.work24.implement.Work24Collector
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24CollectDto
+import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24CollectionResultDto
 import com.ogonggo.core.error.InternalServerException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,10 +12,10 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-class AdminWork24CollectionServiceTest {
+class Work24CollectionSchedulerTest {
 
     private val collector = Mockito.mock(Work24Collector::class.java)
-    private val service = AdminWork24CollectionService(
+    private val scheduler = Work24CollectionScheduler(
         collector,
         Clock.fixed(Instant.parse("2026-09-26T19:00:00Z"), ZoneId.of("Asia/Seoul")),
     )
@@ -34,19 +33,19 @@ class AdminWork24CollectionServiceTest {
             .thenThrow(InternalServerException(Work24ErrorCode.WORK24_UNAVAILABLE))
 
         // when
-        val results = service.collectAll()
+        val results = scheduler.collectAll()
 
         // then
         assertEquals(targets, results.map { it.target })
         assertEquals(
-            AdminWork24CollectResult.Skipped(Work24CollectionTarget.RECRUITMENTS),
+            Work24CollectionResultDto.Skipped(Work24CollectionTarget.RECRUITMENTS),
             results.first { it.target == Work24CollectionTarget.RECRUITMENTS },
         )
         assertEquals(
-            AdminWork24CollectResult.Failed(Work24CollectionTarget.WORK_STUDY_COURSES),
+            Work24CollectionResultDto.Failed(Work24CollectionTarget.WORK_STUDY_COURSES),
             results.first { it.target == Work24CollectionTarget.WORK_STUDY_COURSES },
         )
-        assertEquals(targets.size - 2, results.count { it is AdminWork24CollectResult.Collected })
+        assertEquals(targets.size - 2, results.count { it is Work24CollectionResultDto.Collected })
         Mockito.verify(collector, Mockito.never()).collect(Work24CollectionTarget.RECRUITMENTS, SEOUL_NOW)
     }
 

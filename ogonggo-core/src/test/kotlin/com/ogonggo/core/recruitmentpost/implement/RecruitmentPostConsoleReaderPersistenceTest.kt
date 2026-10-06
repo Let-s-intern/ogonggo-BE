@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -85,7 +86,7 @@ internal class RecruitmentPostConsoleReaderPersistenceTest @Autowired constructo
         assertEquals("모집글을 찾을 수 없습니다. (id: $missingIds)", exception.message)
     }
 
-    private fun readConsolePage(condition: RecruitmentPostConsoleSearchCondition): RecruitmentPostPage =
+    private fun readConsolePage(condition: RecruitmentPostConsoleSearchCondition): RecruitmentPostPageDto =
         postReader.readConsolePage(condition, RecruitmentPostSortType.LATEST, page = 0, size = 10)
 
     private fun createPost(

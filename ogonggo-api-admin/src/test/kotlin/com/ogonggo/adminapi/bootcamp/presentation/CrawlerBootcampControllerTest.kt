@@ -6,7 +6,7 @@ import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampCommand
 import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampService
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
-import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
+import com.ogonggo.adminapi.auth.presentation.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.ConflictException

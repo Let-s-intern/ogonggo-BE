@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ogonggo.userapi.auth.implement.LetsCareerInternalApiKeyFilter
+import com.ogonggo.userapi.auth.presentation.LetsCareerInternalApiKeyFilter
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.auth.presentation.UserAuthenticationFilter
 import org.springframework.beans.factory.annotation.Value

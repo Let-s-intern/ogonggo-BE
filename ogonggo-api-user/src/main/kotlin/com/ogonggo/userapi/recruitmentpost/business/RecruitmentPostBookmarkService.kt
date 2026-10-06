@@ -1,28 +1,26 @@
 package com.ogonggo.userapi.recruitmentpost.business
 
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostApplicationErrorCode
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricDto
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkManager
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
-import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class RecruitmentPostBookmarkService(
@@ -149,11 +147,7 @@ class RecruitmentPostBookmarkService(
     }
 
     private fun verifyActiveUser(userId: Long) {
-        when (userReader.read(userId).status) {
-            UserStatus.ACTIVE -> Unit
-            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
-            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
-        }
+        userReader.read(userId).status.requireActive()
     }
 }
 

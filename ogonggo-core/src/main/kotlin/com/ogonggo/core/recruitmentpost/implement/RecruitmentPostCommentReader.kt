@@ -1,11 +1,13 @@
 package com.ogonggo.core.recruitmentpost.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostComment
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostCommentErrorCode
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostCommentJpaRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentPageDto
 
 @Component
 class RecruitmentPostCommentReader internal constructor(
@@ -39,10 +41,10 @@ class RecruitmentPostCommentReader internal constructor(
         postId: Long,
         page: Int,
         size: Int,
-    ): RecruitmentPostCommentPage {
+    ): RecruitmentPostCommentPageDto {
         validatePageRequest(page, size)
         val result = commentRepository.findRootComments(postId, PageRequest.of(page, size))
-        return RecruitmentPostCommentPage(
+        return RecruitmentPostCommentPageDto(
             comments = result.content,
             page = result.number,
             size = result.size,
@@ -56,10 +58,10 @@ class RecruitmentPostCommentReader internal constructor(
         parentId: Long,
         page: Int,
         size: Int,
-    ): RecruitmentPostCommentPage {
+    ): RecruitmentPostCommentPageDto {
         validatePageRequest(page, size)
         val result = commentRepository.findReplies(postId, parentId, PageRequest.of(page, size))
-        return RecruitmentPostCommentPage(
+        return RecruitmentPostCommentPageDto(
             comments = result.content,
             page = result.number,
             size = result.size,
@@ -72,7 +74,7 @@ class RecruitmentPostCommentReader internal constructor(
         postId: Long,
         parentIds: Collection<Long>,
         size: Int,
-    ): Map<Long, RecruitmentPostCommentPage> {
+    ): Map<Long, RecruitmentPostCommentPageDto> {
         if (parentIds.isEmpty()) return emptyMap()
 
         val replies = commentRepository.findRepliesByParentIds(postId, parentIds, size)
@@ -83,7 +85,7 @@ class RecruitmentPostCommentReader internal constructor(
             .mapValues { (_, comments) ->
                 val parentId = checkNotNull(comments.first().parentId)
                 val totalElements = replyCounts[parentId] ?: comments.size.toLong()
-                RecruitmentPostCommentPage(
+                RecruitmentPostCommentPageDto(
                     comments = comments,
                     page = 0,
                     size = size,
@@ -92,19 +94,6 @@ class RecruitmentPostCommentReader internal constructor(
                 )
             }
     }
-}
-
-data class RecruitmentPostCommentPage(
-    val comments: List<RecruitmentPostComment>,
-    val page: Int,
-    val size: Int,
-    val totalElements: Long,
-    val totalPages: Int,
-)
-
-private fun validatePageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size > 0) { "댓글 조회 크기는 양수여야 합니다." }
 }
 
 private fun pageCount(totalElements: Long, size: Int): Int =

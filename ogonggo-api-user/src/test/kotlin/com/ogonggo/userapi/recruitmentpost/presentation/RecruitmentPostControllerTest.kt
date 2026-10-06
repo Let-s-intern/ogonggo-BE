@@ -9,7 +9,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostDraftAppendDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostListFilter
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -93,7 +93,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
 
     @Test
     fun `모집글 목록을 페이지와 enum 필터로 조회한다`() {
-        val filter = RecruitmentPostListFilter(
+        val filter = RecruitmentPostListFilterDto(
             recruitmentTypes = setOf(RecruitmentPostType.STUDY, RecruitmentPostType.SIDE_PROJECT),
             progressMethods = setOf(RecruitmentPostProgressMethod.ONLINE),
             recruitmentStatuses = setOf(RecruitmentPostRecruitmentStatus.RECRUITING),
@@ -177,7 +177,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
                     page = 0,
                     size = 10,
                     sortType = RecruitmentPostSortType.LATEST,
-                    filter = RecruitmentPostListFilter(),
+                    filter = RecruitmentPostListFilterDto(),
                 ),
             ),
         ).thenReturn(RecruitmentPostPageResult(emptyList(), 0, 10, 0, 0))

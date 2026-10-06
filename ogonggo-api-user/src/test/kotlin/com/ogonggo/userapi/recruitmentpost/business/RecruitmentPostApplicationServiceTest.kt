@@ -6,8 +6,8 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationItem
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationPage
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostApplicationItemDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostApplicationPageDto
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
@@ -121,9 +121,9 @@ class RecruitmentPostApplicationServiceTest {
     fun `목록 작성자 프로필을 한 번에 조회하고 없으면 null로 반환한다`() {
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(user(UserStatus.ACTIVE))
         Mockito.`when`(applicationReader.readPage(USER_ID, null, null, null, 0, 10)).thenReturn(
-            RecruitmentPostApplicationPage(
+            RecruitmentPostApplicationPageDto(
                 items = listOf(
-                    RecruitmentPostApplicationItem(
+                    RecruitmentPostApplicationItemDto(
                         postId = POST_ID,
                         title = "Kotlin 팀원 모집",
                         recruitmentType = RecruitmentPostType.SIDE_PROJECT,

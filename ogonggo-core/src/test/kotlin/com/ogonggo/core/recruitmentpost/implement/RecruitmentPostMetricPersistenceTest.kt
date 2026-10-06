@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(RecruitmentPostMetricManager::class, RecruitmentPostMetricRegistrar::class)
+@Import(RecruitmentPostMetricManager::class, RecruitmentPostMetricAppender::class)
 internal class RecruitmentPostMetricPersistenceTest @Autowired constructor(
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
     private val recruitmentPostMetricRepository: RecruitmentPostMetricJpaRepository,

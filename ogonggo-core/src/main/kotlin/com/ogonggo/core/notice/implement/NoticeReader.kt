@@ -1,5 +1,6 @@
 package com.ogonggo.core.notice.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.notice.domain.Notice
 import com.ogonggo.core.notice.domain.NoticeManagementSearchCondition
@@ -53,8 +54,3 @@ private fun Page<Notice>.toPageDto(): NoticePageDto = NoticePageDto(
     totalElements = totalElements,
     totalPages = totalPages,
 )
-
-private fun validatePageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
-}

@@ -2,21 +2,21 @@ package com.ogonggo.userapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserRole
-import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserReader
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CompanyBootcampService(
@@ -84,11 +84,7 @@ class CompanyBootcampService(
 
     private fun verifyCompany(userId: Long) {
         val account = userReader.read(userId)
-        when (account.status) {
-            UserStatus.ACTIVE -> Unit
-            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
-            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
-        }
+        account.status.requireActive()
         if (account.role != UserRole.COMPANY) {
             throw ForbiddenException(UserErrorCode.COMPANY_ROLE_REQUIRED)
         }

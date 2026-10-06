@@ -10,24 +10,8 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
-data class RecruitmentPostMetricDto(
-    val viewCount: Long,
-    val commentCount: Long,
-    val bookmarkCount: Long = 0,
-) {
-    companion object {
-        val EMPTY = RecruitmentPostMetricDto(viewCount = 0, commentCount = 0, bookmarkCount = 0)
-
-        internal fun from(metric: RecruitmentPostMetric): RecruitmentPostMetricDto = RecruitmentPostMetricDto(
-            viewCount = metric.viewCount,
-            commentCount = metric.commentCount,
-            bookmarkCount = metric.bookmarkCount,
-        )
-    }
-}
-
 @Component
-internal class RecruitmentPostMetricRegistrar(
+internal class RecruitmentPostMetricAppender(
     private val recruitmentPostMetricRepository: RecruitmentPostMetricJpaRepository,
 ) {
 
@@ -38,29 +22,9 @@ internal class RecruitmentPostMetricRegistrar(
 }
 
 @Component
-class RecruitmentPostMetricReader internal constructor(
-    private val recruitmentPostMetricRepository: RecruitmentPostMetricJpaRepository,
-) {
-
-    fun read(postId: Long): RecruitmentPostMetricDto =
-        recruitmentPostMetricRepository.findByPostId(postId)?.let(RecruitmentPostMetricDto::from) ?: RecruitmentPostMetricDto.EMPTY
-
-    fun readAll(postIds: Collection<Long>): Map<Long, RecruitmentPostMetricDto> {
-        if (postIds.isEmpty()) return emptyMap()
-
-        val metrics = recruitmentPostMetricRepository.findAllByPostIdIn(postIds.toSet())
-            .associateBy(RecruitmentPostMetric::postId)
-
-        return postIds.associateWith { postId ->
-            metrics[postId]?.let(RecruitmentPostMetricDto::from) ?: RecruitmentPostMetricDto.EMPTY
-        }
-    }
-}
-
-@Component
 class RecruitmentPostMetricManager internal constructor(
     private val recruitmentPostMetricRepository: RecruitmentPostMetricJpaRepository,
-    private val recruitmentPostMetricRegistrar: RecruitmentPostMetricRegistrar,
+    private val recruitmentPostMetricAppender: RecruitmentPostMetricAppender,
 ) {
 
     @Transactional
@@ -114,7 +78,7 @@ class RecruitmentPostMetricManager internal constructor(
         if (recruitmentPostMetricRepository.findByPostId(postId) != null) return
 
         try {
-            recruitmentPostMetricRegistrar.create(postId)
+            recruitmentPostMetricAppender.create(postId)
         } catch (_: DataIntegrityViolationException) {
             // 다른 요청이 만든 지표 행을 그대로 사용한다.
         }

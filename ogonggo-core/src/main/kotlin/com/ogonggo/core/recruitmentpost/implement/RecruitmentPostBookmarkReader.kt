@@ -1,10 +1,13 @@
 package com.ogonggo.core.recruitmentpost.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostBookmarkJpaRepository
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostBookmarkItemDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostBookmarkPageDto
 
 @Component
 class RecruitmentPostBookmarkReader internal constructor(
@@ -18,15 +21,15 @@ class RecruitmentPostBookmarkReader internal constructor(
         page: Int,
         size: Int,
         condition: RecruitmentPostBookmarkSearchCondition = RecruitmentPostBookmarkSearchCondition.NONE,
-    ): RecruitmentPostBookmarkPage {
-        validateBookmarkPageRequest(page, size)
+    ): RecruitmentPostBookmarkPageDto {
+        validatePageRequest(page, size)
         val bookmarkedPosts = postQueryRepository.findBookmarkedPublishedPage(
             userId = userId,
             condition = condition,
             pageable = PageRequest.of(page, size),
         )
-        return RecruitmentPostBookmarkPage(
-            items = bookmarkedPosts.content.map(::RecruitmentPostBookmarkItem),
+        return RecruitmentPostBookmarkPageDto(
+            items = bookmarkedPosts.content.map(::RecruitmentPostBookmarkItemDto),
             page = bookmarkedPosts.number,
             size = bookmarkedPosts.size,
             totalElements = bookmarkedPosts.totalElements,
@@ -38,21 +41,4 @@ class RecruitmentPostBookmarkReader internal constructor(
         if (postIds.isEmpty()) emptySet() else bookmarkRepository.findActivePostIds(userId, postIds)
 
     fun isBookmarked(userId: Long, postId: Long): Boolean = readBookmarkedPostIds(userId, listOf(postId)).isNotEmpty()
-}
-
-data class RecruitmentPostBookmarkItem(
-    val post: com.ogonggo.core.recruitmentpost.domain.RecruitmentPost,
-)
-
-data class RecruitmentPostBookmarkPage(
-    val items: List<RecruitmentPostBookmarkItem>,
-    val page: Int,
-    val size: Int,
-    val totalElements: Long,
-    val totalPages: Int,
-)
-
-private fun validateBookmarkPageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
 }

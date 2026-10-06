@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -33,7 +34,7 @@ import java.time.LocalDateTime
     RecruitmentPostReader::class,
     RecruitmentPostQueryRepository::class,
     RecruitmentPostMetricManager::class,
-    RecruitmentPostMetricRegistrar::class,
+    RecruitmentPostMetricAppender::class,
 )
 internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
@@ -77,7 +78,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val result = postReader.readPublishedPage(
             page = 0,
             size = 1,
-            filter = RecruitmentPostListFilter(recruitmentTypes = setOf(RecruitmentPostType.STUDY)),
+            filter = RecruitmentPostListFilterDto(recruitmentTypes = setOf(RecruitmentPostType.STUDY)),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
@@ -107,7 +108,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val result = postReader.readPublishedPage(
             page = 0,
             size = 10,
-            filter = RecruitmentPostListFilter(positions = setOf(RecruitmentPostPosition.DESIGN)),
+            filter = RecruitmentPostListFilterDto(positions = setOf(RecruitmentPostPosition.DESIGN)),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
@@ -123,7 +124,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val result = postReader.readPublishedPage(
             page = 0,
             size = 10,
-            filter = RecruitmentPostListFilter(),
+            filter = RecruitmentPostListFilterDto(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
@@ -145,7 +146,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val result = postReader.readPublishedPage(
             page = 0,
             size = 10,
-            filter = RecruitmentPostListFilter(),
+            filter = RecruitmentPostListFilterDto(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
@@ -176,13 +177,13 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val first = postReader.readPublishedPage(
             page = 0,
             size = 2,
-            filter = RecruitmentPostListFilter(),
+            filter = RecruitmentPostListFilterDto(),
             sortType = RecruitmentPostSortType.LATEST,
         )
         val second = postReader.readPublishedPage(
             page = 1,
             size = 2,
-            filter = RecruitmentPostListFilter(),
+            filter = RecruitmentPostListFilterDto(),
             sortType = RecruitmentPostSortType.LATEST,
         )
 
@@ -230,7 +231,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val result = postReader.readPublishedPage(
             page = 0,
             size = 10,
-            filter = RecruitmentPostListFilter(
+            filter = RecruitmentPostListFilterDto(
                 positions = setOf(RecruitmentPostPosition.BACKEND, RecruitmentPostPosition.DESIGN),
             ),
             sortType = RecruitmentPostSortType.VIEW_COUNT,
@@ -259,7 +260,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
         val result = postReader.readPublishedPage(
             page = 0,
             size = 10,
-            filter = RecruitmentPostListFilter(),
+            filter = RecruitmentPostListFilterDto(),
             sortType = RecruitmentPostSortType.COMMENT_COUNT,
         )
 
@@ -274,7 +275,7 @@ internal class RecruitmentPostReaderPersistenceTest @Autowired constructor(
             postReader.readPublishedPage(
                 page = -1,
                 size = 10,
-                filter = RecruitmentPostListFilter(),
+                filter = RecruitmentPostListFilterDto(),
                 sortType = RecruitmentPostSortType.LATEST,
             )
         }

@@ -51,7 +51,7 @@ import org.springframework.test.context.ContextConfiguration
     BootcampManager::class,
     BootcampMetricReader::class,
     BootcampMetricManager::class,
-    BootcampMetricRegistrar::class,
+    BootcampMetricAppender::class,
     BootcampBookmarkManager::class,
     BootcampBookmarkReader::class,
     BootcampApplicationUrlClickAppender::class,

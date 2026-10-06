@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.implement.dto.JobPageDto
@@ -24,7 +25,7 @@ class JobBookmarkReader internal constructor(
         size: Int,
         bookmarkCondition: JobBookmarkSearchCondition = JobBookmarkSearchCondition.NONE,
     ): JobPageDto {
-        validateBookmarkPageRequest(page, size)
+        validatePageRequest(page, size)
         val result = jobQueryRepository.findBookmarkedPublishedPage(
             userId = userId,
             condition = condition,
@@ -43,9 +44,4 @@ class JobBookmarkReader internal constructor(
 
     fun readBookmarkedJobIds(userId: Long, jobIds: Collection<Long>): Set<Long> =
         if (jobIds.isEmpty()) emptySet() else jobBookmarkRepository.findActiveJobIds(userId, jobIds)
-}
-
-private fun validateBookmarkPageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
 }

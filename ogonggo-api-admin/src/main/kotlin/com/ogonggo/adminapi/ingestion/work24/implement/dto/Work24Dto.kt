@@ -17,6 +17,19 @@ data class Work24CollectDto(
     val failedCount: Int,
 )
 
+/** 일일 수집에서 대상 하나의 결과다. */
+sealed interface Work24CollectionResultDto {
+    val target: Work24CollectionTarget
+
+    data class Collected(val result: Work24CollectDto) : Work24CollectionResultDto {
+        override val target: Work24CollectionTarget get() = result.target
+    }
+
+    data class Skipped(override val target: Work24CollectionTarget) : Work24CollectionResultDto
+
+    data class Failed(override val target: Work24CollectionTarget) : Work24CollectionResultDto
+}
+
 /**
  * 고용24 훈련과정 상세 화면에서 읽은 값이다. Open API가 주지 않는 항목만 담는다.
  *

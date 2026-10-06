@@ -16,7 +16,7 @@ import java.time.LocalDateTime
  * 실패한 쪽은 상대가 만든 행을 읽지도, 이어서 갱신하지도 못한다.
  */
 @Component
-internal class BootcampMetricRegistrar(
+internal class BootcampMetricAppender(
     private val bootcampMetricRepository: BootcampMetricJpaRepository,
 ) {
 
@@ -29,7 +29,7 @@ internal class BootcampMetricRegistrar(
 @Component
 class BootcampMetricManager internal constructor(
     private val bootcampMetricRepository: BootcampMetricJpaRepository,
-    private val bootcampMetricRegistrar: BootcampMetricRegistrar,
+    private val bootcampMetricAppender: BootcampMetricAppender,
 ) {
 
     fun increaseViewCount(bootcampId: Long, now: LocalDateTime) {
@@ -57,7 +57,7 @@ class BootcampMetricManager internal constructor(
             return
         }
         try {
-            bootcampMetricRegistrar.create(bootcampId)
+            bootcampMetricAppender.create(bootcampId)
         } catch (exception: DataIntegrityViolationException) {
             return
         }

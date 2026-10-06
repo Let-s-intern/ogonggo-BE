@@ -6,11 +6,11 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManagementPage
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostManagementPageDto
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManagementReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
@@ -66,7 +66,7 @@ class RecruitmentPostManagementServiceTest {
                 sort = RecruitmentPostManagementSortType.LATEST_SAVED,
             ),
         ).thenReturn(
-            RecruitmentPostManagementPage(
+            RecruitmentPostManagementPageDto(
                 posts = listOf(firstPost, secondPost),
                 page = 0,
                 size = 10,
@@ -119,7 +119,7 @@ class RecruitmentPostManagementServiceTest {
                 size = 10,
                 sort = RecruitmentPostManagementSortType.LATEST_SAVED,
             ),
-        ).thenReturn(RecruitmentPostManagementPage(listOf(draft), 0, 10, 1, 1))
+        ).thenReturn(RecruitmentPostManagementPageDto(listOf(draft), 0, 10, 1, 1))
         Mockito.`when`(recruitmentPostMetricReader.readAll(listOf(15L))).thenReturn(emptyMap())
         Mockito.`when`(applicationReader.countByPostIds(listOf(15L))).thenReturn(emptyMap())
 

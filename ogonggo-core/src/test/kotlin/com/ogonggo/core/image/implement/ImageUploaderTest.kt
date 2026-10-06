@@ -1,6 +1,6 @@
 package com.ogonggo.core.image.implement
 
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -37,7 +37,7 @@ class ImageUploaderTest {
         val content = byteArrayOf(
             0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
         )
-        val result = uploader.upload(17L, ImageUploadCommand(content))
+        val result = uploader.upload(17L, ImageUploadDto(content))
 
         assertTrue(result.url.matches(Regex("https://cdn.example.com/images/[0-9a-f-]{36}\\.png")))
         assertEquals("image/png", result.mimeType)

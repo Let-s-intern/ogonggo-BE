@@ -1,11 +1,8 @@
 package com.ogonggo.core.recruitmentpost.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostProgressMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostConsoleSearchCondition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
@@ -14,6 +11,8 @@ import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
 
 @Component
 class RecruitmentPostReader internal constructor(
@@ -50,9 +49,9 @@ class RecruitmentPostReader internal constructor(
     fun readPublishedPage(
         page: Int,
         size: Int,
-        filter: RecruitmentPostListFilter,
+        filter: RecruitmentPostListFilterDto,
         sortType: RecruitmentPostSortType,
-    ): RecruitmentPostPage {
+    ): RecruitmentPostPageDto {
         validatePageRequest(page, size)
         val result = postQueryRepository.findPublishedPage(
             page = page,
@@ -60,7 +59,7 @@ class RecruitmentPostReader internal constructor(
             filter = filter,
             sortType = sortType,
         )
-        return RecruitmentPostPage(
+        return RecruitmentPostPageDto(
             posts = result.content,
             page = result.number,
             size = result.size,
@@ -74,10 +73,10 @@ class RecruitmentPostReader internal constructor(
         sortType: RecruitmentPostSortType,
         page: Int,
         size: Int,
-    ): RecruitmentPostPage {
+    ): RecruitmentPostPageDto {
         validatePageRequest(page, size)
         val result = postQueryRepository.findConsolePage(condition, sortType, PageRequest.of(page, size))
-        return RecruitmentPostPage(
+        return RecruitmentPostPageDto(
             posts = result.content,
             page = result.number,
             size = result.size,
@@ -100,24 +99,4 @@ class RecruitmentPostReader internal constructor(
         }
         return posts
     }
-}
-
-data class RecruitmentPostListFilter(
-    val recruitmentTypes: Set<RecruitmentPostType> = emptySet(),
-    val progressMethods: Set<RecruitmentPostProgressMethod> = emptySet(),
-    val recruitmentStatuses: Set<RecruitmentPostRecruitmentStatus> = emptySet(),
-    val positions: Set<RecruitmentPostPosition> = emptySet(),
-)
-
-data class RecruitmentPostPage(
-    val posts: List<RecruitmentPost>,
-    val page: Int,
-    val size: Int,
-    val totalElements: Long,
-    val totalPages: Int,
-)
-
-private fun validatePageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
 }

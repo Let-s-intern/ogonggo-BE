@@ -59,9 +59,9 @@ import java.time.LocalDateTime
     JobBookmarkManager::class,
     JobMetricReader::class,
     JobMetricManager::class,
-    JobMetricRegistrar::class,
+    JobMetricAppender::class,
     JobTagAppender::class,
-    TagRegistrar::class,
+    TagAppender::class,
     JobSourceUrlClickAppender::class,
     ContentRejectionManager::class,
 )

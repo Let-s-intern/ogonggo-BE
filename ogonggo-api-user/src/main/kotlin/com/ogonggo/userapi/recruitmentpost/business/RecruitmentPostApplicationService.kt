@@ -1,27 +1,25 @@
 package com.ogonggo.userapi.recruitmentpost.business
 
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationPage
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationItem
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
-import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.user.error.UserErrorCode
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostApplicationItemDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostApplicationPageDto
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class RecruitmentPostApplicationService(
@@ -77,7 +75,7 @@ class RecruitmentPostApplicationService(
             size = size,
             sort = sort,
         )
-        val authorIds = result.items.map(RecruitmentPostApplicationItem::authorUserId).distinct()
+        val authorIds = result.items.map(RecruitmentPostApplicationItemDto::authorUserId).distinct()
         val authorsByUserId = userProfileReader.readAll(authorIds).mapValues { (authorId, profile) ->
             RecruitmentPostAuthorResult.from(authorId, profile)
         }
@@ -105,11 +103,7 @@ class RecruitmentPostApplicationService(
     }
 
     private fun verifyActiveUser(userId: Long) {
-        when (userReader.read(userId).status) {
-            UserStatus.ACTIVE -> Unit
-            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
-            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
-        }
+        userReader.read(userId).status.requireActive()
     }
 }
 
@@ -130,7 +124,7 @@ data class RecruitmentPostApplicationPageResult(
 ) {
     companion object {
         internal fun from(
-            page: RecruitmentPostApplicationPage,
+            page: RecruitmentPostApplicationPageDto,
             authorsByUserId: Map<Long, RecruitmentPostAuthorResult>,
         ): RecruitmentPostApplicationPageResult = RecruitmentPostApplicationPageResult(
             items = page.items.map { item ->

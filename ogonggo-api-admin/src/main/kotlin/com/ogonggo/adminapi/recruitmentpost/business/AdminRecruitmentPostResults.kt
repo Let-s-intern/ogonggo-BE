@@ -7,8 +7,8 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricDto
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostPage
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,7 +22,7 @@ data class AdminRecruitmentPostPageResult(
 ) {
     companion object {
         internal fun from(
-            result: RecruitmentPostPage,
+            result: RecruitmentPostPageDto,
             metrics: Map<Long, RecruitmentPostMetricDto>,
             profiles: Map<Long, UserProfileDto>,
         ): AdminRecruitmentPostPageResult = AdminRecruitmentPostPageResult(

@@ -1,5 +1,6 @@
 package com.ogonggo.core.review.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.review.domain.ReviewContentType
 import com.ogonggo.core.review.error.ReviewErrorCode
@@ -21,8 +22,7 @@ class ContentRejectionReader internal constructor(
         page: Int,
         size: Int,
     ): ContentRejectionPageDto {
-        require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-        require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
+        validatePageRequest(page, size)
         val result = contentRejectionQueryRepository.findActivePage(contentType, keyword, PageRequest.of(page, size))
         return ContentRejectionPageDto(
             rejections = result.content,

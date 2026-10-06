@@ -2,12 +2,10 @@ package com.ogonggo.core.recruitmentpost.domain
 
 import com.ogonggo.core.enumeration.EnumField
 
-enum class RecruitmentPostManagementStatus(
+enum class RecruitmentPostApplicationStatus(
     override val code: Int,
     override val desc: String,
 ) : EnumField {
-    ALL(0, "전체"),
-    DRAFT(1, "임시저장"),
-    PUBLISHED(2, "공개"),
-    HIDDEN(3, "비공개"),
+    HAS_APPLICATIONS(1, "지원 있음"),
+    NO_APPLICATIONS(2, "지원 없음"),
 }

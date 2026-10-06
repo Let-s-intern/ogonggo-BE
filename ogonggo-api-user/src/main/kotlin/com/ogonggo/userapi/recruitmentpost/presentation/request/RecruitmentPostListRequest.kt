@@ -5,7 +5,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostListFilter
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostListQuery
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
@@ -31,7 +31,7 @@ class RecruitmentPostListRequest {
         page = page - 1,
         size = size,
         sortType = sort,
-        filter = RecruitmentPostListFilter(
+        filter = RecruitmentPostListFilterDto(
             recruitmentTypes = recruitmentTypes.toSet(),
             progressMethods = progressMethods.toSet(),
             recruitmentStatuses = recruitmentStatuses.toSet(),

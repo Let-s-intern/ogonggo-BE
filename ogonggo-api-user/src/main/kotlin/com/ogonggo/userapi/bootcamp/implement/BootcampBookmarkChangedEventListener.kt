@@ -19,8 +19,6 @@ import java.time.LocalDateTime
  * 북마크가 롤백되면 지표도 바뀌면 안 되므로 커밋 이후에만 처리한다.
  * 다른 스레드에서 실행되어 발행자의 트랜잭션을 이어받을 수 없으므로 여기서 트랜잭션을 연다.
  * 갱신은 다시 세는 방식이라 한 번 놓쳐도 다음 북마크 변경에서 값이 복구되므로 실패는 로그만 남긴다.
- *
- * 부트캠프 북마크 엔드포인트가 아직 없어 현재 이 이벤트를 발행하는 곳은 없다.
  */
 @Component
 class BootcampBookmarkChangedEventListener(

@@ -23,6 +23,8 @@ import org.springframework.test.context.ContextConfiguration
 import jakarta.persistence.EntityManager
 import java.time.LocalDate
 import java.time.LocalDateTime
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentReportAppendDto
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -49,7 +51,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
     fun `모집글과 댓글을 post_id 외래키로 함께 저장한다`() {
         // given
         val post = postAppender.append(postCommand())
-        val command = RecruitmentPostCommentAppendCommand(
+        val command = RecruitmentPostCommentAppendDto(
             postId = checkNotNull(post.id),
             parentId = null,
             userId = 17L,
@@ -75,7 +77,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // given
         val post = postAppender.append(postCommand())
         val root = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = null,
                 userId = 17L,
@@ -83,7 +85,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
             ),
         )
         commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = null,
                 userId = 18L,
@@ -92,7 +94,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         )
         repeat(6) { index ->
             commentAppender.append(
-                RecruitmentPostCommentAppendCommand(
+                RecruitmentPostCommentAppendDto(
                     postId = checkNotNull(post.id),
                     parentId = checkNotNull(root.id),
                     userId = 19L,
@@ -160,7 +162,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // given
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = null,
                 userId = 17L,
@@ -168,7 +170,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
             ),
         )
         val reply = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = checkNotNull(parent.id),
                 userId = 18L,
@@ -206,7 +208,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         // given
         val post = postAppender.append(postCommand())
         val parent = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = null,
                 userId = 17L,
@@ -214,7 +216,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
             ),
         )
         val reply = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = checkNotNull(parent.id),
                 userId = 18L,
@@ -222,7 +224,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
             ),
         )
         commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = checkNotNull(parent.id),
                 userId = 19L,
@@ -266,7 +268,7 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
     fun `동일 사용자가 같은 댓글을 중복 신고할 수 있다`() {
         val post = postAppender.append(postCommand())
         val comment = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = checkNotNull(post.id),
                 parentId = null,
                 userId = 17L,
@@ -276,14 +278,14 @@ internal class RecruitmentPostCommentImplementPersistenceTest @Autowired constru
         val commentId = checkNotNull(comment.id)
 
         reportAppender.append(
-            RecruitmentPostCommentReportAppendCommand(
+            RecruitmentPostCommentReportAppendDto(
                 commentId = commentId,
                 userId = 17L,
                 reason = null,
             ),
         )
         reportAppender.append(
-            RecruitmentPostCommentReportAppendCommand(
+            RecruitmentPostCommentReportAppendDto(
                 commentId = commentId,
                 userId = 17L,
                 reason = "반복 신고",

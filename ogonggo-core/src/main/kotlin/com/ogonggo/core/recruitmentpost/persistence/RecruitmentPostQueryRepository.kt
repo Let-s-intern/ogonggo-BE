@@ -11,7 +11,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostListFilter
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostApplication.recruitmentPostApplication
 import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPost.recruitmentPost
 import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostBookmark.recruitmentPostBookmark
@@ -35,7 +35,7 @@ internal class RecruitmentPostQueryRepository(
     fun findPublishedPage(
         page: Int,
         size: Int,
-        filter: RecruitmentPostListFilter,
+        filter: RecruitmentPostListFilterDto,
         sortType: RecruitmentPostSortType,
     ): Page<RecruitmentPost> {
         val predicates = publishedPredicates(filter).filterNotNull()
@@ -202,7 +202,7 @@ internal class RecruitmentPostQueryRepository(
         condition.keyword?.takeIf(String::isNotBlank)?.let(recruitmentPost.title::containsIgnoreCase),
     )
 
-    private fun publishedPredicates(filter: RecruitmentPostListFilter): Array<Predicate?> = arrayOf(
+    private fun publishedPredicates(filter: RecruitmentPostListFilterDto): Array<Predicate?> = arrayOf(
         recruitmentPost.publicationStatus.eq(RecruitmentPostPublicationStatus.PUBLISHED),
         recruitmentPost.deletedAt.isNull,
         filter.recruitmentTypes.takeIf { it.isNotEmpty() }?.let(recruitmentPost.recruitmentType::`in`),

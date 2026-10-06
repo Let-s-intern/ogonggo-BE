@@ -5,12 +5,12 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostComment
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentAppender
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentAppendCommand
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentPage
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentPageDto
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentRemover
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentReportAppender
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentReportAppendCommand
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentReportAppendDto
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -64,7 +64,7 @@ class RecruitmentPostCommentServiceTest {
         Mockito.`when`(deletedParent.updatedAt).thenReturn(NOW)
         Mockito.`when`(postReader.readPublished(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
         Mockito.`when`(commentReader.readRootPage(POST_ID, 0, 10)).thenReturn(
-            RecruitmentPostCommentPage(
+            RecruitmentPostCommentPageDto(
                 comments = listOf(deletedParent),
                 page = 0,
                 size = 10,
@@ -177,7 +177,7 @@ class RecruitmentPostCommentServiceTest {
         service.report(USER_ID, POST_ID, COMMENT_ID, reason = null)
 
         Mockito.verify(reportAppender).append(
-            RecruitmentPostCommentReportAppendCommand(
+            RecruitmentPostCommentReportAppendDto(
                 commentId = COMMENT_ID,
                 userId = USER_ID,
                 reason = null,
@@ -213,7 +213,7 @@ class RecruitmentPostCommentServiceTest {
         content = "참여하고 싶습니다.",
     )
 
-    private fun normalizedCommand() = RecruitmentPostCommentAppendCommand(
+    private fun normalizedCommand() = RecruitmentPostCommentAppendDto(
         postId = POST_ID,
         parentId = null,
         userId = USER_ID,

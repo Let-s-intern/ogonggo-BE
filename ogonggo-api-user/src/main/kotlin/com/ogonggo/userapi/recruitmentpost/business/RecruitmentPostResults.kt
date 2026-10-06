@@ -7,9 +7,9 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostPage
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostListFilter
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDate
 
@@ -17,7 +17,7 @@ data class RecruitmentPostListQuery(
     val page: Int,
     val size: Int,
     val sortType: RecruitmentPostSortType,
-    val filter: RecruitmentPostListFilter,
+    val filter: RecruitmentPostListFilterDto,
 )
 
 data class RecruitmentPostPageResult(
@@ -152,7 +152,7 @@ data class RecruitmentPostContactResult(
     val value: String,
 )
 
-internal fun RecruitmentPostPage.toResult(
+internal fun RecruitmentPostPageDto.toResult(
     metrics: Map<Long, RecruitmentPostMetricDto>,
     authorsByUserId: Map<Long, RecruitmentPostAuthorResult>,
     bookmarkedPostIds: Set<Long> = emptySet(),

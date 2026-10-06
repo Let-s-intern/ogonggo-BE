@@ -1,28 +1,27 @@
 package com.ogonggo.userapi.recruitmentpost.business
 
-import com.ogonggo.core.recruitmentpost.error.RecruitmentPostCommentErrorCode
+import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostComment
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
+import com.ogonggo.core.recruitmentpost.error.RecruitmentPostCommentErrorCode
+import com.ogonggo.core.recruitmentpost.error.RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PERMISSION_DENIED
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentAppender
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentAppendCommand
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentPage
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentRemover
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentReportAppender
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostCommentReportAppendCommand
-import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.error.InvalidValueException
-import com.ogonggo.core.recruitmentpost.error.RecruitmentPostCommentErrorCode.RECRUITMENT_POST_COMMENT_PERMISSION_DENIED
-import com.ogonggo.core.user.domain.UserStatus
-import com.ogonggo.core.user.error.UserErrorCode
-import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentPageDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentReportAppendDto
 import com.ogonggo.core.user.implement.UserProfileReader
+import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 data class CreateRecruitmentPostCommentCommand(
     val parentId: Long?,
@@ -114,7 +113,7 @@ class RecruitmentPostCommentService(
         command.parentId?.let { parentId -> readValidParent(parentId, postId) }
 
         val comment = commentAppender.append(
-            RecruitmentPostCommentAppendCommand(
+            RecruitmentPostCommentAppendDto(
                 postId = postId,
                 parentId = command.parentId,
                 userId = userId,
@@ -131,7 +130,7 @@ class RecruitmentPostCommentService(
         postReader.readPublished(postId)
         val comment = commentReader.readInPost(postId, commentId)
         reportAppender.append(
-            RecruitmentPostCommentReportAppendCommand(
+            RecruitmentPostCommentReportAppendDto(
                 commentId = checkNotNull(comment.id) { "신고할 댓글 식별자가 없습니다." },
                 userId = userId,
                 reason = reason,
@@ -156,11 +155,7 @@ class RecruitmentPostCommentService(
     }
 
     private fun verifyActiveUser(userId: Long) {
-        when (userReader.read(userId).status) {
-            UserStatus.ACTIVE -> Unit
-            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
-            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
-        }
+        userReader.read(userId).status.requireActive()
     }
 
     private fun readProfiles(comments: Collection<RecruitmentPostComment>): Map<Long, UserProfileDto> =
@@ -186,7 +181,7 @@ class RecruitmentPostCommentService(
         )
     }
 
-    private fun RecruitmentPostCommentPage.toReplyPageResult(
+    private fun RecruitmentPostCommentPageDto.toReplyPageResult(
         viewerUserId: Long?,
         profiles: Map<Long, UserProfileDto>,
     ): RecruitmentPostCommentReplyPageResult = RecruitmentPostCommentReplyPageResult(
