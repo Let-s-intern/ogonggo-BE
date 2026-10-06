@@ -58,6 +58,7 @@ internal object Work24JobMapper {
             industry = (corp.text("indTpCdNm") ?: item.text("indTpNm"))?.limit(CATEGORY_MAX),
             employmentType = employmentType(info.text("empTpCd") ?: item.text("empTpCd")),
             experienceType = experienceType(info.text("enterTpCd"), item.text("career")),
+            experienceMinYears = minCareerYears(detail)?.takeIf { it >= 1 },
             educationLevel = educationLevel(info.text("minEdubgIcd")),
             region = subRegion?.region ?: region(item.text("strtnmCd"), item.text("region")),
             subRegion = subRegion,
@@ -158,6 +159,16 @@ internal object Work24JobMapper {
         }
     }
 
+    /**
+     * 상세의 경력 문구(`enterTpNm`)에서 최소 경력 연수를 읽는다. `경력 (최소2년) 우대`는 2,
+     * `경력 (6개월 이상) 우대`는 0이다. 신입·관계없음처럼 연수가 없으면 null이다.
+     */
+    fun minCareerYears(detail: JsonNode): Int? {
+        val text = detail.path("wantedInfo").text("enterTpNm") ?: return null
+        CAREER_YEARS.find(text)?.let { return it.groupValues[1].toIntOrNull() }
+        return CAREER_MONTHS.find(text)?.groupValues?.get(1)?.toIntOrNull()?.div(MONTHS_PER_YEAR)
+    }
+
     /** 최소 학력 코드다. 초졸·중졸은 오공고에 없는 단계라 학력 무관으로 본다. */
     private fun educationLevel(code: String?): EducationLevel = when (code) {
         "03" -> EducationLevel.HIGH_SCHOOL
@@ -168,6 +179,9 @@ internal object Work24JobMapper {
         else -> EducationLevel.ANY
     }
 
+    private val CAREER_YEARS = Regex("""(\d+)\s*년""")
+    private val CAREER_MONTHS = Regex("""(\d+)\s*개월""")
+    private const val MONTHS_PER_YEAR = 12
     private const val UNTIL_FILLED = "채용시까지"
     private const val COMPANY_NAME_MAX = 150
     private const val TITLE_MAX = 255
