@@ -1,9 +1,9 @@
 package com.ogonggo.userapi.job.presentation.request
 
+import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
-import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
@@ -12,6 +12,7 @@ import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestFieldException
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
@@ -128,6 +129,7 @@ data class CreateCompanyJobRequest(
     override val employmentType: JobEmploymentType,
     override val experienceType: JobExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
+    @field:Schema(description = "학력 조건입니다. 보내지 않으면 학력 무관(ANY)으로 저장합니다.")
     override val educationLevel: JobEducationLevel?,
     override val region: Region?,
     override val subRegion: SubRegion?,
@@ -197,6 +199,7 @@ data class UpdateCompanyJobRequest(
     override val employmentType: JobEmploymentType,
     override val experienceType: JobExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
+    @field:Schema(description = "학력 조건입니다. 보내지 않으면 학력 무관(ANY)으로 저장합니다.")
     override val educationLevel: JobEducationLevel?,
     override val region: Region?,
     override val subRegion: SubRegion?,
