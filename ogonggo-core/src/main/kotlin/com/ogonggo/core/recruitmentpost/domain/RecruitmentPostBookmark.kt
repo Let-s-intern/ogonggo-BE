@@ -1,17 +1,12 @@
 package com.ogonggo.core.recruitmentpost.domain
 
 import com.ogonggo.core.jpa.BaseTimeEntity
-import com.ogonggo.core.user.domain.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
-import jakarta.persistence.ForeignKey
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
@@ -43,30 +38,4 @@ internal class RecruitmentPostBookmark(
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null
         protected set
-
-    /**
-     * 쓰기 모델은 ID만 다뤄 Community와 User 도메인의 조회 결합을 만들지 않는다.
-     * 다만 같은 컬럼을 읽기 전용 연관관계로 매핑해 Hibernate DDL 생성 시 게시글 FK를 보장한다.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "post_id",
-        insertable = false,
-        updatable = false,
-        foreignKey = ForeignKey(name = "fk_recruitment_post_bookmarks_post"),
-    )
-    lateinit var post: RecruitmentPost
-
-    /**
-     * 사용자 ID는 쓰기·조회 계약의 기준으로 유지한다.
-     * 이 읽기 전용 매핑은 DDL의 사용자 FK 생성과 무결성 검증만 담당한다.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "user_id",
-        insertable = false,
-        updatable = false,
-        foreignKey = ForeignKey(name = "fk_recruitment_post_bookmarks_user"),
-    )
-    lateinit var user: User
 }
