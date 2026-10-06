@@ -1,19 +1,19 @@
 package com.ogonggo.userapi.presentation
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.UnauthorizedException
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
@@ -155,13 +155,13 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `인기 공고는 고용 형태로 좁혀 조회한다`() {
-        Mockito.`when`(userJobService.getPopularJobs(USER_ID, EmploymentType.INTERN)).thenReturn(listOf(jobSummary()))
+        Mockito.`when`(userJobService.getPopularJobs(USER_ID, JobEmploymentType.INTERN)).thenReturn(listOf(jobSummary()))
 
         mockMvc.perform(get("/api/v1/jobs/popular").param("employmentType", "INTERN").with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data[0].id").value(1))
 
-        Mockito.verify(userJobService).getPopularJobs(USER_ID, EmploymentType.INTERN)
+        Mockito.verify(userJobService).getPopularJobs(USER_ID, JobEmploymentType.INTERN)
     }
 
     @Test
@@ -260,8 +260,8 @@ class UserReadControllerTest @Autowired constructor(
     @Test
     fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달되고 직무는 여러 개 고를 수 있다`() {
         val condition = JobSearchCondition(
-            employmentType = EmploymentType.INTERN,
-            experienceType = ExperienceType.NEWCOMER,
+            employmentType = JobEmploymentType.INTERN,
+            experienceType = JobExperienceType.NEWCOMER,
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND),
         )
@@ -284,7 +284,7 @@ class UserReadControllerTest @Autowired constructor(
     @Test
     fun `검색어는 필터 정렬과 함께 조회 조건으로 전달된다`() {
         val condition = JobSearchCondition(
-            employmentType = EmploymentType.INTERN,
+            employmentType = JobEmploymentType.INTERN,
             keyword = "백엔드",
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
@@ -350,7 +350,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `부트캠프 모집 상태는 조회 조건으로 전달되고 임시저장은 400으로 응답한다`() {
-        val condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.CLOSED)
+        val condition = BootcampSearchCondition(recruitmentStatus = BootcampRecruitmentStatus.CLOSED)
         Mockito.`when`(userBootcampService.getBootcamps(USER_ID, condition, BootcampSortType.LATEST, 0, 10))
             .thenReturn(bootcampPageResult())
 
@@ -464,8 +464,8 @@ class UserReadControllerTest @Autowired constructor(
                     title = "콘텐츠 마케팅 인턴",
                     coverImageUrl = "https://example.com/cover.png",
                     logoUrl = "https://example.com/logo.png",
-                    employmentType = EmploymentType.INTERN,
-                    experienceType = ExperienceType.IRRELEVANT,
+                    employmentType = JobEmploymentType.INTERN,
+                    experienceType = JobExperienceType.IRRELEVANT,
                     jobField = JobField.MARKETING_ADVERTISING,
                     jobRole = JobRole.MARKETING_CONTENT,
                     recruitmentStartAt = LocalDateTime.of(2026, 8, 10, 9, 0),
@@ -503,8 +503,8 @@ class UserReadControllerTest @Autowired constructor(
         val from = LocalDate.of(2026, 8, 1)
         val to = LocalDate.of(2026, 8, 31)
         val condition = JobSearchCondition(
-            employmentType = EmploymentType.INTERN,
-            experienceType = ExperienceType.NEWCOMER,
+            employmentType = JobEmploymentType.INTERN,
+            experienceType = JobExperienceType.NEWCOMER,
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",
@@ -753,12 +753,12 @@ class UserReadControllerTest @Autowired constructor(
         title = "백엔드 개발자",
         coverImageUrl = "https://example.com/cover.png",
         logoUrl = "https://example.com/logo.png",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         jobField = JobField.IT_DEVELOPMENT,
         jobRole = JobRole.IT_BACKEND,
         experienceMinYears = 1,
-        educationLevel = EducationLevel.ANY,
+        educationLevel = JobEducationLevel.ANY,
         region = Region.SEOUL,
         subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
@@ -777,12 +777,12 @@ class UserReadControllerTest @Autowired constructor(
         title = "백엔드 개발자",
         coverImageUrl = "https://example.com/cover.png",
         logoUrl = null,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         jobField = JobField.IT_DEVELOPMENT,
         jobRole = JobRole.IT_BACKEND,
         experienceMinYears = 1,
-        educationLevel = EducationLevel.ANY,
+        educationLevel = JobEducationLevel.ANY,
         region = Region.SEOUL,
         subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,
@@ -822,19 +822,19 @@ class UserReadControllerTest @Autowired constructor(
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = "개발",
-        operationType = OperationType.ONLINE,
+        operationType = BootcampOperationType.ONLINE,
         recruitmentType = BootcampRecruitmentType.PERIOD,
         recruitmentStartAt = null,
         recruitmentEndAt = null,
         programStartDate = LocalDate.of(2026, 9, 1),
         programEndDate = LocalDate.of(2026, 12, 1),
         capacity = 30,
-        tuitionType = TuitionType.FREE,
+        tuitionType = BootcampTuitionType.FREE,
         tuitionAmount = 0,
         representativeImageUrl = "https://example.com/image.png",
         logoUrl = "https://example.com/logo.png",
         shortDescription = "백엔드 개발자로 성장하는 12주",
-        status = BootcampStatus.RECRUITING,
+        status = BootcampRecruitmentStatus.RECRUITING,
         closedAt = null,
         bookmarked = true,
         viewCount = 21,
@@ -847,14 +847,14 @@ class UserReadControllerTest @Autowired constructor(
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = "개발",
-        operationType = OperationType.ONLINE,
+        operationType = BootcampOperationType.ONLINE,
         recruitmentType = BootcampRecruitmentType.PERIOD,
         recruitmentStartAt = null,
         recruitmentEndAt = null,
         programStartDate = LocalDate.of(2026, 9, 1),
         programEndDate = LocalDate.of(2026, 12, 1),
         capacity = 30,
-        tuitionType = TuitionType.FREE,
+        tuitionType = BootcampTuitionType.FREE,
         tuitionAmount = 0,
         representativeImageUrl = "https://example.com/image.png",
         shortDescription = "백엔드 개발자로 성장하는 12주",
@@ -864,14 +864,14 @@ class UserReadControllerTest @Autowired constructor(
         instructorInfo = null,
         programFeatures = null,
         completionRequirements = null,
-        applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+        applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
         managerEmail = null,
         inquiryUrl = null,
         publicationStartAt = null,
         publicationEndAt = null,
         sourceUrl = null,
-        status = BootcampStatus.RECRUITING,
+        status = BootcampRecruitmentStatus.RECRUITING,
         closedAt = null,
         bookmarked = true,
         viewCount = 21,

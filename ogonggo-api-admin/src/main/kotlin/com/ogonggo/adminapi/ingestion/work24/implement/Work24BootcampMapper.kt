@@ -9,12 +9,12 @@ import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.section
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.text
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24CoursePageDto
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24InstitutionImagesDto
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
@@ -97,7 +97,7 @@ internal object Work24BootcampMapper {
             programEndDate = programEndDate,
             // 정원을 0으로 주는 과정은 정원 없음으로 본다.
             capacity = number(item.text("yardMan"))?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
-            tuitionType = TuitionType.GOVERNMENT_FUNDED,
+            tuitionType = BootcampTuitionType.GOVERNMENT_FUNDED,
             tuitionAmount = number(detailInfo.text("tgcrGnrlTrneOwepAllt")),
             representativeImageUrl = null,
             shortDescription = listOfNotNull(base.text("ncsNm"), totalHours?.let { "총 ${it}시간" })
@@ -128,12 +128,12 @@ internal object Work24BootcampMapper {
             logoUrl = images?.logoUrl,
             instructorInfo = page?.instructors?.joinToString("\n", transform = ::instructor)?.ifBlank { null },
             programFeatures = page?.overview?.entries?.firstOrNull { it.key.isStrength() }?.value,
-            applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+            applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
             applicationUrl = sourceUrl,
             managerEmail = base.text("trprChapEmail")?.limit(EMAIL_MAX),
             inquiryUrl = base.text("hpAddr"),
             sourceUrl = sourceUrl,
-            status = BootcampStatus.RECRUITING,
+            status = BootcampRecruitmentStatus.RECRUITING,
             publicationStatus = BootcampPublicationStatus.PUBLISHED,
             source = ContentSource.WORK24,
             externalId = externalId,
@@ -215,10 +215,10 @@ internal object Work24BootcampMapper {
 
     private fun String.isStrength(): Boolean = "장점" in this || "강점" in this
 
-    private fun operationType(trainingMethodCode: String?): OperationType = when (trainingMethodCode) {
-        "M1005" -> OperationType.ONLINE
-        "M1010", "M1014" -> OperationType.HYBRID
-        else -> OperationType.OFFLINE
+    private fun operationType(trainingMethodCode: String?): BootcampOperationType = when (trainingMethodCode) {
+        "M1005" -> BootcampOperationType.ONLINE
+        "M1010", "M1014" -> BootcampOperationType.HYBRID
+        else -> BootcampOperationType.OFFLINE
     }
 
     private const val COMPANY_NAME_MAX = 150

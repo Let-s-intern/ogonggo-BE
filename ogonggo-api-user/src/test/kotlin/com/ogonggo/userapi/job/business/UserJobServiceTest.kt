@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobField
@@ -49,9 +49,9 @@ class UserJobServiceTest {
         Mockito.`when`(job.id).thenReturn(1L)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
-        Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
-        Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
-        Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
+        Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
+        Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
+        Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
         Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(job.companyAndTeamIntroduction).thenReturn("회사 및 팀 소개")
@@ -156,7 +156,7 @@ class UserJobServiceTest {
         val popular = createJobMock()
         val other = createJobMock()
         Mockito.`when`(other.id).thenReturn(2L)
-        Mockito.`when`(jobReader.readPopularRecruiting(EmploymentType.INTERN, 4)).thenReturn(listOf(popular, other))
+        Mockito.`when`(jobReader.readPopularRecruiting(JobEmploymentType.INTERN, 4)).thenReturn(listOf(popular, other))
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L, 2L))).thenReturn(setOf(2L))
         Mockito.`when`(jobMetricReader.readAll(listOf(1L, 2L))).thenReturn(
             mapOf(
@@ -165,13 +165,13 @@ class UserJobServiceTest {
             ),
         )
 
-        val result = service.getPopularJobs(USER_ID, EmploymentType.INTERN)
+        val result = service.getPopularJobs(USER_ID, JobEmploymentType.INTERN)
 
         assertEquals(listOf(1L, 2L), result.map { it.id })
         assertEquals(listOf(false, true), result.map { it.bookmarked })
         assertEquals(listOf(9L, 7L), result.map { it.viewCount })
         assertEquals(listOf(1L, 2L), result.map { it.bookmarkCount })
-        Mockito.verify(jobReader).readPopularRecruiting(EmploymentType.INTERN, 4)
+        Mockito.verify(jobReader).readPopularRecruiting(JobEmploymentType.INTERN, 4)
     }
 
     @Test
@@ -311,8 +311,8 @@ class UserJobServiceTest {
         assertEquals(1L, result.id)
         assertEquals("오공고", result.companyName)
         assertEquals("백엔드 개발자", result.title)
-        assertEquals(EmploymentType.FULL_TIME, result.employmentType)
-        assertEquals(ExperienceType.EXPERIENCED, result.experienceType)
+        assertEquals(JobEmploymentType.FULL_TIME, result.employmentType)
+        assertEquals(JobExperienceType.EXPERIENCED, result.experienceType)
         assertEquals(JobRole.MARKETING_STRATEGY, result.jobRole)
         assertEquals(startAt, result.recruitmentStartAt)
         assertEquals(endAt, result.recruitmentEndAt)
@@ -374,9 +374,9 @@ class UserJobServiceTest {
         Mockito.`when`(job.id).thenReturn(id)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
-        Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
-        Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
-        Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
+        Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
+        Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
+        Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
         Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
     }

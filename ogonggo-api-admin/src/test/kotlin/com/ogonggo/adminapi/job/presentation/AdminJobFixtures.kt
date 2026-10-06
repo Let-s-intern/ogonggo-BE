@@ -3,16 +3,16 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import java.time.LocalDateTime
 
 internal object AdminJobFixtures {
@@ -21,11 +21,11 @@ internal object AdminJobFixtures {
         id = id,
         title = "VMD 경력사원 채용",
         companyName = "한국후지필름",
-        employmentType = EmploymentType.CONTRACT,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.CONTRACT,
+        experienceType = JobExperienceType.EXPERIENCED,
         jobField = JobField.DESIGN,
         jobRole = JobRole.DESIGN_SPACE_INTERIOR_VMD,
-        educationLevel = EducationLevel.ANY,
+        educationLevel = JobEducationLevel.ANY,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 8, 0, 0),
         recruitmentEndAt = LocalDateTime.of(2026, 9, 14, 23, 59),
@@ -37,7 +37,7 @@ internal object AdminJobFixtures {
         commentCount = 0,
         visibility = AdminContentVisibility.HIDDEN,
         source = ContentSource.COMPANY,
-        reviewStatus = ReviewStatus.PENDING,
+        reviewStatus = ContentReviewStatus.PENDING,
         recruitmentStatus = JobRecruitmentStatus.RECRUITING,
         registeredAt = LocalDateTime.of(2026, 9, 10, 10, 48),
     )

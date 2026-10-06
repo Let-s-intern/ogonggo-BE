@@ -2,11 +2,11 @@ package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.enumeration.EnumField
 
-enum class OperationType(
+enum class BootcampRecruitmentStatus(
     override val code: Int,
     override val desc: String,
 ) : EnumField {
-    ONLINE(1, "온라인"),
-    OFFLINE(2, "오프라인"),
-    HYBRID(3, "온·오프라인"),
+    DRAFT(1, "임시저장"),
+    RECRUITING(2, "모집중"),
+    CLOSED(3, "모집 마감"),
 }

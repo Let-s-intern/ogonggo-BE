@@ -1,11 +1,11 @@
 package com.ogonggo.core.review.implement.dto
 
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import java.time.LocalDateTime
 
 /** 반려 기록에 콘텐츠의 제목과 회사명을 붙여 읽은 값이다. 콘텐츠가 삭제됐어도 제목은 남는다. */
 data class ContentRejectionDto(
-    val contentType: ReviewContentType,
+    val contentType: ContentReviewTargetType,
     val contentId: Long,
     val title: String,
     val companyName: String,

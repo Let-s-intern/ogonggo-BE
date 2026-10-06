@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.recruitmentpost.presentation
 
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
@@ -239,7 +239,7 @@ interface RecruitmentPostManagementApi {
         @Min(1) @Max(100) size: Int,
         status: RecruitmentPostManagementStatus,
         recruitmentStatus: RecruitmentPostRecruitmentStatus?,
-        applicationStatus: RecruitmentPostApplicationStatus?,
+        applicationStatus: RecruitmentPostApplicantPresence?,
         recruitmentType: RecruitmentPostType?,
         @Size(min = 2, max = 100) keyword: String?,
         sort: RecruitmentPostManagementSortType,

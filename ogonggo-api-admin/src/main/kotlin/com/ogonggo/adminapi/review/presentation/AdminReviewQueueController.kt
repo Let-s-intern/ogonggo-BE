@@ -5,7 +5,7 @@ import com.ogonggo.adminapi.review.business.AdminReviewService
 import com.ogonggo.adminapi.review.presentation.request.DecideReviewRequest
 import com.ogonggo.adminapi.review.presentation.response.AdminReviewDecisionResponse
 import com.ogonggo.adminapi.review.presentation.response.AdminReviewItemResponse
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -34,9 +34,9 @@ class AdminReviewQueueController(
     ): ResponseEntity<SuccessResponse<AdminReviewDecisionResponse>> {
         val contentType = parseReviewContentType(type)
         val result = when (request.decision) {
-            ReviewStatus.APPROVED -> adminReviewService.approve(contentType, id)
-            ReviewStatus.REJECTED -> adminReviewService.reject(contentType, id, request.requiredReason())
-            ReviewStatus.PENDING -> request.invalidDecision()
+            ContentReviewStatus.APPROVED -> adminReviewService.approve(contentType, id)
+            ContentReviewStatus.REJECTED -> adminReviewService.reject(contentType, id, request.requiredReason())
+            ContentReviewStatus.PENDING -> request.invalidDecision()
         }
         return SuccessResponse.ok(AdminReviewDecisionResponse.from(result))
     }

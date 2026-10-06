@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobRole
@@ -43,7 +43,7 @@ class UserJobService(
         )
     }
 
-    fun getPopularJobs(userId: Long?, employmentType: EmploymentType?): List<UserJobSummary> =
+    fun getPopularJobs(userId: Long?, employmentType: JobEmploymentType?): List<UserJobSummary> =
         toSummaries(userId, jobReader.readPopularRecruiting(employmentType, POPULAR_JOB_LIMIT))
 
     /** 운영자가 관리자 콘솔에서 고른 공고를 고른 순서대로 보여 준다. 개수는 운영자가 정한다. */

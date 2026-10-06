@@ -6,7 +6,7 @@ import com.ogonggo.core.jpa.pageOf
 import com.ogonggo.core.jpa.paged
 import com.ogonggo.core.review.domain.ContentRejection
 import com.ogonggo.core.review.domain.QContentRejection.contentRejection
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import com.ogonggo.core.review.implement.dto.ContentRejectionDto
 import com.querydsl.core.Tuple
 import com.querydsl.core.types.Predicate
@@ -20,10 +20,10 @@ import org.springframework.stereotype.Repository
 
 internal interface ContentRejectionJpaRepository : JpaRepository<ContentRejection, Long> {
     /** 콘텐츠마다 한 행뿐이므로 풀린 기록까지 찾아 다시 반려할 때 되살린다. */
-    fun findByContentTypeAndContentId(contentType: ReviewContentType, contentId: Long): ContentRejection?
+    fun findByContentTypeAndContentId(contentType: ContentReviewTargetType, contentId: Long): ContentRejection?
 
     fun findByContentTypeAndContentIdAndDeletedAtIsNull(
-        contentType: ReviewContentType,
+        contentType: ContentReviewTargetType,
         contentId: Long,
     ): ContentRejection?
 }
@@ -39,7 +39,7 @@ internal class ContentRejectionQueryRepository(
 ) {
 
     fun findActivePage(
-        contentType: ReviewContentType?,
+        contentType: ContentReviewTargetType?,
         keyword: String?,
         pageable: Pageable,
     ): Page<ContentRejectionDto> {
@@ -65,7 +65,7 @@ internal class ContentRejectionQueryRepository(
         return pageOf(content, pageable, countQuery)
     }
 
-    fun findActive(contentType: ReviewContentType, contentId: Long): ContentRejectionDto? =
+    fun findActive(contentType: ContentReviewTargetType, contentId: Long): ContentRejectionDto? =
         joinedQuery()
             .where(
                 contentRejection.deletedAt.isNull,
@@ -90,12 +90,12 @@ internal class ContentRejectionQueryRepository(
             .leftJoin(bootcamp).on(*bootcampJoinConditions())
 
     private fun jobJoinConditions(): Array<Predicate> = arrayOf(
-        contentRejection.contentType.eq(ReviewContentType.JOB),
+        contentRejection.contentType.eq(ContentReviewTargetType.JOB),
         job.id.eq(contentRejection.contentId),
     )
 
     private fun bootcampJoinConditions(): Array<Predicate> = arrayOf(
-        contentRejection.contentType.eq(ReviewContentType.BOOTCAMP),
+        contentRejection.contentType.eq(ContentReviewTargetType.BOOTCAMP),
         bootcamp.id.eq(contentRejection.contentId),
     )
 
@@ -113,7 +113,7 @@ internal class ContentRejectionQueryRepository(
 
     private fun toDto(tuple: Tuple): ContentRejectionDto {
         val rejection = checkNotNull(tuple.get(contentRejection)) { "반려 기록이 없습니다." }
-        val isJob = rejection.contentType == ReviewContentType.JOB
+        val isJob = rejection.contentType == ContentReviewTargetType.JOB
         val title = if (isJob) tuple.get(job.title) else tuple.get(bootcamp.title)
         val companyName = if (isJob) tuple.get(job.companyName) else tuple.get(bootcamp.companyName)
         val deletedAt = if (isJob) tuple.get(job.deletedAt) else tuple.get(bootcamp.deletedAt)

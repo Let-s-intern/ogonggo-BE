@@ -84,7 +84,7 @@ interface RecruitmentPostApplicationApi {
     ): ResponseEntity<SuccessResponse<CreateRecruitmentPostApplicationResponse>>
 
     @Operation(
-        operationId = "listMyRecruitmentApplications",
+        operationId = "listMyRecruitmentPostApplications",
         summary = "내 모집글 지원 이력 목록 조회",
         description = """
             모집글의 외부 지원 링크를 연 이력을 최초 저장 시각 기준 최근 저장순으로 조회합니다. 지원 상태는 사용자의 개인 관리 상태입니다.
@@ -120,7 +120,7 @@ interface RecruitmentPostApplicationApi {
             ),
         ],
     )
-    @GetMapping("/api/v1/me/recruitment-applications")
+    @GetMapping("/api/v1/users/me/recruitment-post-applications")
     fun getApplications(
         @Parameter(hidden = true) userId: Long,
         @Min(1) page: Int,
@@ -169,7 +169,7 @@ interface RecruitmentPostApplicationApi {
             ),
         ],
     )
-    @PatchMapping("/api/v1/me/recruitment-applications/{postId}")
+    @PatchMapping("/api/v1/users/me/recruitment-post-applications/{postId}")
     fun updateApplicationStatus(
         @Parameter(hidden = true) userId: Long,
         @PathVariable("postId") @Positive postId: Long,
@@ -208,7 +208,7 @@ interface RecruitmentPostApplicationApi {
             ),
         ],
     )
-    @DeleteMapping("/api/v1/me/recruitment-applications/{postId}")
+    @DeleteMapping("/api/v1/users/me/recruitment-post-applications/{postId}")
     fun deleteApplication(
         @Parameter(hidden = true) userId: Long,
         @PathVariable("postId") @Positive postId: Long,

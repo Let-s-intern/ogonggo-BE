@@ -15,7 +15,7 @@ import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -84,7 +84,7 @@ interface AdminJobApi {
         @Size(max = 100) keyword: String?,
         visibility: AdminContentVisibility?,
         source: ContentSource?,
-        reviewStatus: ReviewStatus?,
+        reviewStatus: ContentReviewStatus?,
         recruitmentStatus: JobRecruitmentStatus?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,

@@ -2,7 +2,7 @@ package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
@@ -15,7 +15,7 @@ import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
@@ -88,7 +88,7 @@ class JobReader internal constructor(
      * 마감된 공고를 빼고 조회 수가 높은 게시 공고를 limit건까지 읽는다.
      * 고용 형태를 주면 그 고용 형태의 공고만 읽는다.
      */
-    fun readPopularRecruiting(employmentType: EmploymentType?, limit: Int): List<Job> {
+    fun readPopularRecruiting(employmentType: JobEmploymentType?, limit: Int): List<Job> {
         require(limit in 1..100) { "인기 공고 개수는 1 이상 100 이하여야 합니다." }
         return jobQueryRepository.findPopularRecruiting(employmentType, limit)
     }
@@ -174,10 +174,10 @@ class JobReader internal constructor(
 
     /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 검수 상태는 기업회원 공고에만 있다. */
     fun readPendingReviews(): List<Job> =
-        jobRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ReviewStatus.PENDING)
+        jobRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ContentReviewStatus.PENDING)
 
     fun countPendingReviews(): Long =
-        jobRepository.countByReviewStatusAndDeletedAtIsNull(ReviewStatus.PENDING)
+        jobRepository.countByReviewStatusAndDeletedAtIsNull(ContentReviewStatus.PENDING)
 
     /** 북마크 해제처럼 이미 삭제된 공고에도 허용해야 하는 동작에서만 사용한다. */
 

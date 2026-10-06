@@ -5,9 +5,9 @@ import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -81,7 +81,7 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
 
     @Test
     fun `내 북마크 목록의 모집 상태는 조회 조건으로 전달되고 임시저장은 400으로 응답한다`() {
-        val condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.RECRUITING)
+        val condition = BootcampSearchCondition(recruitmentStatus = BootcampRecruitmentStatus.RECRUITING)
         Mockito.`when`(userBootcampBookmarkService.getBookmarks(USER_ID, condition, 0, 10))
             .thenReturn(bookmarkPage())
 
@@ -208,19 +208,19 @@ class UserBootcampBookmarkControllerTest @Autowired constructor(
                 companyName = "오공고 교육사",
                 title = "백엔드 부트캠프",
                 programType = "개발",
-                operationType = OperationType.ONLINE,
+                operationType = BootcampOperationType.ONLINE,
                 recruitmentType = BootcampRecruitmentType.PERIOD,
                 recruitmentStartAt = null,
                 recruitmentEndAt = null,
                 programStartDate = LocalDate.of(2026, 9, 1),
                 programEndDate = LocalDate.of(2026, 12, 1),
                 capacity = 30,
-                tuitionType = TuitionType.FREE,
+                tuitionType = BootcampTuitionType.FREE,
                 tuitionAmount = 0,
                 representativeImageUrl = "https://example.com/image.png",
                 logoUrl = null,
                 shortDescription = "백엔드 개발자로 성장하는 12주",
-                status = BootcampStatus.RECRUITING,
+                status = BootcampRecruitmentStatus.RECRUITING,
                 closedAt = null,
                 bookmarked = true,
                 viewCount = 12,

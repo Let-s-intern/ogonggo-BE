@@ -1,9 +1,9 @@
 package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -16,7 +16,7 @@ import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -36,11 +36,11 @@ class AdminJobServiceTest {
 
     @Test
     fun `승인과 숨김을 함께 보내면 승인한 뒤 숨긴다`() {
-        val job = lockedJob(reviewStatus = ReviewStatus.PENDING)
+        val job = lockedJob(reviewStatus = ContentReviewStatus.PENDING)
 
         service.updateJob(
             JOB_ID,
-            AdminJobUpdateCommand(visibility = AdminContentVisibility.HIDDEN, reviewStatus = ReviewStatus.APPROVED),
+            AdminJobUpdateCommand(visibility = AdminContentVisibility.HIDDEN, reviewStatus = ContentReviewStatus.APPROVED),
         )
 
         val order = Mockito.inOrder(jobManager)
@@ -51,18 +51,18 @@ class AdminJobServiceTest {
 
     @Test
     fun `이미 같은 검수 상태면 다시 전이하지 않아 노출이 되돌아가지 않는다`() {
-        lockedJob(reviewStatus = ReviewStatus.APPROVED)
+        lockedJob(reviewStatus = ContentReviewStatus.APPROVED)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ReviewStatus.APPROVED))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.APPROVED))
 
         Mockito.verifyNoInteractions(jobManager)
     }
 
     @Test
     fun `검수 대기로 바꾸면 검수를 다시 요청한다`() {
-        val job = lockedJob(reviewStatus = ReviewStatus.APPROVED)
+        val job = lockedJob(reviewStatus = ContentReviewStatus.APPROVED)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ReviewStatus.PENDING))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.PENDING))
 
         Mockito.verify(jobManager).requestReview(job, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
@@ -148,9 +148,9 @@ class AdminJobServiceTest {
         Mockito.`when`(job.id).thenReturn(id)
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
         Mockito.`when`(job.companyName).thenReturn("오공고")
-        Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
-        Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
-        Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
+        Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
+        Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
+        Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.ALWAYS_OPEN)
         Mockito.`when`(job.publicationStatus).thenReturn(JobPublicationStatus.PUBLISHED)
         Mockito.`when`(job.source).thenReturn(ContentSource.CRAWLER)
@@ -162,7 +162,7 @@ class AdminJobServiceTest {
         Mockito.`when`(job.publicationStatus).thenReturn(publicationStatus)
     }
 
-    private fun lockedJob(reviewStatus: ReviewStatus?): Job {
+    private fun lockedJob(reviewStatus: ContentReviewStatus?): Job {
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(job.reviewStatus).thenReturn(reviewStatus)
         Mockito.`when`(jobReader.readForUpdate(JOB_ID)).thenReturn(job)

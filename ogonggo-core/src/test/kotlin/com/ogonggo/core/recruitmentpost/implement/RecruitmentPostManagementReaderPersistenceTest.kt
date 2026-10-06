@@ -5,7 +5,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostProgressMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
@@ -95,7 +95,7 @@ internal class RecruitmentPostManagementReaderPersistenceTest @Autowired constru
             ownerUserId = ownerId,
             status = RecruitmentPostManagementStatus.ALL,
             recruitmentStatus = RecruitmentPostRecruitmentStatus.RECRUITING,
-            applicationStatus = RecruitmentPostApplicationStatus.HAS_APPLICATIONS,
+            applicationStatus = RecruitmentPostApplicantPresence.HAS_APPLICATIONS,
             recruitmentType = RecruitmentPostType.SIDE_PROJECT,
             keyword = "kotlin",
             page = 0,
@@ -108,7 +108,7 @@ internal class RecruitmentPostManagementReaderPersistenceTest @Autowired constru
             ownerUserId = ownerId,
             status = RecruitmentPostManagementStatus.ALL,
             recruitmentStatus = RecruitmentPostRecruitmentStatus.CLOSED,
-            applicationStatus = RecruitmentPostApplicationStatus.NO_APPLICATIONS,
+            applicationStatus = RecruitmentPostApplicantPresence.NO_APPLICATIONS,
             recruitmentType = RecruitmentPostType.STUDY,
             keyword = "JAVA",
             page = 0,

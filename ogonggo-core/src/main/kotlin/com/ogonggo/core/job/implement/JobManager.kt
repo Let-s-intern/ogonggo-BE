@@ -4,7 +4,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
@@ -74,17 +74,17 @@ class JobManager internal constructor(
     /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
     fun approveReview(job: Job, now: LocalDateTime) {
         change(job) { approveReview() }
-        contentRejectionManager.clear(ReviewContentType.JOB, job.requiredId(), now)
+        contentRejectionManager.clear(ContentReviewTargetType.JOB, job.requiredId(), now)
     }
 
     fun rejectReview(job: Job, reason: String, now: LocalDateTime) {
         change(job) { rejectReview() }
-        contentRejectionManager.reject(ReviewContentType.JOB, job.requiredId(), reason, now)
+        contentRejectionManager.reject(ContentReviewTargetType.JOB, job.requiredId(), reason, now)
     }
 
     fun requestReview(job: Job, now: LocalDateTime) {
         change(job) { requestReview() }
-        contentRejectionManager.clear(ReviewContentType.JOB, job.requiredId(), now)
+        contentRejectionManager.clear(ContentReviewTargetType.JOB, job.requiredId(), now)
     }
 
     private fun change(job: Job, change: Job.() -> Unit) {

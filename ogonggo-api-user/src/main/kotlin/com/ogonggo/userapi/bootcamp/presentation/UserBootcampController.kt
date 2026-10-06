@@ -3,7 +3,7 @@ package com.ogonggo.userapi.bootcamp.presentation
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
@@ -34,7 +34,7 @@ class UserBootcampController(
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: BootcampSortType,
         @RequestParam(name = "category", required = false) category: BootcampCategory?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
-        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: BootcampStatus?,
+        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: BootcampRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
         val result = userBootcampService.getBootcamps(
             userId = userId,

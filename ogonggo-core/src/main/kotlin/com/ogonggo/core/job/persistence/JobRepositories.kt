@@ -11,7 +11,7 @@ import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
 import com.ogonggo.core.job.domain.TodayJob
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -70,9 +70,9 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     @Query("select job from Job job where job.id = :jobId")
     fun findIncludingDeletedByIdForUpdate(@Param("jobId") jobId: Long): Job?
 
-    fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ReviewStatus): List<Job>
+    fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ContentReviewStatus): List<Job>
 
-    fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
+    fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ContentReviewStatus): Long
 
     /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. `Job`의 모집 상태 계산과 경계를 맞춘다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

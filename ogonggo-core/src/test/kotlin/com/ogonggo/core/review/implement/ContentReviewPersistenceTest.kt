@@ -1,9 +1,9 @@
 package com.ogonggo.core.review.implement
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
@@ -11,8 +11,8 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.JobAppender
@@ -20,8 +20,8 @@ import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
-import com.ogonggo.core.review.domain.ReviewContentType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewTargetType
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import com.ogonggo.core.review.persistence.ContentRejectionJpaRepository
 import com.ogonggo.core.review.persistence.ContentRejectionQueryRepository
@@ -69,17 +69,17 @@ internal class ContentReviewPersistenceTest @Autowired constructor(
         val jobId = checkNotNull(job.id)
 
         jobManager.rejectReview(job, "급여 조건이 비어 있습니다.", NOW)
-        assertEquals("급여 조건이 비어 있습니다.", contentRejectionReader.readActive(ReviewContentType.JOB, jobId).reason)
+        assertEquals("급여 조건이 비어 있습니다.", contentRejectionReader.readActive(ContentReviewTargetType.JOB, jobId).reason)
 
         jobManager.approveReview(job, NOW.plusHours(1))
         assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
         val cleared = assertThrows(EntityNotFoundException::class.java) {
-            contentRejectionReader.readActive(ReviewContentType.JOB, jobId)
+            contentRejectionReader.readActive(ContentReviewTargetType.JOB, jobId)
         }
         assertEquals(ReviewErrorCode.REJECTION_NOT_FOUND, cleared.errorCode)
 
         jobManager.rejectReview(job, "근무지가 비어 있습니다.", NOW.plusHours(2))
-        val rejectedAgain = contentRejectionReader.readActive(ReviewContentType.JOB, jobId)
+        val rejectedAgain = contentRejectionReader.readActive(ContentReviewTargetType.JOB, jobId)
         assertEquals("근무지가 비어 있습니다.", rejectedAgain.reason)
         assertEquals(NOW.plusHours(2), rejectedAgain.rejectedAt)
         assertEquals(JobPublicationStatus.HIDDEN, job.publicationStatus)
@@ -94,9 +94,9 @@ internal class ContentReviewPersistenceTest @Autowired constructor(
 
         bootcampManager.requestReview(bootcamp, NOW.plusMinutes(1))
 
-        assertEquals(ReviewStatus.PENDING, bootcamp.reviewStatus)
+        assertEquals(ContentReviewStatus.PENDING, bootcamp.reviewStatus)
         assertThrows(EntityNotFoundException::class.java) {
-            contentRejectionReader.readActive(ReviewContentType.BOOTCAMP, bootcampId)
+            contentRejectionReader.readActive(ContentReviewTargetType.BOOTCAMP, bootcampId)
         }
     }
 
@@ -109,13 +109,13 @@ internal class ContentReviewPersistenceTest @Autowired constructor(
         jobManager.delete(jobReader.readForDelete(checkNotNull(job.id)), NOW.plusHours(2))
 
         val all = contentRejectionReader.readActivePage(null, null, 0, 10).rejections
-        assertEquals(listOf(ReviewContentType.BOOTCAMP, ReviewContentType.JOB), all.map { it.contentType })
+        assertEquals(listOf(ContentReviewTargetType.BOOTCAMP, ContentReviewTargetType.JOB), all.map { it.contentType })
         assertEquals(listOf(true, false), all.map { it.contentExists })
         assertEquals("Content Specialist", all.last().title)
 
         assertEquals(
             listOf(job.id),
-            contentRejectionReader.readActivePage(ReviewContentType.JOB, null, 0, 10).rejections.map { it.contentId },
+            contentRejectionReader.readActivePage(ContentReviewTargetType.JOB, null, 0, 10).rejections.map { it.contentId },
         )
         assertEquals(
             listOf(job.id),
@@ -133,18 +133,18 @@ internal class ContentReviewPersistenceTest @Autowired constructor(
         val job = jobAppender.append(companyJob())
         val jobId = checkNotNull(job.id)
         jobManager.rejectReview(job, "급여 조건이 비어 있습니다.", NOW)
-        assertNull(contentRejectionReader.readActive(ReviewContentType.JOB, jobId).reasonUpdatedAt)
+        assertNull(contentRejectionReader.readActive(ContentReviewTargetType.JOB, jobId).reasonUpdatedAt)
 
-        contentRejectionManager.replaceReason(ReviewContentType.JOB, jobId, "급여를 적어 주세요.", NOW.plusDays(1))
+        contentRejectionManager.replaceReason(ContentReviewTargetType.JOB, jobId, "급여를 적어 주세요.", NOW.plusDays(1))
 
-        val replaced = contentRejectionReader.readActive(ReviewContentType.JOB, jobId)
+        val replaced = contentRejectionReader.readActive(ContentReviewTargetType.JOB, jobId)
         assertEquals("급여를 적어 주세요.", replaced.reason)
         assertEquals(NOW, replaced.rejectedAt)
         assertEquals(NOW.plusDays(1), replaced.reasonUpdatedAt)
 
         jobManager.approveReview(job, NOW.plusDays(2))
         assertThrows(EntityNotFoundException::class.java) {
-            contentRejectionManager.replaceReason(ReviewContentType.JOB, jobId, "다른 사유", NOW.plusDays(3))
+            contentRejectionManager.replaceReason(ContentReviewTargetType.JOB, jobId, "다른 사유", NOW.plusDays(3))
         }
     }
 
@@ -168,8 +168,8 @@ internal class ContentReviewPersistenceTest @Autowired constructor(
     private fun crawledJob(title: String = "백엔드 개발자"): JobAppendDto = JobAppendDto(
         companyName = "뱅크",
         title = title,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
     )
 
@@ -178,15 +178,15 @@ internal class ContentReviewPersistenceTest @Autowired constructor(
         companyName = "오공고 교육사",
         title = title,
         programType = "개발",
-        operationType = OperationType.ONLINE,
+        operationType = BootcampOperationType.ONLINE,
         recruitmentType = BootcampRecruitmentType.ALWAYS_OPEN,
         programStartDate = LocalDate.of(2026, 10, 1),
         programEndDate = LocalDate.of(2026, 12, 1),
-        tuitionType = TuitionType.FREE,
+        tuitionType = BootcampTuitionType.FREE,
         representativeImageUrl = "https://example.com/images/bootcamp.png",
         shortDescription = "백엔드 개발자로 성장하는 12주",
         content = "부트캠프 상세 내용",
-        applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+        applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
     )
 

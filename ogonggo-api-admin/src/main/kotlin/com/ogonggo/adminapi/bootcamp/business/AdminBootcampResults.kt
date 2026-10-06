@@ -1,20 +1,20 @@
 package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -45,25 +45,25 @@ data class AdminBootcampSummary(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     val representativeImageUrl: String?,
     val shortDescription: String,
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     val closedAt: LocalDateTime?,
     val viewCount: Long,
     val bookmarkCount: Long,
     val commentCount: Long,
     val visibility: AdminContentVisibility,
     val source: ContentSource,
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val registeredAt: LocalDateTime,
 ) {
     companion object {
@@ -104,7 +104,7 @@ data class AdminBootcampResult(
     val instructorInfo: String?,
     val programFeatures: String?,
     val completionRequirements: String?,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String?,
     val managerEmail: String?,
     val inquiryUrl: String?,

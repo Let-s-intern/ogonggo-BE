@@ -2,7 +2,7 @@ package com.ogonggo.adminapi.review.presentation.request
 
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.review.domain.ContentRejection
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size
  * 화면에서도 막지만 규칙이 화면에만 있지 않도록 서버도 막는다.
  */
 data class DecideReviewRequest(
-    val decision: ReviewStatus,
+    val decision: ContentReviewStatus,
     @field:Size(max = ContentRejection.MAX_REASON_LENGTH) val reason: String?,
 ) {
     fun requiredReason(): String =

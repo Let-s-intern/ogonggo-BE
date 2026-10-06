@@ -1,7 +1,7 @@
 package com.ogonggo.core.recruitmentpost.implement
 
 import com.ogonggo.core.paging.validatePageRequest
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
@@ -20,7 +20,7 @@ class RecruitmentPostManagementReader internal constructor(
         ownerUserId: Long,
         status: RecruitmentPostManagementStatus,
         recruitmentStatus: RecruitmentPostRecruitmentStatus?,
-        applicationStatus: RecruitmentPostApplicationStatus?,
+        applicationStatus: RecruitmentPostApplicantPresence?,
         recruitmentType: RecruitmentPostType?,
         keyword: String?,
         page: Int,

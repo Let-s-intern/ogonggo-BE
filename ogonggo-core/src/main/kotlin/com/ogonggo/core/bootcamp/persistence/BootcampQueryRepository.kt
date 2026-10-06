@@ -8,7 +8,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.QBootcamp.bootcamp
 import com.ogonggo.core.bootcamp.domain.QBootcampBookmark.bootcampBookmark
 import com.ogonggo.core.bootcamp.domain.QBootcampMetric.bootcampMetric
@@ -39,7 +39,7 @@ internal class BootcampQueryRepository(
     fun findPublicPage(
         condition: BootcampSearchCondition,
         sortType: BootcampSortType,
-        publicStatuses: Collection<BootcampStatus>,
+        publicStatuses: Collection<BootcampRecruitmentStatus>,
         now: LocalDateTime,
         pageable: Pageable,
     ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable, enterpriseFirst = true)
@@ -52,7 +52,7 @@ internal class BootcampQueryRepository(
         userId: Long,
         condition: BootcampSearchCondition,
         bookmarkCondition: BootcampBookmarkSearchCondition,
-        publicStatuses: Collection<BootcampStatus>,
+        publicStatuses: Collection<BootcampRecruitmentStatus>,
         now: LocalDateTime,
         pageable: Pageable,
     ): Page<Bootcamp> {
@@ -109,7 +109,7 @@ internal class BootcampQueryRepository(
     /** 게시 상태와 모집 상태, 공개 기간, 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */
     private fun publicPredicates(
         condition: BootcampSearchCondition,
-        publicStatuses: Collection<BootcampStatus>,
+        publicStatuses: Collection<BootcampRecruitmentStatus>,
         now: LocalDateTime,
     ): Array<Predicate?> = arrayOf(
         bootcamp.publicationStatus.eq(BootcampPublicationStatus.PUBLISHED),
@@ -139,7 +139,7 @@ internal class BootcampQueryRepository(
         BootcampCategory.SESAC -> bootcamp.source.eq(ContentSource.CRAWLER)
     }
 
-    private fun statusEq(status: BootcampStatus?): BooleanExpression? =
+    private fun statusEq(status: BootcampRecruitmentStatus?): BooleanExpression? =
         status?.let(bootcamp.status::eq)
 
     private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {

@@ -2,11 +2,11 @@ package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.enumeration.EnumField
 
-enum class BootcampStatus(
+enum class BootcampTuitionType(
     override val code: Int,
     override val desc: String,
 ) : EnumField {
-    DRAFT(1, "임시저장"),
-    RECRUITING(2, "모집중"),
-    CLOSED(3, "모집 마감"),
+    FREE(1, "무료"),
+    PAID(2, "유료"),
+    GOVERNMENT_FUNDED(3, "국비 지원"),
 }

@@ -1,10 +1,10 @@
 package com.ogonggo.userapi.bootcamp.presentation.request
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
@@ -24,14 +24,14 @@ data class CreateCompanyBootcampRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:NotBlank @field:Size(max = 255) override val title: String,
     @field:NotBlank @field:Size(max = 50) override val programType: String,
-    override val operationType: OperationType,
+    override val operationType: BootcampOperationType,
     override val recruitmentType: BootcampRecruitmentType,
     override val recruitmentStartAt: LocalDateTime?,
     override val recruitmentEndAt: LocalDateTime?,
     override val programStartDate: LocalDate,
     override val programEndDate: LocalDate,
     @field:PositiveOrZero override val capacity: Int?,
-    override val tuitionType: TuitionType,
+    override val tuitionType: BootcampTuitionType,
     @field:PositiveOrZero override val tuitionAmount: Long?,
     @field:NotBlank @field:Size(max = 2048) @field:URL override val representativeImageUrl: String,
     @field:NotBlank @field:Size(max = 500) override val shortDescription: String,
@@ -41,7 +41,7 @@ data class CreateCompanyBootcampRequest(
     override val instructorInfo: String?,
     override val programFeatures: String?,
     override val completionRequirements: String?,
-    override val applicationMethod: ApplicationMethod,
+    override val applicationMethod: BootcampApplicationMethod,
     @field:Size(max = 2048) @field:URL override val applicationUrl: String?,
     @field:Size(max = 320) @field:Email override val managerEmail: String?,
     @field:Size(max = 2048) @field:URL override val inquiryUrl: String?,
@@ -50,7 +50,7 @@ data class CreateCompanyBootcampRequest(
     @field:Size(max = 2048) @field:URL override val sourceUrl: String?,
     @field:Valid @field:Size(max = 100) override val partners: List<CompanyBootcampPartnerRequest>,
     @field:Valid @field:Size(max = 100) override val curriculums: List<CompanyBootcampCurriculumRequest>,
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
 ) : CompanyBootcampWriteRequest {
     fun toCommand(): BootcampAppendDto {
         validateRelations()
@@ -93,14 +93,14 @@ data class UpdateCompanyBootcampRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
     @field:NotBlank @field:Size(max = 255) override val title: String,
     @field:NotBlank @field:Size(max = 50) override val programType: String,
-    override val operationType: OperationType,
+    override val operationType: BootcampOperationType,
     override val recruitmentType: BootcampRecruitmentType,
     override val recruitmentStartAt: LocalDateTime?,
     override val recruitmentEndAt: LocalDateTime?,
     override val programStartDate: LocalDate,
     override val programEndDate: LocalDate,
     @field:PositiveOrZero override val capacity: Int?,
-    override val tuitionType: TuitionType,
+    override val tuitionType: BootcampTuitionType,
     @field:PositiveOrZero override val tuitionAmount: Long?,
     @field:NotBlank @field:Size(max = 2048) @field:URL override val representativeImageUrl: String,
     @field:NotBlank @field:Size(max = 500) override val shortDescription: String,
@@ -110,7 +110,7 @@ data class UpdateCompanyBootcampRequest(
     override val instructorInfo: String?,
     override val programFeatures: String?,
     override val completionRequirements: String?,
-    override val applicationMethod: ApplicationMethod,
+    override val applicationMethod: BootcampApplicationMethod,
     @field:Size(max = 2048) @field:URL override val applicationUrl: String?,
     @field:Size(max = 320) @field:Email override val managerEmail: String?,
     @field:Size(max = 2048) @field:URL override val inquiryUrl: String?,
@@ -185,14 +185,14 @@ private interface CompanyBootcampWriteRequest {
     val companyName: String
     val title: String
     val programType: String
-    val operationType: OperationType
+    val operationType: BootcampOperationType
     val recruitmentType: BootcampRecruitmentType
     val recruitmentStartAt: LocalDateTime?
     val recruitmentEndAt: LocalDateTime?
     val programStartDate: LocalDate
     val programEndDate: LocalDate
     val capacity: Int?
-    val tuitionType: TuitionType
+    val tuitionType: BootcampTuitionType
     val tuitionAmount: Long?
     val representativeImageUrl: String
     val shortDescription: String
@@ -202,7 +202,7 @@ private interface CompanyBootcampWriteRequest {
     val instructorInfo: String?
     val programFeatures: String?
     val completionRequirements: String?
-    val applicationMethod: ApplicationMethod
+    val applicationMethod: BootcampApplicationMethod
     val applicationUrl: String?
     val managerEmail: String?
     val inquiryUrl: String?
@@ -236,10 +236,10 @@ private fun CompanyBootcampWriteRequest.validateRelations() {
     if (publicationStart != null && publicationEnd != null && publicationStart.isAfter(publicationEnd)) {
         invalid("publicationStartAt", "공개 종료 일시보다 늦을 수 없습니다.")
     }
-    if (applicationMethod == ApplicationMethod.EXTERNAL_PAGE && applicationUrl.isNullOrBlank()) {
+    if (applicationMethod == BootcampApplicationMethod.EXTERNAL_PAGE && applicationUrl.isNullOrBlank()) {
         invalid("applicationUrl", "외부 페이지 지원 링크는 필수입니다.")
     }
-    if (applicationMethod == ApplicationMethod.EMAIL && applicationUrl != null) {
+    if (applicationMethod == BootcampApplicationMethod.EMAIL && applicationUrl != null) {
         invalid("applicationUrl", "이메일 지원에는 외부 지원 링크를 설정할 수 없습니다.")
     }
     optionalTextValues().firstOrNull { (_, value) -> value != null && value.isBlank() }?.let { (field, _) ->

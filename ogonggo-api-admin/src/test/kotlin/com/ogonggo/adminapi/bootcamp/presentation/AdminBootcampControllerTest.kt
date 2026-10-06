@@ -11,7 +11,7 @@ import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.review.domain.ContentSource
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -46,7 +46,7 @@ class AdminBootcampControllerTest @Autowired constructor(
     fun `모집 상태와 등록 경로 필터를 조회 조건으로 옮긴다`() {
         val condition = BootcampManagementSearchCondition(
             source = ContentSource.CRAWLER,
-            status = BootcampStatus.CLOSED,
+            status = BootcampRecruitmentStatus.CLOSED,
         )
         Mockito.`when`(adminBootcampService.getBootcamps(condition, BootcampSortType.LATEST, 0, 20))
             .thenReturn(AdminBootcampPageResult(emptyList(), page = 0, size = 20, totalElements = 0, totalPages = 0))

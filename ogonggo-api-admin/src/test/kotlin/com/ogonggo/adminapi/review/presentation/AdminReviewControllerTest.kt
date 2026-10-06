@@ -11,8 +11,8 @@ import com.ogonggo.adminapi.review.business.AdminReviewItem
 import com.ogonggo.adminapi.review.business.AdminReviewMeta
 import com.ogonggo.adminapi.review.business.AdminReviewSection
 import com.ogonggo.adminapi.review.business.AdminReviewService
-import com.ogonggo.core.review.domain.ReviewContentType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewTargetType
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.review.implement.dto.ContentRejectionDto
 import com.ogonggo.core.review.implement.dto.ContentRejectionPageDto
 import org.junit.jupiter.api.Test
@@ -53,7 +53,7 @@ class AdminReviewControllerTest @Autowired constructor(
         Mockito.`when`(adminReviewService.getQueue()).thenReturn(
             listOf(
                 AdminReviewItem(
-                    type = ReviewContentType.JOB,
+                    type = ContentReviewTargetType.JOB,
                     id = 693,
                     title = "VMD 경력사원 채용",
                     companyName = "한국후지필름",
@@ -74,8 +74,8 @@ class AdminReviewControllerTest @Autowired constructor(
 
     @Test
     fun `승인하면 남은 검수 대기 건수와 함께 응답한다`() {
-        Mockito.`when`(adminReviewService.approve(ReviewContentType.BOOTCAMP, 3L))
-            .thenReturn(AdminReviewDecisionResult(ReviewContentType.BOOTCAMP, 3L, ReviewStatus.APPROVED, 14))
+        Mockito.`when`(adminReviewService.approve(ContentReviewTargetType.BOOTCAMP, 3L))
+            .thenReturn(AdminReviewDecisionResult(ContentReviewTargetType.BOOTCAMP, 3L, ContentReviewStatus.APPROVED, 14))
 
         mockMvc.perform(admin(decide("bootcamp", mapOf("decision" to "APPROVED"))))
             .andExpect(status().isOk)
@@ -103,10 +103,10 @@ class AdminReviewControllerTest @Autowired constructor(
 
     @Test
     fun `반려는 사유와 함께 넘기고 되돌리기는 검수 대기로 돌린다`() {
-        Mockito.`when`(adminReviewService.reject(ReviewContentType.JOB, 693L, "급여 조건이 비어 있습니다."))
-            .thenReturn(AdminReviewDecisionResult(ReviewContentType.JOB, 693L, ReviewStatus.REJECTED, 2))
-        Mockito.`when`(adminReviewService.undo(ReviewContentType.JOB, 693L))
-            .thenReturn(AdminReviewDecisionResult(ReviewContentType.JOB, 693L, ReviewStatus.PENDING, 3))
+        Mockito.`when`(adminReviewService.reject(ContentReviewTargetType.JOB, 693L, "급여 조건이 비어 있습니다."))
+            .thenReturn(AdminReviewDecisionResult(ContentReviewTargetType.JOB, 693L, ContentReviewStatus.REJECTED, 2))
+        Mockito.`when`(adminReviewService.undo(ContentReviewTargetType.JOB, 693L))
+            .thenReturn(AdminReviewDecisionResult(ContentReviewTargetType.JOB, 693L, ContentReviewStatus.PENDING, 3))
 
         mockMvc.perform(admin(decide("job", mapOf("decision" to "REJECTED", "reason" to "급여 조건이 비어 있습니다."))))
             .andExpect(status().isOk)
@@ -120,7 +120,7 @@ class AdminReviewControllerTest @Autowired constructor(
 
     @Test
     fun `반려 보관 목록은 종류와 검색어로 좁히고 삭제된 콘텐츠도 표시한다`() {
-        Mockito.`when`(adminRejectionService.getRejections(ReviewContentType.JOB, "급여", 0, 20)).thenReturn(
+        Mockito.`when`(adminRejectionService.getRejections(ContentReviewTargetType.JOB, "급여", 0, 20)).thenReturn(
             ContentRejectionPageDto(listOf(rejection(contentExists = false)), page = 0, size = 20, totalElements = 1, totalPages = 1),
         )
 
@@ -138,13 +138,13 @@ class AdminReviewControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.message").value("[reason] 반려 사유를 입력해 주세요."))
         Mockito.verifyNoInteractions(adminRejectionService)
 
-        Mockito.`when`(adminRejectionService.getRejection(ReviewContentType.JOB, 512L))
+        Mockito.`when`(adminRejectionService.getRejection(ContentReviewTargetType.JOB, 512L))
             .thenReturn(rejection(reason = "고친 사유"))
 
         mockMvc.perform(admin(updateReason("고친 사유")))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.reason").value("고친 사유"))
-        Mockito.verify(adminRejectionService).replaceReason(ReviewContentType.JOB, 512L, "고친 사유")
+        Mockito.verify(adminRejectionService).replaceReason(ContentReviewTargetType.JOB, 512L, "고친 사유")
     }
 
     private fun decide(type: String, body: Map<String, String>): MockHttpServletRequestBuilder =
@@ -164,7 +164,7 @@ class AdminReviewControllerTest @Autowired constructor(
         reason: String = "급여 조건이 비어 있습니다.",
         contentExists: Boolean = true,
     ): ContentRejectionDto = ContentRejectionDto(
-        contentType = ReviewContentType.JOB,
+        contentType = ContentReviewTargetType.JOB,
         contentId = 512L,
         title = "Content Specialist",
         companyName = "뱅크",

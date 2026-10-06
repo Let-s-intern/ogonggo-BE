@@ -5,8 +5,8 @@ import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.review.domain.ReviewContentType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewTargetType
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -41,14 +41,14 @@ class AdminReviewService(
     }
 
     @Transactional
-    fun approve(type: ReviewContentType, contentId: Long): AdminReviewDecisionResult {
+    fun approve(type: ContentReviewTargetType, contentId: Long): AdminReviewDecisionResult {
         val now = LocalDateTime.now(clock)
         val reviewStatus = when (type) {
-            ReviewContentType.JOB -> jobReader.readForUpdate(contentId)
+            ContentReviewTargetType.JOB -> jobReader.readForUpdate(contentId)
                 .also { jobManager.approveReview(it, now) }
                 .reviewStatus
 
-            ReviewContentType.BOOTCAMP -> bootcampReader.readForUpdate(contentId)
+            ContentReviewTargetType.BOOTCAMP -> bootcampReader.readForUpdate(contentId)
                 .also { bootcampManager.approveReview(it, now) }
                 .reviewStatus
         }
@@ -57,14 +57,14 @@ class AdminReviewService(
 
     /** 같은 대상을 다시 반려하면 반려 기록을 새로 만들지 않고 사유만 바꾼다. */
     @Transactional
-    fun reject(type: ReviewContentType, contentId: Long, reason: String): AdminReviewDecisionResult {
+    fun reject(type: ContentReviewTargetType, contentId: Long, reason: String): AdminReviewDecisionResult {
         val now = LocalDateTime.now(clock)
         val reviewStatus = when (type) {
-            ReviewContentType.JOB -> jobReader.readForUpdate(contentId)
+            ContentReviewTargetType.JOB -> jobReader.readForUpdate(contentId)
                 .also { jobManager.rejectReview(it, reason, now) }
                 .reviewStatus
 
-            ReviewContentType.BOOTCAMP -> bootcampReader.readForUpdate(contentId)
+            ContentReviewTargetType.BOOTCAMP -> bootcampReader.readForUpdate(contentId)
                 .also { bootcampManager.rejectReview(it, reason, now) }
                 .reviewStatus
         }
@@ -76,14 +76,14 @@ class AdminReviewService(
      * 승인으로 노출됐던 콘텐츠는 다시 비노출이 되고 반려 기록은 지운다.
      */
     @Transactional
-    fun undo(type: ReviewContentType, contentId: Long): AdminReviewDecisionResult {
+    fun undo(type: ContentReviewTargetType, contentId: Long): AdminReviewDecisionResult {
         val now = LocalDateTime.now(clock)
         val reviewStatus = when (type) {
-            ReviewContentType.JOB -> jobReader.readForUpdate(contentId)
+            ContentReviewTargetType.JOB -> jobReader.readForUpdate(contentId)
                 .also { jobManager.requestReview(it, now) }
                 .reviewStatus
 
-            ReviewContentType.BOOTCAMP -> bootcampReader.readForUpdate(contentId)
+            ContentReviewTargetType.BOOTCAMP -> bootcampReader.readForUpdate(contentId)
                 .also { bootcampManager.requestReview(it, now) }
                 .reviewStatus
         }
@@ -92,9 +92,9 @@ class AdminReviewService(
 
     /** 건수 조회는 같은 트랜잭션에서 방금 바꾼 상태를 먼저 반영한 뒤 센다. */
     private fun decisionResult(
-        type: ReviewContentType,
+        type: ContentReviewTargetType,
         contentId: Long,
-        reviewStatus: ReviewStatus?,
+        reviewStatus: ContentReviewStatus?,
     ): AdminReviewDecisionResult = AdminReviewDecisionResult(
         type = type,
         id = contentId,

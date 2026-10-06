@@ -1,8 +1,8 @@
 package com.ogonggo.core.job.implement.dto
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobContentField
@@ -26,10 +26,10 @@ data class JobAppendDto(
     val industry: String? = null,
     val coverImageUrl: String? = null,
     val logoUrl: String? = null,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val experienceMinYears: Int? = null,
-    val educationLevel: EducationLevel = EducationLevel.ANY,
+    val educationLevel: JobEducationLevel = JobEducationLevel.ANY,
     val region: Region? = null,
     val subRegion: SubRegion? = null,
     val recruitmentType: JobRecruitmentType,
@@ -65,10 +65,10 @@ data class JobUpdateDto(
     val industry: String? = null,
     val coverImageUrl: String? = null,
     val logoUrl: String? = null,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val experienceMinYears: Int? = null,
-    val educationLevel: EducationLevel = EducationLevel.ANY,
+    val educationLevel: JobEducationLevel = JobEducationLevel.ANY,
     val region: Region? = null,
     val subRegion: SubRegion? = null,
     val recruitmentType: JobRecruitmentType,

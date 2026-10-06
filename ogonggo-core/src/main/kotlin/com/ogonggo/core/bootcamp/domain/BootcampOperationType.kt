@@ -2,10 +2,11 @@ package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.enumeration.EnumField
 
-enum class ApplicationMethod(
+enum class BootcampOperationType(
     override val code: Int,
     override val desc: String,
 ) : EnumField {
-    EXTERNAL_PAGE(1, "외부 페이지"),
-    EMAIL(2, "이메일"),
+    ONLINE(1, "온라인"),
+    OFFLINE(2, "오프라인"),
+    HYBRID(3, "온·오프라인"),
 }

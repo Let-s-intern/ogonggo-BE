@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.error.UnauthorizedException
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
@@ -45,8 +45,8 @@ class UserJobController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: JobSortType,
-        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
-        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: JobExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
         @RequestParam(name = "region", required = false) region: Region?,
@@ -84,7 +84,7 @@ class UserJobController(
     @GetMapping("/popular")
     override fun getPopularJobs(
         @AuthenticationPrincipal userId: Long?,
-        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
+        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
     ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>> =
         SuccessResponse.ok(userJobService.getPopularJobs(userId, employmentType).map(UserJobSummaryResponse::from))
 
@@ -121,8 +121,8 @@ class UserJobController(
         @AuthenticationPrincipal userId: Long?,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
-        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
-        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: JobExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
         @RequestParam(name = "region", required = false) region: Region?,

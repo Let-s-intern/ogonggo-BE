@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampManager
@@ -31,7 +31,7 @@ class CompanyBootcampService(
     @Transactional
     fun create(userId: Long, command: BootcampAppendDto): Long {
         verifyCompany(userId)
-        val closedAt = if (command.status == BootcampStatus.CLOSED) LocalDateTime.now(clock) else null
+        val closedAt = if (command.status == BootcampRecruitmentStatus.CLOSED) LocalDateTime.now(clock) else null
         val bootcamp = bootcampAppender.append(
             command.copy(ownerUserId = userId, closedAt = closedAt),
         )

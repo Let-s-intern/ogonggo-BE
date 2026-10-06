@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.presentation.response
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -10,7 +10,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.userapi.job.business.CompanyJobResult
 import com.ogonggo.userapi.job.business.CompanyJobSummary
 import io.swagger.v3.oas.annotations.media.Schema
@@ -27,8 +27,8 @@ data class CompanyJobSummaryResponse(
     val jobField: JobField?,
     val jobRole: JobRole?,
     val industry: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val region: Region?,
     val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
@@ -36,7 +36,7 @@ data class CompanyJobSummaryResponse(
     val recruitmentEndAt: LocalDateTime?,
     val publicationStatus: JobPublicationStatus,
     @Schema(description = REVIEW_STATUS_DESCRIPTION)
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -71,10 +71,10 @@ data class CompanyJobDetailResponse(
     val industry: String?,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val experienceMinYears: Int?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val region: Region?,
     val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
@@ -96,7 +96,7 @@ data class CompanyJobDetailResponse(
     val sourceUrl: String?,
     val publicationStatus: JobPublicationStatus,
     @Schema(description = REVIEW_STATUS_DESCRIPTION)
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {

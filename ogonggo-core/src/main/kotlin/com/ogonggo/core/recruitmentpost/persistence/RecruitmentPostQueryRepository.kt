@@ -8,7 +8,7 @@ import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostApplication.recru
 import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostBookmark.recruitmentPostBookmark
 import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostMetric.recruitmentPostMetric
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostConsoleSearchCondition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
@@ -79,7 +79,7 @@ internal class RecruitmentPostQueryRepository(
         ownerUserId: Long,
         status: RecruitmentPostManagementStatus,
         recruitmentStatus: RecruitmentPostRecruitmentStatus?,
-        applicationStatus: RecruitmentPostApplicationStatus?,
+        applicationStatus: RecruitmentPostApplicantPresence?,
         recruitmentType: RecruitmentPostType?,
         keyword: String?,
         pageable: Pageable,
@@ -143,7 +143,7 @@ internal class RecruitmentPostQueryRepository(
         ownerUserId: Long,
         status: RecruitmentPostManagementStatus,
         recruitmentStatus: RecruitmentPostRecruitmentStatus?,
-        applicationStatus: RecruitmentPostApplicationStatus?,
+        applicationStatus: RecruitmentPostApplicantPresence?,
         recruitmentType: RecruitmentPostType?,
         keyword: String?,
     ): Array<Predicate?> = buildList {
@@ -163,7 +163,7 @@ internal class RecruitmentPostQueryRepository(
                     recruitmentPostApplication.deletedAt.isNull,
                 )
                 .exists()
-            add(if (it == RecruitmentPostApplicationStatus.HAS_APPLICATIONS) hasApplications else hasApplications.not())
+            add(if (it == RecruitmentPostApplicantPresence.HAS_APPLICATIONS) hasApplications else hasApplications.not())
         }
         keyword?.takeIf(String::isNotBlank)?.let { add(recruitmentPost.title.containsIgnoreCase(it)) }
     }.toTypedArray()

@@ -31,7 +31,7 @@ import java.time.LocalDateTime
     ],
 )
 class ContentRejection internal constructor(
-    contentType: ReviewContentType,
+    contentType: ContentReviewTargetType,
     contentId: Long,
     reason: String,
     rejectedAt: LocalDateTime,
@@ -49,7 +49,7 @@ class ContentRejection internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "content_type", nullable = false, length = 20)
-    var contentType: ReviewContentType = contentType /* 반려한 콘텐츠 종류 */
+    var contentType: ContentReviewTargetType = contentType /* 반려한 콘텐츠 종류 */
         protected set
 
     @Column(name = "content_id", nullable = false)

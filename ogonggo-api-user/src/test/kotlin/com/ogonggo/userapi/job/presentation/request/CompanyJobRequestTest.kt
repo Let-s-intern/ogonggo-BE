@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.job.presentation.request
 
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -115,8 +115,8 @@ class CompanyJobRequestTest {
         industry = null,
         coverImageUrl = null,
         logoUrl = logoUrl,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.NEWCOMER,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.NEWCOMER,
         experienceMinYears = null,
         educationLevel = null,
         region = region,

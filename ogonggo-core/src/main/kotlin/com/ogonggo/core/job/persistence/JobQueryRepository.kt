@@ -1,8 +1,8 @@
 package com.ogonggo.core.job.persistence
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
@@ -157,7 +157,7 @@ internal class JobQueryRepository(
      * 지표 행은 첫 조회 시점에 생기므로 한 번도 조회되지 않은 공고는 대상이 아니다.
      * 고용 형태가 없으면 모든 고용 형태를 대상으로 한다.
      */
-    fun findPopularRecruiting(employmentType: EmploymentType?, limit: Int): List<Job> =
+    fun findPopularRecruiting(employmentType: JobEmploymentType?, limit: Int): List<Job> =
         queryFactory.select(job)
             .from(jobMetric)
             .join(job).on(job.id.eq(jobMetric.jobId))
@@ -238,10 +238,10 @@ internal class JobQueryRepository(
             keywordContains(condition.keyword),
         )
 
-    private fun employmentTypeEq(employmentType: EmploymentType?): BooleanExpression? =
+    private fun employmentTypeEq(employmentType: JobEmploymentType?): BooleanExpression? =
         employmentType?.let(job.employmentType::eq)
 
-    private fun experienceTypeEq(experienceType: ExperienceType?): BooleanExpression? =
+    private fun experienceTypeEq(experienceType: JobExperienceType?): BooleanExpression? =
         experienceType?.let(job.experienceType::eq)
 
     private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {

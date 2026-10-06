@@ -7,8 +7,8 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobRecruitmentType
-import com.ogonggo.core.review.domain.ReviewContentType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewTargetType
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter
  * 화면이 종류로 갈라지기 시작하면 키보드 흐름이 종류마다 어긋난다.
  */
 data class AdminReviewItem(
-    val type: ReviewContentType,
+    val type: ContentReviewTargetType,
     val id: Long,
     val title: String,
     val companyName: String,
@@ -28,7 +28,7 @@ data class AdminReviewItem(
 ) {
     companion object {
         internal fun from(job: Job): AdminReviewItem = AdminReviewItem(
-            type = ReviewContentType.JOB,
+            type = ContentReviewTargetType.JOB,
             id = checkNotNull(job.id) { "채용공고 식별자가 없습니다." },
             title = job.title,
             companyName = job.companyName,
@@ -58,7 +58,7 @@ data class AdminReviewItem(
 
         internal fun from(bootcamp: Bootcamp, curriculums: List<BootcampCurriculumDto.Response>): AdminReviewItem =
             AdminReviewItem(
-                type = ReviewContentType.BOOTCAMP,
+                type = ContentReviewTargetType.BOOTCAMP,
                 id = checkNotNull(bootcamp.id) { "부트캠프 식별자가 없습니다." },
                 title = bootcamp.title,
                 companyName = bootcamp.companyName,
@@ -128,9 +128,9 @@ data class AdminReviewSection(
 )
 
 data class AdminReviewDecisionResult(
-    val type: ReviewContentType,
+    val type: ContentReviewTargetType,
     val id: Long,
-    val reviewStatus: ReviewStatus,
+    val reviewStatus: ContentReviewStatus,
     /** 판정 뒤에 남은 검수 대기 건수. 채용공고와 부트캠프를 합한다. */
     val remaining: Long,
 )

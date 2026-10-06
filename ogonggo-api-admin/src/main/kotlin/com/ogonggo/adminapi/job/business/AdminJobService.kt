@@ -11,7 +11,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -100,11 +100,11 @@ class AdminJobService(
         }
     }
 
-    private fun changeReview(job: Job, reviewStatus: ReviewStatus, now: LocalDateTime) {
+    private fun changeReview(job: Job, reviewStatus: ContentReviewStatus, now: LocalDateTime) {
         when (reviewStatus) {
-            ReviewStatus.APPROVED -> jobManager.approveReview(job, now)
-            ReviewStatus.PENDING -> jobManager.requestReview(job, now)
-            ReviewStatus.REJECTED -> throw IllegalArgumentException("반려는 사유와 함께 검수 화면에서 처리합니다.")
+            ContentReviewStatus.APPROVED -> jobManager.approveReview(job, now)
+            ContentReviewStatus.PENDING -> jobManager.requestReview(job, now)
+            ContentReviewStatus.REJECTED -> throw IllegalArgumentException("반려는 사유와 함께 검수 화면에서 처리합니다.")
         }
     }
 }

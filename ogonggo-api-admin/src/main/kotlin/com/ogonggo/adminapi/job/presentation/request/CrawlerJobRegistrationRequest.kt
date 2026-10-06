@@ -3,9 +3,9 @@ package com.ogonggo.adminapi.job.presentation.request
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.CrawlerJobCommand
 import com.ogonggo.adminapi.job.business.CrawlerJobRegistrationCommand
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -36,10 +36,10 @@ interface CrawlerJobWriteRequest {
     val industry: String?
     val coverImageUrl: String?
     val logoUrl: String?
-    val employmentType: EmploymentType
-    val experienceType: ExperienceType
+    val employmentType: JobEmploymentType
+    val experienceType: JobExperienceType
     val experienceMinYears: Int?
-    val educationLevel: EducationLevel
+    val educationLevel: JobEducationLevel
     val region: Region?
     val subRegion: SubRegion?
     val recruitmentType: JobRecruitmentType
@@ -160,15 +160,15 @@ data class CrawlerJobRegistrationRequest(
     @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
     override val logoUrl: String? = null,
 
-    override val employmentType: EmploymentType,
+    override val employmentType: JobEmploymentType,
 
-    override val experienceType: ExperienceType,
+    override val experienceType: JobExperienceType,
 
     @field:Schema(description = "최소 요구 경력 연수. 원문에 근거가 있을 때만 보낸다")
     @field:PositiveOrZero(message = "최소 경력 연수는 0 이상이어야 합니다.")
     override val experienceMinYears: Int? = null,
 
-    override val educationLevel: EducationLevel,
+    override val educationLevel: JobEducationLevel,
 
     @field:Schema(description = "근무 시·도. GET /api/v1/enums(사용자 API)의 Region 값입니다.", example = "SEOUL")
     override val region: Region? = null,
@@ -268,14 +268,14 @@ data class CrawlerJobReplaceRequest(
     @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
     override val logoUrl: String? = null,
 
-    override val employmentType: EmploymentType,
+    override val employmentType: JobEmploymentType,
 
-    override val experienceType: ExperienceType,
+    override val experienceType: JobExperienceType,
 
     @field:PositiveOrZero(message = "최소 경력 연수는 0 이상이어야 합니다.")
     override val experienceMinYears: Int? = null,
 
-    override val educationLevel: EducationLevel,
+    override val educationLevel: JobEducationLevel,
 
     override val region: Region? = null,
     override val subRegion: SubRegion? = null,

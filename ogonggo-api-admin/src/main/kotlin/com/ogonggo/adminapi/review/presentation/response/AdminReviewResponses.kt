@@ -2,14 +2,14 @@ package com.ogonggo.adminapi.review.presentation.response
 
 import com.ogonggo.adminapi.review.business.AdminReviewDecisionResult
 import com.ogonggo.adminapi.review.business.AdminReviewItem
-import com.ogonggo.core.review.domain.ReviewContentType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewTargetType
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.review.implement.dto.ContentRejectionDto
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
 data class AdminReviewItemResponse(
-    val type: ReviewContentType,
+    val type: ContentReviewTargetType,
     val id: Long,
     val title: String,
     val companyName: String,
@@ -46,9 +46,9 @@ data class AdminReviewSectionResponse(
 )
 
 data class AdminReviewDecisionResponse(
-    val type: ReviewContentType,
+    val type: ContentReviewTargetType,
     val id: Long,
-    val reviewStatus: ReviewStatus,
+    val reviewStatus: ContentReviewStatus,
     @Schema(description = "판정 뒤에 남은 검수 대기 건수입니다. 채용공고와 부트캠프를 합합니다.")
     val remaining: Long,
 ) {
@@ -63,7 +63,7 @@ data class AdminReviewDecisionResponse(
 }
 
 data class AdminRejectionResponse(
-    val type: ReviewContentType,
+    val type: ContentReviewTargetType,
     val id: Long,
     val title: String,
     val companyName: String,

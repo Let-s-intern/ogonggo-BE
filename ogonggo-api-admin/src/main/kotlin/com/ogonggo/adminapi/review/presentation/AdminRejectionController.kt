@@ -5,7 +5,7 @@ import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.adminapi.review.business.AdminRejectionService
 import com.ogonggo.adminapi.review.presentation.request.UpdateRejectionReasonRequest
 import com.ogonggo.adminapi.review.presentation.response.AdminRejectionResponse
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -28,7 +28,7 @@ class AdminRejectionController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "20") size: Int,
         @RequestParam(name = "keyword", required = false) keyword: String?,
-        @RequestParam(name = "type", required = false) type: ReviewContentType?,
+        @RequestParam(name = "type", required = false) type: ContentReviewTargetType?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminRejectionResponse>>> {
         val result = adminRejectionService.getRejections(type, keyword?.takeIf { it.isNotBlank() }, page - 1, size)
         return SuccessResponse.ok(

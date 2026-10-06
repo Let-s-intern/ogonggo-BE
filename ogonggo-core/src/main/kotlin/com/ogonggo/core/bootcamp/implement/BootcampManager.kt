@@ -10,7 +10,7 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.Clock
 import java.time.LocalDateTime
@@ -97,17 +97,17 @@ class BootcampManager internal constructor(
     /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
     fun approveReview(bootcamp: Bootcamp, now: LocalDateTime) {
         change(bootcamp) { approveReview() }
-        contentRejectionManager.clear(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), now)
+        contentRejectionManager.clear(ContentReviewTargetType.BOOTCAMP, bootcamp.requiredId(), now)
     }
 
     fun rejectReview(bootcamp: Bootcamp, reason: String, now: LocalDateTime) {
         change(bootcamp) { rejectReview() }
-        contentRejectionManager.reject(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), reason, now)
+        contentRejectionManager.reject(ContentReviewTargetType.BOOTCAMP, bootcamp.requiredId(), reason, now)
     }
 
     fun requestReview(bootcamp: Bootcamp, now: LocalDateTime) {
         change(bootcamp) { requestReview() }
-        contentRejectionManager.clear(ReviewContentType.BOOTCAMP, bootcamp.requiredId(), now)
+        contentRejectionManager.clear(ContentReviewTargetType.BOOTCAMP, bootcamp.requiredId(), now)
     }
 
     /** 모집 종료 일시가 지난 모집 중 부트캠프를 마감하고 마감한 건수를 돌려준다. */

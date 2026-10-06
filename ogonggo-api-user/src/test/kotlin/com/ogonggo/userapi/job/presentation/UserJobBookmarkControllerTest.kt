@@ -3,9 +3,9 @@ package com.ogonggo.userapi.job.presentation
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobField
@@ -66,8 +66,8 @@ class UserJobBookmarkControllerTest @Autowired constructor(
     fun `내 북마크 목록의 필터와 검색어는 조회 조건으로 전달된다`() {
         // given
         val condition = JobSearchCondition(
-            employmentType = EmploymentType.INTERN,
-            experienceType = ExperienceType.NEWCOMER,
+            employmentType = JobEmploymentType.INTERN,
+            experienceType = JobExperienceType.NEWCOMER,
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",
@@ -240,12 +240,12 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 title = "백엔드 개발자",
                 coverImageUrl = null,
                 logoUrl = null,
-                employmentType = EmploymentType.FULL_TIME,
-                experienceType = ExperienceType.EXPERIENCED,
+                employmentType = JobEmploymentType.FULL_TIME,
+                experienceType = JobExperienceType.EXPERIENCED,
                 jobField = null,
                 jobRole = null,
                 experienceMinYears = 1,
-                educationLevel = EducationLevel.ANY,
+                educationLevel = JobEducationLevel.ANY,
                 region = Region.SEOUL,
                 subRegion = null,
                 recruitmentType = JobRecruitmentType.PERIOD,

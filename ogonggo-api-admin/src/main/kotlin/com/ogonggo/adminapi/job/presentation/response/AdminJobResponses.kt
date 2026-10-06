@@ -3,9 +3,9 @@ package com.ogonggo.adminapi.job.presentation.response
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -13,7 +13,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -21,11 +21,11 @@ data class AdminJobSummaryResponse(
     val id: Long,
     val title: String,
     val companyName: String,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -38,7 +38,7 @@ data class AdminJobSummaryResponse(
     val visibility: AdminContentVisibility,
     val source: ContentSource,
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
@@ -75,11 +75,11 @@ data class AdminJobDetailResponse(
     val id: Long,
     val title: String,
     val companyName: String,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -92,7 +92,7 @@ data class AdminJobDetailResponse(
     val visibility: AdminContentVisibility,
     val source: ContentSource,
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,

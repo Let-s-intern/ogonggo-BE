@@ -2,7 +2,7 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.job.domain.JobContentField
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 
 /**
  * 관리자가 채용공고의 운영 값과 내용을 고친다. 넘어온 값만 바꾼다.
@@ -11,7 +11,7 @@ import com.ogonggo.core.review.domain.ReviewStatus
 data class AdminJobUpdateCommand(
     val visibility: AdminContentVisibility? = null,
     /** 승인이나 검수 대기로만 바꾼다. 반려는 사유가 필요해 검수 화면에서 처리한다. */
-    val reviewStatus: ReviewStatus? = null,
+    val reviewStatus: ContentReviewStatus? = null,
     val title: String? = null,
     /** 값이 null인 칸은 비운다. */
     val contents: Map<JobContentField, String?> = emptyMap(),

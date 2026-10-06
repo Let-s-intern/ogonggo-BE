@@ -3,7 +3,7 @@ package com.ogonggo.core.review.domain
 import com.ogonggo.core.enumeration.EnumField
 
 /** 검수와 반려 기록이 가리키는 콘텐츠 종류다. */
-enum class ReviewContentType(
+enum class ContentReviewTargetType(
     override val code: Int,
     override val desc: String,
 ) : EnumField {

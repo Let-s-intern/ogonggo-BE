@@ -23,14 +23,14 @@ class BootcampDomainTest {
             companyName = "변경 교육사",
             title = "데이터 분석 부트캠프",
             programType = "데이터",
-            operationType = OperationType.OFFLINE,
+            operationType = BootcampOperationType.OFFLINE,
             recruitmentType = BootcampRecruitmentType.PERIOD,
             recruitmentStartAt = recruitmentStartAt,
             recruitmentEndAt = recruitmentEndAt,
             programStartDate = programStartDate,
             programEndDate = programEndDate,
             capacity = 30,
-            tuitionType = TuitionType.PAID,
+            tuitionType = BootcampTuitionType.PAID,
             tuitionAmount = 1_000_000,
             representativeImageUrl = "https://example.com/images/bootcamp-2.png",
             shortDescription = "데이터 분석가로 성장하는 12주",
@@ -40,7 +40,7 @@ class BootcampDomainTest {
             instructorInfo = "현업 데이터 분석가가 강의합니다.",
             programFeatures = "매주 실데이터 프로젝트를 진행합니다.",
             completionRequirements = "출석률 80% 이상",
-            applicationMethod = ApplicationMethod.EMAIL,
+            applicationMethod = BootcampApplicationMethod.EMAIL,
             applicationUrl = null,
             managerEmail = "manager@example.com",
             inquiryUrl = "https://example.com/inquiry",
@@ -51,12 +51,12 @@ class BootcampDomainTest {
 
         assertEquals("변경 교육사", bootcamp.companyName)
         assertEquals("데이터 분석 부트캠프", bootcamp.title)
-        assertEquals(OperationType.OFFLINE, bootcamp.operationType)
+        assertEquals(BootcampOperationType.OFFLINE, bootcamp.operationType)
         assertEquals(30, bootcamp.capacity)
-        assertEquals(TuitionType.PAID, bootcamp.tuitionType)
+        assertEquals(BootcampTuitionType.PAID, bootcamp.tuitionType)
         assertEquals(1_000_000, bootcamp.tuitionAmount)
         assertEquals("데이터 분석가로 성장하는 12주", bootcamp.shortDescription)
-        assertEquals(ApplicationMethod.EMAIL, bootcamp.applicationMethod)
+        assertEquals(BootcampApplicationMethod.EMAIL, bootcamp.applicationMethod)
         assertEquals("https://example.com/images/logo.png", bootcamp.logoUrl)
         assertEquals("현업 데이터 분석가가 강의합니다.", bootcamp.instructorInfo)
         assertEquals("매주 실데이터 프로젝트를 진행합니다.", bootcamp.programFeatures)
@@ -108,13 +108,13 @@ class BootcampDomainTest {
         assertThrows(IllegalArgumentException::class.java) { createBootcamp(applicationUrl = null) }
         assertThrows(IllegalArgumentException::class.java) {
             createBootcamp(
-                applicationMethod = ApplicationMethod.EMAIL,
+                applicationMethod = BootcampApplicationMethod.EMAIL,
                 applicationUrl = "https://example.com/apply",
             )
         }
 
         createBootcamp(
-            applicationMethod = ApplicationMethod.EMAIL,
+            applicationMethod = BootcampApplicationMethod.EMAIL,
             applicationUrl = null,
             managerEmail = null,
         )
@@ -126,15 +126,15 @@ class BootcampDomainTest {
         val firstClosedAt = LocalDateTime.of(2026, 9, 1, 0, 0)
 
         bootcamp.startRecruitment()
-        assertEquals(BootcampStatus.RECRUITING, bootcamp.status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, bootcamp.status)
 
         bootcamp.close(firstClosedAt)
         bootcamp.close(firstClosedAt.plusDays(1))
-        assertEquals(BootcampStatus.CLOSED, bootcamp.status)
+        assertEquals(BootcampRecruitmentStatus.CLOSED, bootcamp.status)
         assertEquals(firstClosedAt, bootcamp.closedAt)
 
         bootcamp.startRecruitment()
-        assertEquals(BootcampStatus.RECRUITING, bootcamp.status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, bootcamp.status)
         assertEquals(null, bootcamp.closedAt)
     }
 
@@ -179,7 +179,7 @@ class BootcampDomainTest {
         tuitionAmount: Long? = 0,
         representativeImageUrl: String? = "https://example.com/images/bootcamp.png",
         shortDescription: String = "백엔드 개발자로 성장하는 12주",
-        applicationMethod: ApplicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+        applicationMethod: BootcampApplicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
         applicationUrl: String? = "https://example.com/apply",
         managerEmail: String? = null,
         publicationStartAt: LocalDateTime? = null,
@@ -188,14 +188,14 @@ class BootcampDomainTest {
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = programType,
-        operationType = OperationType.ONLINE,
+        operationType = BootcampOperationType.ONLINE,
         recruitmentType = recruitmentType,
         recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
         programStartDate = programStartDate,
         programEndDate = programEndDate,
         capacity = capacity,
-        tuitionType = TuitionType.FREE,
+        tuitionType = BootcampTuitionType.FREE,
         tuitionAmount = tuitionAmount,
         representativeImageUrl = representativeImageUrl,
         shortDescription = shortDescription,

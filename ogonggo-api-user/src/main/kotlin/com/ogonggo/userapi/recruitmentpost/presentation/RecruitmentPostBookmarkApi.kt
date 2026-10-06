@@ -31,7 +31,7 @@ interface RecruitmentPostBookmarkApi {
         summary = "사이드·스터디 모집글 북마크 목록 조회",
         description = """
             북마크 목록을 조회합니다. 마이페이지 지원·신청 관리의 스크랩 칸에도 이 목록을 씁니다.
-            지원 준비 중 이후 칸은 `GET /api/v1/me/recruitment-applications`의 지원 이력을 씁니다.
+            지원 준비 중 이후 칸은 `GET /api/v1/users/me/recruitment-post-applications`의 지원 이력을 씁니다.
 
             recruitmentStatus(RECRUITING 모집 중, CLOSED 마감), recruitmentType(SIDE_PROJECT, STUDY)으로 좁히며
             보내지 않으면 해당 조건을 적용하지 않습니다.

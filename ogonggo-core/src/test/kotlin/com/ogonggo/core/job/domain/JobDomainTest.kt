@@ -6,7 +6,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -25,7 +25,7 @@ class JobDomainTest {
         job.update(
             companyName = "변경 회사",
             title = "백엔드 인턴",
-            employmentType = EmploymentType.INTERN,
+            employmentType = JobEmploymentType.INTERN,
             parentCompanyName = "변경 모회사",
             jobField = JobField.IT_DEVELOPMENT,
             jobRole = JobRole.IT_BACKEND,
@@ -33,9 +33,9 @@ class JobDomainTest {
             coverImageUrl = "https://example.com/cover2.png",
             logoUrl = "https://example.com/logo2.png",
             recruitmentHeadcount = 5,
-            experienceType = ExperienceType.NEWCOMER,
+            experienceType = JobExperienceType.NEWCOMER,
             experienceMinYears = 0,
-            educationLevel = EducationLevel.BACHELOR,
+            educationLevel = JobEducationLevel.BACHELOR,
             region = Region.BUSAN,
             subRegion = SubRegion.BUSAN_HAEUNDAE_GU,
             recruitmentType = JobRecruitmentType.PERIOD,
@@ -69,7 +69,7 @@ class JobDomainTest {
         assertEquals("https://example.com/cover2.png", job.coverImageUrl)
         assertEquals("https://example.com/logo2.png", job.logoUrl)
         assertEquals(5, job.recruitmentHeadcount)
-        assertEquals(EmploymentType.INTERN, job.employmentType)
+        assertEquals(JobEmploymentType.INTERN, job.employmentType)
         assertEquals(startAt, job.recruitmentStartAt)
         assertEquals(endAt, job.recruitmentEndAt)
         assertEquals("변경된 회사 및 팀 소개", job.companyAndTeamIntroduction)
@@ -125,7 +125,7 @@ class JobDomainTest {
 
     @Test
     fun `기업회원 공고는 검수 대기로 시작하고 수집한 공고는 검수 상태가 없다`() {
-        assertEquals(ReviewStatus.PENDING, createJob(ownerUserId = 7L).reviewStatus)
+        assertEquals(ContentReviewStatus.PENDING, createJob(ownerUserId = 7L).reviewStatus)
         assertNull(createJob().reviewStatus)
         assertThrows(IllegalArgumentException::class.java) {
             createJob(ownerUserId = 7L, publicationStatus = JobPublicationStatus.PUBLISHED)
@@ -140,7 +140,7 @@ class JobDomainTest {
         assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
 
         job.approveReview()
-        assertEquals(ReviewStatus.APPROVED, job.reviewStatus)
+        assertEquals(ContentReviewStatus.APPROVED, job.reviewStatus)
         assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
     }
 
@@ -148,7 +148,7 @@ class JobDomainTest {
     fun `반려하거나 검수 대기로 되돌리면 노출을 끈다`() {
         val rejected = createJob(ownerUserId = 7L).apply { approveReview() }
         rejected.rejectReview()
-        assertEquals(ReviewStatus.REJECTED, rejected.reviewStatus)
+        assertEquals(ContentReviewStatus.REJECTED, rejected.reviewStatus)
         assertEquals(JobPublicationStatus.HIDDEN, rejected.publicationStatus)
 
         val draft = createJob(ownerUserId = 7L)
@@ -158,7 +158,7 @@ class JobDomainTest {
 
         val approved = createJob(ownerUserId = 7L).apply { approveReview() }
         approved.requestReview()
-        assertEquals(ReviewStatus.PENDING, approved.reviewStatus)
+        assertEquals(ContentReviewStatus.PENDING, approved.reviewStatus)
         assertEquals(JobPublicationStatus.HIDDEN, approved.publicationStatus)
     }
 
@@ -273,10 +273,10 @@ class JobDomainTest {
         jobRole = jobRole,
         industry = industry,
         coverImageUrl = coverImageUrl,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         experienceMinYears = experienceMinYears,
-        educationLevel = EducationLevel.ANY,
+        educationLevel = JobEducationLevel.ANY,
         region = region,
         subRegion = subRegion,
         recruitmentType = recruitmentType,

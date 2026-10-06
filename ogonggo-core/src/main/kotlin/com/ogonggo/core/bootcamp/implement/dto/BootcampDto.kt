@@ -1,14 +1,14 @@
 package com.ogonggo.core.bootcamp.implement.dto
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.review.domain.ContentSource
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -18,14 +18,14 @@ data class BootcampAppendDto(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime? = null,
     val recruitmentEndAt: LocalDateTime? = null,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int? = null,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long? = null,
     val representativeImageUrl: String?,
     val shortDescription: String,
@@ -35,7 +35,7 @@ data class BootcampAppendDto(
     val instructorInfo: String? = null,
     val programFeatures: String? = null,
     val completionRequirements: String? = null,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String? = null,
     val managerEmail: String? = null,
     val inquiryUrl: String? = null,
@@ -46,7 +46,7 @@ data class BootcampAppendDto(
     val curriculums: List<BootcampCurriculumDto.Request> = emptyList(),
     /** 상세에서만 보여 주는 사진이다. 고용24 수집만 넣으며, 수정([BootcampUpdateDto])으로는 바뀌지 않는다. */
     val images: List<BootcampImageDto.Request> = emptyList(),
-    val status: BootcampStatus = BootcampStatus.DRAFT,
+    val status: BootcampRecruitmentStatus = BootcampRecruitmentStatus.DRAFT,
     val closedAt: LocalDateTime? = null,
     val publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
     /** 비우면 저장할 때 소유자 유무로 정한다. `copy(ownerUserId = ...)`로 만든 값도 소유자와 어긋나지 않게 하기 위해서다. */
@@ -66,14 +66,14 @@ data class BootcampUpdateDto(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime? = null,
     val recruitmentEndAt: LocalDateTime? = null,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int? = null,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long? = null,
     val representativeImageUrl: String?,
     val shortDescription: String,
@@ -83,7 +83,7 @@ data class BootcampUpdateDto(
     val instructorInfo: String? = null,
     val programFeatures: String? = null,
     val completionRequirements: String? = null,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String? = null,
     val managerEmail: String? = null,
     val inquiryUrl: String? = null,

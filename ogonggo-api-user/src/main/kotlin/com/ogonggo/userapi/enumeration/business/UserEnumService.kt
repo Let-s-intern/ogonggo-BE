@@ -5,7 +5,7 @@ import com.ogonggo.core.enumeration.catalog.EnumOptionReader
 import com.ogonggo.core.enumeration.enumOptionMapOf
 import com.ogonggo.core.enumeration.enumOptionsOf
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
+import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
 import org.springframework.stereotype.Service
 
 /**
@@ -30,14 +30,24 @@ class UserEnumService(
         val USER_API_ENUMS: Map<String, List<EnumOption>> = enumOptionMapOf(
             // 광고 문의
             enumOptionsOf<AdvertisementInquiryType>(),
-            enumOptionsOf<AdvertisementPromotionChannel>(),
+            enumOptionsOf<AdvertisementInquiryPromotionChannel>(),
         )
 
         /**
-         * 모집글 enum 이름에 RecruitmentPost 접두어를 붙이기 전의 키다. 예전 키 → 새 키.
+         * enum 이름에 루트 접두어를 붙이기 전의 키다. 예전 키 → 새 키.
          * 프런트가 새 키로 옮기는 동안 같은 선택지를 예전 키로도 내려 준다. 프런트 배포 후 서버 2차 배포에서 제거한다.
          */
         val LEGACY_KEYS: Map<String, String> = mapOf(
+            "EmploymentType" to "JobEmploymentType",
+            "ExperienceType" to "JobExperienceType",
+            "EducationLevel" to "JobEducationLevel",
+            "OperationType" to "BootcampOperationType",
+            "TuitionType" to "BootcampTuitionType",
+            "ApplicationMethod" to "BootcampApplicationMethod",
+            "BootcampStatus" to "BootcampRecruitmentStatus",
+            "ReviewStatus" to "ContentReviewStatus",
+            "AdvertisementPromotionChannel" to "AdvertisementInquiryPromotionChannel",
+            "RecruitmentPostApplicationStatus" to "RecruitmentPostApplicantPresence",
             "RecruitmentType" to "RecruitmentPostType",
             "RecruitmentPosition" to "RecruitmentPostPosition",
             "ProgressMethod" to "RecruitmentPostProgressMethod",

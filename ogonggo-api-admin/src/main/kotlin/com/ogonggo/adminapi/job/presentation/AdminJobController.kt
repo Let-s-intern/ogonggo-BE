@@ -15,7 +15,7 @@ import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -43,7 +43,7 @@ class AdminJobController(
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "visibility", required = false) visibility: AdminContentVisibility?,
         @RequestParam(name = "source", required = false) source: ContentSource?,
-        @RequestParam(name = "reviewStatus", required = false) reviewStatus: ReviewStatus?,
+        @RequestParam(name = "reviewStatus", required = false) reviewStatus: ContentReviewStatus?,
         @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,

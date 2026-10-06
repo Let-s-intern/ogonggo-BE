@@ -10,7 +10,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -96,11 +96,11 @@ class AdminBootcampService(
         }
     }
 
-    private fun changeReview(bootcamp: Bootcamp, reviewStatus: ReviewStatus, now: LocalDateTime) {
+    private fun changeReview(bootcamp: Bootcamp, reviewStatus: ContentReviewStatus, now: LocalDateTime) {
         when (reviewStatus) {
-            ReviewStatus.APPROVED -> bootcampManager.approveReview(bootcamp, now)
-            ReviewStatus.PENDING -> bootcampManager.requestReview(bootcamp, now)
-            ReviewStatus.REJECTED -> throw IllegalArgumentException("반려는 사유와 함께 검수 화면에서 처리합니다.")
+            ContentReviewStatus.APPROVED -> bootcampManager.approveReview(bootcamp, now)
+            ContentReviewStatus.PENDING -> bootcampManager.requestReview(bootcamp, now)
+            ContentReviewStatus.REJECTED -> throw IllegalArgumentException("반려는 사유와 함께 검수 화면에서 처리합니다.")
         }
     }
 }

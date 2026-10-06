@@ -2,7 +2,7 @@ package com.ogonggo.userapi.recruitmentpost.business
 
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
@@ -43,7 +43,7 @@ class RecruitmentPostManagementService(
         userId: Long,
         status: RecruitmentPostManagementStatus,
         recruitmentStatus: RecruitmentPostRecruitmentStatus?,
-        applicationStatus: RecruitmentPostApplicationStatus?,
+        applicationStatus: RecruitmentPostApplicantPresence?,
         recruitmentType: RecruitmentPostType?,
         keyword: String?,
         page: Int,

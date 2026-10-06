@@ -2,7 +2,7 @@ package com.ogonggo.userapi.advertisement.implement
 
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
+import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -107,7 +107,7 @@ class AdvertisementInquiryMailSenderTest {
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
-            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
+            promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }

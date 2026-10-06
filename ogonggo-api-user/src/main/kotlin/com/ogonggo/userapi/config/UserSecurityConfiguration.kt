@@ -92,19 +92,17 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").permitAll()
                 it.requestMatchers(
+                    "/api/v1/users/me/recruitment-post-applications",
+                    "/api/v1/users/me/recruitment-post-applications/**",
+                    "/api/v1/users/me/recruitment-posts",
+                    "/api/v1/users/me/recruitment-posts/**",
+                ).authenticated()
+                // 프런트가 새 경로로 옮기는 동안 남겨 둔 예전 경로다(RecruitmentPostLegacyPathController). 서버 2차 배포에서 제거한다.
+                it.requestMatchers(
                     "/api/v1/me/recruitment-applications",
                     "/api/v1/me/recruitment-applications/**",
-                ).authenticated()
-                it.requestMatchers(
-                    HttpMethod.GET,
                     "/api/v1/me/recruitment-posts",
-                    "/api/v1/me/recruitment-posts/*",
-                ).authenticated()
-                it.requestMatchers(
-                    HttpMethod.POST,
-                    "/api/v1/me/recruitment-posts/drafts",
-                    "/api/v1/me/recruitment-posts/*/copies",
-                    "/api/v1/me/recruitment-posts/*/publish",
+                    "/api/v1/me/recruitment-posts/**",
                 ).authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/recruitment-posts/*/applications").authenticated()
                 it.requestMatchers("/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").authenticated()

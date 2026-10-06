@@ -1,6 +1,6 @@
 package com.ogonggo.adminapi.review.business
 
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import com.ogonggo.core.review.implement.ContentRejectionReader
 import com.ogonggo.core.review.implement.dto.ContentRejectionDto
@@ -22,17 +22,17 @@ class AdminRejectionService(
 ) {
 
     fun getRejections(
-        type: ReviewContentType?,
+        type: ContentReviewTargetType?,
         keyword: String?,
         page: Int,
         size: Int,
     ): ContentRejectionPageDto = contentRejectionReader.readActivePage(type, keyword, page, size)
 
-    fun getRejection(type: ReviewContentType, contentId: Long): ContentRejectionDto =
+    fun getRejection(type: ContentReviewTargetType, contentId: Long): ContentRejectionDto =
         contentRejectionReader.readActive(type, contentId)
 
     @Transactional
-    fun replaceReason(type: ReviewContentType, contentId: Long, reason: String) {
+    fun replaceReason(type: ContentReviewTargetType, contentId: Long, reason: String) {
         contentRejectionManager.replaceReason(type, contentId, reason, LocalDateTime.now(clock))
     }
 }

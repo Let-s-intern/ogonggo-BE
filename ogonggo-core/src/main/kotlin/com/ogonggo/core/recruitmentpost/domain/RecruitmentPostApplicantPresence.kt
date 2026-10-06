@@ -2,7 +2,7 @@ package com.ogonggo.core.recruitmentpost.domain
 
 import com.ogonggo.core.enumeration.EnumField
 
-enum class RecruitmentPostApplicationStatus(
+enum class RecruitmentPostApplicantPresence(
     override val code: Int,
     override val desc: String,
 ) : EnumField {

@@ -2,7 +2,7 @@ package com.ogonggo.userapi.bootcamp.presentation
 
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampDetailResponse
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -60,7 +60,7 @@ interface UserBootcampApi {
         category: BootcampCategory?,
         @Size(min = 2, max = 100)
         keyword: String?,
-        recruitmentStatus: BootcampStatus?,
+        recruitmentStatus: BootcampRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(

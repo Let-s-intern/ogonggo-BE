@@ -1,22 +1,22 @@
 package com.ogonggo.core.enumeration.catalog
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.enumeration.EnumOption
 import com.ogonggo.core.enumeration.enumOptionMapOf
 import com.ogonggo.core.enumeration.enumOptionsOf
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobContentField
@@ -28,7 +28,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
@@ -41,8 +41,8 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewContentType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewTargetType
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -63,9 +63,9 @@ class EnumOptionReader {
     private companion object {
         val ENUMS: Map<String, List<EnumOption>> = enumOptionMapOf(
             // 채용공고
-            enumOptionsOf<EmploymentType>(),
-            enumOptionsOf<ExperienceType>(),
-            enumOptionsOf<EducationLevel>(),
+            enumOptionsOf<JobEmploymentType>(),
+            enumOptionsOf<JobExperienceType>(),
+            enumOptionsOf<JobEducationLevel>(),
             enumOptionsOf<JobRecruitmentType>(),
             enumOptionsOf<JobRecruitmentStatus>(),
             enumOptionsOf<JobApplicationMethod>(),
@@ -80,19 +80,19 @@ class EnumOptionReader {
             enumOptionsOf<Region>(),
             enumOptionsOf<SubRegion>(),
             // 부트캠프
-            enumOptionsOf<BootcampStatus>(),
+            enumOptionsOf<BootcampRecruitmentStatus>(),
             enumOptionsOf<BootcampRecruitmentType>(),
-            enumOptionsOf<OperationType>(),
-            enumOptionsOf<TuitionType>(),
-            enumOptionsOf<ApplicationMethod>(),
+            enumOptionsOf<BootcampOperationType>(),
+            enumOptionsOf<BootcampTuitionType>(),
+            enumOptionsOf<BootcampApplicationMethod>(),
             enumOptionsOf<BootcampApplicationStatus>(),
             enumOptionsOf<BootcampPublicationStatus>(),
             enumOptionsOf<BootcampSortType>(),
             enumOptionsOf<BootcampCategory>(),
             enumOptionsOf<BootcampContentField>(),
             // 기업회원 등록 콘텐츠의 검수
-            enumOptionsOf<ReviewContentType>(),
-            enumOptionsOf<ReviewStatus>(),
+            enumOptionsOf<ContentReviewTargetType>(),
+            enumOptionsOf<ContentReviewStatus>(),
             enumOptionsOf<ContentSource>(),
             // 북마크
             enumOptionsOf<BookmarkSortType>(),
@@ -105,7 +105,7 @@ class EnumOptionReader {
             enumOptionsOf<RecruitmentPostPublicationStatus>(),
             enumOptionsOf<RecruitmentPostSortType>(),
             enumOptionsOf<RecruitmentPostManagementStatus>(),
-            enumOptionsOf<RecruitmentPostApplicationStatus>(),
+            enumOptionsOf<RecruitmentPostApplicantPresence>(),
             enumOptionsOf<RecruitmentPostManagementSortType>(),
             enumOptionsOf<RecruitmentPostApplicationProgressStatus>(),
             enumOptionsOf<RecruitmentPostApplicationSortType>(),

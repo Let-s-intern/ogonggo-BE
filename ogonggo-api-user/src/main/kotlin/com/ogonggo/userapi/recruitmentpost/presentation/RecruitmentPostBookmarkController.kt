@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -59,7 +58,7 @@ class RecruitmentPostBookmarkController(
         )
     }
 
-    @PutMapping("/recruitment-posts/{postId}/bookmarks/me")
+    @PostMapping("/recruitment-post-bookmarks/{postId}")
     override fun addBookmark(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("postId") postId: Long,
@@ -68,7 +67,7 @@ class RecruitmentPostBookmarkController(
         return SuccessResponse.created()
     }
 
-    @DeleteMapping("/recruitment-posts/{postId}/bookmarks/me")
+    @DeleteMapping("/recruitment-post-bookmarks/{postId}")
     override fun deleteBookmark(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("postId") postId: Long,

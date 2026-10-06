@@ -3,7 +3,7 @@ package com.ogonggo.userapi.recruitmentpost.presentation
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostProgressMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
@@ -54,7 +54,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
         Mockito.`when`(recruitmentPostService.createDraft(USER_ID, request.toCommand(USER_ID))).thenReturn(15L)
 
         mockMvc.perform(
-            post("/api/v1/me/recruitment-posts/drafts")
+            post("/api/v1/users/me/recruitment-posts/drafts")
                 .with(authenticatedUser())
                 .contentType("application/json")
                 .content("{\"title\":\"작성 중인 모집글\"}"),
@@ -69,7 +69,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
     @Test
     fun `정책에 동의하지 않으면 임시저장 모집글 게시를 요청할 수 없다`() {
         mockMvc.perform(
-            post("/api/v1/me/recruitment-posts/$POST_ID/publish")
+            post("/api/v1/users/me/recruitment-posts/$POST_ID/publish")
                 .with(authenticatedUser())
                 .contentType("application/json")
                 .content("{\"agreedToPolicy\":false}"),
@@ -83,7 +83,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
     @Test
     fun `정책에 동의하면 임시저장 모집글 게시를 요청한다`() {
         mockMvc.perform(
-            post("/api/v1/me/recruitment-posts/$POST_ID/publish")
+            post("/api/v1/users/me/recruitment-posts/$POST_ID/publish")
                 .with(authenticatedUser())
                 .contentType("application/json")
                 .content("{\"agreedToPolicy\":true}"),
@@ -110,7 +110,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
             ),
         ).thenReturn(pageResult())
 
-        mockMvc.perform(get("/api/v1/me/recruitment-posts").with(authenticatedUser()))
+        mockMvc.perform(get("/api/v1/users/me/recruitment-posts").with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.items[0].postId").value(POST_ID))
@@ -129,7 +129,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
                 USER_ID,
                 RecruitmentPostManagementStatus.PUBLISHED,
                 RecruitmentPostRecruitmentStatus.RECRUITING,
-                RecruitmentPostApplicationStatus.HAS_APPLICATIONS,
+                RecruitmentPostApplicantPresence.HAS_APPLICATIONS,
                 RecruitmentPostType.SIDE_PROJECT,
                 "Kotlin",
                 1,
@@ -139,7 +139,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
         ).thenReturn(pageResult())
 
         mockMvc.perform(
-            get("/api/v1/me/recruitment-posts")
+            get("/api/v1/users/me/recruitment-posts")
                 .param("page", "2")
                 .param("size", "20")
                 .param("status", "PUBLISHED")
@@ -154,7 +154,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
             USER_ID,
             RecruitmentPostManagementStatus.PUBLISHED,
             RecruitmentPostRecruitmentStatus.RECRUITING,
-            RecruitmentPostApplicationStatus.HAS_APPLICATIONS,
+            RecruitmentPostApplicantPresence.HAS_APPLICATIONS,
             RecruitmentPostType.SIDE_PROJECT,
             "Kotlin",
             1,
@@ -166,7 +166,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
     @Test
     fun `관리 목록 검색어는 trim 후 길이를 검증한다`() {
         mockMvc.perform(
-            get("/api/v1/me/recruitment-posts")
+            get("/api/v1/users/me/recruitment-posts")
                 .param("keyword", " 가 ")
                 .with(authenticatedUser()),
         )
@@ -178,7 +178,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
     fun `내 모집글을 새 임시저장 글로 복사하고 작성 폼 전체를 반환한다`() {
         Mockito.`when`(managementService.copy(USER_ID, POST_ID)).thenReturn(copyResult())
 
-        mockMvc.perform(post("/api/v1/me/recruitment-posts/$POST_ID/copies").with(authenticatedUser()))
+        mockMvc.perform(post("/api/v1/users/me/recruitment-posts/$POST_ID/copies").with(authenticatedUser()))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.postId").value(101))
@@ -195,7 +195,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
     fun `내 모집글 작성 폼 상세를 전체 필드로 조회한다`() {
         Mockito.`when`(managementService.getPostForm(USER_ID, POST_ID)).thenReturn(formResult())
 
-        mockMvc.perform(get("/api/v1/me/recruitment-posts/$POST_ID").with(authenticatedUser()))
+        mockMvc.perform(get("/api/v1/users/me/recruitment-posts/$POST_ID").with(authenticatedUser()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.postId").value(101))
@@ -211,22 +211,22 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
 
     @Test
     fun `인증 없이 모집글 복사를 요청하면 인증 오류를 반환한다`() {
-        mockMvc.perform(post("/api/v1/me/recruitment-posts/$POST_ID/copies"))
+        mockMvc.perform(post("/api/v1/users/me/recruitment-posts/$POST_ID/copies"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
-        mockMvc.perform(get("/api/v1/me/recruitment-posts/$POST_ID"))
+        mockMvc.perform(get("/api/v1/users/me/recruitment-posts/$POST_ID"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
     }
 
     @Test
     fun `인증이 없거나 페이지가 잘못되면 표준 오류로 응답한다`() {
-        mockMvc.perform(get("/api/v1/me/recruitment-posts"))
+        mockMvc.perform(get("/api/v1/users/me/recruitment-posts"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
-        mockMvc.perform(get("/api/v1/me/recruitment-posts").param("page", "0").with(authenticatedUser()))
+        mockMvc.perform(get("/api/v1/users/me/recruitment-posts").param("page", "0").with(authenticatedUser()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
     }

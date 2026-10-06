@@ -1,15 +1,15 @@
 package com.ogonggo.core.bootcamp.implement
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
@@ -18,7 +18,7 @@ import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import java.time.LocalDate
@@ -53,7 +53,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
 
     @Test
     fun `기업회원 부트캠프는 모집 중이어도 승인되기 전까지 사용자에게 보이지 않는다`() {
-        val bootcamp = bootcampAppender.append(command(ownerUserId = OWNER_ID, status = BootcampStatus.RECRUITING))
+        val bootcamp = bootcampAppender.append(command(ownerUserId = OWNER_ID, status = BootcampRecruitmentStatus.RECRUITING))
         val bootcampId = checkNotNull(bootcamp.id)
         bootcampBookmarkManager.append(USER_ID, bootcampId, NOW)
 
@@ -76,11 +76,11 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
     @Test
     fun `관리 목록은 공개 여부와 무관하게 미삭제 부트캠프를 읽고 필터를 AND로 묶는다`() {
         val crawledRecruiting = bootcampAppender.append(
-            command(status = BootcampStatus.RECRUITING, publicationStatus = BootcampPublicationStatus.PUBLISHED),
+            command(status = BootcampRecruitmentStatus.RECRUITING, publicationStatus = BootcampPublicationStatus.PUBLISHED),
         )
-        val companyPending = bootcampAppender.append(command(ownerUserId = OWNER_ID, status = BootcampStatus.RECRUITING))
+        val companyPending = bootcampAppender.append(command(ownerUserId = OWNER_ID, status = BootcampRecruitmentStatus.RECRUITING))
         val companyClosed = bootcampAppender.append(
-            command(ownerUserId = OWNER_ID, status = BootcampStatus.CLOSED, closedAt = NOW),
+            command(ownerUserId = OWNER_ID, status = BootcampRecruitmentStatus.CLOSED, closedAt = NOW),
         )
         bootcampManager.approveReview(companyClosed, NOW)
         val deleted = bootcampAppender.append(command())
@@ -97,11 +97,11 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
         assertEquals(listOf(crawledRecruiting.id), ids(BootcampManagementSearchCondition(source = ContentSource.CRAWLER)))
         assertEquals(
             listOf(companyPending.id),
-            ids(BootcampManagementSearchCondition(reviewStatus = ReviewStatus.PENDING)),
+            ids(BootcampManagementSearchCondition(reviewStatus = ContentReviewStatus.PENDING)),
         )
         assertEquals(
             listOf(companyPending.id),
-            ids(BootcampManagementSearchCondition(source = ContentSource.COMPANY, status = BootcampStatus.RECRUITING)),
+            ids(BootcampManagementSearchCondition(source = ContentSource.COMPANY, status = BootcampRecruitmentStatus.RECRUITING)),
         )
     }
 
@@ -156,11 +156,11 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
     fun `모집 종료 일시가 지난 모집 중 부트캠프만 자동 마감하고 종료 일시와 같은 시각은 남긴다`() {
         val expired = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusSeconds(1)))
         val endsNow = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW))
-        val alwaysOpen = bootcampAppender.append(command(status = BootcampStatus.RECRUITING))
+        val alwaysOpen = bootcampAppender.append(command(status = BootcampRecruitmentStatus.RECRUITING))
         val alreadyClosed = bootcampAppender.append(
-            periodCommand(recruitmentEndAt = NOW.minusDays(1), status = BootcampStatus.CLOSED, closedAt = CLOSED_AT),
+            periodCommand(recruitmentEndAt = NOW.minusDays(1), status = BootcampRecruitmentStatus.CLOSED, closedAt = CLOSED_AT),
         )
-        val draft = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusDays(1), status = BootcampStatus.DRAFT))
+        val draft = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusDays(1), status = BootcampRecruitmentStatus.DRAFT))
         val deleted = bootcampAppender.append(periodCommand(recruitmentEndAt = NOW.minusDays(1)))
         bootcampManager.delete(deleted, NOW)
 
@@ -168,18 +168,18 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
 
         assertEquals(1, closedCount)
         bootcampReader.read(checkNotNull(expired.id)).let {
-            assertEquals(BootcampStatus.CLOSED, it.status)
+            assertEquals(BootcampRecruitmentStatus.CLOSED, it.status)
             assertEquals(NOW, it.closedAt)
         }
-        assertEquals(BootcampStatus.RECRUITING, bootcampReader.read(checkNotNull(endsNow.id)).status)
-        assertEquals(BootcampStatus.RECRUITING, bootcampReader.read(checkNotNull(alwaysOpen.id)).status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, bootcampReader.read(checkNotNull(endsNow.id)).status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, bootcampReader.read(checkNotNull(alwaysOpen.id)).status)
         assertEquals(CLOSED_AT, bootcampReader.read(checkNotNull(alreadyClosed.id)).closedAt)
-        assertEquals(BootcampStatus.DRAFT, bootcampReader.read(checkNotNull(draft.id)).status)
+        assertEquals(BootcampRecruitmentStatus.DRAFT, bootcampReader.read(checkNotNull(draft.id)).status)
     }
 
     private fun periodCommand(
         recruitmentEndAt: LocalDateTime,
-        status: BootcampStatus = BootcampStatus.RECRUITING,
+        status: BootcampRecruitmentStatus = BootcampRecruitmentStatus.RECRUITING,
         closedAt: LocalDateTime? = null,
     ): BootcampAppendDto = command(status = status, closedAt = closedAt).copy(
         recruitmentType = BootcampRecruitmentType.PERIOD,
@@ -195,7 +195,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
 
     private fun command(
         ownerUserId: Long? = null,
-        status: BootcampStatus = BootcampStatus.DRAFT,
+        status: BootcampRecruitmentStatus = BootcampRecruitmentStatus.DRAFT,
         closedAt: LocalDateTime? = null,
         publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
         eligibilityAndSelectionProcess: String? = null,
@@ -204,16 +204,16 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = "개발",
-        operationType = OperationType.ONLINE,
+        operationType = BootcampOperationType.ONLINE,
         recruitmentType = BootcampRecruitmentType.ALWAYS_OPEN,
         programStartDate = LocalDate.of(2026, 10, 1),
         programEndDate = LocalDate.of(2026, 12, 1),
-        tuitionType = TuitionType.FREE,
+        tuitionType = BootcampTuitionType.FREE,
         representativeImageUrl = "https://example.com/images/bootcamp.png",
         shortDescription = "백엔드 개발자로 성장하는 12주",
         content = "부트캠프 상세 내용",
         eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
-        applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+        applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
         status = status,
         closedAt = closedAt,

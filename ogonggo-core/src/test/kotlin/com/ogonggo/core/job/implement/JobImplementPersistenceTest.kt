@@ -3,9 +3,9 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
@@ -233,8 +233,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     fun `공고 달력은 목록과 같은 필터와 검색어로 좁힌다`() {
         // given
         fun appendInRange(
-            employmentType: EmploymentType = EmploymentType.INTERN,
-            experienceType: ExperienceType = ExperienceType.NEWCOMER,
+            employmentType: JobEmploymentType = JobEmploymentType.INTERN,
+            experienceType: JobExperienceType = JobExperienceType.NEWCOMER,
             jobField: JobField? = JobField.IT_DEVELOPMENT,
             jobRole: JobRole? = JobRole.IT_BACKEND,
             companyName: String = "오공고",
@@ -252,8 +252,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             ),
         )
         val matched = appendInRange()
-        appendInRange(employmentType = EmploymentType.FULL_TIME)
-        appendInRange(experienceType = ExperienceType.EXPERIENCED)
+        appendInRange(employmentType = JobEmploymentType.FULL_TIME)
+        appendInRange(experienceType = JobExperienceType.EXPERIENCED)
         appendInRange(jobField = JobField.DESIGN, jobRole = JobRole.DESIGN_WEB)
         appendInRange(jobRole = JobRole.IT_FRONTEND)
         appendInRange(title = "데이터 인턴")
@@ -261,8 +261,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         // when
         val result = jobReader.readPublishedCalendar(
             condition = JobSearchCondition(
-                employmentType = EmploymentType.INTERN,
-                experienceType = ExperienceType.NEWCOMER,
+                employmentType = JobEmploymentType.INTERN,
+                experienceType = JobExperienceType.NEWCOMER,
                 jobField = JobField.IT_DEVELOPMENT,
                 jobRoles = setOf(JobRole.IT_BACKEND),
                 keyword = "backend",
@@ -672,17 +672,17 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     @Test
     fun `고용 형태를 지정하면 해당 고용 형태의 인기 공고만 반환한다`() {
         // given
-        val fullTime = jobAppender.append(createCommand(employmentType = EmploymentType.FULL_TIME))
-        val intern = jobAppender.append(createCommand(employmentType = EmploymentType.INTERN))
-        val popularContract = jobAppender.append(createCommand(employmentType = EmploymentType.CONTRACT))
+        val fullTime = jobAppender.append(createCommand(employmentType = JobEmploymentType.FULL_TIME))
+        val intern = jobAppender.append(createCommand(employmentType = JobEmploymentType.INTERN))
+        val popularContract = jobAppender.append(createCommand(employmentType = JobEmploymentType.CONTRACT))
         listOf(fullTime, intern, popularContract).forEach(jobManager::publish)
         view(popularContract, times = 5)
         view(fullTime, times = 2)
         view(intern, times = 1)
 
         // when
-        val fullTimeJobs = jobReader.readPopularRecruiting(EmploymentType.FULL_TIME, limit = 4)
-        val internJobs = jobReader.readPopularRecruiting(EmploymentType.INTERN, limit = 4)
+        val fullTimeJobs = jobReader.readPopularRecruiting(JobEmploymentType.FULL_TIME, limit = 4)
+        val internJobs = jobReader.readPopularRecruiting(JobEmploymentType.INTERN, limit = 4)
 
         // then
         assertEquals(listOf(fullTime.id), fullTimeJobs.map { it.id })
@@ -816,9 +816,9 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `선택 필터는 지정한 값만 남기고 지정하지 않으면 적용되지 않는다`() {
-        val fullTimeExperienced = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
-        val fullTimeNewcomer = publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
-        val internExperienced = publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+        val fullTimeExperienced = publish(JobEmploymentType.FULL_TIME, JobExperienceType.EXPERIENCED)
+        val fullTimeNewcomer = publish(JobEmploymentType.FULL_TIME, JobExperienceType.NEWCOMER)
+        val internExperienced = publish(JobEmploymentType.INTERN, JobExperienceType.EXPERIENCED)
 
         assertEquals(
             setOf(internExperienced, fullTimeNewcomer, fullTimeExperienced),
@@ -826,11 +826,11 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         )
         assertEquals(
             setOf(fullTimeNewcomer, fullTimeExperienced),
-            readIds(JobSearchCondition(employmentType = EmploymentType.FULL_TIME)),
+            readIds(JobSearchCondition(employmentType = JobEmploymentType.FULL_TIME)),
         )
         assertEquals(
             setOf(internExperienced, fullTimeExperienced),
-            readIds(JobSearchCondition(experienceType = ExperienceType.EXPERIENCED)),
+            readIds(JobSearchCondition(experienceType = JobExperienceType.EXPERIENCED)),
         )
     }
 
@@ -857,12 +857,12 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     @Test
     fun `북마크 목록은 공개 목록과 같은 필터와 검색어로 좁히고 최근 북마크 순을 유지한다`() {
         // given
-        val firstBookmarked = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
-        val lastBookmarked = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
-        val otherRole = publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = JobRole.IT_FRONTEND))
-        val otherType = publishCommand(createCommand(employmentType = EmploymentType.FULL_TIME, jobRole = JobRole.IT_BACKEND))
+        val firstBookmarked = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
+        val lastBookmarked = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
+        val otherRole = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_FRONTEND))
+        val otherType = publishCommand(createCommand(employmentType = JobEmploymentType.FULL_TIME, jobRole = JobRole.IT_BACKEND))
         // 북마크하지 않은 공고는 조건에 맞아도 나오지 않는다.
-        publishCommand(createCommand(employmentType = EmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
+        publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
         listOf(firstBookmarked, otherRole, otherType, lastBookmarked)
             .forEach { jobBookmarkManager.append(USER_ID, it, NOW) }
 
@@ -870,7 +870,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val page = jobBookmarkReader.readBookmarkedPublishedPage(
             userId = USER_ID,
             condition = JobSearchCondition(
-                employmentType = EmploymentType.INTERN,
+                employmentType = JobEmploymentType.INTERN,
                 jobRoles = setOf(JobRole.IT_BACKEND),
                 keyword = "백엔드",
             ),
@@ -914,16 +914,16 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `두 필터를 함께 지정하면 모두 만족하는 공고만 남는다`() {
-        val target = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
-        publish(EmploymentType.FULL_TIME, ExperienceType.NEWCOMER)
-        publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+        val target = publish(JobEmploymentType.FULL_TIME, JobExperienceType.EXPERIENCED)
+        publish(JobEmploymentType.FULL_TIME, JobExperienceType.NEWCOMER)
+        publish(JobEmploymentType.INTERN, JobExperienceType.EXPERIENCED)
 
         val page = readPage(
             page = 0,
             size = 10,
             condition = JobSearchCondition(
-                employmentType = EmploymentType.FULL_TIME,
-                experienceType = ExperienceType.EXPERIENCED,
+                employmentType = JobEmploymentType.FULL_TIME,
+                experienceType = JobExperienceType.EXPERIENCED,
             ),
         )
 
@@ -933,16 +933,16 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
     @Test
     fun `필터는 정렬과 함께 적용되며 전체 건수도 필터를 반영한다`() {
-        val quiet = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
-        val popular = publish(EmploymentType.FULL_TIME, ExperienceType.EXPERIENCED)
-        publish(EmploymentType.INTERN, ExperienceType.EXPERIENCED)
+        val quiet = publish(JobEmploymentType.FULL_TIME, JobExperienceType.EXPERIENCED)
+        val popular = publish(JobEmploymentType.FULL_TIME, JobExperienceType.EXPERIENCED)
+        publish(JobEmploymentType.INTERN, JobExperienceType.EXPERIENCED)
         jobMetricManager.increaseViewCount(popular, NOW)
 
         val page = readPage(
             page = 0,
             size = 10,
             sortType = JobSortType.VIEW_COUNT,
-            condition = JobSearchCondition(employmentType = EmploymentType.FULL_TIME),
+            condition = JobSearchCondition(employmentType = JobEmploymentType.FULL_TIME),
         )
 
         assertEquals(listOf(popular, quiet), page.jobs.map { it.id })
@@ -984,16 +984,16 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val target = publishNamed(
             companyName = "오공고",
             title = "백엔드 개발자",
-            employmentType = EmploymentType.INTERN,
+            employmentType = JobEmploymentType.INTERN,
         )
-        publishNamed(companyName = "오공고", title = "백엔드 개발자", employmentType = EmploymentType.FULL_TIME)
-        publishNamed(companyName = "오공고", title = "데이터 엔지니어", employmentType = EmploymentType.INTERN)
+        publishNamed(companyName = "오공고", title = "백엔드 개발자", employmentType = JobEmploymentType.FULL_TIME)
+        publishNamed(companyName = "오공고", title = "데이터 엔지니어", employmentType = JobEmploymentType.INTERN)
 
         val page = readPage(
             page = 0,
             size = 10,
             sortType = JobSortType.VIEW_COUNT,
-            condition = JobSearchCondition(employmentType = EmploymentType.INTERN, keyword = "백엔드"),
+            condition = JobSearchCondition(employmentType = JobEmploymentType.INTERN, keyword = "백엔드"),
         )
 
         assertEquals(listOf(target), page.jobs.map { it.id })
@@ -1003,7 +1003,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     private fun publishNamed(
         companyName: String,
         title: String,
-        employmentType: EmploymentType = EmploymentType.FULL_TIME,
+        employmentType: JobEmploymentType = JobEmploymentType.FULL_TIME,
     ): Long {
         val job = jobAppender.append(
             createCommand(employmentType = employmentType, companyName = companyName, title = title),
@@ -1087,7 +1087,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         repeat(times) { jobMetricManager.increaseViewCount(checkNotNull(job.id), NOW) }
     }
 
-    private fun publish(employmentType: EmploymentType, experienceType: ExperienceType): Long {
+    private fun publish(employmentType: JobEmploymentType, experienceType: JobExperienceType): Long {
         val job = jobAppender.append(
             createCommand(employmentType = employmentType, experienceType = experienceType),
         )
@@ -1129,8 +1129,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
         sourceUrl: String? = "https://example.com/jobs/1",
-        employmentType: EmploymentType = EmploymentType.FULL_TIME,
-        experienceType: ExperienceType = ExperienceType.EXPERIENCED,
+        employmentType: JobEmploymentType = JobEmploymentType.FULL_TIME,
+        experienceType: JobExperienceType = JobExperienceType.EXPERIENCED,
         companyName: String = "오공고",
         title: String = "백엔드 개발자",
         ownerUserId: Long? = null,
@@ -1148,7 +1148,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = 1,
-        educationLevel = EducationLevel.ANY,
+        educationLevel = JobEducationLevel.ANY,
         region = region,
         subRegion = subRegion,
         recruitmentType = recruitmentType,
@@ -1167,10 +1167,10 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         companyName = "오공고",
         title = "백엔드 개발자",
         sourceUrl = "https://example.com/jobs/1",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         experienceMinYears = 1,
-        educationLevel = EducationLevel.ANY,
+        educationLevel = JobEducationLevel.ANY,
         region = Region.SEOUL,
         subRegion = null,
         recruitmentType = JobRecruitmentType.PERIOD,

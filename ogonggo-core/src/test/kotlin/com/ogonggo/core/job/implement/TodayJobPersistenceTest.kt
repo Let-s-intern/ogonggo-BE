@@ -2,8 +2,8 @@ package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -111,8 +111,8 @@ internal class TodayJobPersistenceTest @Autowired constructor(
         JobAppendDto(
             companyName = "오공고",
             title = "백엔드 개발자",
-            employmentType = EmploymentType.FULL_TIME,
-            experienceType = ExperienceType.EXPERIENCED,
+            employmentType = JobEmploymentType.FULL_TIME,
+            experienceType = JobExperienceType.EXPERIENCED,
             recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
             publicationStatus = JobPublicationStatus.PUBLISHED,
         ),

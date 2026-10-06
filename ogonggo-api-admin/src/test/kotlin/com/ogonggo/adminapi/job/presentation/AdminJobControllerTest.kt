@@ -21,7 +21,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import com.ogonggo.core.review.error.ReviewErrorCode
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
@@ -60,7 +60,7 @@ class AdminJobControllerTest @Autowired constructor(
         val condition = JobManagementSearchCondition(
             published = false,
             source = ContentSource.COMPANY,
-            reviewStatus = ReviewStatus.PENDING,
+            reviewStatus = ContentReviewStatus.PENDING,
             recruitmentStatus = JobRecruitmentStatus.RECRUITING,
             jobField = JobField.DESIGN,
             jobRoles = setOf(JobRole.DESIGN_SPACE_INTERIOR_VMD, JobRole.DESIGN_GRAPHIC_VISUAL),
@@ -164,7 +164,7 @@ class AdminJobControllerTest @Autowired constructor(
             693L,
             AdminJobUpdateCommand(
                 visibility = AdminContentVisibility.HIDDEN,
-                reviewStatus = ReviewStatus.APPROVED,
+                reviewStatus = ContentReviewStatus.APPROVED,
                 title = "고친 제목",
                 contents = mapOf(
                     JobContentField.RESPONSIBILITIES to "고친 업무",

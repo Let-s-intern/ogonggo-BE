@@ -2,7 +2,7 @@ package com.ogonggo.core.review.implement
 
 import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import com.ogonggo.core.review.error.ReviewErrorCode
 import com.ogonggo.core.review.implement.dto.ContentRejectionDto
 import com.ogonggo.core.review.implement.dto.ContentRejectionPageDto
@@ -17,7 +17,7 @@ class ContentRejectionReader internal constructor(
 
     /** 방금 무엇을 돌려보냈는지 확인하러 오는 목록이므로 최근 반려가 먼저다. */
     fun readActivePage(
-        contentType: ReviewContentType?,
+        contentType: ContentReviewTargetType?,
         keyword: String?,
         page: Int,
         size: Int,
@@ -33,7 +33,7 @@ class ContentRejectionReader internal constructor(
         )
     }
 
-    fun readActive(contentType: ReviewContentType, contentId: Long): ContentRejectionDto =
+    fun readActive(contentType: ContentReviewTargetType, contentId: Long): ContentRejectionDto =
         contentRejectionQueryRepository.findActive(contentType, contentId)
             ?: throw EntityNotFoundException(ReviewErrorCode.REJECTION_NOT_FOUND)
 }

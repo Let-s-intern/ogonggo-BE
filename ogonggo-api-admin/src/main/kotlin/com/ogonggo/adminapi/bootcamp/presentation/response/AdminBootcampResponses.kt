@@ -3,16 +3,16 @@ package com.ogonggo.adminapi.bootcamp.presentation.response
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampResult
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampSummary
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.review.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,20 +22,20 @@ data class AdminBootcampSummaryResponse(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
     val representativeImageUrl: String?,
     val shortDescription: String,
     @Schema(description = "모집 상태입니다. 콘솔에서는 RECRUITING·CLOSED만 다룹니다.")
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     val closedAt: LocalDateTime?,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -43,7 +43,7 @@ data class AdminBootcampSummaryResponse(
     val visibility: AdminContentVisibility,
     val source: ContentSource,
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val registeredAt: LocalDateTime,
 ) {
     companion object {
@@ -81,20 +81,20 @@ data class AdminBootcampDetailResponse(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
     val representativeImageUrl: String?,
     val shortDescription: String,
     @Schema(description = "모집 상태입니다. 콘솔에서는 RECRUITING·CLOSED만 다룹니다.")
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     val closedAt: LocalDateTime?,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -102,7 +102,7 @@ data class AdminBootcampDetailResponse(
     val visibility: AdminContentVisibility,
     val source: ContentSource,
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val registeredAt: LocalDateTime,
     val content: String,
     val eligibilityAndSelectionProcess: String?,
@@ -110,7 +110,7 @@ data class AdminBootcampDetailResponse(
     val instructorInfo: String?,
     val programFeatures: String?,
     val completionRequirements: String?,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String?,
     val managerEmail: String?,
     val inquiryUrl: String?,

@@ -8,7 +8,7 @@ import com.ogonggo.core.enumeration.EnumField
  * 폼에 보이는 팔로워 수와 인원 수는 계속 바뀌므로 여기 담지 않는다.
  * 서버는 어느 채널인지만 알면 되고, 규모 표기는 폼이 소유한다.
  */
-enum class AdvertisementPromotionChannel(
+enum class AdvertisementInquiryPromotionChannel(
     override val code: Int,
     override val desc: String,
 ) : EnumField {

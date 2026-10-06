@@ -44,7 +44,7 @@ class AdminEnumControllerTest @Autowired constructor(
         // given
         Mockito.`when`(adminEnumService.getEnums()).thenReturn(
             mapOf(
-                "EmploymentType" to listOf(EnumOption(name = "FULL_TIME", desc = "정규직")),
+                "JobEmploymentType" to listOf(EnumOption(name = "FULL_TIME", desc = "정규직")),
                 "JobRole" to listOf(EnumOption(name = "IT_BACKEND", desc = "백엔드", parent = "IT_DEVELOPMENT")),
             ),
         )
@@ -52,10 +52,10 @@ class AdminEnumControllerTest @Autowired constructor(
         // when & then
         mockMvc.perform(get(PATH).with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY))))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data.EmploymentType[0].name").value("FULL_TIME"))
-            .andExpect(jsonPath("$.data.EmploymentType[0].desc").value("정규직"))
-            .andExpect(jsonPath("$.data.EmploymentType[0].code").doesNotExist())
-            .andExpect(jsonPath("$.data.EmploymentType[0].parent").isEmpty)
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].name").value("FULL_TIME"))
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].desc").value("정규직"))
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].code").doesNotExist())
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].parent").isEmpty)
             .andExpect(jsonPath("$.data.JobRole[0].parent").value("IT_DEVELOPMENT"))
     }
 

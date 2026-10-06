@@ -299,7 +299,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ```json
 {
-  "EmploymentType": [
+  "JobEmploymentType": [
     { "name": "FULL_TIME", "desc": "정규직", "parent": null }
   ],
   "SubRegion": [
@@ -320,7 +320,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 결정일: 2026-10-06 / 리뷰 상태: 팀 리뷰 필요
 - 배경: 처음에는 "내보낼 enum은 각 API의 계약이 정한다"는 기준으로 사용자 API만 목록을 두었고, 관리자 API에 선택지 API를 추가하면서 목록이 두 벌이 되었습니다. 두 목록의 대부분이 같은 core enum이라, enum을 추가하거나 바꿀 때마다 두 곳을 함께 고쳐야 했습니다.
 - 변경: 공통 목록을 core로 옮기고, 각 API는 자기 전용 enum만 덧붙입니다.
-- 감수한 점: 목록을 바꾸면 두 API를 모두 배포해야 합니다. 두 API가 상대 API에서만 쓰는 enum도 함께 내보냅니다(예: 사용자 API가 `ReviewContentType`, `ContentSource`, `JobContentField`, `BootcampContentField`를, 관리자 API가 사용자 화면의 정렬·지원 상태 enum을 내보냄). 선택지는 화면 라벨이고 접근 권한과 무관하므로 노출해도 문제가 없다고 보았습니다.
+- 감수한 점: 목록을 바꾸면 두 API를 모두 배포해야 합니다. 두 API가 상대 API에서만 쓰는 enum도 함께 내보냅니다(예: 사용자 API가 `ContentReviewTargetType`, `ContentSource`, `JobContentField`, `BootcampContentField`를, 관리자 API가 사용자 화면의 정렬·지원 상태 enum을 내보냄). 선택지는 화면 라벨이고 접근 권한과 무관하므로 노출해도 문제가 없다고 보았습니다.
 
 ### 공지사항
 

@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.recruitmentpost.presentation
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Validated
 @RestController
-@RequestMapping("/api/v1/me/recruitment-posts")
+@RequestMapping("/api/v1/users/me/recruitment-posts")
 class RecruitmentPostManagementController(
     private val managementService: RecruitmentPostManagementService,
     private val recruitmentPostService: RecruitmentPostService,
@@ -74,7 +74,7 @@ class RecruitmentPostManagementController(
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "status", defaultValue = "ALL") status: RecruitmentPostManagementStatus,
         @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: RecruitmentPostRecruitmentStatus?,
-        @RequestParam(name = "applicationStatus", required = false) applicationStatus: RecruitmentPostApplicationStatus?,
+        @RequestParam(name = "applicationStatus", required = false) applicationStatus: RecruitmentPostApplicantPresence?,
         @RequestParam(name = "recruitmentType", required = false) recruitmentType: RecruitmentPostType?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "sort", defaultValue = "LATEST_SAVED") sort: RecruitmentPostManagementSortType,

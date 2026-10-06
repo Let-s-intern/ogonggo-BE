@@ -2,7 +2,7 @@ package com.ogonggo.userapi.enumeration.business
 
 import com.ogonggo.core.enumeration.EnumField
 import com.ogonggo.core.enumeration.catalog.EnumOptionReader
-import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.job.domain.JobEmploymentType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -19,16 +19,18 @@ class UserEnumServiceTest {
 
     @Test
     fun `enum 값을 선언 순서대로 이름과 라벨로 제공한다`() {
-        val employmentTypes = enums.getValue("EmploymentType")
+        val employmentTypes = enums.getValue("JobEmploymentType")
 
         assertEquals(
-            EmploymentType.entries.map { it.name to it.desc },
+            JobEmploymentType.entries.map { it.name to it.desc },
             employmentTypes.map { it.name to it.desc },
         )
     }
 
     @Test
-    fun `프런트 전환 기간에는 모집글 선택지를 예전 키로도 같은 값으로 제공한다`() {
+    fun `프런트 전환 기간에는 이름을 바꾼 enum의 선택지를 예전 키로도 같은 값으로 제공한다`() {
+        assertEquals(enums.getValue("JobEmploymentType"), enums.getValue("EmploymentType"))
+        assertEquals(enums.getValue("BootcampRecruitmentStatus"), enums.getValue("BootcampStatus"))
         assertEquals(enums.getValue("RecruitmentPostType"), enums.getValue("RecruitmentType"))
         assertEquals(enums.getValue("RecruitmentPostPosition"), enums.getValue("RecruitmentPosition"))
         assertEquals(

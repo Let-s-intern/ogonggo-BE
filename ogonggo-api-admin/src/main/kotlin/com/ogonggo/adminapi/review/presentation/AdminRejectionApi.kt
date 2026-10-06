@@ -6,7 +6,7 @@ import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.adminapi.review.presentation.request.UpdateRejectionReasonRequest
 import com.ogonggo.adminapi.review.presentation.response.AdminRejectionResponse
-import com.ogonggo.core.review.domain.ReviewContentType
+import com.ogonggo.core.review.domain.ContentReviewTargetType
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -55,7 +55,7 @@ interface AdminRejectionApi {
         @Min(1) page: Int,
         @Min(1) @Max(100) size: Int,
         @Size(max = 100) keyword: String?,
-        type: ReviewContentType?,
+        type: ContentReviewTargetType?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminRejectionResponse>>>
 
     @Operation(

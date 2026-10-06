@@ -2,7 +2,7 @@ package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.enumeration.EnumField
 
-enum class EducationLevel(
+enum class JobEducationLevel(
     override val code: Int,
     override val desc: String,
 ) : EnumField {
