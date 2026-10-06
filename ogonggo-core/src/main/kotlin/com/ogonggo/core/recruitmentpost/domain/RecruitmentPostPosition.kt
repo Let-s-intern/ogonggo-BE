@@ -15,7 +15,7 @@ enum class RecruitmentPostPosition(
 
     /**
      * 선택지에서 빠진 값이다. 프런트가 마케팅으로 전환하는 동안 이전 화면의 요청과 기존 모집글을 받기 위해 남겨 둔다.
-     * 서버 2차 배포에서 저장된 값을 MARKETING으로 옮기고 제거한다(`docs/schema/2026-10-06-recruitment-post-position-mobile-cleanup.sql`).
+     * 서버 2차 배포에서 저장된 값을 MARKETING으로 옮기고 제거한다.
      */
     MOBILE(5, "모바일"),
 }

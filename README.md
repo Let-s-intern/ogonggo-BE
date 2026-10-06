@@ -12,7 +12,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 - QueryDSL 5.0.0
 - MySQL
 - Redis (사용자 리프레시 토큰)
-- Hibernate `ddl-auto=none` in production (schema changes are applied with `docs/schema` SQL)
+- Hibernate `ddl-auto=none` in production (schema changes are applied to the production DB before deploy)
 - No Flyway or Liquibase
 
 ## Modules
@@ -21,7 +21,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 ogonggo-api-user  ---> ogonggo-core <--- ogonggo-api-admin
 ```
 
-- `ogonggo-core`: user, job, bootcamp, study and announcement domain boundaries; JPA persistence
+- `ogonggo-core`: user, job, bootcamp, recruitment post and announcement domain boundaries; JPA persistence
 - `ogonggo-api-user`: public API and LetsCareer login integration
 - `ogonggo-api-admin`: administrator API boundary
 
@@ -77,28 +77,6 @@ Users sign in by exchanging a LetsCareer access token at `POST /api/v1/auth/lets
 
 Administrator console endpoints (`/api/v1/admin/**`) accept a user API access token whose account has `UserRole.ADMIN`, granted directly in the database. `ogonggo-api-admin` must be configured with the same `ogonggo.auth.jwt.secret` as the user API. Read section 7-3 of [오공고 사용자 인증과 렛츠커리어 연동](docs/architecture/authentication.md) before changing it.
 
-Before deploying the admin console changes to an existing database, apply `docs/schema/2026-09-14-admin-review.sql`.
-
-Before deploying the company profile contact fields (logo, manager phone, notification email), apply `docs/schema/2026-09-28-company-profile-contact.sql`.
-
-Before deploying the job region enums (`region`, `subRegion`), apply `docs/schema/2026-09-28-job-region-enum.sql`.
-
-Before deploying the job field and role enums (`jobField`, `jobRole`), apply `docs/schema/2026-09-28-job-field-role-enum.sql`.
-
-Before deploying the job list sort key (crawled jobs first, same-day jobs shuffled), apply `docs/schema/2026-09-30-job-list-sort-key.sql`.
-
-Before deploying today's jobs (`GET /api/v1/jobs/today`, picked in the admin console), apply `docs/schema/2026-09-30-today-jobs.sql`.
-
-Before deploying the admin job list `jobField`·`jobRole` filters, apply `docs/schema/2026-10-02-job-admin-field-role-index.sql`.
-
-Before the crawler sends 미래내일 일경험 jobs (`employmentType=WORK_EXPERIENCE`), apply `docs/schema/2026-10-03-job-employment-type-work-experience.sql`. The existing `employment_type` column is a MySQL enum without the new value.
-
-Before the first server deploy of the recruitment post position change (`MARKETING` added), apply `docs/schema/2026-10-06-recruitment-post-position-marketing.sql`. It only widens the column, so the running server is unaffected. After the frontend switches to `MARKETING`, follow `docs/schema/2026-10-06-recruitment-post-position-mobile-cleanup.sql` around the second server deploy that removes `MOBILE`: run steps 1–2, deploy, then run steps 3–4 right away.
-
-Before deploying the announcement rename (`/api/v1/notices` → `/api/v1/announcements`), apply steps 1–3 of `docs/schema/2026-10-06-announcement-rename.sql`. They rename the `notices` table to `announcements` and leave a `notices` view so the running servers keep working; drop the view (step 4) after both APIs are deployed.
-
-After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
-
 ## Work24 (고용24) Open API
 
 관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.
@@ -119,11 +97,11 @@ ogonggo:
 
 키 이름은 배포 로그 마스킹이 가리도록 모두 `-auth-key`로 끝냅니다. 응답 계약은 [API 성공 응답](docs/architecture/api-response.md#고용24-open-api-조회)을 읽습니다.
 
-관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보와 일학습병행 훈련과정을 채용공고로, K-디지털 트레이닝 조건의 국민내일배움카드 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 고용24 Open API는 과정 이미지를 주지 않아, 훈련기관 소개 화면의 로고와 사진을 관리자 API가 이미지 저장소(`cloud.aws.s3.bucket`)로 옮겨 넣습니다. 로고는 로고 칸에, 사진은 상세에서만 보여 주는 `bootcamp_images`에 들어가며 대표 이미지는 비워 두어 클라이언트가 기본 이미지를 그립니다. 저장소 설정이 없거나 옮기지 못하면 이미지를 넣지 않습니다. 배포 전에 `docs/schema/2026-09-30-bootcamp-images.sql`과 `docs/schema/2026-09-30-bootcamp-enterprise-linked.sql`을 적용합니다. 훈련목표·교과편성·주차별 커리큘럼과 일학습병행의 학습기업·훈련 편성은 Open API에 없어 고용24 과정 상세 화면과 시간표 엑셀에서 읽으며, 화면을 못 읽으면 Open API 값만으로 등록합니다. 수집한 콘텐츠는 등록 경로 `WORK24`와 고용24 식별값(`external_id`)을 남기므로, 배포 전에 `docs/schema/2026-09-29-content-source.sql`을 적용합니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
+관리자 API는 매일 04:00(Asia/Seoul)에 고용24 채용정보와 일학습병행 훈련과정을 채용공고로, K-디지털 트레이닝 조건의 국민내일배움카드 훈련과정을 부트캠프로 새 항목만 등록합니다. 시각과 켜짐 여부는 `scheduled_jobs`의 `work24DailyCollection` 행으로 바꿉니다. 고용24 Open API는 과정 이미지를 주지 않아, 훈련기관 소개 화면의 로고와 사진을 관리자 API가 이미지 저장소(`cloud.aws.s3.bucket`)로 옮겨 넣습니다. 로고는 로고 칸에, 사진은 상세에서만 보여 주는 `bootcamp_images`에 들어가며 대표 이미지는 비워 두어 클라이언트가 기본 이미지를 그립니다. 저장소 설정이 없거나 옮기지 못하면 이미지를 넣지 않습니다. 훈련목표·교과편성·주차별 커리큘럼과 일학습병행의 학습기업·훈련 편성은 Open API에 없어 고용24 과정 상세 화면과 시간표 엑셀에서 읽으며, 화면을 못 읽으면 Open API 값만으로 등록합니다. 수집한 콘텐츠는 등록 경로 `WORK24`와 고용24 식별값(`external_id`)을 남깁니다. 등록 규칙은 [고용24 일일 수집](docs/architecture/api-response.md#고용24-일일-수집)을 읽습니다.
 
 ## Scheduled jobs
 
-스케줄 작업의 실행 주기(cron)와 켜짐 여부는 DB `scheduled_jobs` 테이블에서 SQL로 바꿉니다. 바꾼 cron은 1분 안에 반영되고, 행은 애플리케이션이 기동할 때 없는 작업만 기본값으로 만들어집니다. 두 API를 배포하기 전에 `docs/schema/2026-09-27-scheduled-jobs.sql`을 적용합니다. 규칙과 작업 목록은 [스케줄 작업](docs/architecture/scheduling.md)을 읽습니다.
+스케줄 작업의 실행 주기(cron)와 켜짐 여부는 DB `scheduled_jobs` 테이블에서 SQL로 바꿉니다. 바꾼 cron은 1분 안에 반영되고, 행은 애플리케이션이 기동할 때 없는 작업만 기본값으로 만들어집니다. 규칙과 작업 목록은 [스케줄 작업](docs/architecture/scheduling.md)을 읽습니다.
 
 ## Docker
 
@@ -155,12 +133,8 @@ The project intentionally follows the current LetsCareer approach and does not i
 
 운영의 두 API는 모두 `spring.jpa.hibernate.ddl-auto=none`으로 띄웁니다. 두 서비스가 하나의 DB를 공유하므로, 어느 한쪽이라도 `update`로 뜨면 병렬 배포 중 동시에 스키마를 바꿀 수 있습니다. 운영 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)에 `none` 외의 값을 넣지 않습니다.
 
-엔티티를 바꿔 스키마가 달라지면 `docs/schema`에 날짜별 SQL을 추가하고, 두 API를 배포하기 전에 운영 DB에 한 번 적용합니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
+엔티티를 바꿔 스키마가 달라지면 두 API를 배포하기 전에 운영 DB에 변경을 한 번 적용합니다. 스키마 변경 SQL은 저장소에 두지 않습니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
 
 로컬과 테스트는 빈 DB에서 시작하므로 `update`나 `create-drop`을 씁니다.
 
-Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 `docs/schema`의 날짜별 SQL을 검토하고 백업 후 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환 SQL을 실행하지 않습니다.
-
-## Study domain
-
-The Study package boundary exists, but no Study entity is defined yet because the study page behavior and fields have not been specified.
+Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 백업 후 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환을 실행하지 않습니다.
