@@ -1,18 +1,15 @@
-package com.ogonggo.userapi.bootcamp.implement
+package com.ogonggo.userapi.bootcamp.presentation
 
-import com.ogonggo.core.bootcamp.implement.BootcampManager
+import com.ogonggo.userapi.bootcamp.business.BootcampAutoCloseService
 import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.LocalDateTime
 
 /** 부트캠프의 모집 상태는 칼럼에 저장하므로 모집 종료 일시가 지나도 저절로 바뀌지 않는다. */
 @Component
 class BootcampAutoCloseScheduler(
-    private val bootcampManager: BootcampManager,
-    private val clock: Clock,
+    private val bootcampAutoCloseService: BootcampAutoCloseService,
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
@@ -24,7 +21,7 @@ class BootcampAutoCloseScheduler(
     )
     fun closeExpiredBootcamps() {
         val closedCount = schedulerExecutionObserver.observe(SCHEDULER_NAME) {
-            bootcampManager.closeExpired(LocalDateTime.now(clock))
+            bootcampAutoCloseService.closeExpired()
         }
         log.info("모집 기간 만료 부트캠프 자동 마감 완료. closedCount={}", closedCount)
     }

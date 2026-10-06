@@ -1,17 +1,14 @@
-package com.ogonggo.userapi.recruitmentpost.implement
+package com.ogonggo.userapi.recruitmentpost.presentation
 
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
+import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostAutoCloseService
 import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.LocalDateTime
 
 @Component
 class RecruitmentPostAutoCloseScheduler(
-    private val recruitmentPostManager: RecruitmentPostManager,
-    private val clock: Clock,
+    private val recruitmentPostAutoCloseService: RecruitmentPostAutoCloseService,
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
@@ -23,11 +20,7 @@ class RecruitmentPostAutoCloseScheduler(
     )
     fun closeExpiredRecruitmentPosts() {
         val closedCount = schedulerExecutionObserver.observe(SCHEDULER_NAME) {
-            val now = LocalDateTime.now(clock)
-            recruitmentPostManager.closeExpired(
-                today = now.toLocalDate(),
-                closedAt = now,
-            )
+            recruitmentPostAutoCloseService.closeExpired()
         }
         log.info("기간 만료 모집글 자동 마감 완료. closedCount={}", closedCount)
     }

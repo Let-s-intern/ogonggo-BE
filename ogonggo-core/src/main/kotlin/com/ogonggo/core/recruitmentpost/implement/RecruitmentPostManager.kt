@@ -4,7 +4,6 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostJpaRepository
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -71,7 +70,6 @@ class RecruitmentPostManager internal constructor(
 
     fun unhide(post: RecruitmentPost) = change(post) { unhide() }
 
-    @Transactional
     fun closeExpired(today: LocalDate, closedAt: LocalDateTime): Int =
         postRepository.closeExpired(today = today, closedAt = closedAt)
 

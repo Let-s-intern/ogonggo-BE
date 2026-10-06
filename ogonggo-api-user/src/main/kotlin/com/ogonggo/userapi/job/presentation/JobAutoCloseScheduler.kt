@@ -1,18 +1,15 @@
-package com.ogonggo.userapi.job.implement
+package com.ogonggo.userapi.job.presentation
 
-import com.ogonggo.core.job.implement.JobManager
+import com.ogonggo.userapi.job.business.JobAutoCloseService
 import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.LocalDateTime
 
 /** 채용공고의 모집 상태는 등록·수정·마감할 때만 정하므로 모집 종료 일시가 지난 것은 이 작업이 반영한다. */
 @Component
 class JobAutoCloseScheduler(
-    private val jobManager: JobManager,
-    private val clock: Clock,
+    private val jobAutoCloseService: JobAutoCloseService,
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
@@ -24,7 +21,7 @@ class JobAutoCloseScheduler(
     )
     fun closeExpiredJobs() {
         val closedCount = schedulerExecutionObserver.observe(SCHEDULER_NAME) {
-            jobManager.closeExpired(LocalDateTime.now(clock))
+            jobAutoCloseService.closeExpired()
         }
         log.info("모집 기간 만료 채용공고 자동 마감 완료. closedCount={}", closedCount)
     }

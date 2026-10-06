@@ -8,7 +8,6 @@ import com.ogonggo.core.contentreview.domain.ContentReviewTargetType
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 
 @Component
 class JobManager internal constructor(
@@ -68,7 +67,6 @@ class JobManager internal constructor(
     fun delete(job: Job, now: LocalDateTime) = change(job) { delete(now) }
 
     /** 모집 종료 일시가 지난 모집 중 공고를 마감하고 마감한 건수를 돌려준다. 직접 마감한 것이 아니므로 마감 처리 일시는 남기지 않는다. */
-    @Transactional
     fun closeExpired(now: LocalDateTime): Int = jobRepository.closeExpired(now)
 
     /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
