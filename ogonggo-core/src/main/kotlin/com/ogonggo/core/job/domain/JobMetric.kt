@@ -55,31 +55,4 @@ internal class JobMetric(
     @Column(name = "comment_count", nullable = false)
     var commentCount: Long = commentCount /* 댓글 수 */
         protected set
-
-    fun increaseViewCount() {
-        viewCount++
-    }
-
-    fun decreaseViewCount() {
-        check(viewCount > 0) { "조회 수는 0보다 작아질 수 없습니다." }
-        viewCount--
-    }
-
-    fun increaseBookmarkCount() {
-        bookmarkCount++
-    }
-
-    fun decreaseBookmarkCount() {
-        check(bookmarkCount > 0) { "북마크 수는 0보다 작아질 수 없습니다." }
-        bookmarkCount--
-    }
-
-    fun increaseCommentCount() {
-        commentCount++
-    }
-
-    fun decreaseCommentCount() {
-        check(commentCount > 0) { "댓글 수는 0보다 작아질 수 없습니다." }
-        commentCount--
-    }
 }
