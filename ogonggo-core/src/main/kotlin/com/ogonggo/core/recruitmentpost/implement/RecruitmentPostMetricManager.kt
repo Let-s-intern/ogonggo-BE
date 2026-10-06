@@ -27,20 +27,17 @@ class RecruitmentPostMetricManager internal constructor(
     private val recruitmentPostMetricAppender: RecruitmentPostMetricAppender,
 ) {
 
-    @Transactional
     fun increaseViewCount(postId: Long, now: LocalDateTime) {
         updateOrCreate(postId) { recruitmentPostMetricRepository.increaseViewCount(postId, 1, now) }
     }
 
     /** 공개 모집글 생성·게시 시점에 지표 행을 같은 트랜잭션으로 준비한다. */
-    @Transactional
     fun initialize(postId: Long) {
         if (recruitmentPostMetricRepository.findByPostId(postId) == null) {
             recruitmentPostMetricRepository.save(RecruitmentPostMetric(postId = postId))
         }
     }
 
-    @Transactional
     fun increaseCommentCount(postId: Long, now: LocalDateTime) {
         updateOrCreate(postId) { recruitmentPostMetricRepository.increaseCommentCount(postId, now) }
     }
@@ -49,7 +46,6 @@ class RecruitmentPostMetricManager internal constructor(
      * 카운터가 실제 수보다 작아 줄일 수 없으면 값을 두고 경고만 남긴다.
      * 지표는 화면 표시용이라, 어긋났다고 사용자의 댓글 삭제를 실패시키지 않는다.
      */
-    @Transactional
     fun decreaseCommentCount(postId: Long, amount: Int, now: LocalDateTime) {
         require(amount > 0) { "감소할 댓글 수는 양수여야 합니다." }
         val updated = recruitmentPostMetricRepository.decreaseCommentCount(postId, amount, now)
@@ -61,7 +57,6 @@ class RecruitmentPostMetricManager internal constructor(
      * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
      * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
      */
-    @Transactional
     fun syncBookmarkCount(postId: Long, now: LocalDateTime) =
         updateOrCreate(postId) { recruitmentPostMetricRepository.syncBookmarkCount(postId, now) }
 

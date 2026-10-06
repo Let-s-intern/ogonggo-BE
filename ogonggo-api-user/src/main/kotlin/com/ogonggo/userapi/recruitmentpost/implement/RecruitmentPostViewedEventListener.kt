@@ -7,18 +7,20 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
 import java.time.LocalDateTime
 
 /**
  * 조회수 기록을 상세 조회 응답과 분리한다.
  *
- * [RecruitmentPostMetricManager]가 메서드마다 트랜잭션을 열므로 여기서는 열지 않는다.
- * 바깥에 트랜잭션을 두면 기록 실패가 그 트랜잭션을 롤백 대상으로 만들어, 예외를 삼켜도 커밋에서 다시 터진다.
+ * 다른 스레드에서 실행되어 발행자의 트랜잭션을 이어받을 수 없으므로 여기서 트랜잭션을 연다.
+ * 트랜잭션은 예외를 잡는 범위 안쪽에서 열고 닫는다. 바깥에 두면 실패한 트랜잭션을 커밋하려다 예외가 다시 터진다.
  */
 @Component
 class RecruitmentPostViewedEventListener(
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
+    private val transactionTemplate: TransactionTemplate,
     private val clock: Clock,
 ) {
 
@@ -26,7 +28,9 @@ class RecruitmentPostViewedEventListener(
     @EventListener
     fun handle(event: RecruitmentPostViewedEvent) {
         try {
-            recruitmentPostMetricManager.increaseViewCount(event.postId, LocalDateTime.now(clock))
+            transactionTemplate.executeWithoutResult {
+                recruitmentPostMetricManager.increaseViewCount(event.postId, LocalDateTime.now(clock))
+            }
         } catch (exception: Exception) {
             log.warn("모집글 조회 수 기록에 실패했습니다. postId={}", event.postId, exception)
         }
