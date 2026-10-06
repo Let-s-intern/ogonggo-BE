@@ -10,17 +10,17 @@ import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.OperationType
 import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.community.domain.ContactMethod
-import com.ogonggo.core.community.domain.ProgressMethod
-import com.ogonggo.core.community.domain.RecruitmentApplicationProgressStatus
-import com.ogonggo.core.community.domain.RecruitmentApplicationSortType
-import com.ogonggo.core.community.domain.RecruitmentPosition
-import com.ogonggo.core.community.domain.RecruitmentPostApplicationStatus
-import com.ogonggo.core.community.domain.RecruitmentPostManagementSortType
-import com.ogonggo.core.community.domain.RecruitmentPostManagementStatus
-import com.ogonggo.core.community.domain.RecruitmentPostSortType
-import com.ogonggo.core.community.domain.RecruitmentStatus
-import com.ogonggo.core.community.domain.RecruitmentType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostProgressMethod
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.enumeration.EnumField
 import com.ogonggo.core.enumeration.EnumOption
 import com.ogonggo.core.enumeration.toEnumOptions
@@ -91,17 +91,17 @@ class UserEnumService {
             // 북마크
             options<BookmarkSortType>(),
             // 커뮤니티 모집글
-            options<RecruitmentType>(),
-            options<RecruitmentPosition>(),
-            options<ProgressMethod>(),
-            options<ContactMethod>(),
-            options<RecruitmentStatus>(),
+            options<RecruitmentPostType>(),
+            options<RecruitmentPostPosition>(),
+            options<RecruitmentPostProgressMethod>(),
+            options<RecruitmentPostContactMethod>(),
+            options<RecruitmentPostRecruitmentStatus>(),
             options<RecruitmentPostSortType>(),
             options<RecruitmentPostManagementStatus>(),
             options<RecruitmentPostApplicationStatus>(),
             options<RecruitmentPostManagementSortType>(),
-            options<RecruitmentApplicationProgressStatus>(),
-            options<RecruitmentApplicationSortType>(),
+            options<RecruitmentPostApplicationProgressStatus>(),
+            options<RecruitmentPostApplicationSortType>(),
             // 회원
             options<UserRole>(),
             options<UserStatus>(),

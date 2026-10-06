@@ -54,7 +54,7 @@ class UserEnumServiceTest {
             .toSet()
     }
 
-    /** `List<RecruitmentPosition>`처럼 컬렉션에 담긴 enum도 찾도록 타입 인자까지 푼다. */
+    /** `List<RecruitmentPostPosition>`처럼 컬렉션에 담긴 enum도 찾도록 타입 인자까지 푼다. */
     private fun rawTypes(type: Type): List<Class<*>> = when (type) {
         is Class<*> -> listOf(type)
         is ParameterizedType -> rawTypes(type.rawType) + type.actualTypeArguments.flatMap(::rawTypes)

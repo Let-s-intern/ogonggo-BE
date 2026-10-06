@@ -2,7 +2,7 @@ package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.userapi.bootcamp.implement.BootcampAutoCloseScheduler
-import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
+import com.ogonggo.userapi.recruitmentpost.implement.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.job.implement.JobAutoCloseScheduler
 import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler

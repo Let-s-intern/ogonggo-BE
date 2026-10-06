@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.scheduling
 
-import com.ogonggo.core.community.implement.RecruitmentPostManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.core.image.implement.ImageAssetManager
-import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
+import com.ogonggo.userapi.recruitmentpost.implement.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.config.SchedulerLockConfiguration
 import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry

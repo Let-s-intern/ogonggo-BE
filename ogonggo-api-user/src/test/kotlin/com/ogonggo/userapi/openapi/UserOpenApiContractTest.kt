@@ -174,40 +174,40 @@ class UserOpenApiContractTest @Autowired constructor(
             document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}~1bookmarks~1me/delete")
         assertTrue(deleteRecruitmentPostBookmark.isObject)
         assertTrue(deleteRecruitmentPostBookmark.at("/responses/200/content/application~1json/schema").isObject)
-        val recruitmentApplication =
+        val recruitmentPostApplication =
             document.at("/paths/~1api~1v1~1recruitment-posts~1{postId}~1applications/post")
-        assertTrue(recruitmentApplication.at("/security/0/BearerAuth").isArray)
-        assertTrue(recruitmentApplication.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(recruitmentPostApplication.at("/security/0/BearerAuth").isArray)
+        assertTrue(recruitmentPostApplication.at("/responses/200/content/application~1json/schema").isObject)
         assertTrue(
-            recruitmentApplication.at("/responses/409/description").asText()
+            recruitmentPostApplication.at("/responses/409/description").asText()
                 .startsWith("RECRUITMENT_POST_CLOSED"),
         )
-        val myRecruitmentApplications =
+        val myRecruitmentPostApplications =
             document.at("/paths/~1api~1v1~1me~1recruitment-applications/get")
-        assertTrue(myRecruitmentApplications.at("/security/0/BearerAuth").isArray)
-        assertPageParameter(myRecruitmentApplications, "page", defaultValue = "1", minimum = 1, maximum = null)
-        assertPageParameter(myRecruitmentApplications, "size", defaultValue = "10", minimum = 1, maximum = 100)
+        assertTrue(myRecruitmentPostApplications.at("/security/0/BearerAuth").isArray)
+        assertPageParameter(myRecruitmentPostApplications, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(myRecruitmentPostApplications, "size", defaultValue = "10", minimum = 1, maximum = 100)
         listOf("recruitmentStatus", "recruitmentType", "applicationStatus", "keyword", "sort")
-            .forEach { name -> assertTrue(myRecruitmentApplications.parameter(name).isObject) }
-        val recruitmentApplicationItemProperties = document.at(
-            "/components/schemas/RecruitmentApplicationItemResponse/properties",
+            .forEach { name -> assertTrue(myRecruitmentPostApplications.parameter(name).isObject) }
+        val recruitmentPostApplicationItemProperties = document.at(
+            "/components/schemas/RecruitmentPostApplicationItemResponse/properties",
         )
         listOf("progressMethod", "activityDurationMonths", "applicationStatus")
-            .forEach { field -> assertTrue(recruitmentApplicationItemProperties.has(field)) }
+            .forEach { field -> assertTrue(recruitmentPostApplicationItemProperties.has(field)) }
         assertTrue(
-            document.at("/components/schemas/RecruitmentApplicationPageResponse/properties/countsByRecruitmentType")
+            document.at("/components/schemas/RecruitmentPostApplicationPageResponse/properties/countsByRecruitmentType")
                 .isObject,
         )
-        val updateRecruitmentApplication = document.at(
+        val updateRecruitmentPostApplication = document.at(
             "/paths/~1api~1v1~1me~1recruitment-applications~1{postId}/patch",
         )
-        assertTrue(updateRecruitmentApplication.at("/security/0/BearerAuth").isArray)
-        assertTrue(updateRecruitmentApplication.at("/requestBody/content/application~1json/schema").isObject)
-        val deleteRecruitmentApplication = document.at(
+        assertTrue(updateRecruitmentPostApplication.at("/security/0/BearerAuth").isArray)
+        assertTrue(updateRecruitmentPostApplication.at("/requestBody/content/application~1json/schema").isObject)
+        val deleteRecruitmentPostApplication = document.at(
             "/paths/~1api~1v1~1me~1recruitment-applications~1{postId}/delete",
         )
-        assertTrue(deleteRecruitmentApplication.at("/security/0/BearerAuth").isArray)
-        assertTrue(deleteRecruitmentApplication.at("/responses/404/description").asText().startsWith("RECRUITMENT_POST_APPLICATION_NOT_FOUND"))
+        assertTrue(deleteRecruitmentPostApplication.at("/security/0/BearerAuth").isArray)
+        assertTrue(deleteRecruitmentPostApplication.at("/responses/404/description").asText().startsWith("RECRUITMENT_POST_APPLICATION_NOT_FOUND"))
         val reportRecruitmentPostComment = document.at(
             "/paths/~1api~1v1~1recruitment-posts~1{postId}~1comments~1{commentId}~1reports/post",
         )
