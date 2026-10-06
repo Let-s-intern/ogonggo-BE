@@ -53,7 +53,6 @@ class RecruitmentPostApplicationService(
         )
     }
 
-    @Transactional(readOnly = true)
     fun getApplications(
         userId: Long,
         recruitmentStatus: RecruitmentPostRecruitmentStatus?,

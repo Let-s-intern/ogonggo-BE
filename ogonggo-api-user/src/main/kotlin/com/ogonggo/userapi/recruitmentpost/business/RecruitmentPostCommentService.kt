@@ -41,7 +41,6 @@ class RecruitmentPostCommentService(
     private val clock: Clock,
 ) {
 
-    @Transactional(readOnly = true)
     fun readComments(
         userId: Long?,
         postId: Long,
@@ -69,7 +68,6 @@ class RecruitmentPostCommentService(
         )
     }
 
-    @Transactional(readOnly = true)
     fun readReplies(
         userId: Long?,
         postId: Long,
