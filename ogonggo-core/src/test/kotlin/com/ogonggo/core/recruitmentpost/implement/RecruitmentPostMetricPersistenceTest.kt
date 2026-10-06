@@ -59,6 +59,21 @@ internal class RecruitmentPostMetricPersistenceTest @Autowired constructor(
         assertEquals(1, recruitmentPostMetricRepository.findByPostId(postId)?.bookmarkCount)
     }
 
+    @Test
+    fun `카운터가 실제 수보다 작아 줄일 수 없어도 예외 없이 0을 유지한다`() {
+        // given: 지표 행이 북마크·댓글보다 늦게 만들어져 카운터가 0인 상태
+        recruitmentPostMetricManager.initialize(POST_ID)
+
+        // when
+        recruitmentPostMetricManager.decreaseBookmarkCount(POST_ID, NOW)
+        recruitmentPostMetricManager.decreaseCommentCount(POST_ID, 1, NOW)
+
+        // then
+        val metric = recruitmentPostMetricRepository.findByPostId(POST_ID)
+        assertEquals(0L, metric?.bookmarkCount)
+        assertEquals(0L, metric?.commentCount)
+    }
+
     companion object {
         private const val POST_ID = 12L
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 12, 0, 5)

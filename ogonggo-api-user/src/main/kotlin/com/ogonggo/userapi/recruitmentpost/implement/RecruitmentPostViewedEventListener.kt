@@ -7,11 +7,15 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.LocalDateTime
 
-/** 조회수 기록을 상세 조회 응답과 분리한다. */
+/**
+ * 조회수 기록을 상세 조회 응답과 분리한다.
+ *
+ * [RecruitmentPostMetricManager]가 메서드마다 트랜잭션을 열므로 여기서는 열지 않는다.
+ * 바깥에 트랜잭션을 두면 기록 실패가 그 트랜잭션을 롤백 대상으로 만들어, 예외를 삼켜도 커밋에서 다시 터진다.
+ */
 @Component
 class RecruitmentPostViewedEventListener(
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
@@ -20,7 +24,6 @@ class RecruitmentPostViewedEventListener(
 
     @Async(METRIC_TASK_EXECUTOR)
     @EventListener
-    @Transactional
     fun handle(event: RecruitmentPostViewedEvent) {
         try {
             recruitmentPostMetricManager.increaseViewCount(event.postId, LocalDateTime.now(clock))
