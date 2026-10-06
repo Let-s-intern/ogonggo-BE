@@ -1,25 +1,26 @@
 package com.ogonggo.core.recruitmentpost.persistence
 
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
+import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPost.recruitmentPost
+import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostApplication.recruitmentPostApplication
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplication
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPost.recruitmentPost
-import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostApplication.recruitmentPostApplication
+import com.querydsl.core.Tuple
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.Projections
 import com.querydsl.core.types.dsl.BooleanExpression
-import com.querydsl.core.Tuple
 import com.querydsl.jpa.impl.JPAQueryFactory
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 internal interface RecruitmentPostApplicationJpaRepository : JpaRepository<RecruitmentPostApplication, Long> {
 
@@ -72,18 +73,16 @@ internal class RecruitmentPostApplicationQueryRepository(
             .join(recruitmentPost).on(recruitmentPost.id.eq(recruitmentPostApplication.postId))
             .where(*predicates)
             .orderBy(*sort.toOrder())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
 
-        val total = queryFactory
+        val countQuery = queryFactory
             .select(recruitmentPostApplication.count())
             .from(recruitmentPostApplication)
             .join(recruitmentPost).on(recruitmentPost.id.eq(recruitmentPostApplication.postId))
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     fun countByPostIds(postIds: Collection<Long>): Map<Long, Long> {

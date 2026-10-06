@@ -12,6 +12,8 @@ import com.ogonggo.core.bootcamp.domain.BootcampStatus
 import com.ogonggo.core.bootcamp.domain.QBootcamp.bootcamp
 import com.ogonggo.core.bootcamp.domain.QBootcampBookmark.bootcampBookmark
 import com.ogonggo.core.bootcamp.domain.QBootcampMetric.bootcampMetric
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
 import com.ogonggo.core.review.domain.ContentSource
 import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
@@ -19,11 +21,10 @@ import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
 import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
+import java.time.LocalDateTime
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
-import java.time.LocalDateTime
 
 /**
  * 목록 조회의 필터는 선택적이고 앞으로 계속 늘어나므로 정적 JPQL 대신 동적 쿼리로 조립한다.
@@ -66,17 +67,15 @@ internal class BootcampQueryRepository(
             .join(bootcampBookmark).on(bootcampBookmark.bootcampId.eq(bootcamp.id))
             .where(*predicates)
             .orderBy(*bookmarkOrders(bookmarkCondition.sortType))
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
 
-        val total = queryFactory.select(bootcamp.count())
+        val countQuery = queryFactory.select(bootcamp.count())
             .from(bootcamp)
             .join(bootcampBookmark).on(bootcampBookmark.bootcampId.eq(bootcamp.id))
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {
@@ -97,16 +96,14 @@ internal class BootcampQueryRepository(
         enterpriseFirst: Boolean,
     ): Page<Bootcamp> {
         val content = sorted(queryFactory.selectFrom(bootcamp).where(*predicates), sortType, enterpriseFirst)
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
 
-        val total = queryFactory.select(bootcamp.count())
+        val countQuery = queryFactory.select(bootcamp.count())
             .from(bootcamp)
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     /** 게시 상태와 모집 상태, 공개 기간, 삭제 여부는 클라이언트가 고를 수 없는 고정 조건이므로 항상 앞에 둔다. */

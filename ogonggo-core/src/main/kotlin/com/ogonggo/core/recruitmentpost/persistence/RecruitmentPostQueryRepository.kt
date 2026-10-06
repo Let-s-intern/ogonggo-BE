@@ -1,28 +1,29 @@
 package com.ogonggo.core.recruitmentpost.persistence
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
+import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPost.recruitmentPost
+import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostApplication.recruitmentPostApplication
+import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostBookmark.recruitmentPostBookmark
+import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostMetric.recruitmentPostMetric
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostBookmarkSearchCondition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostConsoleSearchCondition
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostManagementStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
-import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
-import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostApplication.recruitmentPostApplication
-import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPost.recruitmentPost
-import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostBookmark.recruitmentPostBookmark
-import com.ogonggo.core.recruitmentpost.domain.QRecruitmentPostMetric.recruitmentPostMetric
 import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.Expressions
 import com.querydsl.jpa.JPAExpressions
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
@@ -38,6 +39,7 @@ internal class RecruitmentPostQueryRepository(
         filter: RecruitmentPostListFilterDto,
         sortType: RecruitmentPostSortType,
     ): Page<RecruitmentPost> {
+        val pageable = PageRequest.of(page, size)
         val predicates = publishedPredicates(filter).filterNotNull()
         val content = queryFactory
             .select(recruitmentPost, VIEW_COUNT_OR_ZERO, COMMENT_COUNT_OR_ZERO)
@@ -46,16 +48,13 @@ internal class RecruitmentPostQueryRepository(
             .where(*predicates.toTypedArray())
             .distinct()
             .orderBy(*sortType.toOrder())
-            .offset(page.toLong() * size)
-            .limit(size.toLong())
+            .paged(pageable)
             .fetch()
             .map { checkNotNull(it.get(recruitmentPost)) { "조회된 모집글이 없습니다." } }
-        val total = queryFactory.select(recruitmentPost.count())
+        val countQuery = queryFactory.select(recruitmentPost.count())
             .from(recruitmentPost)
             .where(*predicates.toTypedArray())
-            .fetchOne() ?: 0L
-        val pageable = PageRequest.of(page, size)
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     fun findConsolePage(
@@ -68,14 +67,12 @@ internal class RecruitmentPostQueryRepository(
             .leftJoin(recruitmentPostMetric).on(recruitmentPostMetric.postId.eq(recruitmentPost.id))
             .where(*predicates)
             .orderBy(*sortType.toOrder())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
-        val total = queryFactory.select(recruitmentPost.count())
+        val countQuery = queryFactory.select(recruitmentPost.count())
             .from(recruitmentPost)
             .where(*predicates)
-            .fetchOne() ?: 0L
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     fun findOwnedPage(
@@ -99,14 +96,12 @@ internal class RecruitmentPostQueryRepository(
         val content = queryFactory.selectFrom(recruitmentPost)
             .where(*predicates)
             .orderBy(*sort.toOrder())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
-        val total = queryFactory.select(recruitmentPost.count())
+        val countQuery = queryFactory.select(recruitmentPost.count())
             .from(recruitmentPost)
             .where(*predicates)
-            .fetchOne() ?: 0L
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     /**
@@ -131,15 +126,13 @@ internal class RecruitmentPostQueryRepository(
             .join(recruitmentPost).on(recruitmentPost.id.eq(recruitmentPostBookmark.postId))
             .where(*predicates)
             .orderBy(*bookmarkOrders(condition.sortType))
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
-        val total = queryFactory.select(recruitmentPostBookmark.count())
+        val countQuery = queryFactory.select(recruitmentPostBookmark.count())
             .from(recruitmentPostBookmark)
             .join(recruitmentPost).on(recruitmentPost.id.eq(recruitmentPostBookmark.postId))
             .where(*predicates)
-            .fetchOne() ?: 0L
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     private fun bookmarkOrders(sortType: BookmarkSortType): Array<OrderSpecifier<*>> = when (sortType) {

@@ -2,6 +2,8 @@ package com.ogonggo.core.review.persistence
 
 import com.ogonggo.core.bootcamp.domain.QBootcamp.bootcamp
 import com.ogonggo.core.job.domain.QJob.job
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
 import com.ogonggo.core.review.domain.ContentRejection
 import com.ogonggo.core.review.domain.QContentRejection.contentRejection
 import com.ogonggo.core.review.domain.ReviewContentType
@@ -12,7 +14,6 @@ import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
@@ -51,19 +52,17 @@ internal class ContentRejectionQueryRepository(
         val content = joinedQuery()
             .where(*predicates)
             .orderBy(contentRejection.rejectedAt.desc(), contentRejection.id.desc())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
             .map(::toDto)
 
-        val total = queryFactory.select(contentRejection.count())
+        val countQuery = queryFactory.select(contentRejection.count())
             .from(contentRejection)
             .leftJoin(job).on(*jobJoinConditions())
             .leftJoin(bootcamp).on(*bootcampJoinConditions())
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     fun findActive(contentType: ReviewContentType, contentId: Long): ContentRejectionDto? =

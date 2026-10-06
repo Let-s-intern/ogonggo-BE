@@ -3,11 +3,12 @@ package com.ogonggo.core.announcement.persistence
 import com.ogonggo.core.announcement.domain.Announcement
 import com.ogonggo.core.announcement.domain.AnnouncementManagementSearchCondition
 import com.ogonggo.core.announcement.domain.QAnnouncement.announcement
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
 import com.querydsl.core.types.Predicate
 import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
@@ -55,15 +56,13 @@ internal class AnnouncementQueryRepository(
         val content = queryFactory.selectFrom(announcement)
             .where(*predicates)
             .orderBy(announcement.pinned.desc(), announcement.id.desc())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
 
-        val total = queryFactory.select(announcement.count())
+        val countQuery = queryFactory.select(announcement.count())
             .from(announcement)
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 }

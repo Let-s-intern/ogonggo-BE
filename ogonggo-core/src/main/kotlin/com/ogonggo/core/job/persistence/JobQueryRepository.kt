@@ -9,14 +9,16 @@ import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
-import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.domain.QJob.job
 import com.ogonggo.core.job.domain.QJobBookmark.jobBookmark
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.job.domain.QTodayJob.todayJob
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
 import com.ogonggo.core.review.domain.ContentSource
 import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
@@ -27,7 +29,6 @@ import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
 import java.time.LocalDateTime
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
 
@@ -68,17 +69,15 @@ internal class JobQueryRepository(
             .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
             .where(*predicates)
             .orderBy(*bookmarkOrders(bookmarkCondition.sortType))
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
 
-        val total = queryFactory.select(job.count())
+        val countQuery = queryFactory.select(job.count())
             .from(job)
             .join(jobBookmark).on(jobBookmark.jobId.eq(job.id))
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     /**
@@ -141,16 +140,14 @@ internal class JobQueryRepository(
         pageable: Pageable,
     ): Page<Job> {
         val content = sorted(queryFactory.selectFrom(job).where(*predicates), sortType, latestOrders)
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
 
-        val total = queryFactory.select(job.count())
+        val countQuery = queryFactory.select(job.count())
             .from(job)
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     /**
