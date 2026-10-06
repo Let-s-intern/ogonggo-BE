@@ -19,7 +19,7 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.LocalTime

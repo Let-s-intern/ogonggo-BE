@@ -10,7 +10,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.userapi.job.business.CompanyJobResult
 import com.ogonggo.userapi.job.business.CompanyJobSummary
 import io.swagger.v3.oas.annotations.media.Schema

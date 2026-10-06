@@ -3,9 +3,9 @@ package com.ogonggo.core.bootcamp.domain
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -401,7 +401,7 @@ class Bootcamp internal constructor(
     fun publish() {
         checkModifiable()
         if (reviewStatus != null && reviewStatus != ContentReviewStatus.APPROVED) {
-            throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
+            throw ConflictException(ContentReviewErrorCode.REVIEW_NOT_APPROVED)
         }
         publicationStatus = BootcampPublicationStatus.PUBLISHED
     }
@@ -446,7 +446,7 @@ class Bootcamp internal constructor(
     private fun checkReviewable() {
         checkModifiable()
         if (reviewStatus == null) {
-            throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
+            throw ConflictException(ContentReviewErrorCode.CONTENT_NOT_REVIEWABLE)
         }
     }
 

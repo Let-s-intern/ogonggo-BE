@@ -1,6 +1,6 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import java.time.LocalDate
 
 /**

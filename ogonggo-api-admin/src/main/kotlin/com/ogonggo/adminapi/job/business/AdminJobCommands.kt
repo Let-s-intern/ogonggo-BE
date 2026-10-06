@@ -2,7 +2,7 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.job.domain.JobContentField
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 
 /**
  * 관리자가 채용공고의 운영 값과 내용을 고친다. 넘어온 값만 바꾼다.

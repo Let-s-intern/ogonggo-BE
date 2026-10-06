@@ -4,8 +4,8 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
-import com.ogonggo.core.review.domain.ContentReviewTargetType
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentReviewTargetType
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional

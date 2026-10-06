@@ -10,7 +10,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock

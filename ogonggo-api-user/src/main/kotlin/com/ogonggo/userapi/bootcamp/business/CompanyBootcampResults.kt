@@ -10,7 +10,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 

@@ -6,7 +6,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime

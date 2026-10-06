@@ -10,8 +10,8 @@ import com.ogonggo.core.job.domain.JobSourceUrlClick
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
 import com.ogonggo.core.job.domain.TodayJob
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable

@@ -12,7 +12,7 @@ import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired

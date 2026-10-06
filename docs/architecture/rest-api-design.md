@@ -20,12 +20,12 @@
 
 ### 예외: 관리자 콘솔 API
 
-관리자 콘솔 화면이 쓰는 API는 `/api/v1/admin` 아래에 둡니다: `/api/v1/admin/jobs`, `/api/v1/admin/review-queue`.
+관리자 콘솔 화면이 쓰는 API는 `/api/v1/admin` 아래에 둡니다: `/api/v1/admin/jobs`, `/api/v1/admin/content-reviews`.
 
 - 결정일: 2026-09-14 / 리뷰 상태: 팀 리뷰 필요
 - 배경: 콘솔 화면이 목 핸들러로 먼저 만들어졌고 그 경로가 `/api/v1/admin/**`입니다. 화면을 고치지 않고 붙이기로 했습니다.
 - 크롤러의 `/api/v1/internal/**`과 인증 방식(내부 API 키, 관리자 토큰)이 달라 경로 접두사로 인가 규칙을 나눕니다.
-- 콘솔 계약을 따라 `PATCH /api/v1/admin/jobs/{jobId}`가 노출·검수 상태와 내용을 부분 수정으로 함께 받고, 검수 판정은 `PATCH /api/v1/admin/review-queue/{type}/{id}`로 둡니다. 4절의 명령별 엔드포인트 원칙과 다르며 같은 이유의 예외입니다.
+- 콘솔 계약을 따라 `PATCH /api/v1/admin/jobs/{jobId}`가 노출·검수 상태와 내용을 부분 수정으로 함께 받고, 검수 판정은 `PATCH /api/v1/admin/content-reviews/{type}/{id}`로 둡니다. 4절의 명령별 엔드포인트 원칙과 다르며 같은 이유의 예외입니다.
 - 영향 범위: 관리자 API의 콘솔 Controller와 인가 규칙. 사용자 API와 크롤러 경로는 바뀌지 않습니다.
 
 ## 2. URI

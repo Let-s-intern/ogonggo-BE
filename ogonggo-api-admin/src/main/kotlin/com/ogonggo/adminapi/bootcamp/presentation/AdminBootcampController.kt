@@ -12,8 +12,8 @@ import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping

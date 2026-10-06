@@ -1,7 +1,7 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 
 /**
  * 게시 상태와 무관하게 모든 미삭제 채용공고를 관리할 때 고르는 선택 필터다.

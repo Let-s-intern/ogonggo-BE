@@ -20,9 +20,9 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -189,7 +189,7 @@ class AdminJobControllerTest @Autowired constructor(
 
     @Test
     fun `승인 전에 노출하려 하면 409로 응답한다`() {
-        Mockito.doThrow(ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED))
+        Mockito.doThrow(ConflictException(ContentReviewErrorCode.REVIEW_NOT_APPROVED))
             .`when`(adminJobService)
             .updateJob(693L, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE))
 

@@ -2,7 +2,7 @@ package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 
 /**
  * 관리자가 부트캠프의 운영 값과 내용을 고친다. 채용공고와 같이 넘어온 값만 바꾼다.

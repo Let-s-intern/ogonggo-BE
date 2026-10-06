@@ -5,7 +5,7 @@ import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.AdminJobUpdateCommand
 import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.job.domain.JobContentField
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import jakarta.validation.constraints.Size
 
 /** 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고, 한 트랜잭션의 잠금이 지나치게 길어지지 않을 만큼으로 둔다. */

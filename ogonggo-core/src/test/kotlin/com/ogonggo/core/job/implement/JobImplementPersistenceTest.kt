@@ -31,8 +31,8 @@ import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals

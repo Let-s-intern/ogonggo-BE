@@ -15,9 +15,9 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

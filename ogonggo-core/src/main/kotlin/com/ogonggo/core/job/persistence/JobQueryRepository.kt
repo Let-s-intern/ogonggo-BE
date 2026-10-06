@@ -19,7 +19,7 @@ import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.job.domain.QTodayJob.todayJob
 import com.ogonggo.core.jpa.pageOf
 import com.ogonggo.core.jpa.paged
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression

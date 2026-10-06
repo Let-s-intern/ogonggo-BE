@@ -5,9 +5,9 @@ import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -137,7 +137,7 @@ class JobDomainTest {
         val job = createJob(ownerUserId = 7L)
 
         val exception = assertThrows(ConflictException::class.java) { job.publish() }
-        assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
+        assertEquals(ContentReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
 
         job.approveReview()
         assertEquals(ContentReviewStatus.APPROVED, job.reviewStatus)
@@ -166,7 +166,7 @@ class JobDomainTest {
     fun `수집한 공고는 검수할 수 없다`() {
         val exception = assertThrows(ConflictException::class.java) { createJob().approveReview() }
 
-        assertEquals(ReviewErrorCode.CONTENT_NOT_REVIEWABLE, exception.errorCode)
+        assertEquals(ContentReviewErrorCode.CONTENT_NOT_REVIEWABLE, exception.errorCode)
     }
 
     @Test

@@ -11,7 +11,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock

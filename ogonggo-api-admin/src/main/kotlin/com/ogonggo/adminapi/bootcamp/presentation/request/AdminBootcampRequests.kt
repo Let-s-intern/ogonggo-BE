@@ -5,7 +5,7 @@ import com.ogonggo.adminapi.bootcamp.business.AdminBootcampVisibilityChangeComma
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import jakarta.validation.constraints.Size
 
 /** 채용공고 일괄 노출 변경과 같은 상한이다. */

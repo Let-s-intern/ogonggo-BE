@@ -14,7 +14,7 @@ import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import java.time.LocalDateTime
 import java.time.LocalTime
 

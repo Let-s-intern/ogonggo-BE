@@ -18,7 +18,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals

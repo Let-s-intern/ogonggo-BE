@@ -6,9 +6,9 @@ import com.querydsl.core.annotations.PropertyType
 import com.querydsl.core.annotations.QueryType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -508,7 +508,7 @@ class Job internal constructor(
     fun publish() {
         checkNotDeleted()
         if (reviewStatus != null && reviewStatus != ContentReviewStatus.APPROVED) {
-            throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
+            throw ConflictException(ContentReviewErrorCode.REVIEW_NOT_APPROVED)
         }
         publicationStatus = JobPublicationStatus.PUBLISHED
     }
@@ -561,7 +561,7 @@ class Job internal constructor(
     private fun checkReviewable() {
         checkNotDeleted()
         if (reviewStatus == null) {
-            throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
+            throw ConflictException(ContentReviewErrorCode.CONTENT_NOT_REVIEWABLE)
         }
     }
 

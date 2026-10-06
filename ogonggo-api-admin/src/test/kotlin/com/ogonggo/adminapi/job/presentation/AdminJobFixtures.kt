@@ -11,8 +11,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import java.time.LocalDateTime
 
 internal object AdminJobFixtures {

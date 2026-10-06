@@ -12,7 +12,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import java.time.LocalDateTime
 
 data class CompanyJobPageResult(

@@ -9,7 +9,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
 import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import java.time.LocalDate
 import java.time.LocalDateTime
 

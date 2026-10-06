@@ -10,8 +10,8 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
-import com.ogonggo.core.review.domain.ContentReviewTargetType
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentReviewTargetType
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.Clock
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component

@@ -15,8 +15,8 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito

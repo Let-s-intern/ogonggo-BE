@@ -6,7 +6,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
 import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.userapi.bootcamp.business.CompanyBootcampResult
 import com.ogonggo.userapi.bootcamp.business.CompanyBootcampSummary
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult

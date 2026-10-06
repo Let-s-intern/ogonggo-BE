@@ -11,8 +11,8 @@ import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema

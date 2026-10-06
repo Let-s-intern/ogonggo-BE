@@ -28,8 +28,8 @@ import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals

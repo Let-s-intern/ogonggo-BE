@@ -240,7 +240,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/jobs` | `visibility`, `source`, `reviewStatus`, `recruitmentStatus`, `jobField`, `jobRole` | 제목, 회사명 |
 | `GET /api/v1/admin/bootcamps` | `visibility`, `source`, `reviewStatus`, `status`(`RECRUITING`·`CLOSED`) | 과정명, 운영사 |
 | `GET /api/v1/admin/recruitment-posts` | `visibility`, `recruitmentType`(`SIDE_PROJECT`·`STUDY`), `recruitmentStatus` | 제목 |
-| `GET /api/v1/admin/rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
+| `GET /api/v1/admin/content-rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
 | `GET /api/v1/admin/announcements` | `visibility`, `pinned` | 제목 |
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 | `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`. `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
@@ -251,7 +251,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - `source`는 등록할 때 정해 `source` 칼럼에 저장합니다(`COMPANY` 비즈니스 등록, `CRAWLER` 크롤링, `WORK24` 고용24 수집). 비즈니스 등록만 소유자가 있고 고용24 수집만 외부 식별값(`external_id`)을 가지며, 도메인이 이 관계를 강제합니다. 등록 경로는 바꿀 수 없어 수정 요청으로 받지 않습니다. 2026-09-29까지는 저장하지 않고 소유자 유무로 계산했으나, 소유자가 없는 크롤링과 고용24 수집을 구분하려고 저장으로 바꿨습니다. 크롤러 API(`/api/v1/internal/**`)는 `CRAWLER` 행만 다룹니다.
 - 채용공고 `recruitmentStatus`는 `jobs.recruitment_status`에 저장한 값입니다. 마감 처리 일시가 있거나 모집 종료 일시가 지났으면 `CLOSED`, 그 밖에는 `RECRUITING`입니다. 등록·수정·마감할 때 정하고, 종료 일시가 지난 공고는 매시 정각 자동 마감 작업(`jobAutoClose`)이 `CLOSED`로 바꾸므로 그 전까지는 `RECRUITING`일 수 있습니다. 직접 마감한 공고는 종료 일시를 늘려도 `CLOSED`로 남습니다. 2026-10-02까지는 저장하지 않고 조회할 때 계산했으나, 부트캠프처럼 칼럼으로 거르려고 저장으로 바꿨습니다. 상시 채용은 모집 종료 일시를 둘 수 없습니다.
 - 목록에는 본문 칸을 싣지 않고 상세에서만 줍니다.
-- 검수 대기(`GET /api/v1/admin/review-queue`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
+- 검수 대기(`GET /api/v1/admin/content-reviews`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
 - 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다. 노출 일괄 변경(`PATCH /visibility`)은 여러 건이라 `data: null`로 응답합니다([REST API 설계](rest-api-design.md#관리자-콘솔-노출-일괄-변경)).
 - 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.
 

@@ -17,10 +17,10 @@ import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -61,7 +61,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
         assertEquals(0L, publicPage().totalElements)
         assertEquals(0L, bootcampBookmarkReader.readBookmarkedPublicPage(USER_ID, BootcampSearchCondition.NONE, 0, 10, NOW).totalElements)
         val exception = assertThrows(ConflictException::class.java) { bootcampManager.publish(bootcamp) }
-        assertEquals(ReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
+        assertEquals(ContentReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
 
         bootcampManager.approveReview(bootcamp, NOW)
 

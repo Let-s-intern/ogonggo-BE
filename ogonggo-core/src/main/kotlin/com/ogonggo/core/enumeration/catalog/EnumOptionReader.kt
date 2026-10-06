@@ -40,9 +40,9 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ContentReviewTargetType
-import com.ogonggo.core.review.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewTargetType
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
