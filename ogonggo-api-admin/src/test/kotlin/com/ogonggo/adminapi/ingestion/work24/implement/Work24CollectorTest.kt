@@ -511,6 +511,56 @@ class Work24CollectorTest {
         assertEquals(listOf("K3"), appendedJobs.map { it.externalId })
     }
 
+    @Test
+    fun `임시로 정한 직군 밖 직종의 공고는 상세를 부르지 않고 제외한다`() {
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
+            .andRespond(
+                xml(
+                    """
+                    <wantedRoot><total>2</total>
+                      <wanted><wantedAuthNo>K1</wantedAuthNo><jobsCd>140100</jobsCd><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K2</wantedAuthNo><jobsCd>024102</jobsCd><company>회사</company><title>제목</title><wantedInfoUrl>$WORKNET/K2</wantedInfoUrl></wanted>
+                    </wantedRoot>
+                    """.trimIndent(),
+                ),
+            )
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210D01.do")))
+            .andExpect(queryParam("wantedAuthNo", "K2"))
+            .andRespond(xml("<wantedDtl/>"))
+
+        val result = collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
+
+        server.verify()
+        assertEquals(1, result.excludedCount)
+        assertEquals(listOf(JobField.MARKETING_ADVERTISING), appendedJobs.map { it.jobField })
+    }
+
+    @Test
+    fun `최소 경력이 3년보다 긴 공고는 상세를 보고 제외하고 3년까지는 최소 경력 연수를 넣어 게시한다`() {
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
+            .andRespond(
+                xml(
+                    "<wantedRoot><total>3</total>" +
+                        listOf("K1", "K2", "K3").joinToString("") {
+                            "<wanted><wantedAuthNo>$it</wantedAuthNo><jobsCd>133201</jobsCd><company>회사</company>" +
+                                "<title>제목</title><wantedInfoUrl>$WORKNET/$it</wantedInfoUrl></wanted>"
+                        } +
+                        "</wantedRoot>",
+                ),
+            )
+        listOf("경력 (최소3년) 우대", "경력 (최소5년) 필수", "경력 (6개월 이상) 우대").forEach { career ->
+            server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210D01.do")))
+                .andRespond(xml("<wantedDtl><wantedInfo><enterTpCd>E</enterTpCd><enterTpNm>$career</enterTpNm></wantedInfo></wantedDtl>"))
+        }
+
+        val result = collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
+
+        server.verify()
+        assertEquals(1, result.excludedCount)
+        assertEquals(listOf("K1", "K3"), appendedJobs.map { it.externalId })
+        assertEquals(listOf(3, null), appendedJobs.map { it.experienceMinYears })
+    }
+
     private fun collector(): Work24Collector {
         val properties = Work24Properties(
             baseUrl = BASE_URL,
