@@ -9,18 +9,15 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(CloudAwsProperties::class, LegacyS3Properties::class)
+@EnableConfigurationProperties(CloudAwsProperties::class)
 class S3Configuration {
 
-    /** `cloud.aws` 값을 쓰고, 비어 있는 값만 이전 이름(`ogonggo.storage.s3`)에서 채운다. */
+    /** 운영 설정의 `cloud.aws` 값으로 버킷과 표시용 URL 설정을 만든다. */
     @Bean
-    fun s3Properties(
-        aws: CloudAwsProperties,
-        legacy: LegacyS3Properties,
-    ): S3Properties = S3Properties(
-        bucket = aws.s3.bucket.ifBlank { legacy.bucket },
-        region = aws.region.static.ifBlank { legacy.region }.ifBlank { DEFAULT_REGION },
-        publicBaseUrl = aws.s3.publicBaseUrl.ifBlank { legacy.publicBaseUrl },
+    fun s3Properties(aws: CloudAwsProperties): S3Properties = S3Properties(
+        bucket = aws.s3.bucket,
+        region = aws.region.static.ifBlank { DEFAULT_REGION },
+        publicBaseUrl = aws.s3.publicBaseUrl,
     )
 
     @Bean

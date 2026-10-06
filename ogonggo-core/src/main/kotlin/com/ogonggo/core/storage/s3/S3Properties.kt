@@ -51,15 +51,4 @@ data class CloudAwsProperties(
     data class Region(val static: String = DEFAULT_REGION)
 }
 
-/**
- * 2026-10-01 이전 코드가 읽던 이름이다. 운영 설정은 처음부터 [CloudAwsProperties] 이름을 써서 이 값이 비어 있었고,
- * 그래서 관리자 API가 이미지를 옮기지 못했다. 혹시 이 이름으로 넣어 둔 환경이 있을 수 있어 `cloud.aws`가 비었을 때만 쓴다.
- */
-@ConfigurationProperties(prefix = "ogonggo.storage.s3")
-data class LegacyS3Properties(
-    val bucket: String = "",
-    val region: String = "",
-    val publicBaseUrl: String = "",
-)
-
 internal const val DEFAULT_REGION = "ap-northeast-2"

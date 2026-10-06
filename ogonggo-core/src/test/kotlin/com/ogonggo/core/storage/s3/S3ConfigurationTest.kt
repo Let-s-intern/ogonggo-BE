@@ -34,18 +34,6 @@ class S3ConfigurationTest {
     }
 
     @Test
-    fun `cloud aws가 비어 있으면 이전 이름의 값을 쓰고 리전은 서울이 기본이다`() {
-        contextRunner
-            .withPropertyValues("ogonggo.storage.s3.bucket=legacy-bucket")
-            .run { context ->
-                assertEquals(
-                    S3Properties(bucket = "legacy-bucket", region = "ap-northeast-2"),
-                    context.getBean(S3Properties::class.java),
-                )
-            }
-    }
-
-    @Test
     fun `설정이 없어도 기동하고 버킷은 비어 있다`() {
         contextRunner.run { context ->
             assertEquals("", context.getBean(S3Properties::class.java).bucket)
