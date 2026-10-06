@@ -1,21 +1,14 @@
-package com.ogonggo.userapi.image.implement
+package com.ogonggo.userapi.image.presentation
 
-import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.userapi.image.business.ImageAssetCleanupService
 import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.Duration
-import java.time.LocalDateTime
 
 @Component
 class ImageAssetCleanupScheduler(
-    private val imageAssetManager: ImageAssetManager,
-    private val clock: Clock,
-    @Value("\${ogonggo.storage.s3.cleanup.retention-hours:24}")
-    private val retentionHours: Long,
+    private val imageAssetCleanupService: ImageAssetCleanupService,
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
 ) {
 
@@ -27,10 +20,7 @@ class ImageAssetCleanupScheduler(
     )
     fun cleanup() {
         val deletedCount = schedulerExecutionObserver.observe(SCHEDULER_NAME) {
-            imageAssetManager.cleanup(
-                now = LocalDateTime.now(clock),
-                retention = Duration.ofHours(retentionHours),
-            )
+            imageAssetCleanupService.cleanup()
         }
         log.info("고아 이미지 정리 완료. deletedCount={}", deletedCount)
     }

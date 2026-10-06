@@ -3,7 +3,8 @@ package com.ogonggo.userapi.scheduling
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.userapi.config.SchedulerLockConfiguration
-import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
+import com.ogonggo.userapi.image.business.ImageAssetCleanupService
+import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostAutoCloseService
 import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -47,6 +48,7 @@ class SchedulerLockIntegrationTest {
             SchedulerExecutionObserver::class.java,
             RecruitmentPostAutoCloseService::class.java,
             RecruitmentPostAutoCloseScheduler::class.java,
+            ImageAssetCleanupService::class.java,
             ImageAssetCleanupScheduler::class.java,
         )
 
