@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClientException
 import java.time.LocalDateTime
+import java.time.Clock
 
 /**
  * 오공고에서 고친 학력·희망 조건을 렛츠커리어로 보낸다.
@@ -26,6 +27,7 @@ class LetsCareerJobProfileSyncScheduler(
     private val userProfileReader: UserProfileReader,
     private val letsCareerUserClient: LetsCareerUserClient,
     private val schedulerExecutionObserver: SchedulerExecutionObserver,
+    private val clock: Clock,
 ) {
 
     /** 실행 주기와 켜짐 여부는 `scheduled_jobs`가 정한다. `UserScheduledJobConfiguration` 참고. */
@@ -44,14 +46,14 @@ class LetsCareerJobProfileSyncScheduler(
         val profile = userProfileReader.read(outbox.userId)
         val updatedAt = profile?.jobInfoUpdatedAt
         if (letsCareerUserId == null || profile == null || updatedAt == null) {
-            // 적재할 때와 달리 보낼 값이 없다. 보낼 수 없는 행이 남아 매번 실패하지 않도록 지운다.
-            outboxManager.markSent(outbox)
+            // 적재할 때와 달리 보낼 값이 없다. 보낼 수 없는 행이 남아 매번 실패하지 않도록 보낸 것으로 표시한다.
+            outboxManager.markSent(outbox, LocalDateTime.now(clock))
             return true
         }
 
         return try {
             letsCareerUserClient.replaceJobProfile(letsCareerUserId, profile.toReplaceCommand(updatedAt))
-            outboxManager.markSent(outbox)
+            outboxManager.markSent(outbox, LocalDateTime.now(clock))
             true
         } catch (exception: RestClientException) {
             outboxManager.markFailed(outbox)

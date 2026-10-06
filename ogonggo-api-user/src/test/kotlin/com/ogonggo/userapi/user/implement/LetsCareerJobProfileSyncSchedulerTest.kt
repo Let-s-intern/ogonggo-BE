@@ -10,10 +10,13 @@ import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.web.client.ResourceAccessException
-import java.time.LocalDateTime
 
 class LetsCareerJobProfileSyncSchedulerTest {
 
@@ -27,6 +30,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
         userProfileReader,
         letsCareerUserClient,
         SchedulerExecutionObserver(SimpleMeterRegistry()),
+        CLOCK,
     )
 
     @Test
@@ -40,7 +44,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
 
         // then
         Mockito.verify(letsCareerUserClient).replaceJobProfile(LETSCAREER_USER_ID, EXPECTED_COMMAND)
-        Mockito.verify(outboxManager).markSent(OUTBOX)
+        Mockito.verify(outboxManager).markSent(OUTBOX, SENT_AT)
     }
 
     @Test
@@ -56,7 +60,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
 
         // then
         Mockito.verify(outboxManager).markFailed(OUTBOX)
-        Mockito.verify(outboxManager, Mockito.never()).markSent(OUTBOX)
+        Mockito.verify(outboxManager, Mockito.never()).markSent(OUTBOX, SENT_AT)
     }
 
     @Test
@@ -70,7 +74,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
 
         // then
         Mockito.verifyNoInteractions(letsCareerUserClient)
-        Mockito.verify(outboxManager).markSent(OUTBOX)
+        Mockito.verify(outboxManager).markSent(OUTBOX, SENT_AT)
     }
 
     private fun givenPending() {
@@ -126,5 +130,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
             updatedAt = UPDATED_AT,
         )
         private val OUTBOX = LetsCareerJobProfileOutboxDto(userId = USER_ID, requestedAt = UPDATED_AT, attemptCount = 0)
+        private val CLOCK: Clock = Clock.fixed(Instant.parse("2026-09-29T02:00:00Z"), ZoneId.of("Asia/Seoul"))
+        private val SENT_AT: LocalDateTime = LocalDateTime.of(2026, 9, 29, 11, 0)
     }
 }

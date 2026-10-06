@@ -27,14 +27,14 @@ class LetsCareerJobProfileOutboxManager internal constructor(
     }
 
     fun readPending(): List<LetsCareerJobProfileOutboxDto> =
-        outboxRepository.findTop100ByOrderByAttemptCountAscRequestedAtAsc().map {
+        outboxRepository.findTop100BySentAtIsNullOrderByAttemptCountAscRequestedAtAsc().map {
             LetsCareerJobProfileOutboxDto(userId = it.userId, requestedAt = it.requestedAt, attemptCount = it.attemptCount)
         }
 
-    /** 보내는 사이 다시 적재됐으면 지우지 않는다. 그 변경은 다음 전송에서 보낸다. */
+    /** 보내는 사이 다시 적재됐으면 보낸 것으로 표시하지 않는다. 그 변경은 다음 전송에서 보낸다. */
     @Transactional
-    fun markSent(outbox: LetsCareerJobProfileOutboxDto) {
-        outboxRepository.deleteSent(outbox.userId, outbox.requestedAt)
+    fun markSent(outbox: LetsCareerJobProfileOutboxDto, sentAt: LocalDateTime) {
+        outboxRepository.markSent(outbox.userId, outbox.requestedAt, sentAt)
     }
 
     @Transactional

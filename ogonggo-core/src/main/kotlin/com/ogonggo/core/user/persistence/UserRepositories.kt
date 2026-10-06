@@ -27,11 +27,23 @@ internal interface CompanyProfileJpaRepository : JpaRepository<CompanyProfile, L
 internal interface LetsCareerJobProfileOutboxJpaRepository : JpaRepository<LetsCareerJobProfileOutbox, Long> {
     fun findByUserId(userId: Long): LetsCareerJobProfileOutbox?
 
-    fun findTop100ByOrderByAttemptCountAscRequestedAtAsc(): List<LetsCareerJobProfileOutbox>
+    fun findTop100BySentAtIsNullOrderByAttemptCountAscRequestedAtAsc(): List<LetsCareerJobProfileOutbox>
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("delete from LetsCareerJobProfileOutbox o where o.userId = :userId and o.requestedAt = :requestedAt")
-    fun deleteSent(@Param("userId") userId: Long, @Param("requestedAt") requestedAt: LocalDateTime): Int
+    @Query(
+        """
+        update LetsCareerJobProfileOutbox o
+        set o.sentAt = :sentAt
+        where o.userId = :userId
+          and o.requestedAt = :requestedAt
+          and o.sentAt is null
+        """,
+    )
+    fun markSent(
+        @Param("userId") userId: Long,
+        @Param("requestedAt") requestedAt: LocalDateTime,
+        @Param("sentAt") sentAt: LocalDateTime,
+    ): Int
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update LetsCareerJobProfileOutbox o set o.attemptCount = o.attemptCount + 1 where o.userId = :userId")
