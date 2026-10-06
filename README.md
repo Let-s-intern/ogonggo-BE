@@ -93,6 +93,8 @@ Before deploying the admin job list `jobField`·`jobRole` filters, apply `docs/s
 
 Before the crawler sends 미래내일 일경험 jobs (`employmentType=WORK_EXPERIENCE`), apply `docs/schema/2026-10-03-job-employment-type-work-experience.sql`. The existing `employment_type` column is a MySQL enum without the new value.
 
+Before deploying the recruitment post position change (`MOBILE` removed, `MARKETING` added), apply `docs/schema/2026-10-06-recruitment-post-position-marketing.sql`. It moves stored `MOBILE` positions to `MARKETING`; a remaining `MOBILE` row fails to load with the new code.
+
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
 ## Work24 (고용24) Open API
