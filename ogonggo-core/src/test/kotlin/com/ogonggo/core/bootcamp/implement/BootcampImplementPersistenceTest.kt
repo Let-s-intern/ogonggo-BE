@@ -19,7 +19,6 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
-import com.ogonggo.core.bootcamp.persistence.BootcampApplicationUrlClickJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampMetricJpaRepository
@@ -54,7 +53,6 @@ import org.springframework.test.context.ContextConfiguration
     BootcampMetricAppender::class,
     BootcampBookmarkManager::class,
     BootcampBookmarkReader::class,
-    BootcampApplicationUrlClickAppender::class,
     ContentRejectionManager::class,
 )
 internal class BootcampImplementPersistenceTest @Autowired constructor(
@@ -66,9 +64,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     private val bootcampMetricManager: BootcampMetricManager,
     private val bootcampBookmarkManager: BootcampBookmarkManager,
     private val bootcampBookmarkReader: BootcampBookmarkReader,
-    private val bootcampApplicationUrlClickAppender: BootcampApplicationUrlClickAppender,
     private val bootcampBookmarkRepository: BootcampBookmarkJpaRepository,
-    private val bootcampApplicationUrlClickRepository: BootcampApplicationUrlClickJpaRepository,
     private val bootcampMetricRepository: BootcampMetricJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
@@ -368,27 +364,6 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         )
         // 공백만 있는 검색어는 검색하지 않은 것과 같다.
         assertEquals(3L, publicPage(condition = BootcampSearchCondition(keyword = " "), now = now).totalElements)
-    }
-
-    @Test
-    fun `지원 페이지 이동은 사용자와 부트캠프마다 한 행만 남긴다`() {
-        val bootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
-        val otherBootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
-
-        bootcampApplicationUrlClickAppender.append(USER_ID, bootcampId)
-        bootcampApplicationUrlClickAppender.append(USER_ID, bootcampId)
-        bootcampApplicationUrlClickAppender.append(OTHER_USER_ID, bootcampId)
-        bootcampApplicationUrlClickAppender.append(USER_ID, otherBootcampId)
-
-        assertEquals(3L, bootcampApplicationUrlClickRepository.count())
-        assertEquals(
-            true,
-            bootcampApplicationUrlClickRepository.existsByBootcampIdAndUserId(bootcampId, USER_ID),
-        )
-        assertEquals(
-            false,
-            bootcampApplicationUrlClickRepository.existsByBootcampIdAndUserId(otherBootcampId, OTHER_USER_ID),
-        )
     }
 
     /** 고용24에서 수집한 부트캠프다. 외부 식별값이 있어야 한다. */

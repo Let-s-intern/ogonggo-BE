@@ -91,7 +91,7 @@ DELETE /api/v1/job-bookmarks/{jobId}
 
 ```text
 POST /api/v1/jobs/{jobId}/source-url-clicks
-POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
+POST /api/v1/bootcamps/{bootcampId}/source-url-clicks
 ```
 
 외부 링크를 눌렀다는 사실을 남기는 기록이며 경로 이름은 기록하는 필드(`sourceUrl`, `applicationUrl`)를 따릅니다. 새 행이 생기지 않는 호출이 있어 201이 아니라 200과 `data: null`로 응답합니다.

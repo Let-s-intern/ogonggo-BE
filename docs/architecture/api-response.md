@@ -149,13 +149,13 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 `POST /api/v1/jobs/{jobId}/source-url-clicks`는 사용자가 공고 원문으로 이동하는 버튼을 눌렀다는 사실을 기록합니다. 이동할 주소는 상세 응답의 `sourceUrl`을 사용하며 이 API는 주소를 반환하지 않습니다.
 
-기록은 사용자와 공고마다 한 행만 남기고 `job_source_url_clicks`의 유니크 제약으로 보장합니다. 같은 사용자가 버튼을 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한 채 200으로 응답합니다. 버튼이 항상 동작해야 하므로 북마크와 달리 409를 사용하지 않으며, 새 행이 생기지 않는 호출이 있어 201 대신 200과 `data: null`로 응답합니다.
+기록은 사용자와 공고마다 한 행만 남기고 `source_url_clicks`의 `(target_type, target_id, user_id)` 유니크 제약으로 보장합니다. 채용공고와 부트캠프의 이동 기록은 이 테이블 하나에 종류(`target_type`)로 나눠 둡니다. 같은 사용자가 버튼을 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한 채 200으로 응답합니다. 버튼이 항상 동작해야 하므로 북마크와 달리 409를 사용하지 않으며, 새 행이 생기지 않는 호출이 있어 201 대신 200과 `data: null`로 응답합니다.
 
 북마크와 달리 취소할 수 있는 상태가 아니라 일어난 사실이므로 소프트 삭제 컬럼을 두지 않습니다.
 
 ### 부트캠프 지원 페이지 이동
 
-`POST /api/v1/bootcamps/{bootcampId}/application-url-clicks`도 같은 계약을 사용합니다. 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
+`POST /api/v1/bootcamps/{bootcampId}/source-url-clicks`도 같은 계약을 사용합니다. 2026-10-06에 경로를 채용공고와 맞추면서 예전 경로 `application-url-clicks`는 프런트 전환까지만 명세에 보이지 않게 받습니다. 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
 
 채용공고는 원문(`sourceUrl`) 이동을 기록하지만 부트캠프는 외부 지원 페이지(`applicationUrl`) 이동을 기록합니다. 부트캠프에서 세어야 하는 것이 지원 전환이기 때문입니다. `applicationMethod`가 `EMAIL`이라 `applicationUrl`이 없는 부트캠프는 클라이언트가 이동 버튼을 띄우지 않으므로, 서버는 링크 유무를 따로 검사하지 않습니다. 원문(`sourceUrl`) 이동을 함께 세야 하면 그때 링크 종류를 구분하는 컬럼을 추가할지 검토합니다.
 

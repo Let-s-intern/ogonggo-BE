@@ -122,7 +122,12 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recommended-challenges").permitAll()
                 // 지원 페이지 이동 기록은 부트캠프 하위의 유일한 쓰기 경로이므로 메서드와 경로를 좁혀 허용한다.
                 // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
-                it.requestMatchers(HttpMethod.POST, "/api/v1/bootcamps/*/application-url-clicks").authenticated()
+                // application-url-clicks는 프런트가 새 경로로 옮기는 동안 남겨 둔 예전 경로다. 서버 2차 배포에서 제거한다.
+                it.requestMatchers(
+                    HttpMethod.POST,
+                    "/api/v1/bootcamps/*/source-url-clicks",
+                    "/api/v1/bootcamps/*/application-url-clicks",
+                ).authenticated()
                 it.requestMatchers("/api/v1/bootcamp-bookmarks", "/api/v1/bootcamp-bookmarks/**").authenticated()
                 it.requestMatchers(
                     "/api/v1/recruitment-post-bookmarks",

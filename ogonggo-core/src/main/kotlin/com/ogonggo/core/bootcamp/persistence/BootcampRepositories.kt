@@ -2,7 +2,6 @@ package com.ogonggo.core.bootcamp.persistence
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
-import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampImage
@@ -283,11 +282,6 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         @Param("userId") userId: Long,
         @Param("bootcampIds") bootcampIds: Collection<Long>,
     ): Set<Long>
-}
-
-internal interface BootcampApplicationUrlClickJpaRepository :
-    JpaRepository<BootcampApplicationUrlClick, Long> {
-    fun existsByBootcampIdAndUserId(bootcampId: Long, userId: Long): Boolean
 }
 
 internal interface BootcampPartnerJpaRepository : JpaRepository<BootcampPartner, Long> {

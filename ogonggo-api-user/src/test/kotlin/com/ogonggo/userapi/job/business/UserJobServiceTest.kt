@@ -1,10 +1,10 @@
 package com.ogonggo.userapi.job.business
 
+import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
-import com.ogonggo.core.job.domain.Job
-import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
@@ -13,10 +13,11 @@ import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
+import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDate
@@ -31,14 +32,14 @@ class UserJobServiceTest {
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val jobBookmarkReader = Mockito.mock(JobBookmarkReader::class.java)
     private val jobMetricReader = Mockito.mock(JobMetricReader::class.java)
-    private val jobSourceUrlClickAppender = Mockito.mock(JobSourceUrlClickAppender::class.java)
+    private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val service = UserJobService(
         jobReader,
         jobBookmarkReader,
         jobMetricReader,
-        jobSourceUrlClickAppender,
+        sourceUrlClickAppender,
         userProfileReader,
         eventPublisher,
     )
@@ -274,9 +275,9 @@ class UserJobServiceTest {
 
         service.recordSourceUrlClick(USER_ID, 1L)
 
-        val inOrder = Mockito.inOrder(jobReader, jobSourceUrlClickAppender)
+        val inOrder = Mockito.inOrder(jobReader, sourceUrlClickAppender)
         inOrder.verify(jobReader).readPublished(1L)
-        inOrder.verify(jobSourceUrlClickAppender).append(USER_ID, 1L)
+        inOrder.verify(sourceUrlClickAppender).append(SourceUrlClickTargetType.JOB, 1L, USER_ID)
     }
 
     @Test

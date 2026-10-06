@@ -1,16 +1,17 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
+import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import com.ogonggo.core.user.implement.UserProfileReader
 import java.time.LocalDate
 import org.springframework.context.ApplicationEventPublisher
@@ -21,7 +22,7 @@ class UserJobService(
     private val jobReader: JobReader,
     private val jobBookmarkReader: JobBookmarkReader,
     private val jobMetricReader: JobMetricReader,
-    private val jobSourceUrlClickAppender: JobSourceUrlClickAppender,
+    private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val userProfileReader: UserProfileReader,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
@@ -126,7 +127,7 @@ class UserJobService(
      */
     fun recordSourceUrlClick(userId: Long, jobId: Long) {
         jobReader.readPublished(jobId)
-        jobSourceUrlClickAppender.append(userId, jobId)
+        sourceUrlClickAppender.append(SourceUrlClickTargetType.JOB, jobId, userId)
     }
 
     /** 오늘의·인기·비슷한 공고도 목록과 같은 항목으로 보여 주므로 북마크 여부와 지표를 목록과 같은 방식으로 채운다. */

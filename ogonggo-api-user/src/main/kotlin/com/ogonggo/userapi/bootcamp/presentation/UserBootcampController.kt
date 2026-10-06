@@ -58,12 +58,12 @@ class UserBootcampController(
         )
     }
 
-    @PostMapping("/{bootcampId}/application-url-clicks")
-    override fun recordApplicationUrlClick(
+    @PostMapping("/{bootcampId}/source-url-clicks")
+    override fun recordSourceUrlClick(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("bootcampId") bootcampId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        userBootcampService.recordApplicationUrlClick(userId, bootcampId)
+        userBootcampService.recordSourceUrlClick(userId, bootcampId)
         return SuccessResponse.ok()
     }
 

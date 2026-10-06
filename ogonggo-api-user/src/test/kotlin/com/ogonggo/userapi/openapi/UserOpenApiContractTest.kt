@@ -321,7 +321,8 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(sourceUrlClick.at("/security/0/BearerAuth").isArray)
 
         val applicationUrlClick =
-            document.at("/paths/~1api~1v1~1bootcamps~1{bootcampId}~1application-url-clicks/post")
+            document.at("/paths/~1api~1v1~1bootcamps~1{bootcampId}~1source-url-clicks/post")
+        assertTrue(document.at("/paths/~1api~1v1~1bootcamps~1{bootcampId}~1application-url-clicks").isMissingNode)
         assertTrue(applicationUrlClick.at("/security/0/BearerAuth").isArray)
         assertTrue(applicationUrlClick.at("/responses/200/content/application~1json/schema").isObject)
         assertTrue(

@@ -120,8 +120,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `GET /api/v1/jobs/calendar` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false`. `bookmarkedOnly=true`는 토큰이 없으면 401 |
 | `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `GET /api/v1/recommended-challenges` | 선택 | 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘기고, 없거나 기업 회원이면 넘기지 않는다 |
-| `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
-| `POST /api/v1/bootcamps/{bootcampId}/application-url-clicks` | 필수 | `bootcamp_application_url_clicks.user_id`가 NOT NULL이다 |
+| `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
+| `POST /api/v1/bootcamps/{bootcampId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
 | `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |

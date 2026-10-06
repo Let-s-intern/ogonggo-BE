@@ -32,6 +32,7 @@ import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampService
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
+import com.ogonggo.userapi.bootcamp.presentation.BootcampLegacyPathController
 import com.ogonggo.userapi.bootcamp.presentation.UserBootcampController
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
@@ -58,7 +59,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-@WebMvcTest(controllers = [UserJobController::class, UserBootcampController::class])
+@WebMvcTest(controllers = [UserJobController::class, UserBootcampController::class, BootcampLegacyPathController::class])
 @Import(UserSecurityConfiguration::class, UserApiExceptionHandler::class)
 class UserReadControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
@@ -305,23 +306,31 @@ class UserReadControllerTest @Autowired constructor(
     fun `부트캠프 지원 페이지 이동을 기록하고 반복 호출도 성공으로 응답한다`() {
         repeat(2) {
             mockMvc.perform(
-                post("/api/v1/bootcamps/{bootcampId}/application-url-clicks", 1L).with(authenticatedUser()),
+                post("/api/v1/bootcamps/{bootcampId}/source-url-clicks", 1L).with(authenticatedUser()),
             )
                 .andExpect(status().isOk)
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data").isEmpty)
         }
 
-        Mockito.verify(userBootcampService, Mockito.times(2)).recordApplicationUrlClick(USER_ID, 1L)
+        Mockito.verify(userBootcampService, Mockito.times(2)).recordSourceUrlClick(USER_ID, 1L)
+    }
+
+    @Test
+    fun `프런트 전환 전까지 예전 지원 페이지 이동 경로도 같게 기록한다`() {
+        mockMvc.perform(post("/api/v1/bootcamps/{bootcampId}/application-url-clicks", 1L).with(authenticatedUser()))
+            .andExpect(status().isOk)
+
+        Mockito.verify(userBootcampService).recordSourceUrlClick(USER_ID, 1L)
     }
 
     @Test
     fun `게시되지 않은 부트캠프의 지원 페이지 이동은 404로 응답한다`() {
         Mockito.doThrow(EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND))
-            .`when`(userBootcampService).recordApplicationUrlClick(USER_ID, 99L)
+            .`when`(userBootcampService).recordSourceUrlClick(USER_ID, 99L)
 
         mockMvc.perform(
-            post("/api/v1/bootcamps/{bootcampId}/application-url-clicks", 99L).with(authenticatedUser()),
+            post("/api/v1/bootcamps/{bootcampId}/source-url-clicks", 99L).with(authenticatedUser()),
         )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("BOOTCAMP_NOT_FOUND"))
@@ -329,7 +338,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `인증 없이 부트캠프 지원 페이지 이동을 기록할 수 없다`() {
-        mockMvc.perform(post("/api/v1/bootcamps/1/application-url-clicks"))
+        mockMvc.perform(post("/api/v1/bootcamps/1/source-url-clicks"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 

@@ -26,7 +26,6 @@ import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
-import com.ogonggo.core.job.persistence.JobSourceUrlClickJpaRepository
 import com.ogonggo.core.job.persistence.JobTagJpaRepository
 import com.ogonggo.core.job.persistence.TagJpaRepository
 import com.ogonggo.core.region.domain.Region
@@ -62,7 +61,6 @@ import java.time.LocalDateTime
     JobMetricAppender::class,
     JobTagAppender::class,
     TagAppender::class,
-    JobSourceUrlClickAppender::class,
     ContentRejectionManager::class,
 )
 internal class JobImplementPersistenceTest @Autowired constructor(
@@ -74,8 +72,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     private val jobMetricReader: JobMetricReader,
     private val jobMetricManager: JobMetricManager,
     private val jobTagAppender: JobTagAppender,
-    private val jobSourceUrlClickAppender: JobSourceUrlClickAppender,
-    private val jobSourceUrlClickRepository: JobSourceUrlClickJpaRepository,
     private val tagRepository: TagJpaRepository,
     private val jobTagRepository: JobTagJpaRepository,
     private val jobBookmarkRepository: JobBookmarkJpaRepository,
@@ -750,21 +746,6 @@ internal class JobImplementPersistenceTest @Autowired constructor(
                 limit = 4,
             )
         }
-    }
-
-    @Test
-    fun `원문 이동 기록은 사용자와 공고마다 한 행만 남는다`() {
-        val jobId = checkNotNull(jobAppender.append(createCommand()).id)
-        val otherJobId = checkNotNull(jobAppender.append(createCommand()).id)
-
-        jobSourceUrlClickAppender.append(USER_ID, jobId)
-        jobSourceUrlClickAppender.append(USER_ID, jobId)
-        jobSourceUrlClickAppender.append(OTHER_USER_ID, jobId)
-        jobSourceUrlClickAppender.append(USER_ID, otherJobId)
-
-        assertEquals(3L, jobSourceUrlClickRepository.count())
-        assertEquals(true, jobSourceUrlClickRepository.existsByJobIdAndUserId(jobId, USER_ID))
-        assertEquals(false, jobSourceUrlClickRepository.existsByJobIdAndUserId(otherJobId, OTHER_USER_ID))
     }
 
     @Test

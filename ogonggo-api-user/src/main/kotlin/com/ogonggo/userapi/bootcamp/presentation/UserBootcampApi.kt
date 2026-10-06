@@ -64,7 +64,7 @@ interface UserBootcampApi {
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(
-        operationId = "createBootcampApplicationUrlClick",
+        operationId = "createBootcampSourceUrlClick",
         summary = "부트캠프 지원 페이지 이동 기록",
         description = """
             사용자가 부트캠프의 외부 지원 페이지로 이동하는 버튼을 눌렀다는 사실을 기록합니다.
@@ -90,7 +90,7 @@ interface UserBootcampApi {
             ),
         ],
     )
-    fun recordApplicationUrlClick(
+    fun recordSourceUrlClick(
         @Parameter(hidden = true)
         userId: Long,
         @Positive
