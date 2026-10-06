@@ -2,11 +2,11 @@ package com.ogonggo.core.bootcamp.implement
 
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.persistence.BootcampMetricJpaRepository
-import org.springframework.dao.DataIntegrityViolationException
+import com.ogonggo.core.jpa.ensureRowCreated
+import java.time.LocalDateTime
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
 
 /**
  * 지표 행 생성만 호출자와 분리된 트랜잭션에서 처리한다.
@@ -46,20 +46,8 @@ class BootcampMetricManager internal constructor(
         bootcampMetricRepository.syncBookmarkCount(bootcampId, now)
     }
 
-    /**
-     * 갱신보다 먼저 행을 준비한다.
-     * 없는 행을 UPDATE로 먼저 찾으면 MySQL이 그 자리에 gap lock을 걸어,
-     * 같은 스레드가 여는 생성 전용 트랜잭션의 INSERT가 잠금 대기 시간 초과로 실패한다.
-     * 다른 요청이 먼저 만들었으면 생성 전용 트랜잭션만 롤백되므로 그대로 이어서 갱신한다.
-     */
-    private fun ensureMetric(bootcampId: Long) {
-        if (bootcampMetricRepository.findByBootcampId(bootcampId) != null) {
-            return
-        }
-        try {
-            bootcampMetricAppender.create(bootcampId)
-        } catch (exception: DataIntegrityViolationException) {
-            return
-        }
-    }
+    private fun ensureMetric(bootcampId: Long) = ensureRowCreated(
+        exists = { bootcampMetricRepository.findByBootcampId(bootcampId) != null },
+        create = { bootcampMetricAppender.create(bootcampId) },
+    )
 }

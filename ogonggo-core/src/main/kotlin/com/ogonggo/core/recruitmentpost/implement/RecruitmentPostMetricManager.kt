@@ -1,14 +1,14 @@
 package com.ogonggo.core.recruitmentpost.implement
 
+import com.ogonggo.core.jpa.ensureRowCreated
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostMetric
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostMetricJpaRepository
+import java.time.LocalDateTime
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
 
 @Component
 internal class RecruitmentPostMetricAppender(
@@ -69,20 +69,14 @@ class RecruitmentPostMetricManager internal constructor(
     }
 
     private fun updateOrCreate(postId: Long, update: () -> Int) {
-        // update로 없는 행을 먼저 잠그면 REQUIRES_NEW insert가 gap lock에 막힐 수 있다.
         ensureMetricExists(postId)
         check(update() > 0) { "모집글 지표 행을 갱신하지 못했습니다. postId=$postId" }
     }
 
-    private fun ensureMetricExists(postId: Long) {
-        if (recruitmentPostMetricRepository.findByPostId(postId) != null) return
-
-        try {
-            recruitmentPostMetricAppender.create(postId)
-        } catch (_: DataIntegrityViolationException) {
-            // 다른 요청이 만든 지표 행을 그대로 사용한다.
-        }
-    }
+    private fun ensureMetricExists(postId: Long) = ensureRowCreated(
+        exists = { recruitmentPostMetricRepository.findByPostId(postId) != null },
+        create = { recruitmentPostMetricAppender.create(postId) },
+    )
 
     private companion object {
         val log: Logger = LoggerFactory.getLogger(RecruitmentPostMetricManager::class.java)
