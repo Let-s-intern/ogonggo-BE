@@ -265,17 +265,18 @@ DELETE /api/v1/internal/bootcamps/{bootcampId}
 ### 공지사항
 
 ```text
-GET    /api/v1/notices                        사용자 API, 로그인 없이 조회
-GET    /api/v1/notices/{noticeId}
+GET    /api/v1/announcements                          사용자 API, 로그인 없이 조회
+GET    /api/v1/announcements/{announcementId}
 
-GET    /api/v1/admin/notices                  관리자 콘솔
-POST   /api/v1/admin/notices
-GET    /api/v1/admin/notices/{noticeId}
-PATCH  /api/v1/admin/notices/{noticeId}
-DELETE /api/v1/admin/notices/{noticeId}
+GET    /api/v1/admin/announcements                    관리자 콘솔
+POST   /api/v1/admin/announcements
+GET    /api/v1/admin/announcements/{announcementId}
+PATCH  /api/v1/admin/announcements/{announcementId}
+DELETE /api/v1/admin/announcements/{announcementId}
 ```
 
 - 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요
+- 2026-10-06에 경로와 코드·테이블 이름을 `notices`에서 `announcements`로 바꿨습니다(리뷰 상태: 팀 리뷰 필요). 앞으로 생길 알림(notification)과 이름이 헷갈리지 않게 하려는 것입니다. 에러 코드도 `ANNOUNCEMENT_NOT_FOUND`로 바뀌었습니다. 기존 테이블은 `docs/schema/2026-10-06-announcement-rename.sql`로 옮깁니다.
 - 공지는 관리자만 작성하므로 쓰기 경로는 관리자 API에만 둡니다. 사용자 API에는 GET만 열고 나머지 메서드는 거부합니다.
 - 노출·상단 고정도 콘솔의 다른 콘텐츠처럼 `PATCH`로 내용과 함께 부분 수정합니다. 1절의 관리자 콘솔 예외와 같은 이유입니다.
 - 응답 계약은 [API 성공 응답의 공지사항](api-response.md#공지사항)을 따릅니다.

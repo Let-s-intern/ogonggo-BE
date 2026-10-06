@@ -279,12 +279,12 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(similarJobs.at("/responses/200/content/application~1json/schema").isObject)
 
         // 공지는 토큰으로 달라지는 값이 없어 인증 요구를 노출하지 않는다.
-        val noticeList = document.at("/paths/~1api~1v1~1notices/get")
-        assertTrue(noticeList.isObject)
-        assertTrue(noticeList.at("/security").isMissingNode)
-        assertTrue(document.at("/paths/~1api~1v1~1notices~1{noticeId}/get/security").isMissingNode)
-        assertPageParameter(noticeList, "page", defaultValue = "1", minimum = 1, maximum = null)
-        assertPageParameter(noticeList, "size", defaultValue = "10", minimum = 1, maximum = 100)
+        val announcementList = document.at("/paths/~1api~1v1~1announcements/get")
+        assertTrue(announcementList.isObject)
+        assertTrue(announcementList.at("/security").isMissingNode)
+        assertTrue(document.at("/paths/~1api~1v1~1announcements~1{announcementId}/get/security").isMissingNode)
+        assertPageParameter(announcementList, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(announcementList, "size", defaultValue = "10", minimum = 1, maximum = 100)
 
         // enum 선택지는 누구에게나 같은 고정 값이라 인증 요구를 노출하지 않는다.
         val enums = document.at("/paths/~1api~1v1~1enums/get")

@@ -119,7 +119,7 @@ class UserSecurityConfiguration {
                 // enum 선택지는 사용자와 무관한 고정 값이라 로그인 없이 연다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/enums").permitAll()
                 // 공지는 관리자 API에서만 작성하고 사용자는 로그인 없이 읽기만 한다.
-                it.requestMatchers(HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/*").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/api/v1/announcements", "/api/v1/announcements/*").permitAll()
                 // 추천 챌린지는 채용공고 조회처럼 로그인 없이 연다. 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘긴다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recommended-challenges").permitAll()
                 // 지원 페이지 이동 기록은 부트캠프 하위의 유일한 쓰기 경로이므로 메서드와 경로를 좁혀 허용한다.

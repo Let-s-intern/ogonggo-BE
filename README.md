@@ -21,7 +21,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 ogonggo-api-user  ---> ogonggo-core <--- ogonggo-api-admin
 ```
 
-- `ogonggo-core`: user, job, bootcamp, study and notice domain boundaries; JPA persistence
+- `ogonggo-core`: user, job, bootcamp, study and announcement domain boundaries; JPA persistence
 - `ogonggo-api-user`: public API and LetsCareer login integration
 - `ogonggo-api-admin`: administrator API boundary
 
@@ -94,6 +94,8 @@ Before deploying the admin job list `jobField`·`jobRole` filters, apply `docs/s
 Before the crawler sends 미래내일 일경험 jobs (`employmentType=WORK_EXPERIENCE`), apply `docs/schema/2026-10-03-job-employment-type-work-experience.sql`. The existing `employment_type` column is a MySQL enum without the new value.
 
 Before the first server deploy of the recruitment post position change (`MARKETING` added), apply `docs/schema/2026-10-06-recruitment-post-position-marketing.sql`. It only widens the column, so the running server is unaffected. After the frontend switches to `MARKETING`, follow `docs/schema/2026-10-06-recruitment-post-position-mobile-cleanup.sql` around the second server deploy that removes `MOBILE`: run steps 1–2, deploy, then run steps 3–4 right away.
+
+Before deploying the announcement rename (`/api/v1/notices` → `/api/v1/announcements`), apply steps 1–3 of `docs/schema/2026-10-06-announcement-rename.sql`. They rename the `notices` table to `announcements` and leave a `notices` view so the running servers keep working; drop the view (step 4) after both APIs are deployed.
 
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
