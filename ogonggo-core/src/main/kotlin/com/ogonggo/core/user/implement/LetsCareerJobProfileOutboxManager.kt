@@ -4,7 +4,6 @@ import com.ogonggo.core.user.domain.LetsCareerJobProfileOutbox
 import com.ogonggo.core.user.implement.dto.LetsCareerJobProfileOutboxDto
 import com.ogonggo.core.user.persistence.LetsCareerJobProfileOutboxJpaRepository
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @Component
@@ -32,12 +31,10 @@ class LetsCareerJobProfileOutboxManager internal constructor(
         }
 
     /** 보내는 사이 다시 적재됐으면 보낸 것으로 표시하지 않는다. 그 변경은 다음 전송에서 보낸다. */
-    @Transactional
     fun markSent(outbox: LetsCareerJobProfileOutboxDto, sentAt: LocalDateTime) {
         outboxRepository.markSent(outbox.userId, outbox.requestedAt, sentAt)
     }
 
-    @Transactional
     fun markFailed(outbox: LetsCareerJobProfileOutboxDto) {
         outboxRepository.increaseAttemptCount(outbox.userId)
     }

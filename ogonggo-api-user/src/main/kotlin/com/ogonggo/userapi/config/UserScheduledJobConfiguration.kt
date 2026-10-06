@@ -5,7 +5,7 @@ import com.ogonggo.userapi.bootcamp.presentation.BootcampAutoCloseScheduler
 import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.job.presentation.JobAutoCloseScheduler
 import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
-import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler
+import com.ogonggo.userapi.user.presentation.LetsCareerJobProfileSyncScheduler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 

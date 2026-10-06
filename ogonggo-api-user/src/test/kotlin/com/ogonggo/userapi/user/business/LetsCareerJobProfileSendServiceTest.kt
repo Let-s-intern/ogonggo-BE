@@ -1,4 +1,4 @@
-package com.ogonggo.userapi.user.implement
+package com.ogonggo.userapi.user.business
 
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -8,28 +8,30 @@ import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.dto.LetsCareerJobProfileOutboxDto
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
-import com.ogonggo.userapi.scheduling.SchedulerExecutionObserver
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import com.ogonggo.userapi.user.implement.LetsCareerJobProfileReplaceCommand
+import com.ogonggo.userapi.user.implement.LetsCareerUserClient
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.client.ResourceAccessException
 
-class LetsCareerJobProfileSyncSchedulerTest {
+class LetsCareerJobProfileSendServiceTest {
 
     private val outboxManager = Mockito.mock(LetsCareerJobProfileOutboxManager::class.java)
     private val userReader = Mockito.mock(UserReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val letsCareerUserClient = Mockito.mock(LetsCareerUserClient::class.java)
-    private val scheduler = LetsCareerJobProfileSyncScheduler(
+    private val service = LetsCareerJobProfileSendService(
         outboxManager,
         userReader,
         userProfileReader,
         letsCareerUserClient,
-        SchedulerExecutionObserver(SimpleMeterRegistry()),
+        TransactionTemplate(Mockito.mock(PlatformTransactionManager::class.java)),
         CLOCK,
     )
 
@@ -40,7 +42,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
         givenProfile(jobInfoUpdatedAt = UPDATED_AT)
 
         // when
-        scheduler.sendPending()
+        service.sendPending()
 
         // then
         Mockito.verify(letsCareerUserClient).replaceJobProfile(LETSCAREER_USER_ID, EXPECTED_COMMAND)
@@ -56,7 +58,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
             .`when`(letsCareerUserClient).replaceJobProfile(LETSCAREER_USER_ID, EXPECTED_COMMAND)
 
         // when
-        scheduler.sendPending()
+        service.sendPending()
 
         // then
         Mockito.verify(outboxManager).markFailed(OUTBOX)
@@ -70,7 +72,7 @@ class LetsCareerJobProfileSyncSchedulerTest {
         givenProfile(jobInfoUpdatedAt = null)
 
         // when
-        scheduler.sendPending()
+        service.sendPending()
 
         // then
         Mockito.verifyNoInteractions(letsCareerUserClient)
