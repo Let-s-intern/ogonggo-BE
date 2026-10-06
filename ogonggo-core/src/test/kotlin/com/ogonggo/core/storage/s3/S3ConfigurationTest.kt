@@ -6,9 +6,9 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 
-class S3ImageStorageConfigurationTest {
+class S3ConfigurationTest {
 
-    private val contextRunner = ApplicationContextRunner().withUserConfiguration(S3ImageStorageConfiguration::class.java)
+    private val contextRunner = ApplicationContextRunner().withUserConfiguration(S3Configuration::class.java)
 
     @Test
     fun `운영 설정의 cloud aws 항목으로 버킷과 리전과 공개 주소를 읽는다`() {
@@ -22,12 +22,12 @@ class S3ImageStorageConfigurationTest {
             )
             .run { context ->
                 assertEquals(
-                    S3ImageStorageProperties(
+                    S3Properties(
                         bucket = "ogonggo-images",
                         region = "us-east-1",
                         publicBaseUrl = "https://cdn.ogonggo.test",
                     ),
-                    context.getBean(S3ImageStorageProperties::class.java),
+                    context.getBean(S3Properties::class.java),
                 )
                 assertEquals(Region.US_EAST_1, context.getBean(S3Client::class.java).serviceClientConfiguration().region())
             }
@@ -39,8 +39,8 @@ class S3ImageStorageConfigurationTest {
             .withPropertyValues("ogonggo.storage.s3.bucket=legacy-bucket")
             .run { context ->
                 assertEquals(
-                    S3ImageStorageProperties(bucket = "legacy-bucket", region = "ap-northeast-2"),
-                    context.getBean(S3ImageStorageProperties::class.java),
+                    S3Properties(bucket = "legacy-bucket", region = "ap-northeast-2"),
+                    context.getBean(S3Properties::class.java),
                 )
             }
     }
@@ -48,7 +48,7 @@ class S3ImageStorageConfigurationTest {
     @Test
     fun `설정이 없어도 기동하고 버킷은 비어 있다`() {
         contextRunner.run { context ->
-            assertEquals("", context.getBean(S3ImageStorageProperties::class.java).bucket)
+            assertEquals("", context.getBean(S3Properties::class.java).bucket)
         }
     }
 }

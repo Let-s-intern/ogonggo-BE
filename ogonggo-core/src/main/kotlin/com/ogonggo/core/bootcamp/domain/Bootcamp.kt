@@ -1,7 +1,7 @@
 package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.review.domain.ContentSource
 import com.ogonggo.core.review.domain.ReviewStatus

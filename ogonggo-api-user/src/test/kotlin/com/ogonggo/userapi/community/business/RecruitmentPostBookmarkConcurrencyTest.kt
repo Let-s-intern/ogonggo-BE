@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.community.business
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.RecruitmentPosition

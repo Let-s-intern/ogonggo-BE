@@ -1,6 +1,6 @@
 package com.ogonggo.core.community.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.community.persistence.PostMetricJpaRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

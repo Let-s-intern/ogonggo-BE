@@ -1,6 +1,6 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType

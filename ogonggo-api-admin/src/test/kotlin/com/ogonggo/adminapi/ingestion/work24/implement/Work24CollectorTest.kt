@@ -19,8 +19,7 @@ import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.storage.s3.S3ImageStorage
-import com.ogonggo.core.storage.s3.S3ImageStorageProperties
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -528,8 +527,9 @@ class Work24CollectorTest {
             Work24InstitutionImageImporter(
                 restClientBuilder.build(),
                 // S3 대신 저장 키로 공개 주소를 만들어 돌려준다.
-                Mockito.mock(S3ImageStorage::class.java) { invocation -> "$CDN/${invocation.getArgument<String>(0)}" },
-                S3ImageStorageProperties(bucket = "ogonggo"),
+                Mockito.mock(S3ObjectClient::class.java) { invocation ->
+                    if (invocation.method.name == "isConfigured") true else "$CDN/${invocation.getArgument<String>(0)}"
+                },
             ),
         )
     }

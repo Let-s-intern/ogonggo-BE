@@ -8,7 +8,7 @@ import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentStatus
 import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test

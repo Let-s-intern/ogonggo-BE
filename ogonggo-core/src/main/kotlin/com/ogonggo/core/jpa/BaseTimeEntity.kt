@@ -1,4 +1,4 @@
-package com.ogonggo.core.common
+package com.ogonggo.core.jpa
 
 import jakarta.persistence.Column
 import jakarta.persistence.EntityListeners

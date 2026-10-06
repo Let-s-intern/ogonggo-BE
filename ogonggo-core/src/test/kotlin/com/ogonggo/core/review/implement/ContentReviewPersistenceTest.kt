@@ -9,7 +9,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.ExperienceType

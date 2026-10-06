@@ -1,6 +1,6 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.error.JobErrorCode
 import com.querydsl.core.annotations.PropertyType

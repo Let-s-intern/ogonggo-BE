@@ -14,7 +14,7 @@ import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.review.domain.ContentSource

@@ -1,6 +1,7 @@
 package com.ogonggo.core.storage.s3
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -10,7 +11,7 @@ import software.amazon.awssdk.services.s3.model.CopyObjectResponse
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse
 
-class S3ImageStorageTest {
+class S3ObjectClientTest {
 
     @Test
     fun `S3에 저장한 이미지의 표시용 URL을 public base URL로 만든다`() {
@@ -26,9 +27,9 @@ class S3ImageStorageTest {
                 }
             },
         )
-        val storage = S3ImageStorage(
+        val storage = S3ObjectClient(
             s3Client = s3Client,
-            properties = S3ImageStorageProperties(
+            properties = S3Properties(
                 bucket = "ogonggo-images",
                 region = "ap-northeast-2",
                 publicBaseUrl = "https://cdn.example.com",
@@ -48,11 +49,12 @@ class S3ImageStorageTest {
     @Test
     fun `S3 bucket이 설정되지 않으면 저장하지 않는다`() {
         val s3Client = Mockito.mock(S3Client::class.java)
-        val storage = S3ImageStorage(
+        val storage = S3ObjectClient(
             s3Client = s3Client,
-            properties = S3ImageStorageProperties(),
+            properties = S3Properties(),
         )
 
+        assertFalse(storage.isConfigured())
         org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException::class.java) {
             storage.put("images/image-id.png", byteArrayOf(1), "image/png")
         }
@@ -73,9 +75,9 @@ class S3ImageStorageTest {
                 }
             },
         )
-        val storage = S3ImageStorage(
+        val storage = S3ObjectClient(
             s3Client = s3Client,
-            properties = S3ImageStorageProperties(bucket = "ogonggo-images"),
+            properties = S3Properties(bucket = "ogonggo-images"),
         )
 
         storage.delete("images/image-id.png")
@@ -97,9 +99,9 @@ class S3ImageStorageTest {
                 }
             },
         )
-        val storage = S3ImageStorage(
+        val storage = S3ObjectClient(
             s3Client = s3Client,
-            properties = S3ImageStorageProperties(bucket = "ogonggo-images"),
+            properties = S3Properties(bucket = "ogonggo-images"),
         )
 
         storage.copy("images/source.png", "images/target.png", "image/png")

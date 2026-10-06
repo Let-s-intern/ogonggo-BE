@@ -25,7 +25,7 @@ import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampMetricJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.review.domain.ContentSource

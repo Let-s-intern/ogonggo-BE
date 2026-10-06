@@ -1,4 +1,4 @@
-package com.ogonggo.core.common
+package com.ogonggo.core.jpa
 
 import com.ogonggo.core.time.TimeConfiguration
 import com.querydsl.jpa.impl.JPAQueryFactory

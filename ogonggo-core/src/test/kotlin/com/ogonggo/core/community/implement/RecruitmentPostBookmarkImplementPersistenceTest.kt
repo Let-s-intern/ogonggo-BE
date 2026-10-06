@@ -1,7 +1,7 @@
 package com.ogonggo.core.community.implement
 
 import com.ogonggo.core.community.implement.dto.RecruitmentPostAppendDto
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.community.domain.ContactMethod
 import com.ogonggo.core.community.domain.ProgressMethod
 import com.ogonggo.core.community.domain.PublicationStatus

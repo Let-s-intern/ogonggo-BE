@@ -1,6 +1,6 @@
 package com.ogonggo.core.notice.domain
 
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.editor.lexical.LexicalEditorStateJson
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

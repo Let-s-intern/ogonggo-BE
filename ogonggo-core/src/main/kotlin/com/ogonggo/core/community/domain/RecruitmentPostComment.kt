@@ -1,6 +1,6 @@
 package com.ogonggo.core.community.domain
 
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue

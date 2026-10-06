@@ -1,8 +1,7 @@
 package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24InstitutionImagesDto
-import com.ogonggo.core.storage.s3.S3ImageStorage
-import com.ogonggo.core.storage.s3.S3ImageStorageProperties
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -30,8 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class Work24InstitutionImageImporter(
     @Qualifier(WORK24_REST_CLIENT)
     private val work24RestClient: RestClient,
-    private val s3ImageStorage: S3ImageStorage,
-    private val s3ImageStorageProperties: S3ImageStorageProperties,
+    private val s3ObjectClient: S3ObjectClient,
 ) {
 
     private val imported = ConcurrentHashMap<String, Work24InstitutionImagesDto>()
@@ -39,7 +37,7 @@ class Work24InstitutionImageImporter(
 
     /** [institutionId]는 목록의 훈련기관 ID(`trainstCstId`), [institutionUrl]은 훈련기관 소개 화면 주소(`subTitleLink`)다. */
     fun import(institutionId: String?, institutionUrl: String?): Work24InstitutionImagesDto? {
-        if (s3ImageStorageProperties.bucket.isBlank()) {
+        if (!s3ObjectClient.isConfigured()) {
             if (storageMissingLogged.compareAndSet(false, true)) {
                 log.warn("이미지 저장소(cloud.aws.s3.bucket)가 설정되지 않아 고용24 훈련기관 로고와 사진을 넣지 않습니다.")
             }
@@ -79,7 +77,7 @@ class Work24InstitutionImageImporter(
         return attempt("이미지", imageUri.toString()) {
             val content = work24RestClient.get().uri(imageUri).retrieve().body(ByteArray::class.java)
             val image = content?.takeIf { it.size <= MAX_DOWNLOAD_BYTES }?.let(Work24ImageShrinker::shrink)
-            image?.let { s3ImageStorage.put("$KEY_PREFIX${sha256(imageUri.toString())}.${it.extension}", it.content, it.mimeType) }
+            image?.let { s3ObjectClient.put("$KEY_PREFIX${sha256(imageUri.toString())}.${it.extension}", it.content, it.mimeType) }
         }
     }
 

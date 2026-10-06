@@ -13,7 +13,7 @@ import com.ogonggo.core.community.domain.RecruitmentType
 import com.ogonggo.core.community.persistence.RecruitmentPostApplicationQueryRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostQueryRepository
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.junit.jupiter.api.Assertions.assertEquals

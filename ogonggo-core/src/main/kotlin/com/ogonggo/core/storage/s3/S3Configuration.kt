@@ -9,22 +9,22 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(CloudAwsProperties::class, LegacyS3ImageStorageProperties::class)
-class S3ImageStorageConfiguration {
+@EnableConfigurationProperties(CloudAwsProperties::class, LegacyS3Properties::class)
+class S3Configuration {
 
     /** `cloud.aws` 값을 쓰고, 비어 있는 값만 이전 이름(`ogonggo.storage.s3`)에서 채운다. */
     @Bean
-    fun s3ImageStorageProperties(
+    fun s3Properties(
         aws: CloudAwsProperties,
-        legacy: LegacyS3ImageStorageProperties,
-    ): S3ImageStorageProperties = S3ImageStorageProperties(
+        legacy: LegacyS3Properties,
+    ): S3Properties = S3Properties(
         bucket = aws.s3.bucket.ifBlank { legacy.bucket },
         region = aws.region.static.ifBlank { legacy.region }.ifBlank { DEFAULT_REGION },
         publicBaseUrl = aws.s3.publicBaseUrl.ifBlank { legacy.publicBaseUrl },
     )
 
     @Bean
-    fun s3Client(aws: CloudAwsProperties, properties: S3ImageStorageProperties): S3Client =
+    fun s3Client(aws: CloudAwsProperties, properties: S3Properties): S3Client =
         S3Client.builder()
             .region(Region.of(properties.region))
             .apply {

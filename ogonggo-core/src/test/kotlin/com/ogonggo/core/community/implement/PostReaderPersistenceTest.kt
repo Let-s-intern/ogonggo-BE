@@ -8,7 +8,7 @@ import com.ogonggo.core.community.domain.PublicationStatus
 import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.community.domain.RecruitmentPostSortType
 import com.ogonggo.core.community.domain.RecruitmentType
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.community.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.community.persistence.RecruitmentPostQueryRepository
 import com.ogonggo.core.community.error.RecruitmentPostErrorCode

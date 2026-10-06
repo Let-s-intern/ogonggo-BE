@@ -1,6 +1,6 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.EducationLevel

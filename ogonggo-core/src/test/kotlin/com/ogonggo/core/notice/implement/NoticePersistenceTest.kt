@@ -1,6 +1,6 @@
 package com.ogonggo.core.notice.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.notice.domain.NoticeManagementSearchCondition
 import com.ogonggo.core.notice.error.NoticeErrorCode

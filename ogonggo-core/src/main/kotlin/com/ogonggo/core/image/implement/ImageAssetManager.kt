@@ -9,7 +9,7 @@ import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
-import com.ogonggo.core.storage.s3.S3ImageStorage
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -19,7 +19,7 @@ import java.util.UUID
 @Component
 class ImageAssetManager internal constructor(
     private val imageAssetRepository: ImageAssetJpaRepository,
-    private val s3ImageStorage: S3ImageStorage,
+    private val s3ObjectClient: S3ObjectClient,
     private val objectMapper: ObjectMapper,
 ) {
 
@@ -105,9 +105,9 @@ class ImageAssetManager internal constructor(
                 val targetId = UUID.randomUUID().toString()
                 val extension = source.storageKey.substringAfterLast('.', "bin")
                 val targetKey = "images/$targetId.$extension"
-                val targetUrl = s3ImageStorage.publicUrl(targetKey)
+                val targetUrl = s3ObjectClient.urlOf(targetKey)
 
-                s3ImageStorage.copy(source.storageKey, targetKey, source.mimeType)
+                s3ObjectClient.copy(source.storageKey, targetKey, source.mimeType)
                 copiedKeys += targetKey
 
                 val targetAsset = ImageAsset.uploading(
@@ -126,7 +126,7 @@ class ImageAssetManager internal constructor(
             }
             return replaceImageReferences(content, replacements)
         } catch (exception: Exception) {
-            copiedKeys.asReversed().forEach { key -> runCatching { s3ImageStorage.delete(key) } }
+            copiedKeys.asReversed().forEach { key -> runCatching { s3ObjectClient.delete(key) } }
             throw exception
         }
     }
@@ -196,7 +196,7 @@ class ImageAssetManager internal constructor(
             asset.markDeletePending()
             imageAssetRepository.save(asset)
             try {
-                s3ImageStorage.delete(asset.storageKey)
+                s3ObjectClient.delete(asset.storageKey)
                 asset.markDeleted(now)
                 imageAssetRepository.save(asset)
                 deletedCount++
