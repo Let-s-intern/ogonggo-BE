@@ -9,7 +9,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "community_post_metrics")
+@Table(name = "recruitment_post_metrics")
 internal class RecruitmentPostMetric(
     @Column(name = "post_id", nullable = false, unique = true)
     val postId: Long,

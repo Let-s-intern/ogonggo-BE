@@ -18,8 +18,8 @@ class RecruitmentPostAutoCloseScheduler(
     /** 실행 주기와 켜짐 여부는 `scheduled_jobs`가 정한다. `UserScheduledJobConfiguration` 참고. */
     @SchedulerLock(
         name = SCHEDULER_NAME,
-        lockAtLeastFor = "\${ogonggo.community.recruitment-post.auto-close.lock-at-least-for:PT55M}",
-        lockAtMostFor = "\${ogonggo.community.recruitment-post.auto-close.lock-at-most-for:PT2H}",
+        lockAtLeastFor = "\${ogonggo.recruitment-post.auto-close.lock-at-least-for:PT55M}",
+        lockAtMostFor = "\${ogonggo.recruitment-post.auto-close.lock-at-most-for:PT2H}",
     )
     fun closeExpiredRecruitmentPosts() {
         val closedCount = schedulerExecutionObserver.observe(SCHEDULER_NAME) {
@@ -33,7 +33,7 @@ class RecruitmentPostAutoCloseScheduler(
     }
 
     companion object {
-        const val SCHEDULER_NAME = "communityRecruitmentPostAutoClose"
+        const val SCHEDULER_NAME = "recruitmentPostAutoClose"
         private val log = LoggerFactory.getLogger(RecruitmentPostAutoCloseScheduler::class.java)
     }
 }

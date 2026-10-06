@@ -136,7 +136,8 @@ class AdminJobService(
 > 상태, 유형, 방식, 정렬, 지표, 검색 조건, 에러 코드 같은 딸린 타입에는 루트 이름을 앞에 붙인다.
 
 - 예: `JobRecruitmentStatus`, `BootcampPublicationStatus`, `RecruitmentPostMetric`, `RecruitmentPostErrorCode`.
-- `PublicationStatus`, `BootcampApplicationMethod`, `Status`, `Type`처럼 단독으로 쓰면 다른 도메인이 같은 단어를 쓸 때 충돌합니다.
+- `PublicationStatus`, `ApplicationMethod`, `Status`, `Type`처럼 단독으로 쓰면 다른 도메인이 같은 단어를 쓸 때 충돌합니다.
+- 여러 루트가 같은 뜻으로 함께 쓰는 타입은 공통 개념 이름으로 짓습니다. 예: 채용공고·부트캠프·모집글 북마크가 함께 쓰는 `BookmarkSortType`, 검수 대상 콘텐츠 공통인 `ContentReviewStatus`·`ContentSource`.
 - 루트 엔티티 이름 자체는 일반 명사여도 됩니다. 이 프로젝트에서 그 이름으로 부르는 것이 하나뿐이면 `Post`도 쓸 수 있습니다.
 - 외부 시스템의 개념은 그 시스템 이름을 앞에 붙이고, 외부 시스템이 쓰는 용어를 그대로 씁니다. 예: `Work24Service`(고용24의 인증키 발급 단위).
 
@@ -174,11 +175,9 @@ core에는 `Service`라는 이름을 쓰지 않습니다. 유스케이스는 각
 
 ### 아직 규칙과 다른 곳
 
-계약이나 DB에 닿아 바로 바꾸지 않은 곳입니다. 해당 기능을 바꿀 때 함께 정리합니다(확인 필요).
+루트 엔티티가 없는 패키지가 남아 있습니다. 해당 기능을 바꿀 때 함께 정리합니다(확인 필요).
 
-- 모집글 테이블 `community_*`, 설정 키 `ogonggo.community.*`, 스케줄 작업 이름 `communityRecruitmentPostAutoClose`
-- 루트 접두어가 없는 enum: `JobEmploymentType`, `JobExperienceType`, `JobEducationLevel`, `BootcampOperationType`, `BootcampTuitionType`, `BootcampApplicationMethod`, `BootcampRecruitmentStatus`, `ContentReviewStatus`, `ContentReviewTargetType`, `ContentSource`, `BookmarkSortType`
-- 루트 엔티티가 없는 패키지: `adminapi/content`(관리 목록 공통 정렬·노출), `userapi/challenge`, `userapi/advertisement`, `userapi/scheduling`(메트릭 모듈 분리 전까지 유지)
+- `adminapi/content`(관리 목록 공통 정렬·노출), `userapi/challenge`, `userapi/advertisement`, `userapi/scheduling`(메트릭 모듈 분리 전까지 유지)
 
 ## 6. 의존성과 구현 규칙
 

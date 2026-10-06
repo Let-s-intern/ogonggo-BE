@@ -25,7 +25,7 @@ import java.time.LocalDateTime
  * 일반 글과 고민글은 아직 제품 범위에 포함하지 않는다.
  */
 @Entity
-@Table(name = "community_posts")
+@Table(name = "recruitment_posts")
 class RecruitmentPost internal constructor(
     authorUserId: Long,
     title: String,
@@ -119,7 +119,7 @@ class RecruitmentPost internal constructor(
         protected set
 
     @ElementCollection
-    @CollectionTable(name = "community_post_technology_stacks", joinColumns = [JoinColumn(name = "post_id")])
+    @CollectionTable(name = "recruitment_post_technology_stacks", joinColumns = [JoinColumn(name = "post_id")])
     @Column(name = "technology_stack", nullable = false, length = 50)
     var technologyStacks: MutableList<String> = technologyStacks.toMutableList()
         get() = field.toMutableList()
@@ -146,7 +146,7 @@ class RecruitmentPost internal constructor(
         protected set
 
     @ElementCollection
-    @CollectionTable(name = "community_post_positions", joinColumns = [JoinColumn(name = "post_id")])
+    @CollectionTable(name = "recruitment_post_positions", joinColumns = [JoinColumn(name = "post_id")])
     @Enumerated(EnumType.STRING)
     @Column(name = "position", nullable = false, length = 30)
     var positions: MutableList<RecruitmentPostPosition> = positions.toMutableList()

@@ -18,9 +18,9 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(
-    name = "community_post_bookmarks",
-    uniqueConstraints = [UniqueConstraint(name = "uk_community_post_bookmark_post_user", columnNames = ["post_id", "user_id"])],
-    indexes = [Index(name = "idx_community_post_bookmark_user_active", columnList = "user_id, deleted_at, updated_at")],
+    name = "recruitment_post_bookmarks",
+    uniqueConstraints = [UniqueConstraint(name = "uk_recruitment_post_bookmark_post_user", columnNames = ["post_id", "user_id"])],
+    indexes = [Index(name = "idx_recruitment_post_bookmark_user_active", columnList = "user_id, deleted_at, updated_at")],
 )
 internal class RecruitmentPostBookmark(
     @Column(name = "post_id", nullable = false)
@@ -53,7 +53,7 @@ internal class RecruitmentPostBookmark(
         name = "post_id",
         insertable = false,
         updatable = false,
-        foreignKey = ForeignKey(name = "fk_community_post_bookmarks_post"),
+        foreignKey = ForeignKey(name = "fk_recruitment_post_bookmarks_post"),
     )
     lateinit var post: RecruitmentPost
 
@@ -66,7 +66,7 @@ internal class RecruitmentPostBookmark(
         name = "user_id",
         insertable = false,
         updatable = false,
-        foreignKey = ForeignKey(name = "fk_community_post_bookmarks_user"),
+        foreignKey = ForeignKey(name = "fk_recruitment_post_bookmarks_user"),
     )
     lateinit var user: User
 }
