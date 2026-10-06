@@ -72,6 +72,8 @@ Bean Validation 오류는 필드명 순으로 정렬하고 `, `로 연결한다.
 
 두 파라미터의 관계처럼 단일 필드 제약으로 선언할 수 없는 Query Parameter 규칙은 각 API가 소유한 `InvalidRequestParameterException(parameterName, reason)`으로 전달한다. 이 예외도 같은 `[파라미터명] 검증 메시지` 형식의 400으로 응답하므로 클라이언트는 Bean Validation 실패와 구분하지 않아도 된다. 채용공고 달력의 `from`·`to` 관계와 기간 상한이 이 경우다.
 
+요청 본문 필드의 규칙 중 Bean Validation으로 선언할 수 없는 것은 각 API가 소유한 `InvalidRequestFieldException(fieldName, reason)`으로 전달하고, 같은 `[필드명] 검증 메시지` 형식의 400으로 응답한다. 채용공고 모집 시작·종료 일시의 관계, 모집글·공지 본문(`content`)의 에디터 JSON 형식이 이 경우다. 본문 형식 검사는 core의 `LexicalEditorStateValidator`가 하지만, 실패를 어떤 예외로 알릴지는 응답 형식을 정하는 API가 넘겨준다.
+
 ## 5. require와 check
 
 - `require`와 `check`는 프로그래밍 계약과 도메인 불변식의 방어 수단으로 유지할 수 있다.

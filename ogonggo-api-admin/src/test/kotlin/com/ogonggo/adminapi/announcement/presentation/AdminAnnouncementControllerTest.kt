@@ -6,12 +6,12 @@ import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companio
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
+import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementCreateCommand
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementPageResult
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementResult
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementService
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementSummary
-import com.ogonggo.core.editor.lexical.LexicalEditorStateException
 import com.ogonggo.core.announcement.domain.AnnouncementManagementSearchCondition
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -122,7 +122,7 @@ class AdminAnnouncementControllerTest @Autowired constructor(
             visibility = AdminContentVisibility.HIDDEN,
         )
         Mockito.`when`(adminAnnouncementService.createAnnouncement(command))
-            .thenThrow(LexicalEditorStateException("에디터 내용 JSON 형식이 올바르지 않습니다."))
+            .thenThrow(InvalidRequestFieldException("content", "에디터 내용 JSON 형식이 올바르지 않습니다."))
 
         mockMvc.perform(
             admin(

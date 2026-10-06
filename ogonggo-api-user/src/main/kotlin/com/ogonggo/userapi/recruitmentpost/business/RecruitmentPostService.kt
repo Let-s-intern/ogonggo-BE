@@ -18,6 +18,7 @@ import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostDraftAppend
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.userapi.error.InvalidRequestFieldException
 import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDate
@@ -91,7 +92,7 @@ class RecruitmentPostService(
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
-            content = contentValidator.validateAndSerialize(command.content),
+            content = validContent(command.content),
         )
         val post = postAppender.append(sanitizedCommand)
         recruitmentPostMetricManager.initialize(checkNotNull(post.id))
@@ -116,7 +117,7 @@ class RecruitmentPostService(
         verifyActiveUser(userId)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
-            content = command.content?.let(contentValidator::validateAndSerialize),
+            content = command.content?.let(::validContent),
         )
         val post = postAppender.appendDraft(sanitizedCommand)
         imageAssetManager.syncPostImages(
@@ -140,7 +141,7 @@ class RecruitmentPostService(
         val post = postReader.readOwnedForUpdate(userId, postId)
         val previousContent = post.content.orEmpty()
         val sanitizedCommand = command.copy(
-            content = command.content?.let(contentValidator::validateAndSerialize),
+            content = command.content?.let(::validContent),
         )
         val now = LocalDateTime.now(clock)
         imageAssetManager.syncPostImages(
@@ -189,6 +190,10 @@ class RecruitmentPostService(
         }
         postManager.reopen(post)
     }
+
+    /** 본문 형식 오류는 요청 필드 검증 오류로 알린다. */
+    private fun validContent(content: String): String =
+        contentValidator.validateAndSerialize(content) { reason -> throw InvalidRequestFieldException("content", reason) }
 
     private fun verifyActiveUser(userId: Long) {
         userReader.read(userId).status.requireActive()
