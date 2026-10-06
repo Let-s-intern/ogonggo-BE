@@ -103,13 +103,12 @@ class AdminJobServiceTest {
     }
 
     @Test
-    fun `노출 일괄 변경은 이미 같은 노출인 공고를 건드리지 않아 보관 공고를 숨겨도 실패하지 않는다`() {
-        val archived = jobWithStatus(JobPublicationStatus.ARCHIVED)
+    fun `노출 일괄 변경은 이미 같은 노출인 공고를 건드리지 않아 초안을 숨겨도 초안으로 남는다`() {
         val draft = jobWithStatus(JobPublicationStatus.DRAFT)
         val hidden = jobWithStatus(JobPublicationStatus.HIDDEN)
-        Mockito.`when`(jobReader.readAllForUpdate(listOf(1L, 2L, 3L))).thenReturn(listOf(archived, draft, hidden))
+        Mockito.`when`(jobReader.readAllForUpdate(listOf(1L, 2L))).thenReturn(listOf(draft, hidden))
 
-        service.changeVisibilities(AdminJobVisibilityChangeCommand(listOf(1L, 2L, 3L), AdminContentVisibility.HIDDEN))
+        service.changeVisibilities(AdminJobVisibilityChangeCommand(listOf(1L, 2L), AdminContentVisibility.HIDDEN))
 
         Mockito.verifyNoInteractions(jobManager)
     }

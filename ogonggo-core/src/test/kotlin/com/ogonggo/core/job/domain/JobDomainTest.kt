@@ -3,7 +3,6 @@ package com.ogonggo.core.job.domain
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRole
-import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.review.domain.ContentSource
@@ -109,7 +108,7 @@ class JobDomainTest {
     }
 
     @Test
-    fun `게시 숨김 마감 보관을 처리한다`() {
+    fun `게시 숨김 마감을 처리한다`() {
         val job = createJob()
         val firstClosedAt = LocalDateTime.of(2026, 9, 1, 0, 0)
 
@@ -122,12 +121,6 @@ class JobDomainTest {
         job.close(firstClosedAt)
         job.close(firstClosedAt.plusDays(1))
         assertEquals(firstClosedAt, job.closedAt)
-
-        job.archive()
-        assertEquals(JobPublicationStatus.ARCHIVED, job.publicationStatus)
-        // 보관된 공고는 운영자가 콘솔에서 건드릴 수 있으므로 500이 아니라 409로 알린다.
-        assertEquals(JobErrorCode.JOB_ARCHIVED, assertThrows(ConflictException::class.java) { job.publish() }.errorCode)
-        assertThrows(ConflictException::class.java) { job.close(firstClosedAt) }
     }
 
     @Test
@@ -231,7 +224,6 @@ class JobDomainTest {
 
         assertEquals(firstDeletedAt, job.deletedAt)
         assertThrows(IllegalStateException::class.java) { job.publish() }
-        assertThrows(IllegalStateException::class.java) { job.archive() }
     }
 
     @Test

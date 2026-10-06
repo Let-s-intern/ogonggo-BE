@@ -2,7 +2,6 @@ package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.job.error.JobErrorCode
 import com.querydsl.core.annotations.PropertyType
 import com.querydsl.core.annotations.QueryType
 import com.ogonggo.core.region.domain.Region
@@ -409,7 +408,7 @@ class Job internal constructor(
         sourceUrl: String?,
         now: LocalDateTime,
     ) {
-        checkModifiable()
+        checkNotDeleted()
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
@@ -470,7 +469,7 @@ class Job internal constructor(
      * 수집한 공고도 고칠 수 있다. 크롤러가 원문 구조를 잘못 읽어 왔을 때 통째로 내리지 않게 하기 위해서다.
      */
     fun editContent(title: String?, contents: Map<JobContentField, String?>) {
-        checkModifiable()
+        checkNotDeleted()
         require(title == null || title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
         require(contents.values.all { it == null || it.isNotBlank() }) { "본문 칸은 공백일 수 없습니다." }
 
@@ -507,7 +506,7 @@ class Job internal constructor(
     // TODO: MVP 이후 DRAFT -> PUBLISHED 등 허용 상태 전이를 명시적인 상태 머신으로 강화한다.
     /** 기업회원 공고는 검수 승인을 받아야만 노출한다. 게시하는 쪽이 누구든 같은 규칙을 따른다. */
     fun publish() {
-        checkModifiable()
+        checkNotDeleted()
         if (reviewStatus != null && reviewStatus != ReviewStatus.APPROVED) {
             throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
         }
@@ -515,17 +514,12 @@ class Job internal constructor(
     }
 
     fun hide() {
-        checkModifiable()
+        checkNotDeleted()
         publicationStatus = JobPublicationStatus.HIDDEN
     }
 
-    fun archive() {
-        checkNotDeleted()
-        publicationStatus = JobPublicationStatus.ARCHIVED
-    }
-
     fun close(now: LocalDateTime) {
-        checkModifiable()
+        checkNotDeleted()
         if (closedAt == null) {
             closedAt = now
         }
@@ -565,16 +559,9 @@ class Job internal constructor(
     }
 
     private fun checkReviewable() {
-        checkModifiable()
+        checkNotDeleted()
         if (reviewStatus == null) {
             throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
-        }
-    }
-
-    private fun checkModifiable() {
-        checkNotDeleted()
-        if (publicationStatus == JobPublicationStatus.ARCHIVED) {
-            throw ConflictException(JobErrorCode.JOB_ARCHIVED)
         }
     }
 

@@ -62,7 +62,6 @@ class JobManager internal constructor(
 
     fun hide(job: Job) = change(job) { hide() }
 
-    fun archive(job: Job) = change(job) { archive() }
 
     fun close(job: Job, now: LocalDateTime) = change(job) { close(now) }
 

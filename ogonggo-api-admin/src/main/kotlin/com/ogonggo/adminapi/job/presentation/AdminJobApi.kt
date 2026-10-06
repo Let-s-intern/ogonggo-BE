@@ -46,7 +46,7 @@ interface AdminJobApi {
 
             필터는 모두 AND로 묶이며 값을 보내지 않거나 빈 값을 보내면 그 조건을 적용하지 않습니다.
             keyword는 제목과 회사명에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
-            visibility는 게시 중이면 VISIBLE, 초안·숨김·보관이면 HIDDEN입니다.
+            visibility는 게시 중이면 VISIBLE, 초안·숨김이면 HIDDEN입니다.
             source는 등록 경로입니다. COMPANY 비즈니스 등록, CRAWLER 크롤링, WORK24 고용24 수집입니다.
             recruitmentStatus는 마감 처리됐거나 모집 종료 일시가 지났으면 CLOSED, 그 밖에는 RECRUITING입니다. 종료 일시가 지난 공고는 매시 정각 자동 마감 작업이 CLOSED로 바꾸므로 그 전까지는 RECRUITING일 수 있습니다.
             jobField(직군), jobRole(직무)은 GET /api/v1/enums(사용자 API)의 JobField·JobRole 값을 보냅니다.
@@ -139,7 +139,7 @@ interface AdminJobApi {
             성공하면 data 없이 응답합니다. 이미 그 노출인 공고는 건드리지 않고 성공으로 보며, 같은 요청을 반복해도 결과가 같습니다.
 
             하나라도 바꿀 수 없으면 아무것도 바꾸지 않습니다. 없거나 삭제된 공고가 있으면 404이며 message 끝에 그 식별자를 담습니다.
-            승인 전 기업회원 공고나 보관된 공고를 VISIBLE로 바꾸려 하면 409입니다.
+            승인 전 기업회원 공고를 VISIBLE로 바꾸려 하면 409입니다.
             검수 상태는 바꾸지 않습니다.
         """,
     )
@@ -158,7 +158,7 @@ interface AdminJobApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "REVIEW_NOT_APPROVED 또는 JOB_ARCHIVED: VISIBLE로 바꿀 수 없는 공고가 들어 있습니다.",
+                description = "REVIEW_NOT_APPROVED: VISIBLE로 바꿀 수 없는 공고가 들어 있습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
@@ -213,7 +213,7 @@ interface AdminJobApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "REVIEW_NOT_APPROVED, CONTENT_NOT_REVIEWABLE 또는 JOB_ARCHIVED",
+                description = "REVIEW_NOT_APPROVED 또는 CONTENT_NOT_REVIEWABLE",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
