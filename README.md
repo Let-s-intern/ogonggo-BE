@@ -93,7 +93,7 @@ Before deploying the admin job list `jobField`·`jobRole` filters, apply `docs/s
 
 Before the crawler sends 미래내일 일경험 jobs (`employmentType=WORK_EXPERIENCE`), apply `docs/schema/2026-10-03-job-employment-type-work-experience.sql`. The existing `employment_type` column is a MySQL enum without the new value.
 
-Before deploying the recruitment post position change (`MOBILE` removed, `MARKETING` added), apply `docs/schema/2026-10-06-recruitment-post-position-marketing.sql`. It moves stored `MOBILE` positions to `MARKETING`; a remaining `MOBILE` row fails to load with the new code.
+Before the first server deploy of the recruitment post position change (`MARKETING` added), apply `docs/schema/2026-10-06-recruitment-post-position-marketing.sql`. It only widens the column, so the running server is unaffected. After the frontend switches to `MARKETING`, follow `docs/schema/2026-10-06-recruitment-post-position-mobile-cleanup.sql` around the second server deploy that removes `MOBILE`: run steps 1–2, deploy, then run steps 3–4 right away.
 
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 

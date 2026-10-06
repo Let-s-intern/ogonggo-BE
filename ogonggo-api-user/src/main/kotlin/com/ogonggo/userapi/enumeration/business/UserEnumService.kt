@@ -59,6 +59,20 @@ class UserEnumService {
     fun getEnums(): Map<String, List<EnumOption>> = ENUMS
 
     private companion object {
+        /**
+         * 모집글 enum 이름에 RecruitmentPost 접두어를 붙이기 전의 키다. 예전 키 → 새 키.
+         * 프런트가 새 키로 옮기는 동안 같은 선택지를 예전 키로도 내려 준다. 프런트 배포 후 서버 2차 배포에서 제거한다.
+         */
+        val LEGACY_KEYS: Map<String, String> = mapOf(
+            "RecruitmentType" to "RecruitmentPostType",
+            "RecruitmentPosition" to "RecruitmentPostPosition",
+            "ProgressMethod" to "RecruitmentPostProgressMethod",
+            "ContactMethod" to "RecruitmentPostContactMethod",
+            "RecruitmentStatus" to "RecruitmentPostRecruitmentStatus",
+            "RecruitmentApplicationProgressStatus" to "RecruitmentPostApplicationProgressStatus",
+            "RecruitmentApplicationSortType" to "RecruitmentPostApplicationSortType",
+        )
+
         val ENUMS: Map<String, List<EnumOption>> = listOf(
             // 채용공고
             options<EmploymentType>(),
@@ -113,7 +127,10 @@ class UserEnumService {
         ).also { entries ->
             val duplicated = entries.groupBy { it.first }.filterValues { it.size > 1 }.keys
             check(duplicated.isEmpty()) { "enum 이름이 겹칩니다: $duplicated" }
-        }.toMap()
+        }.toMap().let { enums ->
+            check(LEGACY_KEYS.keys.none(enums::containsKey)) { "예전 키가 현재 enum 이름과 겹칩니다." }
+            enums + LEGACY_KEYS.mapValues { (_, key) -> enums.getValue(key) }
+        }
 
         inline fun <reified E> options(): Pair<String, List<EnumOption>> where E : Enum<E>, E : EnumField =
             E::class.java.simpleName to enumValues<E>().asIterable().toEnumOptions()

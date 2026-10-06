@@ -26,6 +26,16 @@ class UserEnumServiceTest {
         )
     }
 
+    @Test
+    fun `프런트 전환 기간에는 모집글 선택지를 예전 키로도 같은 값으로 제공한다`() {
+        assertEquals(enums.getValue("RecruitmentPostType"), enums.getValue("RecruitmentType"))
+        assertEquals(enums.getValue("RecruitmentPostPosition"), enums.getValue("RecruitmentPosition"))
+        assertEquals(
+            enums.getValue("RecruitmentPostApplicationSortType"),
+            enums.getValue("RecruitmentApplicationSortType"),
+        )
+    }
+
     /**
      * 사용자 API의 요청·응답에 새 업무 enum을 추가하고 이 목록을 빠뜨리면
      * 프론트는 그 값의 라벨을 받을 수 없다. presentation의 요청·응답 필드와 Controller 파라미터를 훑어 막는다.
