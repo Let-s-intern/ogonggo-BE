@@ -63,12 +63,18 @@ interface CrawlerJobWriteRequest {
 }
 
 /**
- * 상시 채용은 종료 일시가 없어야 하고, 시·군·구와 직무는 함께 보낸 시·도와 직군에 속해야 한다.
+ * 상시 채용은 종료 일시가 없어야 하고, 시작 일시는 종료 일시보다 늦을 수 없으며,
+ * 시·군·구와 직무는 함께 보낸 시·도와 직군에 속해야 한다.
  * 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다.
  */
 private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
     if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN && recruitmentEndAt != null) {
         throw InvalidRequestFieldException("recruitmentEndAt", "상시 채용에는 모집 종료 일시를 둘 수 없습니다.")
+    }
+    val start = recruitmentStartAt
+    val end = recruitmentEndAt
+    if (start != null && end != null && start.isAfter(end)) {
+        throw InvalidRequestFieldException("recruitmentStartAt", "모집 종료 일시보다 늦을 수 없습니다.")
     }
     if (subRegion != null && subRegion?.region != region) {
         throw InvalidRequestFieldException("subRegion", "region과 같은 시·도의 시·군·구여야 합니다.")

@@ -16,7 +16,6 @@ import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -156,14 +155,8 @@ class RecruitmentPostService(
         if (post.publicationStatus == RecruitmentPostPublicationStatus.DRAFT) {
             postManager.updateDraft(post, sanitizedCommand)
             if (saveMode == RecruitmentPostSaveMode.PUBLISH) {
-                try {
-                    postManager.publish(post)
-                    recruitmentPostMetricManager.initialize(postId)
-                } catch (_: IllegalArgumentException) {
-                    throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
-                } catch (_: IllegalStateException) {
-                    throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
-                }
+                postManager.publish(post)
+                recruitmentPostMetricManager.initialize(postId)
             }
         } else {
             postManager.update(post, sanitizedCommand, now.toLocalDate())

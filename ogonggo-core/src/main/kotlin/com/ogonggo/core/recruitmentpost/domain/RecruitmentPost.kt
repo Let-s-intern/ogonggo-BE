@@ -2,6 +2,9 @@ package com.ogonggo.core.recruitmentpost.domain
 
 import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.editor.lexical.LexicalEditorStateJson
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
@@ -179,7 +182,7 @@ class RecruitmentPost internal constructor(
 
     fun close(closedAt: LocalDateTime) {
         checkNotDeleted()
-        check(publicationStatus != RecruitmentPostPublicationStatus.DRAFT) { "임시저장 모집글은 마감할 수 없습니다." }
+        checkNotDraftForRecruitmentStatus()
         if (recruitmentStatus == RecruitmentPostRecruitmentStatus.RECRUITING) {
             recruitmentStatus = RecruitmentPostRecruitmentStatus.CLOSED
             this.closedAt = closedAt
@@ -188,7 +191,7 @@ class RecruitmentPost internal constructor(
 
     fun reopen() {
         checkNotDeleted()
-        check(publicationStatus != RecruitmentPostPublicationStatus.DRAFT) { "임시저장 모집글은 재모집할 수 없습니다." }
+        checkNotDraftForRecruitmentStatus()
         if (recruitmentStatus == RecruitmentPostRecruitmentStatus.CLOSED) {
             recruitmentStatus = RecruitmentPostRecruitmentStatus.RECRUITING
             closedAt = null
@@ -198,23 +201,30 @@ class RecruitmentPost internal constructor(
     fun publish() {
         checkNotDeleted()
         if (publicationStatus == RecruitmentPostPublicationStatus.PUBLISHED) return
-        check(publicationStatus == RecruitmentPostPublicationStatus.DRAFT) { "임시저장 모집글만 게시할 수 있습니다." }
-        validatePublishedValues(
-            title = title,
-            recruitmentType = recruitmentType,
-            capacity = capacity,
-            progressMethod = progressMethod,
-            activityDurationMonths = activityDurationMonths,
-            technologyStacks = technologyStacks,
-            summary = summary,
-            content = content,
-            eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
-            recruitmentStartDate = recruitmentStartDate,
-            recruitmentEndDate = recruitmentEndDate,
-            positions = positions,
-            contactMethod = contactMethod,
-            contactValue = contactValue,
-        )
+        // 숨김 글은 운영자만 되돌릴 수 있고, 빈 필수 값은 작성자가 채워야 한다. 둘 다 작성자에게는 게시 조건 미충족이다.
+        if (publicationStatus != RecruitmentPostPublicationStatus.DRAFT) {
+            throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
+        }
+        try {
+            validatePublishedValues(
+                title = title,
+                recruitmentType = recruitmentType,
+                capacity = capacity,
+                progressMethod = progressMethod,
+                activityDurationMonths = activityDurationMonths,
+                technologyStacks = technologyStacks,
+                summary = summary,
+                content = content,
+                eligibilityAndSelectionProcess = eligibilityAndSelectionProcess,
+                recruitmentStartDate = recruitmentStartDate,
+                recruitmentEndDate = recruitmentEndDate,
+                positions = positions,
+                contactMethod = contactMethod,
+                contactValue = contactValue,
+            )
+        } catch (_: IllegalArgumentException) {
+            throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
+        }
         publicationStatus = RecruitmentPostPublicationStatus.PUBLISHED
     }
 
@@ -369,6 +379,13 @@ class RecruitmentPost internal constructor(
         this.contactValue = checkNotNull(contactValue)
         if (shouldReopen) {
             reopen()
+        }
+    }
+
+    /** 모집 상태는 게시된 적 있는 글에만 의미가 있다. 임시저장은 작성자가 보는 글이라 요청 오류로 돌려준다. */
+    private fun checkNotDraftForRecruitmentStatus() {
+        if (publicationStatus == RecruitmentPostPublicationStatus.DRAFT) {
+            throw ConflictException(RecruitmentPostErrorCode.RECRUITMENT_POST_DRAFT_NOT_CLOSABLE)
         }
     }
 

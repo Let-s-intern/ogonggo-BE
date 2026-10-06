@@ -208,6 +208,11 @@ interface RecruitmentPostApi {
                 description = "RECRUITMENT_POST_NOT_FOUND: 모집글이 없거나 본인 글이 아님",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
+            ApiResponse(
+                responseCode = "409",
+                description = "RECRUITMENT_POST_DRAFT_NOT_CLOSABLE: 임시저장 모집글",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
         ],
     )
     @PatchMapping("/{postId}/close")
@@ -252,7 +257,8 @@ interface RecruitmentPostApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "RECRUITMENT_POST_REOPEN_END_DATE_REQUIRED: 모집 종료일이 현재보다 미래가 아님",
+                description = "RECRUITMENT_POST_REOPEN_END_DATE_REQUIRED: 모집 종료일이 현재보다 미래가 아님, " +
+                    "RECRUITMENT_POST_DRAFT_NOT_CLOSABLE: 임시저장 모집글",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

@@ -10,8 +10,6 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
-import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
-import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricDto
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
@@ -98,14 +96,8 @@ class RecruitmentPostManagementService(
     fun publish(userId: Long, postId: Long) {
         verifyActiveUser(userId)
         val post = postReader.readOwnedForUpdate(userId, postId)
-        try {
-            postManager.publish(post)
-            recruitmentPostMetricManager.initialize(checkNotNull(post.id))
-        } catch (_: IllegalArgumentException) {
-            throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
-        } catch (_: IllegalStateException) {
-            throw InvalidValueException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY)
-        }
+        postManager.publish(post)
+        recruitmentPostMetricManager.initialize(checkNotNull(post.id))
     }
 
     private fun verifyActiveUser(userId: Long) {

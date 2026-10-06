@@ -1,5 +1,8 @@
 package com.ogonggo.core.recruitmentpost.domain
 
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
@@ -273,10 +276,10 @@ class RecruitmentPostDomainTest {
         )
 
         // when
-        val exception = assertThrows(IllegalArgumentException::class.java) { post.publish() }
+        val exception = assertThrows(InvalidValueException::class.java) { post.publish() }
 
         // then
-        assertEquals("모집 구분은 필수입니다.", exception.message)
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY, exception.errorCode)
         assertEquals(RecruitmentPostPublicationStatus.DRAFT, post.publicationStatus)
     }
 
@@ -331,13 +334,32 @@ class RecruitmentPostDomainTest {
         post.hide()
 
         // when
-        assertThrows(IllegalStateException::class.java) { post.publish() }
+        val exception = assertThrows(InvalidValueException::class.java) { post.publish() }
         val statusAfterPublish = post.publicationStatus
         post.unhide()
 
         // then
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_READY, exception.errorCode)
         assertEquals(RecruitmentPostPublicationStatus.HIDDEN, statusAfterPublish)
         assertEquals(RecruitmentPostPublicationStatus.PUBLISHED, post.publicationStatus)
+    }
+
+    @Test
+    @DisplayName("임시저장 모집글은 작성자가 마감하거나 재모집하면 충돌로 거절한다")
+    fun draftCannotBeClosedOrReopened() {
+        // given
+        val post = createPostFixture().copyAsDraft()
+
+        // when
+        val closeException = assertThrows(ConflictException::class.java) {
+            post.close(LocalDateTime.of(2026, 9, 10, 12, 0))
+        }
+        val reopenException = assertThrows(ConflictException::class.java) { post.reopen() }
+
+        // then
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_DRAFT_NOT_CLOSABLE, closeException.errorCode)
+        assertEquals(RecruitmentPostErrorCode.RECRUITMENT_POST_DRAFT_NOT_CLOSABLE, reopenException.errorCode)
+        assertEquals(RecruitmentPostRecruitmentStatus.RECRUITING, post.recruitmentStatus)
     }
 
     @Test

@@ -69,6 +69,19 @@ class CrawlerJobRegistrationRequestTest {
     }
 
     @Test
+    fun `모집 시작 일시가 종료 일시보다 늦으면 시작 일시 칸이 틀렸다고 알린다`() {
+        val exception = assertThrows<InvalidRequestFieldException> {
+            request(
+                recruitmentType = JobRecruitmentType.PERIOD,
+                recruitmentStartAt = LocalDateTime.of(2026, 10, 1, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
+            ).toCommand()
+        }
+
+        assertEquals("recruitmentStartAt", exception.fieldName)
+    }
+
+    @Test
     fun `교체 요청은 등록 요청과 같은 칸을 옮긴다`() {
         val replace = CrawlerJobReplaceRequest(
             companyName = "오공고",
@@ -95,6 +108,7 @@ class CrawlerJobRegistrationRequestTest {
         experienceType: ExperienceType = ExperienceType.IRRELEVANT,
         educationLevel: EducationLevel = EducationLevel.ANY,
         recruitmentType: JobRecruitmentType = JobRecruitmentType.ALWAYS_OPEN,
+        recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
         recruitmentHeadcount: Int? = null,
         recruitmentNotice: String? = null,
@@ -109,6 +123,7 @@ class CrawlerJobRegistrationRequestTest {
         experienceType = experienceType,
         educationLevel = educationLevel,
         recruitmentType = recruitmentType,
+        recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
         recruitmentHeadcount = recruitmentHeadcount,
         closesWhenFilled = true,
