@@ -10,7 +10,6 @@ import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationMana
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
@@ -19,6 +18,7 @@ import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -28,7 +28,7 @@ class RecruitmentPostBookmarkService(
     private val postReader: RecruitmentPostReader,
     private val postBookmarkReader: RecruitmentPostBookmarkReader,
     private val postBookmarkManager: RecruitmentPostBookmarkManager,
-    private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
+    private val eventPublisher: ApplicationEventPublisher,
     private val recruitmentPostMetricReader: RecruitmentPostMetricReader,
     private val clock: Clock,
     private val userProfileReader: UserProfileReader,
@@ -78,7 +78,7 @@ class RecruitmentPostBookmarkService(
         postReader.readPublished(postId)
         val now = LocalDateTime.now(clock)
         if (postBookmarkManager.append(userId, postId, now)) {
-            recruitmentPostMetricManager.increaseBookmarkCount(postId, now)
+            eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
         }
     }
 
@@ -88,7 +88,7 @@ class RecruitmentPostBookmarkService(
         postReader.readIncludingDeleted(postId)
         val now = LocalDateTime.now(clock)
         if (postBookmarkManager.delete(userId, postId, now)) {
-            recruitmentPostMetricManager.decreaseBookmarkCount(postId, now)
+            eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
         }
     }
 
@@ -108,7 +108,7 @@ class RecruitmentPostBookmarkService(
 
         val unbookmarked = postBookmarkManager.delete(userId, postId, now)
         if (unbookmarked) {
-            recruitmentPostMetricManager.decreaseBookmarkCount(postId, now)
+            eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
         }
         if (applicationStatus == null) {
             if (!unbookmarked) {
@@ -142,7 +142,7 @@ class RecruitmentPostBookmarkService(
 
         applicationManager.delete(postId = postId, userId = userId, deletedAt = now)
         if (!bookmarked && postBookmarkManager.append(userId, postId, now)) {
-            recruitmentPostMetricManager.increaseBookmarkCount(postId, now)
+            eventPublisher.publishEvent(RecruitmentPostBookmarkChangedEvent(postId))
         }
     }
 

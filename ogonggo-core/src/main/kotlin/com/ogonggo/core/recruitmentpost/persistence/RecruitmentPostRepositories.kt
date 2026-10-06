@@ -165,34 +165,22 @@ internal interface RecruitmentPostMetricJpaRepository : JpaRepository<Recruitmen
         @Param("now") now: LocalDateTime,
     ): Int
 
+    /** 활성 북마크를 다시 세어 맞춘다. 글 하나의 북마크만 (post_id, user_id) 인덱스 범위로 센다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
         update RecruitmentPostMetric metric
-        set metric.bookmarkCount = metric.bookmarkCount + 1,
+        set metric.bookmarkCount = (
+                select count(bookmark)
+                from RecruitmentPostBookmark bookmark
+                where bookmark.postId = :postId
+                  and bookmark.deletedAt is null
+            ),
             metric.updatedAt = :now
         where metric.postId = :postId
         """,
     )
-    fun increaseBookmarkCount(
-        @Param("postId") postId: Long,
-        @Param("now") now: LocalDateTime,
-    ): Int
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(
-        """
-        update RecruitmentPostMetric metric
-        set metric.bookmarkCount = metric.bookmarkCount - 1,
-            metric.updatedAt = :now
-        where metric.postId = :postId
-          and metric.bookmarkCount > 0
-        """,
-    )
-    fun decreaseBookmarkCount(
-        @Param("postId") postId: Long,
-        @Param("now") now: LocalDateTime,
-    ): Int
+    fun syncBookmarkCount(@Param("postId") postId: Long, @Param("now") now: LocalDateTime): Int
 }
 
 internal interface RecruitmentPostBookmarkJpaRepository : JpaRepository<RecruitmentPostBookmark, Long> {

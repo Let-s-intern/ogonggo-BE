@@ -47,7 +47,7 @@ class RecruitmentPostMetricManager internal constructor(
 
     /**
      * 카운터가 실제 수보다 작아 줄일 수 없으면 값을 두고 경고만 남긴다.
-     * 지표는 화면 표시용이라, 어긋났다고 사용자의 댓글 삭제나 북마크 해제를 실패시키지 않는다.
+     * 지표는 화면 표시용이라, 어긋났다고 사용자의 댓글 삭제를 실패시키지 않는다.
      */
     @Transactional
     fun decreaseCommentCount(postId: Long, amount: Int, now: LocalDateTime) {
@@ -57,16 +57,13 @@ class RecruitmentPostMetricManager internal constructor(
         log.warn("댓글 카운터가 실제 댓글 수보다 작아 줄이지 않았습니다. postId={}, amount={}", postId, amount)
     }
 
+    /**
+     * 북마크 수를 증감하지 않고 활성 북마크를 다시 세어 맞춘다.
+     * 몇 번을 실행해도 결과가 같으므로 갱신을 한 번 놓쳐도 다음 갱신에서 값이 스스로 복구된다.
+     */
     @Transactional
-    fun increaseBookmarkCount(postId: Long, now: LocalDateTime) =
-        updateOrCreate(postId) { recruitmentPostMetricRepository.increaseBookmarkCount(postId, now) }
-
-    /** [decreaseCommentCount]와 같이 줄일 수 없으면 값을 두고 경고만 남긴다. */
-    @Transactional
-    fun decreaseBookmarkCount(postId: Long, now: LocalDateTime) {
-        if (recruitmentPostMetricRepository.decreaseBookmarkCount(postId, now) > 0) return
-        log.warn("북마크 카운터가 실제 북마크 수보다 작아 줄이지 않았습니다. postId={}", postId)
-    }
+    fun syncBookmarkCount(postId: Long, now: LocalDateTime) =
+        updateOrCreate(postId) { recruitmentPostMetricRepository.syncBookmarkCount(postId, now) }
 
     private fun updateOrCreate(postId: Long, update: () -> Int) {
         ensureMetricExists(postId)

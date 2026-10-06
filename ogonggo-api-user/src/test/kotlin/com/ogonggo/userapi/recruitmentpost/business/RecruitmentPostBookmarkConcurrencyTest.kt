@@ -70,10 +70,12 @@ class RecruitmentPostBookmarkConcurrencyTest @Autowired constructor(
                 listOf(postId),
                 bookmarkService.getBookmarks(USER_ID, page = 0, size = 10).items.map { it.id },
             )
-            assertEquals(
-                1L,
-                bookmarkService.getBookmarks(USER_ID, page = 0, size = 10).items.single().bookmarkCount,
-            )
+            // 북마크 수는 커밋 뒤 지표 실행기에서 다시 세므로 반영될 때까지 기다린다.
+            val bookmarkCount = (1..50).asSequence()
+                .map { bookmarkService.getBookmarks(USER_ID, page = 0, size = 10).items.single().bookmarkCount }
+                .onEach { count -> if (count != 1L) Thread.sleep(100) }
+                .firstOrNull { it == 1L }
+            assertEquals(1L, bookmarkCount)
         } finally {
             executor.shutdownNow()
         }

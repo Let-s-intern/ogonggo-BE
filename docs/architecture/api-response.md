@@ -141,7 +141,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 지표 실행기는 스레드를 하나만 두어 지표 기록이 DB 커넥션을 최대 1개만 점유하게 합니다. 지표는 조회 응답의 정확성에 필요하지 않으므로 기록이 실패하거나 대기 큐가 가득 차면 로그만 남기고 버립니다.
 
-`bookmarkCount`도 Business Service가 직접 올리지 않고 `JobBookmarkChangedEvent`, `BootcampBookmarkChangedEvent`로 변경 사실만 발행합니다. 수신자는 등록·해제를 구분하지 않고 활성 북마크를 다시 세므로 갱신을 한 번 놓쳐도 다음 변경에서 값이 스스로 복구됩니다.
+`bookmarkCount`도 Business Service가 직접 올리지 않고 `JobBookmarkChangedEvent`, `BootcampBookmarkChangedEvent`, `RecruitmentPostBookmarkChangedEvent`로 변경 사실만 발행합니다. 모집글도 같은 방식입니다. 수신자는 등록·해제를 구분하지 않고 활성 북마크를 다시 세므로 갱신을 한 번 놓쳐도 다음 변경에서 값이 스스로 복구됩니다.
 
 북마크가 롤백되면 지표도 바뀌면 안 되므로 이 이벤트는 `AFTER_COMMIT`에만 처리합니다. 그 결과 북마크 직후 목록을 다시 조회하면 이전 `bookmarkCount`가 보일 수 있습니다. 사용자 본인의 `bookmarked` 상태는 북마크 행에서 직접 읽으므로 항상 정확합니다.
 

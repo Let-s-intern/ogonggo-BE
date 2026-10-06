@@ -12,10 +12,11 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(RecruitmentPostMetricManager::class, RecruitmentPostMetricAppender::class)
+@Import(RecruitmentPostMetricManager::class, RecruitmentPostMetricAppender::class, RecruitmentPostBookmarkManager::class)
 internal class RecruitmentPostMetricPersistenceTest @Autowired constructor(
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
     private val recruitmentPostMetricRepository: RecruitmentPostMetricJpaRepository,
+    private val bookmarkManager: RecruitmentPostBookmarkManager,
 ) {
 
     @Test
@@ -46,32 +47,29 @@ internal class RecruitmentPostMetricPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `북마크 수는 지표 행에서 원자적으로 증가하고 0 미만으로 감소하지 않는다`() {
-        // given
-        val postId = POST_ID
+    fun `북마크 수는 해제하지 않은 북마크를 다시 세어 맞춘다`() {
+        // given: 세 명이 북마크하고 한 명이 해제했다
+        listOf(1L, 2L, 3L).forEach { userId -> bookmarkManager.append(userId, POST_ID, NOW) }
+        bookmarkManager.delete(3L, POST_ID, NOW)
 
-        // when
-        recruitmentPostMetricManager.increaseBookmarkCount(postId, NOW)
-        recruitmentPostMetricManager.increaseBookmarkCount(postId, NOW)
-        recruitmentPostMetricManager.decreaseBookmarkCount(postId, NOW)
+        // when: 몇 번을 다시 세어도 결과가 같다
+        recruitmentPostMetricManager.syncBookmarkCount(POST_ID, NOW)
+        recruitmentPostMetricManager.syncBookmarkCount(POST_ID, NOW)
 
         // then
-        assertEquals(1, recruitmentPostMetricRepository.findByPostId(postId)?.bookmarkCount)
+        assertEquals(2L, recruitmentPostMetricRepository.findByPostId(POST_ID)?.bookmarkCount)
     }
 
     @Test
-    fun `카운터가 실제 수보다 작아 줄일 수 없어도 예외 없이 0을 유지한다`() {
-        // given: 지표 행이 북마크·댓글보다 늦게 만들어져 카운터가 0인 상태
+    fun `댓글 카운터가 실제 수보다 작아 줄일 수 없어도 예외 없이 0을 유지한다`() {
+        // given: 지표 행이 댓글보다 늦게 만들어져 카운터가 0인 상태
         recruitmentPostMetricManager.initialize(POST_ID)
 
         // when
-        recruitmentPostMetricManager.decreaseBookmarkCount(POST_ID, NOW)
         recruitmentPostMetricManager.decreaseCommentCount(POST_ID, 1, NOW)
 
         // then
-        val metric = recruitmentPostMetricRepository.findByPostId(POST_ID)
-        assertEquals(0L, metric?.bookmarkCount)
-        assertEquals(0L, metric?.commentCount)
+        assertEquals(0L, recruitmentPostMetricRepository.findByPostId(POST_ID)?.commentCount)
     }
 
     companion object {

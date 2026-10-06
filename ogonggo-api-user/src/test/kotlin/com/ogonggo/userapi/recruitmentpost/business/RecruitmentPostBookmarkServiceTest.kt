@@ -4,7 +4,6 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgres
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostApplicationErrorCode
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
-import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
@@ -24,6 +23,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -35,7 +35,7 @@ class RecruitmentPostBookmarkServiceTest {
     private val postReader = Mockito.mock(RecruitmentPostReader::class.java)
     private val bookmarkReader = Mockito.mock(RecruitmentPostBookmarkReader::class.java)
     private val bookmarkManager = Mockito.mock(RecruitmentPostBookmarkManager::class.java)
-    private val recruitmentPostMetricManager = Mockito.mock(RecruitmentPostMetricManager::class.java)
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val recruitmentPostMetricReader = Mockito.mock(RecruitmentPostMetricReader::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
@@ -45,7 +45,7 @@ class RecruitmentPostBookmarkServiceTest {
         postReader,
         bookmarkReader,
         bookmarkManager,
-        recruitmentPostMetricManager,
+        eventPublisher,
         recruitmentPostMetricReader,
         Clock.fixed(Instant.parse("2026-09-15T00:00:00Z"), ZONE),
         userProfileReader,
@@ -77,7 +77,7 @@ class RecruitmentPostBookmarkServiceTest {
 
         // then
         Mockito.verify(bookmarkManager).append(USER_ID, POST_ID, NOW)
-        Mockito.verify(recruitmentPostMetricManager).increaseBookmarkCount(POST_ID, NOW)
+        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostBookmarkChangedEvent(POST_ID))
     }
 
     @Test
@@ -102,7 +102,7 @@ class RecruitmentPostBookmarkServiceTest {
 
         Mockito.verify(postReader).readIncludingDeleted(POST_ID)
         Mockito.verify(bookmarkManager).delete(USER_ID, POST_ID, NOW)
-        Mockito.verify(recruitmentPostMetricManager).decreaseBookmarkCount(POST_ID, NOW)
+        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostBookmarkChangedEvent(POST_ID))
     }
 
     @Test
@@ -116,7 +116,7 @@ class RecruitmentPostBookmarkServiceTest {
         service.deleteBookmark(USER_ID, POST_ID)
 
         // then
-        Mockito.verifyNoInteractions(recruitmentPostMetricManager)
+        Mockito.verifyNoInteractions(eventPublisher)
     }
 
     @Test
@@ -129,7 +129,7 @@ class RecruitmentPostBookmarkServiceTest {
         service.prepare(USER_ID, POST_ID)
 
         // then
-        Mockito.verify(recruitmentPostMetricManager).decreaseBookmarkCount(POST_ID, NOW)
+        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostBookmarkChangedEvent(POST_ID))
         Mockito.verify(applicationManager).startPreparation(POST_ID, USER_ID, NOW)
     }
 
@@ -145,7 +145,7 @@ class RecruitmentPostBookmarkServiceTest {
         service.prepare(USER_ID, POST_ID)
 
         // then
-        Mockito.verifyNoInteractions(applicationManager, recruitmentPostMetricManager)
+        Mockito.verifyNoInteractions(applicationManager, eventPublisher)
     }
 
     @Test
@@ -193,7 +193,7 @@ class RecruitmentPostBookmarkServiceTest {
 
         // then
         Mockito.verify(applicationManager).delete(POST_ID, USER_ID, NOW)
-        Mockito.verify(recruitmentPostMetricManager).increaseBookmarkCount(POST_ID, NOW)
+        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostBookmarkChangedEvent(POST_ID))
     }
 
     @Test
@@ -206,7 +206,7 @@ class RecruitmentPostBookmarkServiceTest {
         service.cancelPreparation(USER_ID, POST_ID)
 
         // then
-        Mockito.verifyNoInteractions(bookmarkManager, applicationManager, recruitmentPostMetricManager)
+        Mockito.verifyNoInteractions(bookmarkManager, applicationManager, eventPublisher)
     }
 
     private fun givenActivePublishedPost() {
