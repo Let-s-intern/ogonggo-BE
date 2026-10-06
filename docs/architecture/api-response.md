@@ -299,7 +299,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### enum 선택지
 
-`GET /api/v1/enums`는 사용자 API의 요청·응답에 나오는 업무 enum을 enum 이름별로 묶어 반환합니다. 로그인 없이 호출할 수 있으며 값은 선언 순서를 따릅니다.
+`GET /api/v1/enums`(사용자 API, 로그인 불필요)와 `GET /api/v1/admin/enums`(관리자 API, 관리자 토큰 필요)는 업무 enum을 enum 이름별로 묶어 반환합니다. 두 API의 응답 형식과 목록은 같고, 값은 선언 순서를 따릅니다.
 
 ```json
 {
@@ -315,10 +315,16 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - `name`은 요청과 응답에 쓰는 값이고, `desc`는 화면 라벨입니다. `EnumField.code`는 업무 메타데이터이므로 싣지 않아 클라이언트가 코드 번호로 요청하지 않게 합니다.
 - `parent`는 다른 enum 값에 속하는 값(`HierarchicalEnumField`)의 상위 값 이름이고, 그 밖에는 `null`입니다. 시·군·구(`SubRegion`)의 `parent`는 시·도(`Region`)입니다.
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
-- 어떤 enum을 내보낼지는 사용자 API가 정하며 `UserEnumService`가 목록을 관리합니다. 값을 선택지로 바꾸는 `EnumOption`만 core가 제공합니다.
-- 사용자 API 요청·응답에 새 업무 enum을 쓰면 이 목록에도 추가합니다. presentation의 요청·응답 필드와 Controller 파라미터에 쓰인 `EnumField` enum이 목록에 없으면 테스트가 실패합니다.
+- 목록은 core의 `EnumOptionReader`가 한 곳에서 관리합니다. core에 업무 enum을 새로 만들면 이 목록에 추가하며, 빠뜨리면 core 테스트가 실패합니다.
+- core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(사용자: 광고 문의 유형·홍보 채널, 관리자: 관리 목록 정렬·노출). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
 - 모집글 enum 이름에 `RecruitmentPost` 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`). 프런트가 새 키로 옮기는 동안 `UserEnumService.LEGACY_KEYS`가 같은 선택지를 예전 키 7개로도 내려 주며, 프런트 배포 후 제거합니다. 모집 포지션의 `MOBILE`도 같은 기간에만 남아 있는 값이라 선택지 목록 맨 뒤에 오고, 화면에서는 기존 글의 라벨로만 씁니다.
-- 관리자 API는 `GET /api/v1/admin/enums`로 자기 목록을 따로 제공합니다. 응답 형식은 같고 관리자 토큰이 필요합니다. 두 API의 독립 배포 경계를 지키도록 목록은 `AdminEnumService`가 관리하며, 사용자 API 목록과 겹치는 enum이 있어도 합치지 않습니다. 관리자 API의 presentation에 쓰인 `EnumField` enum이 목록에 없으면 같은 방식으로 테스트가 실패합니다.
+
+#### 목록을 한 곳에서 관리하는 이유
+
+- 결정일: 2026-10-06 / 리뷰 상태: 팀 리뷰 필요
+- 배경: 처음에는 "내보낼 enum은 각 API의 계약이 정한다"는 기준으로 사용자 API만 목록을 두었고, 관리자 API에 선택지 API를 추가하면서 목록이 두 벌이 되었습니다. 두 목록의 대부분이 같은 core enum이라, enum을 추가하거나 바꿀 때마다 두 곳을 함께 고쳐야 했습니다.
+- 변경: 공통 목록을 core로 옮기고, 각 API는 자기 전용 enum만 덧붙입니다.
+- 감수한 점: 목록을 바꾸면 두 API를 모두 배포해야 합니다. 두 API가 상대 API에서만 쓰는 enum도 함께 내보냅니다(예: 사용자 API가 `ReviewContentType`, `ContentSource`, `JobContentField`, `BootcampContentField`를, 관리자 API가 사용자 화면의 정렬·지원 상태 enum을 내보냄). 선택지는 화면 라벨이고 접근 권한과 무관하므로 노출해도 문제가 없다고 보았습니다.
 
 ### 공지사항
 

@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.enumeration.business
 
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Api
 import com.ogonggo.core.enumeration.EnumField
+import com.ogonggo.core.enumeration.catalog.EnumOptionReader
 import com.ogonggo.core.job.domain.JobRole
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -15,7 +16,7 @@ import java.util.regex.Pattern
 
 class AdminEnumServiceTest {
 
-    private val enums = AdminEnumService().getEnums()
+    private val enums = AdminEnumService(EnumOptionReader()).getEnums()
 
     @Test
     fun `enum 값을 선언 순서대로 이름과 라벨, 상위 값으로 제공한다`() {

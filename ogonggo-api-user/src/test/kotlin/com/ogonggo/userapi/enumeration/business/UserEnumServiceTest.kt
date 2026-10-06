@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.enumeration.business
 
 import com.ogonggo.core.enumeration.EnumField
+import com.ogonggo.core.enumeration.catalog.EnumOptionReader
 import com.ogonggo.core.job.domain.EmploymentType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -14,7 +15,7 @@ import java.util.regex.Pattern
 
 class UserEnumServiceTest {
 
-    private val enums = UserEnumService().getEnums()
+    private val enums = UserEnumService(EnumOptionReader()).getEnums()
 
     @Test
     fun `enum 값을 선언 순서대로 이름과 라벨로 제공한다`() {
