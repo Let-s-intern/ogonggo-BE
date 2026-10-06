@@ -317,7 +317,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
 - 어떤 enum을 내보낼지는 사용자 API가 정하며 `UserEnumService`가 목록을 관리합니다. 값을 선택지로 바꾸는 `EnumOption`만 core가 제공합니다.
 - 사용자 API 요청·응답에 새 업무 enum을 쓰면 이 목록에도 추가합니다. presentation의 요청·응답 필드와 Controller 파라미터에 쓰인 `EnumField` enum이 목록에 없으면 테스트가 실패합니다.
-- 관리자 API에는 아직 두지 않습니다. 관리자 콘솔에 필요해지면 두 API의 독립 배포 경계를 지키도록 관리자 API가 자기 목록을 따로 제공합니다.
+- 관리자 API는 `GET /api/v1/admin/enums`로 자기 목록을 따로 제공합니다. 응답 형식은 같고 관리자 토큰이 필요합니다. 두 API의 독립 배포 경계를 지키도록 목록은 `AdminEnumService`가 관리하며, 사용자 API 목록과 겹치는 enum이 있어도 합치지 않습니다. 관리자 API의 presentation에 쓰인 `EnumField` enum이 목록에 없으면 같은 방식으로 테스트가 실패합니다.
 
 ### 공지사항
 
