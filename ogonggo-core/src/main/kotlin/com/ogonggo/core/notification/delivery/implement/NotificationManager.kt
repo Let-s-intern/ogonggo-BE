@@ -17,16 +17,36 @@ class NotificationManager internal constructor(
 
     /** 전역 delivery 스케줄 잠금 안에서 처리할 due 알림을 작은 묶음으로 읽는다. */
     @Transactional(readOnly = true)
-    fun findDue(now: LocalDateTime, limit: Int): List<NotificationMessageDto> {
+    fun findDue(now: LocalDateTime, notBefore: LocalDateTime, limit: Int): List<NotificationMessageDto> {
         require(limit > 0)
         return notificationRepository.findDue(
             now = now,
+            notBefore = notBefore,
             pending = NotificationStatus.PENDING,
             pageable = PageRequest.of(0, limit),
         ).map { it.toMessageDto() }
     }
 
-    /** provider 응답만 저장한다. 오류는 최종 FAILED로 남기며 자동 재시도하지 않는다. */
+    /** Actuator backlog gauge용 PENDING 전체 건수다. */
+    @Transactional(readOnly = true)
+    fun countPendingTotal(): Long = notificationRepository.countByStatus(NotificationStatus.PENDING)
+
+    /** 현재 dispatcher의 8분 발송 창에 들어오는 PENDING 건수다. */
+    @Transactional(readOnly = true)
+    fun countPendingDue(now: LocalDateTime, notBefore: LocalDateTime): Long =
+        notificationRepository.countDuePending(now, notBefore, NotificationStatus.PENDING)
+
+    /** 발송 창을 넘겨 자동 발송되지 않는 PENDING 건수다. */
+    @Transactional(readOnly = true)
+    fun countPendingExpired(notBefore: LocalDateTime): Long =
+        notificationRepository.countExpiredPending(notBefore, NotificationStatus.PENDING)
+
+    /** 예정 시각이 아직 오지 않은 PENDING 건수다. */
+    @Transactional(readOnly = true)
+    fun countPendingFuture(now: LocalDateTime): Long =
+        notificationRepository.countFuturePending(now, NotificationStatus.PENDING)
+
+    /** provider 결과를 저장한다. 접수 여부 미확정과 명시 실패를 구분하며 자동 재시도하지 않는다. */
     @Transactional
     fun complete(notificationId: Long, result: NotificationDeliveryResult, now: LocalDateTime): Boolean {
         val notification = notificationRepository.findById(notificationId).orElse(null) ?: return false
@@ -34,7 +54,14 @@ class NotificationManager internal constructor(
 
         when (result) {
             is NotificationDeliveryResult.Sent -> notification.markSent(now, result.providerMessageId)
-            is NotificationDeliveryResult.Failed -> notification.markFailed(result.resultCode)
+            is NotificationDeliveryResult.Unknown -> notification.markUnknown(
+                resultCode = result.resultCode,
+                failureCategory = result.failureCategory,
+            )
+            is NotificationDeliveryResult.Failed -> notification.markFailed(
+                resultCode = result.resultCode,
+                failureCategory = result.failureCategory,
+            )
         }
         return true
     }

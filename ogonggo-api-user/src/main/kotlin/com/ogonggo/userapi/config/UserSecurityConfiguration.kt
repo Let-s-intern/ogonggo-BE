@@ -4,15 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.userapi.auth.implement.LetsCareerInternalApiKeyFilter
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.auth.presentation.UserAuthenticationFilter
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
+import org.springframework.security.authorization.AuthorizationDecision
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.util.matcher.IpAddressMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.CorsUtils
@@ -52,6 +55,10 @@ class UserSecurityConfiguration {
             .authorizeHttpRequests {
                 // CorsFilter가 인가보다 앞에 있어 정상 preflight는 여기까지 오지 않는다.
                 // anyRequest().denyAll()로 끝나는 체인이라 안전망으로 함께 둔다.
+                // Actuator metrics는 loopback 요청만 허용하고 외부 요청은 차단한다. health는 아래 denyAll 안전망을 따른다.
+                it.requestMatchers(EndpointRequest.to("metrics")).access { _, context ->
+                    AuthorizationDecision(LOOPBACK_MATCHER.matches(context.request))
+                }
                 it.requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 it.requestMatchers(
                     "/health",
@@ -193,5 +200,6 @@ class UserSecurityConfiguration {
         )
 
         private const val PREFLIGHT_MAX_AGE_SECONDS = 3600L
+        private val LOOPBACK_MATCHER = IpAddressMatcher("127.0.0.1")
     }
 }

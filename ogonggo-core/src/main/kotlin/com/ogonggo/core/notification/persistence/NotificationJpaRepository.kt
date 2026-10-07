@@ -11,6 +11,8 @@ import java.time.LocalDateTime
 
 internal interface NotificationJpaRepository : JpaRepository<Notification, Long> {
 
+    fun countByStatus(status: NotificationStatus): Long
+
     fun existsByDeduplicationKey(deduplicationKey: String): Boolean
 
     /** 적재 시 중복 키를 미리 거르는 조회. 동시 삽입의 최종 방어는 DB 유일 제약이다. */
@@ -35,15 +37,55 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         """
         select notification from Notification notification
         where notification.scheduledAt <= :now
+          and notification.scheduledAt > :notBefore
           and notification.status = :pending
         order by notification.scheduledAt, notification.id
         """,
     )
     fun findDue(
         @Param("now") now: LocalDateTime,
+        @Param("notBefore") notBefore: LocalDateTime,
         @Param("pending") pending: NotificationStatus,
         pageable: Pageable,
     ): List<Notification>
+
+    @Query(
+        """
+        select count(notification) from Notification notification
+        where notification.status = :pending
+          and notification.scheduledAt <= :now
+          and notification.scheduledAt > :notBefore
+        """,
+    )
+    fun countDuePending(
+        @Param("now") now: LocalDateTime,
+        @Param("notBefore") notBefore: LocalDateTime,
+        @Param("pending") pending: NotificationStatus,
+    ): Long
+
+    @Query(
+        """
+        select count(notification) from Notification notification
+        where notification.status = :pending
+          and notification.scheduledAt <= :notBefore
+        """,
+    )
+    fun countExpiredPending(
+        @Param("notBefore") notBefore: LocalDateTime,
+        @Param("pending") pending: NotificationStatus,
+    ): Long
+
+    @Query(
+        """
+        select count(notification) from Notification notification
+        where notification.status = :pending
+          and notification.scheduledAt > :now
+        """,
+    )
+    fun countFuturePending(
+        @Param("now") now: LocalDateTime,
+        @Param("pending") pending: NotificationStatus,
+    ): Long
 
     /** 발송 완료·실패 후 30일 이상 지난 행만 한 페이지씩 찾는다. */
     @Query(

@@ -2,7 +2,9 @@ package com.ogonggo.core.notification.intake.implement
 
 import com.ogonggo.core.notification.domain.Notification
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
+import com.ogonggo.core.notification.intake.implement.event.NotificationEnqueuedEvent
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional
 @Component
 class NotificationAppender internal constructor(
     private val notificationRepository: NotificationJpaRepository,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     /** 호출자의 트랜잭션에 참여해 알림 적재를 업무 변경과 함께 커밋한다. */
@@ -60,6 +63,9 @@ class NotificationAppender internal constructor(
             .toList()
 
         notificationRepository.saveAll(newNotifications)
+        newNotifications.groupingBy(Notification::channel).eachCount().forEach { (channel, count) ->
+            eventPublisher.publishEvent(NotificationEnqueuedEvent(channel, count))
+        }
         return newNotifications.size
     }
 }

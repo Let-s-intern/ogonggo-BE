@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.notification.channel.alimtalk
 
+import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -147,12 +148,19 @@ class NhnAlimTalkClientTest {
 
         val result = client.send(message())
 
-        assertEquals(NhnAlimTalkResult.Rejected("400101"), result)
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "400101",
+                failureCategory = NotificationFailureCategory.UNKNOWN_PROVIDER_ERROR,
+                description = "매핑되지 않은 NHN API 오류 코드",
+            ),
+            result,
+        )
         server.verify()
     }
 
     @Test
-    fun `헤더의 중복 멱등성 코드만 중복 요청 결과로 분류한다`() {
+    fun `NHN 멱등성 중복 코드는 의미 카테고리로 분류한다`() {
         val builder = RestClient.builder()
         val server = MockRestServiceServer.bindTo(builder).build()
         val client = client(builder)
@@ -172,7 +180,64 @@ class NhnAlimTalkClientTest {
 
         val result = client.send(message())
 
-        assertEquals(NhnAlimTalkResult.DuplicateIdempotencyKey, result)
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "-1005",
+                failureCategory = NotificationFailureCategory.DUPLICATE_REQUEST,
+                description = "동일한 멱등성 키로 10분 이내 요청됨. 이전 요청의 최종 전달 여부는 별도 확인 필요",
+            ),
+            result,
+        )
+        server.verify()
+    }
+
+    @Test
+    fun `미승인 템플릿 오류는 의미 카테고리와 설명으로 분류한다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val client = client(builder)
+        server.expect(requestTo("$NHN_BASE_URL/alimtalk/v2.3/appkeys/$APP_KEY/messages"))
+            .andRespond(withSuccess(
+                """
+                    {"header":{"resultCode":-3005,"resultMessage":"not approved","isSuccessful":false}}
+                """.trimIndent(),
+                MediaType.APPLICATION_JSON,
+            ))
+
+        val result = client.send(message())
+
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "-3005",
+                failureCategory = NotificationFailureCategory.TEMPLATE_CONFIGURATION,
+                description = "템플릿 승인 상태 오류",
+            ),
+            result,
+        )
+        server.verify()
+    }
+
+    @Test
+    fun `요청 필드 검증 오류는 잘못된 요청으로 분류한다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val client = client(builder)
+        server.expect(requestTo("$NHN_BASE_URL/alimtalk/v2.3/appkeys/$APP_KEY/messages"))
+            .andRespond(withSuccess(
+                """{"header":{"resultCode":-2001,"isSuccessful":false}}""",
+                MediaType.APPLICATION_JSON,
+            ))
+
+        val result = client.send(message())
+
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "-2001",
+                failureCategory = NotificationFailureCategory.INVALID_REQUEST,
+                description = "요청 파라미터 검증 오류",
+            ),
+            result,
+        )
         server.verify()
     }
 
@@ -197,7 +262,14 @@ class NhnAlimTalkClientTest {
 
         val result = client.send(message())
 
-        assertEquals(NhnAlimTalkResult.Rejected("410201"), result)
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "410201",
+                failureCategory = NotificationFailureCategory.UNKNOWN_PROVIDER_ERROR,
+                description = "매핑되지 않은 NHN API 오류 코드",
+            ),
+            result,
+        )
         server.verify()
     }
 
@@ -254,11 +326,39 @@ class NhnAlimTalkClientTest {
         }
 
         val output = appender.list.map { it.formattedMessage }.joinToString(" ")
-        assertEquals(NhnAlimTalkResult.Rejected("NHN_HTTP_500"), result)
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_HTTP_500",
+                failureCategory = NotificationFailureCategory.PROVIDER_UNAVAILABLE,
+                description = "NHN HTTP 응답 오류 (500)",
+            ),
+            result,
+        )
         assertTrue(appender.list.any { it.level == Level.WARN })
         listOf(APP_KEY, SECRET_KEY, PHONE_NUMBER, "hong@example.com", responseBody).forEach { sensitiveValue ->
             assertFalse(output.contains(sensitiveValue), "민감값이 로그 또는 예외에 노출됐습니다: $sensitiveValue")
         }
+        server.verify()
+    }
+
+    @Test
+    fun `HTTP 429는 rate limit 분류로 남긴다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val client = client(builder)
+        server.expect(requestTo("$NHN_BASE_URL/alimtalk/v2.3/appkeys/$APP_KEY/messages"))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("rate limited"))
+
+        val result = client.send(message())
+
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_HTTP_429",
+                failureCategory = NotificationFailureCategory.RATE_LIMITED,
+                description = "NHN HTTP 응답 오류 (429)",
+            ),
+            result,
+        )
         server.verify()
     }
 
@@ -270,7 +370,14 @@ class NhnAlimTalkClientTest {
         server.expect(requestTo("$NHN_BASE_URL/alimtalk/v2.3/appkeys/$APP_KEY/messages"))
             .andRespond { throw ResourceAccessException("connection reset") }
 
-        assertEquals(NhnAlimTalkResult.Rejected("NHN_TRANSPORT_ERROR"), client.send(message()))
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_TRANSPORT_ERROR",
+                failureCategory = NotificationFailureCategory.TRANSPORT_ERROR,
+                description = "NHN 응답을 받기 전 통신 오류",
+            ),
+            client.send(message()),
+        )
         server.verify()
     }
 
@@ -284,7 +391,14 @@ class NhnAlimTalkClientTest {
 
         val result = client.send(message())
 
-        assertEquals(NhnAlimTalkResult.Rejected("NHN_CLIENT_ERROR"), result)
+        assertEquals(
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_CLIENT_ERROR",
+                failureCategory = NotificationFailureCategory.CLIENT_ERROR,
+                description = "NHN 요청 클라이언트 처리 오류",
+            ),
+            result,
+        )
         server.verify()
     }
 

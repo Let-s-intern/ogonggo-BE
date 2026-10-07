@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.notification.channel.alimtalk
 
+import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.userapi.config.UserAlimTalkConfiguration
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -9,8 +10,6 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestClientResponseException
-
-private const val NHN_DUPLICATE_IDEMPOTENCY_KEY_RESULT_CODE = -1005
 
 @Component
 internal class NhnAlimTalkClient(
@@ -24,7 +23,7 @@ internal class NhnAlimTalkClient(
         val result = try {
             sendRequest(message)?.toResult() ?: NhnAlimTalkResult.InvalidResponse
         } catch (exception: ResourceAccessException) {
-            // 응답이 불명확해도 자동 재시도하지 않고 최종 실패로 기록한다.
+            // 요청이 provider에 도달했는지 알 수 없으므로 UNKNOWN으로 남기고 자동 재발송하지 않는다.
             val safeException = RuntimeException("NHN 알림톡 요청 중 통신 오류가 발생했습니다.").apply {
                 stackTrace = exception.stackTrace
             }
@@ -34,18 +33,36 @@ internal class NhnAlimTalkClient(
                 exception::class.simpleName,
                 safeException,
             )
-            NhnAlimTalkResult.Rejected("NHN_TRANSPORT_ERROR")
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_TRANSPORT_ERROR",
+                failureCategory = NotificationFailureCategory.TRANSPORT_ERROR,
+                description = "NHN 응답을 받기 전 통신 오류",
+            )
         } catch (exception: RestClientResponseException) {
-            // HTTP 오류도 자동 재시도하지 않고 결과 코드만 안전하게 보존한다.
-            NhnAlimTalkResult.Rejected("NHN_HTTP_${exception.statusCode.value()}")
+            // HTTP 상태만 저장한다. 응답 본문은 민감 데이터나 변동 메시지가 포함될 수 있어 보존하지 않는다.
+            val statusCode = exception.statusCode.value()
+            val category = when {
+                statusCode == 429 -> NotificationFailureCategory.RATE_LIMITED
+                statusCode >= 500 -> NotificationFailureCategory.PROVIDER_UNAVAILABLE
+                else -> NotificationFailureCategory.HTTP_ERROR
+            }
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_HTTP_$statusCode",
+                failureCategory = category,
+                description = "NHN HTTP 응답 오류 ($statusCode)",
+            )
         } catch (exception: RestClientException) {
-            // 응답 변환 등 분류할 계약이 없는 오류도 최종 실패로 보존한다.
+            // 요청 처리 여부를 단정할 수 없는 오류는 UNKNOWN으로 보존한다.
             log.warn(
                 "NHN 알림톡 응답을 분류하지 못했습니다. templateCode={}, errorType={}",
                 message.templateCode,
                 exception::class.simpleName,
             )
-            NhnAlimTalkResult.Rejected("NHN_CLIENT_ERROR")
+            NhnAlimTalkResult.Error(
+                resultCode = "NHN_CLIENT_ERROR",
+                failureCategory = NotificationFailureCategory.CLIENT_ERROR,
+                description = "NHN 요청 클라이언트 처리 오류",
+            )
         }
         logResult(message.templateCode, result)
         return result
@@ -71,14 +88,14 @@ internal class NhnAlimTalkClient(
         when (result) {
             is NhnAlimTalkResult.Accepted ->
                 log.info("NHN 알림톡 요청이 접수됐습니다. templateCode={}, requestId={}", templateCode, result.requestId)
-            NhnAlimTalkResult.DuplicateIdempotencyKey ->
-                log.info(
-                    "NHN 알림톡 중복 멱등성 키 응답을 받았습니다. templateCode={}, resultCode={}",
+            is NhnAlimTalkResult.Error ->
+                log.warn(
+                    "NHN 알림톡 요청 결과. templateCode={}, failureCategory={}, resultCode={}, description={}",
                     templateCode,
-                    NHN_DUPLICATE_IDEMPOTENCY_KEY_RESULT_CODE,
+                    result.failureCategory,
+                    result.resultCode,
+                    result.description,
                 )
-            is NhnAlimTalkResult.Rejected ->
-                log.warn("NHN 알림톡 요청이 거절됐습니다. templateCode={}, resultCode={}", templateCode, result.resultCode)
             NhnAlimTalkResult.InvalidResponse ->
                 log.warn("NHN 알림톡 응답의 접수 여부를 판단할 수 없습니다. templateCode={}", templateCode)
         }
@@ -124,11 +141,7 @@ private data class NhnAlimTalkResponse(
         // 접수 여부를 확인할 필드가 빠졌거나 수신자 결과가 하나로 결정되지 않으면 성공으로 추정하지 않는다.
         val successful = header?.isSuccessful ?: return NhnAlimTalkResult.InvalidResponse
         if (!successful) {
-            // NHN은 10분 내 같은 멱등성 키 요청을 -1005로 거절한다. 다른 오류는 일반 거절로 유지한다.
-            if (header.resultCode == NHN_DUPLICATE_IDEMPOTENCY_KEY_RESULT_CODE) {
-                return NhnAlimTalkResult.DuplicateIdempotencyKey
-            }
-            return NhnAlimTalkResult.Rejected(header.resultCode?.toString())
+            return rejected(header.resultCode)
         }
 
         val resultCode = message?.sendResults?.singleOrNull()?.resultCode
@@ -136,8 +149,17 @@ private data class NhnAlimTalkResponse(
         return if (resultCode == SUCCESS_RESULT_CODE) {
             NhnAlimTalkResult.Accepted(message.requestId)
         } else {
-            NhnAlimTalkResult.Rejected(resultCode.toString())
+            rejected(resultCode)
         }
+    }
+
+    private fun rejected(resultCode: Int?): NhnAlimTalkResult.Error {
+        val error = NhnAlimTalkErrorCode.resolve(resultCode)
+        return NhnAlimTalkResult.Error(
+            resultCode = resultCode?.toString(),
+            failureCategory = error.category,
+            description = error.description,
+        )
     }
 
     private companion object {

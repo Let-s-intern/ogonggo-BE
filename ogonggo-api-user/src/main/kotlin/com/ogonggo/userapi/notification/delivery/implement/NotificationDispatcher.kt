@@ -3,7 +3,9 @@ package com.ogonggo.userapi.notification.delivery.implement
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
+import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.userapi.config.UserAsyncConfiguration
+import com.ogonggo.userapi.notification.metrics.NotificationMetrics
 import com.ogonggo.userapi.notification.delivery.implement.dto.NotificationDispatchOutcome
 import com.ogonggo.userapi.notification.delivery.implement.dto.NotificationDispatchSummaryDto
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
@@ -25,6 +27,7 @@ class NotificationDispatcher internal constructor(
     senders: List<NotificationSender>,
     @Qualifier(UserAsyncConfiguration.NOTIFICATION_DELIVERY_TASK_EXECUTOR)
     private val taskExecutor: TaskExecutor,
+    private val notificationMetrics: NotificationMetrics,
     private val clock: Clock,
 ) {
     private val sendersByChannel = senders.associateBy(NotificationSender::channel)
@@ -34,24 +37,40 @@ class NotificationDispatcher internal constructor(
     }
 
     /** 행별 claim 대신 한 번의 발송 작업을 ShedLock으로 직렬화한다. */
-    @SchedulerLock(name = SCHEDULER_NAME, lockAtMostFor = "PT90S")
+    @SchedulerLock(name = SCHEDULER_NAME, lockAtMostFor = LOCK_AT_MOST_FOR)
     fun dispatch() {
         val runId = UUID.randomUUID().toString()
         val startedAt = System.nanoTime()
         var summary = NotificationDispatchSummaryDto()
 
-        while (hasTimeRemaining(startedAt)) {
-            val dueNotifications = notificationManager.findDue(LocalDateTime.now(clock), BATCH_SIZE)
-            if (dueNotifications.isEmpty()) break
+        try {
+            while (hasTimeRemaining(startedAt)) {
+                val now = LocalDateTime.now(clock)
+                val dueNotifications = notificationManager.findDue(
+                    now = now,
+                    notBefore = now.minus(PENDING_DISPATCH_WINDOW),
+                    limit = BATCH_SIZE,
+                )
+                if (dueNotifications.isEmpty()) break
 
-            val batchResult = dispatchBatch(runId, dueNotifications)
-            summary += batchResult
+                val batchResult = dispatchBatch(runId, dueNotifications)
+                summary += batchResult
 
-            // 결과 기록 실패 건은 PENDING으로 남으므로 같은 실행에서 다시 발송하지 않는다.
-            if (batchResult.shouldStopNextBatch) break
+                // 결과 기록 실패 건은 PENDING으로 남지만, 같은 실행에서는 재발송하지 않는다.
+                if (batchResult.shouldStopNextBatch) break
+            }
+        } finally {
+            val durationMs = elapsedMillis(startedAt)
+            if (shouldWarnLongRun(durationMs)) {
+                log.warn(
+                    "알림 dispatcher 실행이 60초 이상 걸렸습니다. ShedLock 만료 전 실행 지연 신호입니다. runId={}, durationMs={}, lockAtMostForMs={}",
+                    runId,
+                    durationMs,
+                    LOCK_AT_MOST_FOR_MILLIS,
+                )
+            }
+            logRunSummary(runId, startedAt, summary)
         }
-
-        logRunSummary(runId, startedAt, summary)
     }
 
     private fun dispatchBatch(
@@ -93,7 +112,10 @@ class NotificationDispatcher internal constructor(
         notification: NotificationMessageDto,
     ): NotificationDeliveryResult = try {
         sendersByChannel[notification.channel]?.send(notification)
-            ?: NotificationDeliveryResult.Failed("CHANNEL_NOT_CONFIGURED")
+            ?: NotificationDeliveryResult.Failed(
+                resultCode = "CHANNEL_NOT_CONFIGURED",
+                failureCategory = NotificationFailureCategory.CHANNEL_NOT_CONFIGURED,
+            )
     } catch (exception: Exception) {
         log.error(
             "알림 sender 예외. runId={}, notificationId={}, errorType={}",
@@ -102,7 +124,10 @@ class NotificationDispatcher internal constructor(
             exception::class.simpleName,
             safeStackTrace(exception),
         )
-        NotificationDeliveryResult.Failed("UNCLASSIFIED_SENDER_ERROR")
+        NotificationDeliveryResult.Unknown(
+            resultCode = "UNCLASSIFIED_SENDER_ERROR",
+            failureCategory = NotificationFailureCategory.APPLICATION_ERROR,
+        )
     }
 
     private fun recordResult(
@@ -118,8 +143,10 @@ class NotificationDispatcher internal constructor(
             )
             if (!recorded) {
                 log.error("알림 발송 결과를 기록하지 못했습니다. runId={}, notificationId={}", runId, notification.notificationId)
+                notificationMetrics.recordUnresolved(notification.channel)
                 NotificationDispatchOutcome.UNRESOLVED
             } else {
+                notificationMetrics.recordDelivery(notification.channel, result)
                 logDeliveryResult(runId, notification, result)
                 result.toDispatchOutcome()
             }
@@ -131,6 +158,7 @@ class NotificationDispatcher internal constructor(
                 exception::class.simpleName,
                 safeStackTrace(exception),
             )
+            notificationMetrics.recordUnresolved(notification.channel)
             NotificationDispatchOutcome.UNRESOLVED
         }
     }
@@ -148,10 +176,19 @@ class NotificationDispatcher internal constructor(
                 notification.channel,
             )
             is NotificationDeliveryResult.Failed -> log.warn(
-                "알림 발송 실패. runId={}, notificationId={}, channel={}, resultCode={}",
+                "알림 발송 실패. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}",
                 runId,
                 notification.notificationId,
                 notification.channel,
+                result.failureCategory,
+                result.resultCode,
+            )
+            is NotificationDeliveryResult.Unknown -> log.warn(
+                "알림 provider 접수 여부 미확정. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}",
+                runId,
+                notification.notificationId,
+                notification.channel,
+                result.failureCategory,
                 result.resultCode,
             )
         }
@@ -165,10 +202,11 @@ class NotificationDispatcher internal constructor(
         if (!summary.hasResults) return
 
         log.info(
-            "알림 발송 실행 완료. runId={}, sent={}, failed={}, unresolved={}, executorRejected={}, durationMs={}",
+            "알림 발송 실행 완료. runId={}, sent={}, failed={}, unknown={}, unresolved={}, executorRejected={}, durationMs={}",
             runId,
             summary.sentCount,
             summary.failedCount,
+            summary.unknownCount,
             summary.unresolvedCount,
             summary.executorRejected,
             elapsedMillis(startedAt),
@@ -184,6 +222,7 @@ class NotificationDispatcher internal constructor(
     private fun NotificationDeliveryResult.toDispatchOutcome() = when (this) {
         is NotificationDeliveryResult.Sent -> NotificationDispatchOutcome.SENT
         is NotificationDeliveryResult.Failed -> NotificationDispatchOutcome.FAILED
+        is NotificationDeliveryResult.Unknown -> NotificationDispatchOutcome.UNKNOWN
     }
 
     private fun safeStackTrace(exception: Exception) = RuntimeException("알림 처리 실패").apply {
@@ -196,7 +235,13 @@ class NotificationDispatcher internal constructor(
         const val SCHEDULER_NAME = "jobBookmarkAlimTalkDelivery"
         private const val BATCH_SIZE = 4
         private const val NANOS_PER_MILLISECOND = 1_000_000
+        private const val LONG_RUN_WARNING_MILLIS = 60_000L
+        private const val LOCK_AT_MOST_FOR = "PT90S"
+        private const val LOCK_AT_MOST_FOR_MILLIS = 90_000L
+        private val PENDING_DISPATCH_WINDOW = Duration.ofMinutes(8)
         private val RUN_BUDGET = Duration.ofSeconds(45)
         private val log = LoggerFactory.getLogger(NotificationDispatcher::class.java)
+
+        internal fun shouldWarnLongRun(durationMillis: Long): Boolean = durationMillis >= LONG_RUN_WARNING_MILLIS
     }
 }

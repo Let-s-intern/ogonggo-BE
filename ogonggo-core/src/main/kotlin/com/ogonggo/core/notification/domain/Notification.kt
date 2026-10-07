@@ -26,6 +26,7 @@ enum class NotificationStatus(override val code: Int, override val desc: String)
     PENDING(1, "발송 대기"),
     SENT(2, "provider 접수"),
     FAILED(3, "발송 실패"),
+    UNKNOWN(4, "provider 접수 여부 미확정"),
 }
 
 /** 수신자 한 명·채널 한 개에 대한 알림과 발송 결과를 보존한다. */
@@ -98,17 +99,32 @@ internal class Notification(
     var resultCode: String? = null
         protected set
 
+    /** 원본 resultCode의 운영상 의미를 채널 공통 분류로 보존한다. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "result_category", length = 50)
+    var resultCategory: NotificationFailureCategory? = null
+        protected set
+
     fun markSent(now: LocalDateTime, providerMessageId: String?) {
         check(status == NotificationStatus.PENDING)
         status = NotificationStatus.SENT
         sentAt = now
         this.providerMessageId = providerMessageId
         resultCode = null
+        resultCategory = null
     }
 
-    fun markFailed(resultCode: String) {
+    fun markFailed(resultCode: String, failureCategory: NotificationFailureCategory) {
         check(status == NotificationStatus.PENDING)
         status = NotificationStatus.FAILED
         this.resultCode = resultCode
+        resultCategory = failureCategory
+    }
+
+    fun markUnknown(resultCode: String, failureCategory: NotificationFailureCategory) {
+        check(status == NotificationStatus.PENDING)
+        status = NotificationStatus.UNKNOWN
+        this.resultCode = resultCode
+        resultCategory = failureCategory
     }
 }

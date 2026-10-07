@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.mock.mockito.MockBean
@@ -30,6 +31,9 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.core.task.TaskExecutor
 import org.springframework.transaction.support.TransactionSynchronization
@@ -56,6 +60,7 @@ import java.util.concurrent.TimeUnit
         "nhn.sendKey=test-send-key",
     ],
 )
+@AutoConfigureMockMvc
 class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
     private val service: UserAuthService,
     private val companyService: CompanyAuthService,
@@ -64,6 +69,7 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
     private val transactionTemplate: TransactionTemplate,
     private val boundary: NhnHttpBoundary,
     private val jdbc: JdbcTemplate,
+    private val mockMvc: MockMvc,
     @Qualifier(UserAsyncConfiguration.NOTIFICATION_ENQUEUE_TASK_EXECUTOR)
     private val notificationEnqueueTaskExecutor: TaskExecutor,
 ) {
@@ -85,6 +91,19 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
     fun prepareHttpBoundary() {
         boundary.reset()
         jdbc.update("delete from notifications")
+    }
+
+    @Test
+    fun `Actuator metrics는 loopback에서만 조회할 수 있다`() {
+        mockMvc.perform(
+            get("/actuator/metrics")
+                .with { request -> request.remoteAddr = "127.0.0.1"; request },
+        ).andExpect(status().isOk)
+
+        mockMvc.perform(
+            get("/actuator/metrics")
+                .with { request -> request.remoteAddr = "10.0.0.5"; request },
+        ).andExpect(status().isUnauthorized)
     }
 
     @Test

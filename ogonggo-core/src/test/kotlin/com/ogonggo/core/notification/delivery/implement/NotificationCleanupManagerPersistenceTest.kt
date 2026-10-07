@@ -35,7 +35,7 @@ internal class NotificationCleanupManagerPersistenceTest @Autowired constructor(
         // given
         val cutoff = LocalDateTime.of(2026, 10, 1, 12, 0)
         val old = cutoff.minusDays(1)
-        listOf("SENT", "FAILED", "SENT", "FAILED").forEachIndexed { index, status ->
+        listOf("SENT", "FAILED", "UNKNOWN", "SENT", "FAILED", "UNKNOWN").forEachIndexed { index, status ->
             appendWithState("old-$status-$index", status, old)
         }
         appendWithState("old-PENDING", "PENDING", old)
@@ -44,11 +44,13 @@ internal class NotificationCleanupManagerPersistenceTest @Autowired constructor(
         // when
         val firstBatch = cleanupManager.deleteExpired(cutoff, batchSize = 2)
         val secondBatch = cleanupManager.deleteExpired(cutoff, batchSize = 2)
+        val thirdBatch = cleanupManager.deleteExpired(cutoff, batchSize = 2)
         val emptyBatch = cleanupManager.deleteExpired(cutoff, batchSize = 2)
 
         // then
         assertEquals(2, firstBatch)
         assertEquals(2, secondBatch)
+        assertEquals(2, thirdBatch)
         assertEquals(0, emptyBatch)
         assertEquals(
             setOf("old-PENDING", "recent-SENT"),

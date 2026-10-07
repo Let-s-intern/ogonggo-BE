@@ -28,6 +28,7 @@ class NotificationCleanupManager internal constructor(
         val TERMINAL_STATUSES = listOf(
             NotificationStatus.SENT,
             NotificationStatus.FAILED,
+            NotificationStatus.UNKNOWN,
         )
     }
 }

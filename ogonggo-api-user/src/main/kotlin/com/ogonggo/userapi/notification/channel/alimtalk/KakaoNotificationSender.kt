@@ -3,6 +3,7 @@ package com.ogonggo.userapi.notification.channel.alimtalk
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.notification.domain.NotificationChannel
+import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.userapi.notification.delivery.implement.NotificationSender
@@ -30,11 +31,27 @@ internal class KakaoNotificationSender(
 
         return when (result) {
             is NhnAlimTalkResult.Accepted -> NotificationDeliveryResult.Sent(result.requestId)
-            NhnAlimTalkResult.DuplicateIdempotencyKey -> NotificationDeliveryResult.Failed("-1005")
-            is NhnAlimTalkResult.Rejected -> NotificationDeliveryResult.Failed(
-                resultCode = result.resultCode ?: "NHN_REJECTED_UNKNOWN_CODE",
+            is NhnAlimTalkResult.Error -> result.toDeliveryResult()
+            NhnAlimTalkResult.InvalidResponse -> NotificationDeliveryResult.Unknown(
+                resultCode = "NHN_INVALID_RESPONSE",
+                failureCategory = NotificationFailureCategory.INVALID_PROVIDER_RESPONSE,
             )
-            NhnAlimTalkResult.InvalidResponse -> NotificationDeliveryResult.Failed("NHN_INVALID_RESPONSE")
+        }
+    }
+
+    private fun NhnAlimTalkResult.Error.toDeliveryResult(): NotificationDeliveryResult {
+        val resultCode = resultCode ?: "NHN_REJECTED_UNKNOWN_CODE"
+        return when (failureCategory) {
+            NotificationFailureCategory.AUTHENTICATION_CONFIGURATION,
+            NotificationFailureCategory.SENDER_PROFILE_CONFIGURATION,
+            NotificationFailureCategory.INVALID_REQUEST,
+            NotificationFailureCategory.TEMPLATE_CONFIGURATION,
+            NotificationFailureCategory.RATE_LIMITED,
+            NotificationFailureCategory.HTTP_ERROR,
+            NotificationFailureCategory.CHANNEL_NOT_CONFIGURED ->
+                NotificationDeliveryResult.Failed(resultCode, failureCategory)
+
+            else -> NotificationDeliveryResult.Unknown(resultCode, failureCategory)
         }
     }
 

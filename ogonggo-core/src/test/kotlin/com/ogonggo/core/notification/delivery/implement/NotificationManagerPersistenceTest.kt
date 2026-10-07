@@ -4,6 +4,7 @@ import com.ogonggo.core.common.CoreJpaConfiguration
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
+import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
@@ -37,23 +38,49 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("예정 시각이 지난 PENDING 알림만 정해진 크기로 읽는다")
-    fun `due 알림만 발송 대상으로 조회한다`() {
+    @DisplayName("예정 시각 이후 8분 안의 PENDING 알림만 발송 대상으로 읽는다")
+    fun `멱등성 보호 시간 안의 due 알림만 조회한다`() {
         // given
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
-        append("due-1", now.minusMinutes(1))
-        append("due-2", now)
+        append("recent", now.minusMinutes(7).minusSeconds(59))
+        append("cutoff", now.minusMinutes(8))
+        append("stale", now.minusMinutes(8).minusNanos(1))
+        append("due-now", now)
         append("future", now.plusMinutes(1))
         append("sent", now.minusMinutes(2))
         val sentId = notificationRepository.findAllByDeduplicationKeyIn(listOf("sent")).single().id!!
         notificationManager.complete(sentId, NotificationDeliveryResult.Sent("provider-1"), now)
 
         // when
-        val due = notificationManager.findDue(now, limit = 1)
+        val due = notificationManager.findDue(
+            now = now,
+            notBefore = now.minusMinutes(8),
+            limit = 10,
+        )
 
         // then
-        assertEquals(1, due.size)
-        assertEquals("due-1", due.single().deduplicationKey)
+        assertEquals(listOf("recent", "due-now"), due.map { it.deduplicationKey })
+        assertEquals(
+            NotificationStatus.PENDING,
+            notificationRepository.findAllByDeduplicationKeyIn(listOf("stale")).single().status,
+        )
+    }
+
+    @Test
+    @DisplayName("PENDING 잔량을 전체·발송 가능·기한 초과·미래 건수로 나눈다")
+    fun `대기 잔량을 발송 창 기준으로 집계한다`() {
+        val now = LocalDateTime.of(2026, 10, 6, 12, 0)
+        append("due", now.minusMinutes(1))
+        append("expired", now.minusMinutes(9))
+        append("future", now.plusMinutes(1))
+        append("sent", now.minusMinutes(1))
+        val sent = notificationRepository.findAllByDeduplicationKeyIn(listOf("sent")).single()
+        notificationManager.complete(sent.id!!, NotificationDeliveryResult.Sent("provider"), now)
+
+        assertEquals(3L, notificationManager.countPendingTotal())
+        assertEquals(1L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
+        assertEquals(1L, notificationManager.countPendingExpired(now.minusMinutes(8)))
+        assertEquals(1L, notificationManager.countPendingFuture(now))
     }
 
     @Test
@@ -83,8 +110,8 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("발송 오류는 사유를 저장해 FAILED로 종료하고 자동 재시도 대상으로 남기지 않는다")
-    fun `발송 오류는 한 번 실패 처리한다`() {
+    @DisplayName("명시적 발송 거절은 사유를 저장해 FAILED로 종료하고 자동 재시도 대상으로 남기지 않는다")
+    fun `명시 거절을 최종 실패 처리한다`() {
         // given
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
         append("signup:user:17:KAKAO", now)
@@ -93,7 +120,10 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         // when
         val recorded = notificationManager.complete(
             notificationId = notification.id!!,
-            result = NotificationDeliveryResult.Failed("NHN_TRANSPORT_ERROR"),
+            result = NotificationDeliveryResult.Failed(
+                "-3005",
+                NotificationFailureCategory.TEMPLATE_CONFIGURATION,
+            ),
             now = now.plusSeconds(1),
         )
 
@@ -101,9 +131,50 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         val saved = notificationRepository.findAll().single()
         assertTrue(recorded)
         assertEquals(NotificationStatus.FAILED, saved.status)
-        assertEquals("NHN_TRANSPORT_ERROR", saved.resultCode)
+        assertEquals("-3005", saved.resultCode)
+        assertEquals(NotificationFailureCategory.TEMPLATE_CONFIGURATION, saved.resultCategory)
         assertEquals(null, saved.sentAt)
-        assertTrue(notificationManager.findDue(now.plusDays(1), limit = 10).isEmpty())
+        val nextDay = now.plusDays(1)
+        assertTrue(
+            notificationManager.findDue(
+                now = nextDay,
+                notBefore = nextDay.minusMinutes(8),
+                limit = 10,
+            ).isEmpty(),
+        )
+    }
+
+    @Test
+    @DisplayName("중복 키 응답처럼 접수 여부가 불명확하면 UNKNOWN으로 기록하고 재발송 대상에서 제외한다")
+    fun `접수 미확정 결과를 UNKNOWN으로 저장한다`() {
+        // given
+        val now = LocalDateTime.of(2026, 10, 6, 12, 0)
+        append("signup:user:18:KAKAO", now)
+        val notification = notificationRepository.findAll().single()
+
+        // when
+        val recorded = notificationManager.complete(
+            notificationId = notification.id!!,
+            result = NotificationDeliveryResult.Unknown(
+                "-1005",
+                NotificationFailureCategory.DUPLICATE_REQUEST,
+            ),
+            now = now.plusSeconds(1),
+        )
+
+        // then
+        val saved = notificationRepository.findAll().single()
+        assertTrue(recorded)
+        assertEquals(NotificationStatus.UNKNOWN, saved.status)
+        assertEquals("-1005", saved.resultCode)
+        assertEquals(NotificationFailureCategory.DUPLICATE_REQUEST, saved.resultCategory)
+        assertTrue(
+            notificationManager.findDue(
+                now = now.plusDays(1),
+                notBefore = now.plusDays(1).minusMinutes(8),
+                limit = 10,
+            ).isEmpty(),
+        )
     }
 
     @Test

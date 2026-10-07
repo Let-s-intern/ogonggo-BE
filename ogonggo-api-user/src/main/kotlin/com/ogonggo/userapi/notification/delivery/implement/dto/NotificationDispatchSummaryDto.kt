@@ -4,11 +4,12 @@ package com.ogonggo.userapi.notification.delivery.implement.dto
 internal data class NotificationDispatchSummaryDto(
     val sentCount: Int = 0,
     val failedCount: Int = 0,
+    val unknownCount: Int = 0,
     val unresolvedCount: Int = 0,
     val executorRejected: Boolean = false,
 ) {
     val hasResults: Boolean
-        get() = sentCount + failedCount + unresolvedCount > 0
+        get() = sentCount + failedCount + unknownCount + unresolvedCount > 0
 
     val shouldStopNextBatch: Boolean
         get() = executorRejected || unresolvedCount > 0
@@ -16,12 +17,14 @@ internal data class NotificationDispatchSummaryDto(
     fun include(outcome: NotificationDispatchOutcome): NotificationDispatchSummaryDto = when (outcome) {
         NotificationDispatchOutcome.SENT -> copy(sentCount = sentCount + 1)
         NotificationDispatchOutcome.FAILED -> copy(failedCount = failedCount + 1)
+        NotificationDispatchOutcome.UNKNOWN -> copy(unknownCount = unknownCount + 1)
         NotificationDispatchOutcome.UNRESOLVED -> copy(unresolvedCount = unresolvedCount + 1)
     }
 
     operator fun plus(other: NotificationDispatchSummaryDto) = NotificationDispatchSummaryDto(
         sentCount = sentCount + other.sentCount,
         failedCount = failedCount + other.failedCount,
+        unknownCount = unknownCount + other.unknownCount,
         unresolvedCount = unresolvedCount + other.unresolvedCount,
         executorRejected = executorRejected || other.executorRejected,
     )
@@ -30,5 +33,6 @@ internal data class NotificationDispatchSummaryDto(
 internal enum class NotificationDispatchOutcome {
     SENT,
     FAILED,
+    UNKNOWN,
     UNRESOLVED,
 }
