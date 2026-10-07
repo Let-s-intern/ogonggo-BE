@@ -1,0 +1,202 @@
+package com.ogonggo.userapi.notification.delivery.implement
+
+import com.ogonggo.core.notification.delivery.implement.NotificationManager
+import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
+import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
+import com.ogonggo.userapi.config.UserAsyncConfiguration
+import com.ogonggo.userapi.notification.delivery.implement.dto.NotificationDispatchOutcome
+import com.ogonggo.userapi.notification.delivery.implement.dto.NotificationDispatchSummaryDto
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.core.task.TaskExecutor
+import org.springframework.core.task.TaskRejectedException
+import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.Duration
+import java.time.LocalDateTime
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
+
+/** Due 알림을 채널 sender로 전달하고 provider 결과를 기록한다. */
+@Component
+class NotificationDispatcher internal constructor(
+    private val notificationManager: NotificationManager,
+    senders: List<NotificationSender>,
+    @Qualifier(UserAsyncConfiguration.NOTIFICATION_DELIVERY_TASK_EXECUTOR)
+    private val taskExecutor: TaskExecutor,
+    private val clock: Clock,
+) {
+    private val sendersByChannel = senders.associateBy(NotificationSender::channel)
+
+    init {
+        require(sendersByChannel.size == senders.size) { "채널별 알림 발송기는 하나만 등록할 수 있습니다." }
+    }
+
+    /** 행별 claim 대신 한 번의 발송 작업을 ShedLock으로 직렬화한다. */
+    @SchedulerLock(name = SCHEDULER_NAME, lockAtMostFor = "PT90S")
+    fun dispatch() {
+        val runId = UUID.randomUUID().toString()
+        val startedAt = System.nanoTime()
+        var summary = NotificationDispatchSummaryDto()
+
+        while (hasTimeRemaining(startedAt)) {
+            val dueNotifications = notificationManager.findDue(LocalDateTime.now(clock), BATCH_SIZE)
+            if (dueNotifications.isEmpty()) break
+
+            val batchResult = dispatchBatch(runId, dueNotifications)
+            summary += batchResult
+
+            // 결과 기록 실패 건은 PENDING으로 남으므로 같은 실행에서 다시 발송하지 않는다.
+            if (batchResult.shouldStopNextBatch) break
+        }
+
+        logRunSummary(runId, startedAt, summary)
+    }
+
+    private fun dispatchBatch(
+        runId: String,
+        notifications: List<NotificationMessageDto>,
+    ): NotificationDispatchSummaryDto {
+        val deliveries = mutableListOf<CompletableFuture<NotificationDispatchOutcome>>()
+        var executorRejected = false
+
+        for (notification in notifications) {
+            try {
+                deliveries += CompletableFuture.supplyAsync(
+                    { deliver(runId, notification) },
+                    taskExecutor,
+                )
+            } catch (_: TaskRejectedException) {
+                executorRejected = true
+                log.warn("알림 전용 실행기가 포화되어 남은 대기 건을 다음 실행으로 넘깁니다. runId={}", runId)
+                break
+            }
+        }
+
+        val batchResult = deliveries.fold(NotificationDispatchSummaryDto()) { result, delivery ->
+            result.include(delivery.join())
+        }
+        return batchResult.copy(executorRejected = executorRejected)
+    }
+
+    private fun deliver(
+        runId: String,
+        notification: NotificationMessageDto,
+    ): NotificationDispatchOutcome {
+        val result = sendToChannel(runId, notification)
+        return recordResult(runId, notification, result)
+    }
+
+    private fun sendToChannel(
+        runId: String,
+        notification: NotificationMessageDto,
+    ): NotificationDeliveryResult = try {
+        sendersByChannel[notification.channel]?.send(notification)
+            ?: NotificationDeliveryResult.Failed("CHANNEL_NOT_CONFIGURED")
+    } catch (exception: Exception) {
+        log.error(
+            "알림 sender 예외. runId={}, notificationId={}, errorType={}",
+            runId,
+            notification.notificationId,
+            exception::class.simpleName,
+            safeStackTrace(exception),
+        )
+        NotificationDeliveryResult.Failed("UNCLASSIFIED_SENDER_ERROR")
+    }
+
+    private fun recordResult(
+        runId: String,
+        notification: NotificationMessageDto,
+        result: NotificationDeliveryResult,
+    ): NotificationDispatchOutcome {
+        return try {
+            val recorded = notificationManager.complete(
+                notificationId = notification.notificationId,
+                result = result,
+                now = LocalDateTime.now(clock),
+            )
+            if (!recorded) {
+                log.error("알림 발송 결과를 기록하지 못했습니다. runId={}, notificationId={}", runId, notification.notificationId)
+                NotificationDispatchOutcome.UNRESOLVED
+            } else {
+                logDeliveryResult(runId, notification, result)
+                result.toDispatchOutcome()
+            }
+        } catch (exception: Exception) {
+            log.error(
+                "알림 발송 결과가 미확정입니다. runId={}, notificationId={}, errorType={}",
+                runId,
+                notification.notificationId,
+                exception::class.simpleName,
+                safeStackTrace(exception),
+            )
+            NotificationDispatchOutcome.UNRESOLVED
+        }
+    }
+
+    private fun logDeliveryResult(
+        runId: String,
+        notification: NotificationMessageDto,
+        result: NotificationDeliveryResult,
+    ) {
+        when (result) {
+            is NotificationDeliveryResult.Sent -> log.debug(
+                "알림 provider 접수. runId={}, notificationId={}, channel={}",
+                runId,
+                notification.notificationId,
+                notification.channel,
+            )
+            is NotificationDeliveryResult.Failed -> log.warn(
+                "알림 발송 실패. runId={}, notificationId={}, channel={}, resultCode={}",
+                runId,
+                notification.notificationId,
+                notification.channel,
+                result.resultCode,
+            )
+        }
+    }
+
+    private fun logRunSummary(
+        runId: String,
+        startedAt: Long,
+        summary: NotificationDispatchSummaryDto,
+    ) {
+        if (!summary.hasResults) return
+
+        log.info(
+            "알림 발송 실행 완료. runId={}, sent={}, failed={}, unresolved={}, executorRejected={}, durationMs={}",
+            runId,
+            summary.sentCount,
+            summary.failedCount,
+            summary.unresolvedCount,
+            summary.executorRejected,
+            elapsedMillis(startedAt),
+        )
+    }
+
+    private fun hasTimeRemaining(startedAt: Long) =
+        System.nanoTime() - startedAt < RUN_BUDGET.toNanos()
+
+    private fun elapsedMillis(startedAt: Long) =
+        (System.nanoTime() - startedAt) / NANOS_PER_MILLISECOND
+
+    private fun NotificationDeliveryResult.toDispatchOutcome() = when (this) {
+        is NotificationDeliveryResult.Sent -> NotificationDispatchOutcome.SENT
+        is NotificationDeliveryResult.Failed -> NotificationDispatchOutcome.FAILED
+    }
+
+    private fun safeStackTrace(exception: Exception) = RuntimeException("알림 처리 실패").apply {
+        // ORM/provider 예외 메시지나 cause에 포함될 수 있는 요청 데이터는 로그에 남기지 않는다.
+        stackTrace = exception.stackTrace
+    }
+
+    companion object {
+        /** DB 작업 키는 기존 설정을 유지해 운영 cron 변경을 보존한다. */
+        const val SCHEDULER_NAME = "jobBookmarkAlimTalkDelivery"
+        private const val BATCH_SIZE = 4
+        private const val NANOS_PER_MILLISECOND = 1_000_000
+        private val RUN_BUDGET = Duration.ofSeconds(45)
+        private val log = LoggerFactory.getLogger(NotificationDispatcher::class.java)
+    }
+}

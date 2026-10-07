@@ -1,9 +1,13 @@
 package com.ogonggo.userapi.config
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import net.javacrumbs.shedlock.core.LockConfiguration
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
@@ -40,6 +44,12 @@ class SchedulerLockConfigurationTest {
         val configuration = SchedulerLockConfiguration()
         val firstProvider = configuration.schedulerLockProvider(dataSource)
         val secondProvider = configuration.schedulerLockProvider(dataSource)
+        val logger = LoggerFactory.getLogger(LoggingLockProvider::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
         val lockConfiguration = LockConfiguration(
             Instant.parse("2099-01-01T00:00:00Z"),
             "sharedScheduler",
@@ -54,10 +64,13 @@ class SchedulerLockConfigurationTest {
         // then
         assertTrue(firstLock.isPresent)
         assertTrue(competingLock.isEmpty)
+        assertTrue(appender.list.any { it.formattedMessage.contains("scheduler=sharedScheduler") })
 
         firstLock.orElseThrow().unlock()
         val lockAfterRelease = secondProvider.lock(lockConfiguration)
         assertTrue(lockAfterRelease.isPresent)
         lockAfterRelease.orElseThrow().unlock()
+        logger.detachAppender(appender)
+        appender.stop()
     }
 }

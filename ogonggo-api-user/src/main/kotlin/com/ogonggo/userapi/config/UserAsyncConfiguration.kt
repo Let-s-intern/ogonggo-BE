@@ -51,8 +51,40 @@ class UserAsyncConfiguration {
         setAwaitTerminationSeconds(5)
     }
 
+    /**
+     * 외부 알림 provider 호출을 요청·지표·문의 메일 작업과 분리한다.
+     * dispatcher가 한 번에 최대 4건을 병렬 처리한다. 포화되면 이번 발송 실행을 멈추고 다음 tick에서 다시 읽는다.
+     */
+    @Bean(name = [NOTIFICATION_DELIVERY_TASK_EXECUTOR])
+    fun notificationDeliveryTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        corePoolSize = 4
+        maxPoolSize = 4
+        queueCapacity = 0
+        setThreadNamePrefix("notification-delivery-")
+        setRejectedExecutionHandler(ThreadPoolExecutor.AbortPolicy())
+        setWaitForTasksToCompleteOnShutdown(true)
+        setAwaitTerminationSeconds(5)
+    }
+
+    /**
+     * 가입 AFTER_COMMIT 후 notification 적재 전용 풀이다. 단일 worker와 bounded queue로 DB 적재 부하를 제한한다.
+     * CallerRuns 대신 AbortPolicy를 써서 포화 시 가입 요청 스레드에서 DB 작업을 실행하지 않고 listener가 유실을 기록한다.
+     */
+    @Bean(name = [NOTIFICATION_ENQUEUE_TASK_EXECUTOR])
+    fun notificationEnqueueTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        corePoolSize = 1
+        maxPoolSize = 1
+        queueCapacity = 1_000
+        setThreadNamePrefix("notification-enqueue-")
+        setRejectedExecutionHandler(ThreadPoolExecutor.AbortPolicy())
+        setWaitForTasksToCompleteOnShutdown(true)
+        setAwaitTerminationSeconds(5)
+    }
+
     companion object {
         const val METRIC_TASK_EXECUTOR = "metricTaskExecutor"
         const val ADVERTISEMENT_TASK_EXECUTOR = "advertisementTaskExecutor"
+        const val NOTIFICATION_DELIVERY_TASK_EXECUTOR = "notificationDeliveryTaskExecutor"
+        const val NOTIFICATION_ENQUEUE_TASK_EXECUTOR = "notificationEnqueueTaskExecutor"
     }
 }

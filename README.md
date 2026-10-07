@@ -93,6 +93,8 @@ Before deploying the admin job list `jobField`·`jobRole` filters, apply `docs/s
 
 Before the crawler sends 미래내일 일경험 jobs (`employmentType=WORK_EXPERIENCE`), apply `docs/schema/2026-10-03-job-employment-type-work-experience.sql`. The existing `employment_type` column is a MySQL enum without the new value.
 
+Before deploying notifications, apply `docs/schema/2026-10-06-notifications.sql`. It adds the bookmark activation time, creates the reminder schedule and notification tables, and seeds only existing jobs whose D-1 time is still in the future. It does not backfill overdue reminders. The migration starts the enqueue and delivery jobs disabled and the 30-day terminal notification cleanup enabled. Pause bookmark writes until the migration and user API rollout finish; the old version does not write or refresh the activation time. See `docs/architecture/scheduling.md` for the job settings.
+
 After both APIs run the crawler job intake changes, apply `docs/schema/2026-09-14-crawler-job-intake.sql` to drop the unused `company_logo_url` and `experience_max_years` columns.
 
 ## Work24 (고용24) Open API
