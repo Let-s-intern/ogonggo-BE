@@ -3,9 +3,11 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
+import com.ogonggo.core.job.implement.event.JobRecruitmentDeadlineChangedEvent
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.review.domain.ReviewContentType
 import com.ogonggo.core.review.implement.ContentRejectionManager
+import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDateTime
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -14,10 +16,13 @@ import org.springframework.transaction.annotation.Transactional
 class JobManager internal constructor(
     private val jobRepository: JobJpaRepository,
     private val contentRejectionManager: ContentRejectionManager,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     /** 모집 상태는 고친 모집 종료 일시와 기준 시각으로 다시 정한다. 직접 마감한 공고는 마감으로 남는다. */
+    @Transactional
     fun update(job: Job, command: JobUpdateDto, now: LocalDateTime) {
+        val previousEndAt = job.recruitmentEndAt
         job.update(
             companyName = command.companyName,
             parentCompanyName = command.parentCompanyName,
@@ -54,6 +59,16 @@ class JobManager internal constructor(
             now = now,
         )
         jobRepository.save(job)
+        if (previousEndAt != job.recruitmentEndAt) {
+            eventPublisher.publishEvent(
+                JobRecruitmentDeadlineChangedEvent(
+                    jobId = job.requiredId(),
+                    previousEndAt = previousEndAt,
+                    recruitmentEndAt = job.recruitmentEndAt,
+                    changedAt = now,
+                ),
+            )
+        }
     }
 
     fun editContent(job: Job, command: JobContentEditDto) = change(job) { editContent(command.title, command.contents) }

@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.config
 
+import com.ogonggo.userapi.notification.intake.implement.reminder.JobBookmarkReminderScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
@@ -22,6 +23,22 @@ class UserScheduledJobConfigurationTest {
         // then
         assertEquals("jobBookmarkAlimTalkDelivery", definition.name)
         assertEquals("* * * * * *", definition.defaultCron)
+        assertNotNull(lock)
+        assertEquals(definition.name, lock.name)
+    }
+
+    @Test
+    fun `스크랩 리마인드는 scheduled_jobs에 매분 기본 주기로 등록하고 ShedLock을 사용한다`() {
+        // given
+        val scheduler = Mockito.mock(JobBookmarkReminderScheduler::class.java)
+
+        // when
+        val definition = UserScheduledJobConfiguration().jobBookmarkAlimTalkReminderJob(scheduler)
+        val lock = JobBookmarkReminderScheduler::class.java.getMethod("run").getAnnotation(SchedulerLock::class.java)
+
+        // then
+        assertEquals("jobBookmarkAlimTalkReminder", definition.name)
+        assertEquals("0 * * * * *", definition.defaultCron)
         assertNotNull(lock)
         assertEquals(definition.name, lock.name)
     }

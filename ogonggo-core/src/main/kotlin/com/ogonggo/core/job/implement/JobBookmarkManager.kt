@@ -26,7 +26,7 @@ class JobBookmarkManager internal constructor(
         }
 
         try {
-            jobBookmarkRepository.saveAndFlush(JobBookmark(jobId = jobId, userId = userId))
+            jobBookmarkRepository.saveAndFlush(JobBookmark(jobId = jobId, userId = userId, activeSince = now))
         } catch (exception: DataIntegrityViolationException) {
             throw ConflictException(JobErrorCode.JOB_BOOKMARK_ALREADY_EXISTS)
         }

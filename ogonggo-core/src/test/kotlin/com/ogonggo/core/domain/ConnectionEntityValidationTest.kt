@@ -15,8 +15,13 @@ class ConnectionEntityValidationTest {
 
     @Test
     fun `연결 엔티티의 대상 식별자는 양수여야 한다`() {
-        assertThrows(IllegalArgumentException::class.java) { JobBookmark(jobId = 0L, userId = 1L) }
-        assertThrows(IllegalArgumentException::class.java) { JobBookmark(jobId = 1L, userId = 0L) }
+        val activeSince = LocalDateTime.of(2026, 1, 1, 0, 0)
+        assertThrows(IllegalArgumentException::class.java) {
+            JobBookmark(jobId = 0L, userId = 1L, activeSince = activeSince)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            JobBookmark(jobId = 1L, userId = 0L, activeSince = activeSince)
+        }
         assertThrows(IllegalArgumentException::class.java) { BootcampBookmark(bootcampId = 0L, userId = 1L) }
         assertThrows(IllegalArgumentException::class.java) { BootcampBookmark(bootcampId = 1L, userId = 0L) }
         assertThrows(IllegalArgumentException::class.java) { JobTag(jobId = 0L, tagId = 1L) }

@@ -7,6 +7,7 @@ import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.job.implement.JobAutoCloseScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
+import com.ogonggo.userapi.notification.intake.implement.reminder.JobBookmarkReminderScheduler
 import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -58,6 +59,15 @@ class UserScheduledJobConfiguration {
         defaultCron = "*/30 * * * * *",
         description = "오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송 (30초마다)",
         action = scheduler::sendPending,
+    )
+
+    /** 매분 due 일정의 대상을 notification 행으로 적재한다. ShedLock은 scheduler 내부에서 적용한다. */
+    @Bean
+    fun jobBookmarkAlimTalkReminderJob(scheduler: JobBookmarkReminderScheduler) = ScheduledJobDefinition(
+        name = JobBookmarkReminderScheduler.SCHEDULER_NAME,
+        defaultCron = "0 * * * * *",
+        description = "스크랩한 채용공고의 D-1 알림톡 대기열 등록 (매분)",
+        action = scheduler::run,
     )
 
     /** 단일 DB 작업 잠금으로 발송 실행 전체를 직렬화한다. */

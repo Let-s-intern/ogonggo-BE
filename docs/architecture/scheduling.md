@@ -24,7 +24,7 @@ scheduled_jobs (name, cron, enabled)
 - cron을 바꾸면 1분 안에 새 주기로 다시 예약한다. 잘못된 cron이면 기존 예약을 유지하고 `error` 로그를 남긴다. 기동 시점에 잘못되어 있으면 코드의 기본 cron으로 예약한다.
 - `enabled`는 예약 시각마다 읽는다. 끄면 그 회차부터 건너뛰고 켜면 다음 회차부터 돈다.
 - 행을 지우면 켜진 것으로 보고 코드의 기본 cron을 쓴다. 멈추려면 지우지 말고 `enabled`를 끈다.
-- 태스크가 여럿이면 모든 태스크가 예약하고, 중복 실행은 작업 메서드의 `@SchedulerLock`이 막는다. 작업 이름은 잠금 이름과 같게 둔다.
+- 태스크가 여럿이면 모든 태스크가 예약하고, 단일 실행 작업은 메서드의 `@SchedulerLock`이 중복 실행을 막는다. 작업 이름은 잠금 이름과 같게 둔다.
 - 작업은 전용 스레드 풀(4개)에서 돈다. 오래 걸리는 작업이 다른 작업의 예약을 막지 않게 하기 위해서다.
 
 ## 2. 작업 목록
@@ -37,6 +37,9 @@ scheduled_jobs (name, cron, enabled)
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
 | `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |
+| `jobBookmarkAlimTalkReminder` | 사용자 | `0 * * * * *` | D-1 대상을 페이지별 트랜잭션으로 DB 대기열에 적재. ShedLock 적용 |
+| `jobBookmarkAlimTalkDelivery` | 사용자 | `* * * * * *` | due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
+| `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
 
 2026-09-27 이전에는 앞의 두 작업이 기동 직후부터 1시간 간격(`fixedDelay`)으로 돌았고 주기를 `application.yml`로 바꿨다. 지금은 매시 정해진 분에 돌며 해당 설정 키는 쓰지 않는다.
 
@@ -45,6 +48,16 @@ scheduled_jobs (name, cron, enabled)
 1. 작업 메서드를 가진 빈을 API의 `implement`에 두고 메서드에 `@SchedulerLock(name = 작업 이름)`을 붙인다.
 2. 같은 API의 `*ScheduledJobConfiguration`에 `ScheduledJobDefinition` 빈을 추가한다. `action`에는 그 빈의 메서드 참조를 넘겨야 프록시를 거쳐 잠금이 걸린다.
 3. 이 문서의 작업 목록을 갱신한다.
+
+### 알림 적재·발송 스케줄
+
+- 리마인드 대상 적재는 매분 시작해 500명씩, 최대 10개 일정의 페이지를 처리하며 45초 예산 안에서 다음 페이지를 반복한다. 매분 작업은 ShedLock으로 인스턴스 간 직렬화하고, 페이지마다 알림 적재와 bookmark 커서를 함께 커밋한다.
+- delivery dispatcher는 매초 due `PENDING` 행을 조회한다. 작업 전체에 ShedLock을 적용해 row claim 상태 없이 한 인스턴스만 읽고 처리한다.
+- provider 발송은 고정 4개 스레드의 전용 실행기로 최대 4건씩 병렬 처리하며 대기열은 두지 않는다. 한 dispatcher 실행은 최대 45초 동안 이어지고, 실행기 포화면 남은 `PENDING` 행을 다음 tick에 둔다.
+- 요청 결과는 provider 접수면 `SENT`, 오류면 `FAILED`다. NHN 오류에 자동 재시도하지 않는다. timeout 등 응답이 불명확한 실패도 `FAILED`로 기록한다.
+- 프로세스가 NHN 접수 후 `SENT` 저장 전에 종료되면 해당 행은 `PENDING`으로 남아 다음 실행에서 다시 요청될 수 있다. 같은 NHN 멱등성 키는 10분 이내 중복을 억제하지만, 그 이후 요청의 중복 가능성은 수용한다.
+- 작업을 완전히 중지하려면 두 발송 작업 모두 `enabled=false`로 설정한다. 이미 실행 중인 dispatcher는 최대 45초까지 처리한다. 적재만 끄면 기존 대기열은 계속 발송된다.
+- MAU 5만 기준의 실제 처리량은 DB·NHN 지연과 provider 한도에 따라 달라지며 부하 검증 전에는 보장하지 않는다.
 
 ## 4. 검토했지만 선택하지 않은 대안
 
