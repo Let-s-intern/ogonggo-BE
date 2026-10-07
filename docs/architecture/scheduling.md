@@ -37,7 +37,7 @@ scheduled_jobs (name, cron, enabled)
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
 | `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |
-| `jobBookmarkAlimTalkReminder` | 사용자 | `0 * * * * *` | D-1 대상을 페이지별 트랜잭션으로 DB 대기열에 적재. ShedLock 적용 |
+| `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
 | `jobBookmarkAlimTalkDelivery` | 사용자 | `* * * * * *` | due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
 
@@ -51,7 +51,8 @@ scheduled_jobs (name, cron, enabled)
 
 ### 알림 적재·발송 스케줄
 
-- 리마인드 대상 적재는 매분 시작해 500명씩, 최대 10개 일정의 페이지를 처리하며 45초 예산 안에서 다음 페이지를 반복한다. 매분 작업은 ShedLock으로 인스턴스 간 직렬화하고, 페이지마다 알림 적재와 bookmark 커서를 함께 커밋한다.
+- **임시 비활성:** NHN `clip_remind` 템플릿이 승인될 때까지 `jobBookmarkAlimTalkReminder`의 `ScheduledJobDefinition` 등록을 보류한다. 이 상태에서는 리마인드 notification을 새로 적재하지 않는다. 승인 후 코드 등록을 복구하고 `scheduled_jobs.enabled`를 확인해 활성화한다.
+- 리마인드 대상 적재를 활성화하면 매분 시작해 500명씩, 최대 10개 일정의 페이지를 처리하며 45초 예산 안에서 다음 페이지를 반복한다. 매분 작업은 ShedLock으로 인스턴스 간 직렬화하고, 페이지마다 알림 적재와 bookmark 커서를 함께 커밋한다.
 - delivery dispatcher는 매초 due `PENDING` 행을 조회한다. 작업 전체에 ShedLock을 적용해 row claim 상태 없이 한 인스턴스만 읽고 처리한다.
 - provider 발송은 고정 4개 스레드의 전용 실행기로 최대 4건씩 병렬 처리하며 대기열은 두지 않는다. 한 dispatcher 실행은 최대 45초 동안 이어지고, 실행기 포화면 남은 `PENDING` 행을 다음 tick에 둔다.
 - 요청 결과는 provider 접수면 `SENT`, 오류면 `FAILED`다. NHN 오류에 자동 재시도하지 않는다. timeout 등 응답이 불명확한 실패도 `FAILED`로 기록한다.

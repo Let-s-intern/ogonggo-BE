@@ -1,10 +1,11 @@
 package com.ogonggo.userapi.config
 
-import com.ogonggo.userapi.notification.intake.implement.reminder.JobBookmarkReminderScheduler
+import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -28,19 +29,14 @@ class UserScheduledJobConfigurationTest {
     }
 
     @Test
-    fun `스크랩 리마인드는 scheduled_jobs에 매분 기본 주기로 등록하고 ShedLock을 사용한다`() {
+    fun `템플릿 승인 전에는 스크랩 리마인드 스케줄 정의를 등록하지 않는다`() {
         // given
-        val scheduler = Mockito.mock(JobBookmarkReminderScheduler::class.java)
-
-        // when
-        val definition = UserScheduledJobConfiguration().jobBookmarkAlimTalkReminderJob(scheduler)
-        val lock = JobBookmarkReminderScheduler::class.java.getMethod("run").getAnnotation(SchedulerLock::class.java)
+        val jobDefinitions = UserScheduledJobConfiguration::class.java.declaredMethods
+            .filter { method -> method.returnType == ScheduledJobDefinition::class.java }
+            .map { method -> method.name }
 
         // then
-        assertEquals("jobBookmarkAlimTalkReminder", definition.name)
-        assertEquals("0 * * * * *", definition.defaultCron)
-        assertNotNull(lock)
-        assertEquals(definition.name, lock.name)
+        assertFalse("jobBookmarkAlimTalkReminderJob" in jobDefinitions)
     }
 
     @Test

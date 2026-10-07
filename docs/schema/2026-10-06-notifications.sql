@@ -71,7 +71,7 @@ where recruitment_end_at is not null
   and date_sub(recruitment_end_at, interval 24 hour) > now(6);
 
 -- 발송 관련 두 작업은 비활성으로, 30일 보관 정리는 활성으로 미리 만든다.
--- 운영 설정·템플릿·대상 데이터를 확인한 뒤 발송 작업을 명시적으로 활성화한다.
+-- NHN clip_remind 승인 전에는 코드도 reminder job 등록을 보류한다. 승인 후 코드 복구와 DB 활성화를 별도로 한다.
 insert ignore into scheduled_jobs (
     name,
     cron,

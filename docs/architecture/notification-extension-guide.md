@@ -155,7 +155,9 @@ flowchart LR
     Worker -->|TX: SENT 또는 FAILED| Notifications
 ```
 
-- 리마인드 materializer의 기존 scheduled job은 매분 대상 페이지를 적재한다. ShedLock으로 다중 인스턴스의 일정 평가가 겹치는 것을 줄인다.
+현재 NHN `clip_remind` 템플릿 승인 전이라 `UserScheduledJobConfiguration`에서 리마인드 materializer의 `ScheduledJobDefinition` 등록을 임시 보류했다. 따라서 이 상태에서는 일정·후보가 있어도 reminder notification을 적재하지 않는다. 템플릿 승인 후 코드 등록을 복구하고, DB 작업 행이 비활성인지 확인한 뒤 운영자가 명시적으로 활성화한다.
+
+- 리마인드 materializer를 활성화하면 매분 대상 페이지를 적재한다. ShedLock으로 다중 인스턴스의 일정 평가가 겹치는 것을 줄인다.
 - 수신 대상은 페이지를 조회하는 시점의 자격으로 한 번 판단한다. bookmark ID 커서가 어떤 ID를 지나간 뒤에는 지원 상태 등 대상 자격이 바뀌어도 그 일정에서 이전 ID를 다시 조회하지 않는다. 따라서 페이지를 나눠 처리하는 동안 자격이 뒤늦게 생긴 대상은 이번 일정에서 제외한다.
 - delivery dispatcher는 기존 DB 작업 키 `jobBookmarkAlimTalkDelivery`를 유지해 배포 시 기존 cron 설정을 보존한다. 기본 cron은 매초다.
 - dispatcher 메서드 전체에 최대 90초 ShedLock을 적용한다. 인스턴스별 행 claim 상태 없이 한 실행만 due 목록을 읽고 처리한다. 처리 예산 45초와 provider 연결·응답 timeout을 감안하고, 비정상 종료 후 잠금이 오래 남는 것을 피한다.
@@ -208,7 +210,7 @@ flowchart LR
 - 일정은 공고·마감일마다 한 행만 둔다. 되돌아온 마감은 해당 행을 재사용한다. 각 새 notification은 새 UUID 고유 키를 받고 `clip-remind:job:{jobId}:` 접두어로 해당 공고의 미발송 행을 찾아 취소한다.
 - `template_code=clip_remind`, 치환 변수 `name`, `posting-title`을 저장한다. 업체명·직무명은 NHN 정적 템플릿에 있으므로 애플리케이션에서 만들지 않는다.
 - 최초 배포용 `docs/schema/2026-10-06-notifications.sql`은 `job_bookmarks.active_since`, 공고별 일정 테이블, 공통 `notifications`를 생성하고 기존 공고의 미래 D-1 일정만 seed한다. 적재·발송 스케줄 행은 비활성, 보관 정리 행은 활성 상태로 미리 만든다. 이 브랜치의 이전 전용 `job_bookmark_reminders` 큐는 배포된 적이 없으므로 해당 테이블을 만들거나 데이터를 이관하지 않는다.
-- `jobBookmarkAlimTalkReminder`와 `jobBookmarkAlimTalkDelivery`의 기존 `scheduled_jobs` 설정은 코드 배포가 덮어쓰지 않는다. 운영 적용 전 주기·enabled를 확인한다.
+- SQL은 `jobBookmarkAlimTalkReminder` 행을 비활성으로 미리 만든다. 현재 코드는 reminder job을 등록하지 않으며, 템플릿 승인 후 코드 등록을 복구하고 `scheduled_jobs.enabled`를 별도로 활성화한다. `jobBookmarkAlimTalkDelivery`의 기존 설정도 코드 배포가 덮어쓰지 않으므로 운영 적용 전 주기·enabled를 확인한다.
 
 ## 8. 새 알림 추가 절차
 
