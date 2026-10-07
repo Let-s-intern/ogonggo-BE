@@ -10,7 +10,7 @@
 2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 수신자 한 명·채널 한 개·논리 알림 한 건이다.
 3. `deduplication_key`는 같은 논리 알림의 재처리에도 변하지 않게 만든다. 별도 회차로 다시 보낼 때는 회차 식별자를 포함한다.
 4. 발송 결과 상태는 `PENDING → SENT | FAILED | UNKNOWN`이다. `SENT`는 provider 접수, `FAILED`는 명시적 거절, `UNKNOWN`은 접수 여부를 판단할 수 없는 결과다. `SENT`는 사용자 도착을 뜻하지 않는다.
-5. dispatcher는 `scheduled_at`이 현재 시각 기준 최근 8분 이내인 `PENDING`만 조회한다. 그보다 오래된 행은 `PENDING`으로 남겨 운영 확인 대상으로 두고 자동 발송하지 않는다.
+5. dispatcher는 `max(scheduled_at, created_at)`이 현재 시각 기준 최근 8분 이내인 due `PENDING`만 조회한다. 지연 적재된 행은 적재 시각부터 창을 적용하고, 그보다 오래된 행은 `PENDING`으로 남겨 자동 발송하지 않는다.
 6. provider 호출·요청/응답 변환은 채널 sender가 맡고, dispatcher에는 채널별 분기 로직을 추가하지 않는다.
 7. `SENT`·`FAILED`·`UNKNOWN`은 terminal 상태로 자동 재발송하지 않고 30일 후 정리한다. `PENDING`은 자동 정리하지 않는다. 삭제된 행의 중복 키는 다시 사용할 수 있다.
 
@@ -47,7 +47,7 @@ flowchart LR
 ### 예약형 알림
 
 - 대상 자격, 예정 시각, 늦은 실행, 취소·변경 정책은 해당 업무 기능이 소유한다.
-- 재시작 시 `notifications` 행이 진행 기록으로 충분하면 별도 일정/커서 테이블을 만들지 않는다. 공고 리마인드는 `jobs.bookmark_reminder_at`과 안정적인 알림 키를 사용한다.
+- 재시작 시 `notifications` 행이 진행 기록으로 충분하면 별도 일정/커서 테이블을 만들지 않는다. 공고 리마인드의 D-1은 `jobs.recruitment_end_at - 24시간`으로 조회 시 계산하고, 안정적인 알림 키에 이 시각을 포함한다. D-1이 지났더라도 실제 마감 전이면 기존 적격 스크랩을 처리하며, D-1 이후 새로 활성화한 스크랩은 `active_since`로 제외한다.
 - scheduler는 소유 API의 `ScheduledJobDefinition`과 `@SchedulerLock`을 사용한다. 실행 주기와 활성화는 `scheduled_jobs`에서 관리한다.
 - 페이지 커서는 한 scheduler 실행 안에서만 유지한다. 재실행은 처음부터 조회하되, 이미 적재된 알림은 중복 키와 `notifications` 조회로 건너뛴다. provider 호출은 적재 트랜잭션 밖에서 한다.
 
@@ -70,11 +70,11 @@ flowchart LR
 | HTTP `5xx`, 통신·client 예외, 해석 불가 응답 | `UNKNOWN` / 해당 `result_category` | provider 접수 여부를 확인할 수 없음 |
 | 미등록 NHN 코드 | `UNKNOWN` / `UNKNOWN_PROVIDER_ERROR` | 원본 코드는 보존하지만 의미를 확인할 수 없어 재발송하지 않음 |
 
-### Actuator 운영 지표
+### 선택 운영 지표 (Actuator)
 
 - Actuator `health`와 `metrics` endpoint를 등록한다. `/health` 컨트롤러는 `HealthEndpoint`를 사용하며, Actuator 자체 `health` 경로는 Security에서 차단한다. `metrics`만 loopback 요청을 허용해 외부에서 접근할 수 없고 컨테이너 내부(ECS Exec 등)에서 `127.0.0.1:8080`으로 조회한다.
 - 적재·발송 카운터는 프로세스 시작 이후의 누적값이며 인스턴스별이다. 구간별 처리량은 같은 인스턴스에서 두 번 조회해 차이를 본다. 재시작 전 이력은 `notifications`에 30일간 남는 결과 상태로 확인한다.
-- 대기 gauge는 DB를 조회한다. `total`은 전체 `PENDING`, `due`는 현재 8분 발송 창, `expired`는 창 초과, `future`는 예정 시각 전 건수다. 여러 인스턴스에서 조회한 backlog는 같은 DB 잔량이므로 합산하지 않는다.
+- 대기 gauge는 DB를 조회한다. `total`은 전체 `PENDING`, `due`는 `max(scheduled_at, created_at)` 기준 8분 발송 창, `expired`는 두 시각 모두 창을 넘긴 건, `future`는 예정 시각 전 건수다. 여러 인스턴스에서 조회한 backlog는 같은 DB 잔량이므로 합산하지 않는다.
 - Prometheus/Grafana 없이도 현재값과 누적량을 확인할 수 있지만, 시간대별 추세·자동 경보는 제공하지 않는다.
 
 ```bash
@@ -86,20 +86,20 @@ curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.pending?tag
 
 ## 운영 대응
 
-확인 순서는 **Actuator로 현재 적재량·발송량·대기량을 확인하고, 로그와 DB로 원인을 좁히는 것**이다. Actuator `metrics`는 앱 컨테이너 내부에서 `127.0.0.1:8080`으로 조회한다. 적재·발송 카운터는 인스턴스별 프로세스 시작 후 누적값이므로 구간 변화량은 같은 인스턴스에서 두 번 조회해 비교한다. 재시작하면 카운터가 초기화된다. backlog gauge는 공유 DB 잔량이므로 인스턴스별 결과를 합산하지 않는다.
+확인 순서는 **CloudWatch Logs Insights에서 실행·오류를 확인하고 DB에서 현재 상태와 잔량을 조회하는 것**이다. Actuator `metrics`는 컨테이너 내부 loopback 전용이므로 ECS에서 직접 조회할 때만 보조 지표로 사용한다. 프로세스 카운터는 재시작 시 초기화되며, DB backlog는 공유 잔량이므로 인스턴스별로 합산하지 않는다.
 
 - NHN HTTP 429(rate limit) 실패가 늘어남
-  - 확인법: 앱 컨테이너에서 해당 인스턴스의 실패 누적값을 조회하고, 일정 간격 후 같은 인스턴스에서 다시 조회해 증가량을 비교한다.
-  ```bash
-  curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.delivery?tag=channel:KAKAO&tag=outcome:FAILED&tag=failure_category:RATE_LIMITED'
-  ```
-  - 전체 인스턴스 및 기간별 집계가 필요하면 CloudWatch Logs Insights에서 발송 실패 로그를 집계한다.
+  - 확인법: CloudWatch Logs Insights에서 NHN 요청 결과 로그를 집계한다. 이 로그는 DB 결과 기록보다 먼저 남으므로 결과 저장 실패 건도 provider 응답 기준 집계에 포함된다.
   ```sql
   fields @timestamp, @message
-  | filter @message like /알림 발송 실패/
-  | parse @message /channel=(?<channel>[^, ]+), failureCategory=(?<failureCategory>[^, ]+), resultCode=(?<resultCode>[^, ]+)/
+  | filter @message like /NHN 알림톡 요청 결과/
+  | parse @message /failureCategory=(?<failureCategory>[^, ]+), resultCode=(?<resultCode>[^, ]+)/
   | filter failureCategory = "RATE_LIMITED" or resultCode = "NHN_HTTP_429"
-  | stats count(*) as failures by bin(5m), channel, resultCode
+  | stats count(*) as failures by bin(5m), failureCategory, resultCode
+  ```
+  - 컨테이너 내부의 프로세스별 누적값이 필요할 때만 Actuator를 보조로 조회한다.
+  ```bash
+  curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.delivery?tag=channel:KAKAO&tag=outcome:FAILED&tag=failure_category:RATE_LIMITED'
   ```
   - `RATE_LIMITED`는 저장된 공통 실패 분류이고, `NHN_HTTP_429`는 현재 HTTP 429의 원본 코드다. NHN 응답 본문 내부 코드가 rate limit으로 추가 확인되면 해당 코드도 별도로 필터링한다. 자동 경보는 아직 없다.
 
@@ -125,19 +125,21 @@ curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.pending?tag
   - `due`가 계속 쌓이면 dispatcher 실행 요약, 실행기 포화 로그와 provider 실패를 확인한다. `future`는 아직 발송 예정 시각이 되지 않은 정상 대기일 수 있다.
 
 - dispatcher 발송 창을 넘긴 `PENDING` 행을 조사함
-  - 확인법: 아래 조회는 `scheduled_at`이 현재보다 8분 이상 지난 `PENDING`이다. 이 행들은 자동 발송 대상에서 제외되며 자동 삭제·재시도되지 않는다. 프로세스 중단, provider 응답 이후 DB 결과 기록 실패, 처리 지연 등 여러 원인이 가능하므로 결과를 곧바로 특정 장애로 단정하지 않는다.
+  - 확인법: 아래 조회는 `scheduled_at`과 `created_at`이 모두 현재보다 8분 이상 지난 `PENDING`이다. 이 행들은 자동 발송 대상에서 제외되며 자동 삭제·재시도되지 않는다. 프로세스 중단, provider 응답 이후 DB 결과 기록 실패, 처리 지연 등 여러 원인이 가능하므로 결과를 곧바로 특정 장애로 단정하지 않는다.
   ```sql
   SELECT
       id,
       channel,
       scheduled_at,
+      created_at,
       updated_at,
       result_code,
       result_category,
-      TIMESTAMPDIFF(MINUTE, scheduled_at, NOW(6)) AS overdue_minutes
+      TIMESTAMPDIFF(MINUTE, GREATEST(scheduled_at, created_at), NOW(6)) AS overdue_minutes
   FROM notifications
   WHERE status = 'PENDING'
     AND scheduled_at <= NOW(6) - INTERVAL 8 MINUTE
+    AND created_at <= NOW(6) - INTERVAL 8 MINUTE
   ORDER BY scheduled_at, id;
   ```
   - 건수만 빠르게 확인하려면 `expired` gauge를 본다. 개별 행의 수신자 주소와 payload는 운영 로그나 공유 문서에 복사하지 않는다.
@@ -185,13 +187,7 @@ curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.pending?tag
   ```
 
 - 동일 `deduplication_key` 동시 적재로 배치 저장이 실패함
-  - 확인법: 선행 조회 후 동시 insert가 경합하면 DB unique 제약이 중복 행을 막지만 해당 배치 트랜잭션 전체가 롤백될 수 있다. 전용 로그의 `batchSize`는 롤백된 배치의 후보 행 수이며 충돌 건수는 아니다. 자동 재실행은 하지 않는다.
-  ```sql
-  fields @timestamp, @message
-  | filter @message like /deduplication_key 고유 제약 경합으로 롤백됩니다/
-  | parse @message /batchSize=(?<batchSize>[0-9]+)/
-  | stats count(*) as rolledBackBatches, sum(batchSize) as candidateRows by bin(5m)
-  ```
+  - DB unique 제약이 중복 행을 막지만 해당 배치 전체가 롤백될 수 있다. 전용 경고 로그에 배치 후보 수(`batchSize`)를 남기며 자동 재실행하지 않는다.
 
 - 30일 정리 작업이 밀리거나 삭제량이 급증함
   - 확인법: 매일 정리 작업 로그의 `deletedCount`와 `timeBudgetReached`를 확인한다. 한 번에 최대 500건씩, 최대 45초 동안 삭제한다. `timeBudgetReached=true`가 반복되면 남은 양이나 삭제 비용을 별도로 확인한다. 정리된 행의 `deduplication_key`도 사라져 30일 이후 동일 논리 이벤트가 다시 들어오면 재등록될 수 있으며, 이 가능성은 허용한다.
@@ -239,7 +235,7 @@ curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.pending?tag
 - 스크랩 리마인드 scheduler는 템플릿 승인 전까지 코드 등록이 보류되어 있어 현재 실행되지 않는다.
 - 템플릿 코드는 알림 행의 `template_code`를 사용한다. `nhn.templateCode`는 호환용 설정이다.
 - NHN 멱등성은 provider의 단기 중복 억제일 뿐 애플리케이션 재시도 정책이 아니다. provider 접수 이후 사용자 도착 여부도 현재 추적하지 않는다.
-- `scheduled_at` 기준 최근 8분 이내의 `PENDING`만 dispatcher가 읽는다. NHN 멱등성 10분보다 2분 짧게 잘라 결과 저장 실패 후 재호출 가능 구간을 제한한다. 8분이 지난 행은 상태를 바꾸거나 삭제하지 않고 남겨 운영 조회 대상으로 둔다.
+- `max(scheduled_at, created_at)` 기준 최근 8분 이내의 due `PENDING`만 dispatcher가 읽는다. NHN 멱등성 10분보다 2분 짧게 잘라 결과 저장 실패 후 재호출 가능 구간을 제한한다. 늦게 적재된 D-1 알림은 적재 시각부터 처리 창을 적용한다. 두 시각 모두 8분을 넘긴 행은 상태를 바꾸거나 삭제하지 않고 남겨 운영 조회 대상으로 둔다.
 - dispatcher 전체 ShedLock은 최대 90초다. 실행이 끝날 때 60초 이상 걸렸으면 경고 로그를 남기며, 반복되면 lock 시간을 늘릴 운영 신호로 본다. 행별 claim은 없으므로 만료된 lock과 장시간 정지 상황까지 수학적으로 중복 발송을 막는 보장은 아니다.
 
 ## 기준 코드

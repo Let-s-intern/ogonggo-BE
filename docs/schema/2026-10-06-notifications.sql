@@ -1,6 +1,6 @@
--- 최초 알림 기능 배포용 스키마 마이그레이션.
--- 이 브랜치의 알림 기능/스키마는 이전에 배포된 적이 없으므로, 운영 DB에 기존 리마인드 큐가 있다고 가정하지 않는다.
--- 사용자 API 배포 전에 운영 DB에 한 번 적용한다. 자동 적용되지 않는다.
+-- 알림 기능 배포용 통합 스키마 마이그레이션.
+-- 초기 배포용이다. 운영 DB에 일부 스키마가 이미 반영됐는지 사전 확인한 뒤 사용한다.
+-- 운영 ddl-auto=none. 사용자 API 배포 전에 한 번 적용하며 자동 적용되지 않는다.
 
 -- 재스크랩 시 bookmark.created_at은 유지되므로 현재 활성화 시각을 별도 관리한다.
 -- 기존 북마크는 기존 생성 시각으로 초기화해 현재 데이터의 의미를 보존한다.
@@ -13,17 +13,6 @@ where active_since is null;
 
 alter table job_bookmarks
     modify column active_since datetime(6) not null;
-
--- 다음 D-1 조회를 위해 공고에 예정 시각만 보관한다. 이미 지난 시각은 소급 적재하지 않는다.
-alter table jobs
-    add column bookmark_reminder_at datetime(6) null;
-
-update jobs
-set bookmark_reminder_at = date_sub(recruitment_end_at, interval 24 hour)
-where recruitment_end_at is not null
-  and date_sub(recruitment_end_at, interval 24 hour) > now(6);
-
-create index idx_jobs_bookmark_reminder_at on jobs (bookmark_reminder_at, id);
 
 create table notifications (
     id bigint not null auto_increment,
@@ -38,6 +27,7 @@ create table notifications (
     provider_message_id varchar(255) null,
     sent_at datetime(6) null,
     result_code varchar(100) null,
+    result_category varchar(50) null,
     created_at datetime(6) not null,
     updated_at datetime(6) not null,
     primary key (id),
