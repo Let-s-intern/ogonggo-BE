@@ -185,13 +185,12 @@ curl -s 'http://127.0.0.1:8080/actuator/metrics/ogonggo.notification.pending?tag
   ```
 
 - 동일 `deduplication_key` 동시 적재로 배치 저장이 실패함
-  - 확인법: 선행 조회 후 동시 insert가 경합하면 DB unique 제약이 중복 행을 막지만 해당 배치 트랜잭션 전체가 롤백될 수 있다. 이를 위한 전용 카운터나 복구 처리는 없다. 애플리케이션 로그에서 제약 이름 또는 중복 키 오류를 검색하고, 해당 시각의 적재 실행 및 이후 재실행 여부를 확인한다.
+  - 확인법: 선행 조회 후 동시 insert가 경합하면 DB unique 제약이 중복 행을 막지만 해당 배치 트랜잭션 전체가 롤백될 수 있다. 전용 로그의 `batchSize`는 롤백된 배치의 후보 행 수이며 충돌 건수는 아니다. 자동 재실행은 하지 않는다.
   ```sql
   fields @timestamp, @message
-  | filter @message like /uk_notification_deduplication_key/
-      or @message like /Duplicate entry/
-      or @message like /ConstraintViolationException/
-  | sort @timestamp desc
+  | filter @message like /deduplication_key 고유 제약 경합으로 롤백됩니다/
+  | parse @message /batchSize=(?<batchSize>[0-9]+)/
+  | stats count(*) as rolledBackBatches, sum(batchSize) as candidateRows by bin(5m)
   ```
 
 - 30일 정리 작업이 밀리거나 삭제량이 급증함

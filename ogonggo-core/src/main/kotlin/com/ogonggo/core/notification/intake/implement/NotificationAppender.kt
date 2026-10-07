@@ -4,7 +4,9 @@ import com.ogonggo.core.notification.domain.Notification
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.intake.implement.event.NotificationEnqueuedEvent
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -62,10 +64,41 @@ class NotificationAppender internal constructor(
             }
             .toList()
 
-        notificationRepository.saveAll(newNotifications)
+        if (newNotifications.isEmpty()) return 0
+
+        try {
+            // Flush here so a concurrent unique-key violation is logged before the transaction exits.
+            notificationRepository.saveAllAndFlush(newNotifications)
+        } catch (exception: DataIntegrityViolationException) {
+            if (exception.isDeduplicationKeyConflict()) {
+                log.warn(
+                    "알림 배치 적재가 deduplication_key 고유 제약 경합으로 롤백됩니다. constraint={}, batchSize={}",
+                    DEDUPLICATION_KEY_CONSTRAINT,
+                    newNotifications.size,
+                )
+            }
+            throw exception
+        }
+
         newNotifications.groupingBy(Notification::channel).eachCount().forEach { (channel, count) ->
             eventPublisher.publishEvent(NotificationEnqueuedEvent(channel, count))
         }
         return newNotifications.size
+    }
+
+    private fun DataIntegrityViolationException.isDeduplicationKeyConflict(): Boolean {
+        var cause: Throwable? = this
+        while (cause != null) {
+            if (cause.message?.contains(DEDUPLICATION_KEY_CONSTRAINT, ignoreCase = true) == true) {
+                return true
+            }
+            cause = cause.cause
+        }
+        return false
+    }
+
+    private companion object {
+        const val DEDUPLICATION_KEY_CONSTRAINT = "uk_notification_deduplication_key"
+        val log = LoggerFactory.getLogger(NotificationAppender::class.java)
     }
 }
