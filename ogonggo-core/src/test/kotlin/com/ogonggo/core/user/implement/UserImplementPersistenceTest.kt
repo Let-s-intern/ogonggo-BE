@@ -71,6 +71,21 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `FCM 토큰을 저장하고 최신 토큰으로 교체하며 이전 토큰은 지울 수 있다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userManager.changeFcmToken(account.userId, "fcm-token-1")
+        assertEquals("fcm-token-1", userReader.readFcmToken(account.userId))
+
+        userManager.changeFcmToken(account.userId, "fcm-token-2")
+        userManager.clearFcmToken(account.userId, "fcm-token-1")
+        assertEquals("fcm-token-2", userReader.readFcmToken(account.userId))
+
+        userManager.clearFcmToken(account.userId, "fcm-token-2")
+        assertNull(userReader.readFcmToken(account.userId))
+    }
+
+    @Test
     fun `존재하지 않는 사용자 조회는 USER_NOT_FOUND로 실패한다`() {
         val exception = assertThrows(EntityNotFoundException::class.java) { userReader.read(9999L) }
 
