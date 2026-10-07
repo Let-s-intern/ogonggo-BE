@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.enumeration.business
 
 import com.ogonggo.core.enumeration.EnumField
+import com.ogonggo.core.community.domain.RecruitmentPosition
 import com.ogonggo.core.job.domain.EmploymentType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -24,6 +25,13 @@ class UserEnumServiceTest {
             EmploymentType.entries.map { it.name to it.desc },
             employmentTypes.map { it.name to it.desc },
         )
+    }
+
+    @Test
+    fun `모집 포지션 MARKETING의 라벨은 마케팅으로 제공한다`() {
+        val marketing = enums.getValue("RecruitmentPosition").single { it.name == RecruitmentPosition.MARKETING.name }
+
+        assertEquals("마케팅", marketing.desc)
     }
 
     /**
