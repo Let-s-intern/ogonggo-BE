@@ -65,7 +65,6 @@ class JobManager internal constructor(
                     jobId = job.requiredId(),
                     previousEndAt = previousEndAt,
                     recruitmentEndAt = job.recruitmentEndAt,
-                    changedAt = now,
                 ),
             )
         }

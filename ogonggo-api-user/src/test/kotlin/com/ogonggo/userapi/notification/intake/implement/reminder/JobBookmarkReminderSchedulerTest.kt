@@ -17,35 +17,38 @@ class JobBookmarkReminderSchedulerTest {
     private val now = LocalDateTime.of(2026, 10, 6, 9, 0)
 
     @Test
-    @DisplayName("처리할 일정이 없으면 빈 배치 확인 후 실행을 마친다")
+    @DisplayName("처리할 대상이 없으면 첫 조회 후 실행을 마친다")
     fun `빈 배치를 확인하면 반복 처리를 종료한다`() {
         // given
         val enqueueService = Mockito.mock(JobBookmarkReminderEnqueueService::class.java)
-        Mockito.`when`(enqueueService.enqueueDue(now)).thenReturn(result(workCount = 0))
+        Mockito.`when`(enqueueService.enqueueDue(now, null)).thenReturn(result(workCount = 0))
         val scheduler = scheduler(enqueueService)
 
         // when
         scheduler.run()
 
         // then
-        Mockito.verify(enqueueService, Mockito.times(1)).enqueueDue(now)
+        Mockito.verify(enqueueService, Mockito.times(1)).enqueueDue(now, null)
         Mockito.verifyNoMoreInteractions(enqueueService)
     }
 
     @Test
-    @DisplayName("일정이 처리된 배치 다음에 빈 배치를 확인하면 그때 실행을 마친다")
-    fun `처리된 배치가 있으면 빈 배치를 만날 때까지 반복한다`() {
+    @DisplayName("페이지가 처리되면 마지막 스크랩 ID부터 다음 페이지를 읽는다")
+    fun `처리된 페이지 다음 커서로 이어 읽는다`() {
         // given
         val enqueueService = Mockito.mock(JobBookmarkReminderEnqueueService::class.java)
-        Mockito.`when`(enqueueService.enqueueDue(now))
-            .thenReturn(result(workCount = 2), result(workCount = 0))
+        Mockito.`when`(enqueueService.enqueueDue(now, null))
+            .thenReturn(result(workCount = 1, lastBookmarkId = 500))
+        Mockito.`when`(enqueueService.enqueueDue(now, 500))
+            .thenReturn(result(workCount = 0))
         val scheduler = scheduler(enqueueService)
 
         // when
         scheduler.run()
 
         // then
-        Mockito.verify(enqueueService, Mockito.times(2)).enqueueDue(now)
+        Mockito.verify(enqueueService).enqueueDue(now, null)
+        Mockito.verify(enqueueService).enqueueDue(now, 500)
     }
 
     private fun scheduler(enqueueService: JobBookmarkReminderEnqueueService) = JobBookmarkReminderScheduler(
@@ -54,10 +57,11 @@ class JobBookmarkReminderSchedulerTest {
         executionObserver = SchedulerExecutionObserver(SimpleMeterRegistry()),
     )
 
-    private fun result(workCount: Int) = ReminderEnqueueResultDto(
+    private fun result(workCount: Int, lastBookmarkId: Long? = null) = ReminderEnqueueResultDto(
         workCount = workCount,
         candidateCount = 0,
         queuedCount = 0,
         skippedCount = 0,
+        lastBookmarkId = lastBookmarkId,
     )
 }

@@ -75,7 +75,6 @@ class JobAppender internal constructor(
                     jobId = checkNotNull(savedJob.id),
                     previousEndAt = null,
                     recruitmentEndAt = recruitmentEndAt,
-                    changedAt = now,
                 ),
             )
         }

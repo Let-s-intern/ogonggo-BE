@@ -14,19 +14,16 @@ where active_since is null;
 alter table job_bookmarks
     modify column active_since datetime(6) not null;
 
-create table job_bookmark_reminder_schedules (
-    id bigint not null auto_increment,
-    job_id bigint not null,
-    recruitment_end_at datetime(6) not null,
-    reminder_at datetime(6) not null,
-    status varchar(20) not null,
-    last_bookmark_id bigint null,
-    created_at datetime(6) not null,
-    updated_at datetime(6) not null,
-    primary key (id),
-    unique key uk_job_reminder_schedule_deadline (job_id, recruitment_end_at),
-    key idx_job_reminder_schedule_due (status, reminder_at, id)
-);
+-- 다음 D-1 조회를 위해 공고에 예정 시각만 보관한다. 이미 지난 시각은 소급 적재하지 않는다.
+alter table jobs
+    add column bookmark_reminder_at datetime(6) null;
+
+update jobs
+set bookmark_reminder_at = date_sub(recruitment_end_at, interval 24 hour)
+where recruitment_end_at is not null
+  and date_sub(recruitment_end_at, interval 24 hour) > now(6);
+
+create index idx_jobs_bookmark_reminder_at on jobs (bookmark_reminder_at, id);
 
 create table notifications (
     id bigint not null auto_increment,
@@ -48,27 +45,6 @@ create table notifications (
     key idx_notification_due (status, scheduled_at, id),
     key idx_notification_cleanup (status, updated_at, id)
 );
-
--- 이미 존재하며 D-1 예정 시각이 미래인 공고만 매분 평가 대상으로 등록한다.
--- 과거 예정 시각은 소급 발송하지 않는다.
-insert ignore into job_bookmark_reminder_schedules (
-    job_id,
-    recruitment_end_at,
-    reminder_at,
-    status,
-    created_at,
-    updated_at
-)
-select
-    id,
-    recruitment_end_at,
-    date_sub(recruitment_end_at, interval 24 hour),
-    'PENDING',
-    now(6),
-    now(6)
-from jobs
-where recruitment_end_at is not null
-  and date_sub(recruitment_end_at, interval 24 hour) > now(6);
 
 -- 발송 관련 두 작업은 비활성으로, 30일 보관 정리는 활성으로 미리 만든다.
 -- NHN clip_remind 승인 전에는 코드도 reminder job 등록을 보류한다. 승인 후 코드 복구와 DB 활성화를 별도로 한다.

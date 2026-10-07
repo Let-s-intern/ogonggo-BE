@@ -8,8 +8,11 @@ import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.job.persistence.JobBookmarkReminderQueryRepository
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
+import com.ogonggo.core.notification.intake.implement.NotificationAppender
+import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserProfile
@@ -31,8 +34,8 @@ import java.time.LocalDateTime
     JobAppender::class,
     JobBookmarkManager::class,
     JobBookmarkReminderReader::class,
-    JobBookmarkReminderScheduleListener::class,
-    JobBookmarkReminderScheduleManager::class,
+    JobBookmarkReminderNotificationListener::class,
+    NotificationAppender::class,
     NotificationManager::class,
     JobBookmarkReminderQueryRepository::class,
     ContentRejectionManager::class,
@@ -40,7 +43,7 @@ import java.time.LocalDateTime
 internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructor(
     private val jobAppender: JobAppender,
     private val reminderReader: JobBookmarkReminderReader,
-    private val scheduleManager: JobBookmarkReminderScheduleManager,
+    private val notificationAppender: NotificationAppender,
     private val entityManager: EntityManager,
     private val jobBookmarkManager: JobBookmarkManager,
 ) {
@@ -111,11 +114,10 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         excludedStatuses.forEach { (userId, status) ->
             jobBookmarkManager.changeApplicationStatus(userId, jobId, status, registeredAt)
         }
-        assertTrue(scheduleManager.readDueSchedules(scheduleAt.minusNanos(1), limit = 10).isEmpty())
-        val dueSchedule = scheduleManager.readDueSchedules(scheduleAt, limit = 10).single()
+        assertTrue(reminderReader.readEligibleCandidates(scheduleAt.minusNanos(1), null, limit = 100).isEmpty())
 
         // when
-        val candidates = reminderReader.readEligibleCandidates(dueSchedule, scheduleAt, limit = 100)
+        val candidates = reminderReader.readEligibleCandidates(scheduleAt, null, limit = 100)
 
         // then
         assertEquals(setOf(scrappedUserId, preparingUserId), candidates.map { it.userId }.toSet())
@@ -124,13 +126,18 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         assertTrue(candidates.all { it.postingTitle == "백엔드 개발자" })
 
         // 자동 마감 작업 전이라 RECRUITING이 남아 있어도 실제 마감 시각을 넘으면 신규 적재하지 않는다.
-        val expiredSchedule = scheduleManager.readDueSchedules(recruitmentEndAt.plusSeconds(1), 10).single()
-        assertTrue(reminderReader.readEligibleCandidates(expiredSchedule, recruitmentEndAt.plusSeconds(1), 100).isEmpty())
+        assertTrue(
+            reminderReader.readEligibleCandidates(
+                recruitmentEndAt.plusSeconds(1),
+                afterBookmarkId = null,
+                limit = 100,
+            ).isEmpty(),
+        )
     }
 
     @Test
-    @DisplayName("커서가 지난 제외 스크랩은 나중에 대상 상태가 되어도 같은 일정에서 다시 읽지 않는다")
-    fun `커서를 지난 스크랩 상태가 바뀌어도 재평가하지 않는다`() {
+    @DisplayName("이미 알림으로 적재한 수신자는 재실행에서 건너뛰고 이후 수신자를 다시 조회한다")
+    fun `알림 행을 진행 기록으로 사용해 재실행을 이어간다`() {
         // given
         val registeredAt = LocalDateTime.of(2026, 10, 4, 9, 0)
         val scheduledAt = registeredAt.plusDays(1)
@@ -161,30 +168,43 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
             JobApplicationStatus.APPLIED,
             scheduledAt,
         )
-        val schedule = scheduleManager.readDueSchedules(scheduledAt, limit = 10).single()
-
-        // when: APPLIED 상태의 중간 스크랩은 제외되고, 뒤의 적격 스크랩까지 커서가 진행한다.
-        val firstPage = reminderReader.readEligibleCandidates(schedule, scheduledAt, limit = 2)
-        assertEquals(listOf(firstUserId, lastUserId), firstPage.map { it.userId })
-        val lastBookmarkIdInPage = firstPage.last().bookmarkId
-        scheduleManager.advanceSchedule(
-            scheduleId = schedule.id,
-            lastBookmarkId = lastBookmarkIdInPage,
-            isComplete = false,
+        // when: 첫 번째 대상 알림을 적재한다. 별도 일정 커서 대신 이 행이 재실행 기준이 된다.
+        val firstRunCandidates = reminderReader.readEligibleCandidates(scheduledAt, null, limit = 1)
+        assertEquals(listOf(firstUserId), firstRunCandidates.map { it.userId })
+        val firstCandidate = firstRunCandidates.single()
+        notificationAppender.append(
+            NotificationAppendDto(
+                deduplicationKey = JobBookmarkReminderNotificationKey.forRecipient(
+                    jobId = jobId,
+                    userId = firstUserId,
+                    channel = NotificationChannel.KAKAO.name,
+                    reminderAt = firstCandidate.reminderAt,
+                ),
+                channel = NotificationChannel.KAKAO,
+                templateCode = "clip_remind",
+                recipientAddress = "01012345101",
+                payloadJson = "{}",
+                scheduledAt = firstCandidate.reminderAt,
+                recipientUserId = firstUserId,
+            ),
         )
 
-        // 커서가 중간 스크랩을 지난 뒤 그 상태가 PREPARING으로 바뀐다.
+        // 중간 스크랩이 대상 상태로 바뀌면 다음 실행에서 그 수신자를 포함한다.
         jobBookmarkManager.changeApplicationStatus(
             changedLaterUserId,
             jobId,
             JobApplicationStatus.PREPARING,
             scheduledAt.plusMinutes(1),
         )
-        val resumedSchedule = scheduleManager.readDueSchedules(scheduledAt.plusMinutes(1), limit = 10).single()
-        val nextPage = reminderReader.readEligibleCandidates(resumedSchedule, scheduledAt.plusMinutes(1), limit = 2)
+        val nextRunCandidates = reminderReader.readEligibleCandidates(
+            scheduledAt.plusMinutes(1),
+            afterBookmarkId = null,
+            limit = 10,
+        )
 
         // then
-        assertTrue(nextPage.isEmpty())
+        assertEquals(listOf(changedLaterUserId, lastUserId), nextRunCandidates.map { it.userId })
+        assertTrue(nextRunCandidates.none { it.userId == firstUserId })
     }
 
     private fun appendUser(

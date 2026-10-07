@@ -18,8 +18,9 @@ class JobBookmarkReminderScheduler internal constructor(
     private val executionObserver: SchedulerExecutionObserver,
 ) {
     /**
-     * DB 등록 주기에 따라 due 일정을 반복 평가한다. ShedLock이 인스턴스 간 실행을 직렬화하고,
-     * 대상 적재와 페이지 커서 이동은 각 페이지 단위 트랜잭션이다. NHN 호출은 delivery dispatcher에 맡긴다.
+     * DB 등록 주기에 따라 due 대상을 반복 적재한다. ShedLock이 인스턴스 간 실행을 직렬화하고,
+     * 진행 커서는 한 번의 실행 안에서만 유지하며, 재시작 시 notifications에 이미 적재된 대상을 건너뛴다.
+     * NHN 호출은 delivery dispatcher에 맡긴다.
      */
     @SchedulerLock(name = SCHEDULER_NAME, lockAtLeastFor = "PT0S", lockAtMostFor = "PT10M")
     fun run() {
@@ -39,11 +40,13 @@ class JobBookmarkReminderScheduler internal constructor(
     }
 
     private fun enqueueUntilStopped(startedAt: Long, stats: JobBookmarkReminderRunStats): Boolean {
+        var afterBookmarkId: Long? = null
         do {
-            // 페이지 처리 도중 새 일정이 계속 들어와도 한 번의 실행이 무한히 이어지지 않게 시간 예산을 둔다.
-            val result = enqueueService.enqueueDue(LocalDateTime.now(clock))
+            // 페이지 처리 도중 새 대상이 계속 생겨도 한 번의 실행이 무한히 이어지지 않게 시간 예산을 둔다.
+            val result = enqueueService.enqueueDue(LocalDateTime.now(clock), afterBookmarkId)
             stats.include(result)
             if (result.workCount == 0) return true
+            afterBookmarkId = result.lastBookmarkId
         } while (System.nanoTime() - startedAt < RUN_BUDGET.toNanos())
 
         return false

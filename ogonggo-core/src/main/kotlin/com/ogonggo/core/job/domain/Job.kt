@@ -94,6 +94,10 @@ import java.time.LocalDateTime
             name = "idx_jobs_recruitment_status_end",
             columnList = "recruitment_status, recruitment_end_at",
         ),
+        Index(
+            name = "idx_jobs_bookmark_reminder_at",
+            columnList = "bookmark_reminder_at, id",
+        ),
     ],
 )
 class Job internal constructor(
@@ -263,6 +267,13 @@ class Job internal constructor(
     var recruitmentEndAt: LocalDateTime? = recruitmentEndAt /* 공고 모집 종료 일시 */
         protected set
 
+    /** 모집 마감 변경 시 계산한 D-1 시각. 이미 지난 새 D-1은 null로 두어 소급 발송하지 않는다. */
+    @Column(name = "bookmark_reminder_at")
+    var bookmarkReminderAt: LocalDateTime? = recruitmentEndAt
+        ?.minusHours(24)
+        ?.takeIf { it.isAfter(now) }
+        protected set
+
     /** 적합한 지원자를 뽑으면 마감일 전이라도 모집을 끝내는 공고인지 나타낸다. */
     @Column(name = "closes_when_filled")
     var closesWhenFilled: Boolean? = closesWhenFilled /* 접수 시 마감 여부 */
@@ -410,6 +421,7 @@ class Job internal constructor(
         now: LocalDateTime,
     ) {
         checkModifiable()
+        val recruitmentDeadlineChanged = this.recruitmentEndAt != recruitmentEndAt
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
@@ -448,6 +460,11 @@ class Job internal constructor(
         this.recruitmentHeadcount = recruitmentHeadcount
         this.recruitmentStartAt = recruitmentStartAt
         this.recruitmentEndAt = recruitmentEndAt
+        if (recruitmentDeadlineChanged) {
+            bookmarkReminderAt = recruitmentEndAt
+                ?.minusHours(24)
+                ?.takeIf { it.isAfter(now) }
+        }
         this.closesWhenFilled = closesWhenFilled
         this.autoCloseEnabled = autoCloseEnabled
         this.companyAndTeamIntroduction = companyAndTeamIntroduction
