@@ -19,7 +19,7 @@ import java.time.LocalDateTime
 class JobDomainTest {
 
     @Test
-    @DisplayName("모집 마감일을 바꾸면 새 마감 기준의 D-1 예정 시각을 계산한다")
+    @DisplayName("공고의 주요 정보를 수정한다")
     fun `채용공고 정보를 수정한다`() {
         // given
         val job = createJob()
@@ -78,7 +78,6 @@ class JobDomainTest {
         assertEquals(EmploymentType.INTERN, job.employmentType)
         assertEquals(startAt, job.recruitmentStartAt)
         assertEquals(endAt, job.recruitmentEndAt)
-        assertEquals(endAt.minusHours(24), job.bookmarkReminderAt)
         assertEquals("변경된 회사 및 팀 소개", job.companyAndTeamIntroduction)
         assertEquals("변경된 주요 업무", job.responsibilities)
         assertEquals("변경된 자격 요건", job.qualifications)
@@ -90,20 +89,6 @@ class JobDomainTest {
         assertEquals(JobApplicationMethod.EMAIL, job.applicationMethod)
         assertEquals(true, job.closesWhenFilled)
         assertEquals(false, job.autoCloseEnabled)
-    }
-
-    @Test
-    @DisplayName("마감 변경 시 새 D-1이 이미 지났으면 리마인드 예정 시각을 두지 않는다")
-    fun `이미 지난 D-1은 소급 리마인드 대상으로 만들지 않는다`() {
-        // given
-        val now = LocalDateTime.of(2026, 10, 4, 9, 0)
-        val recruitmentEndAt = now.plusHours(12)
-
-        // when
-        val job = createJob(recruitmentEndAt = recruitmentEndAt, now = now)
-
-        // then
-        assertNull(job.bookmarkReminderAt)
     }
 
     @Test

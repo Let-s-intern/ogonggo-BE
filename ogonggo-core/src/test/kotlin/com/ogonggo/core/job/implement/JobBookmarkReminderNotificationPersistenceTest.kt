@@ -13,7 +13,6 @@ import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import com.ogonggo.core.review.implement.ContentRejectionManager
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -40,23 +39,6 @@ internal class JobBookmarkReminderNotificationPersistenceTest @Autowired constru
 ) {
 
     @Test
-    @DisplayName("미래 D-1을 계산해 공고에 보관하고 마감 변경 시 다시 계산한다")
-    fun `마감 변경에 따라 D-1 시각을 갱신한다`() {
-        // given
-        val now = LocalDateTime.of(2026, 10, 4, 9, 0)
-        val firstEndAt = now.plusDays(5)
-        val job = jobAppender.append(jobDto(firstEndAt), now)
-        assertEquals(firstEndAt.minusHours(24), job.bookmarkReminderAt)
-
-        // when
-        val alreadyDueEndAt = now.plusHours(12)
-        jobManager.update(job, updateDto(alreadyDueEndAt), now)
-
-        // then
-        assertNull(job.bookmarkReminderAt)
-    }
-
-    @Test
     @DisplayName("마감일이 바뀌면 기존 대기 알림을 제거한다")
     fun `마감 변경은 이전 대기 알림을 취소한다`() {
         // given
@@ -64,7 +46,7 @@ internal class JobBookmarkReminderNotificationPersistenceTest @Autowired constru
         val oldEndAt = now.plusDays(5)
         val job = jobAppender.append(jobDto(oldEndAt), now)
         val jobId = checkNotNull(job.id)
-        val reminderAt = checkNotNull(job.bookmarkReminderAt)
+        val reminderAt = oldEndAt.minusHours(24)
         val key = JobBookmarkReminderNotificationKey.forRecipient(
             jobId = jobId,
             userId = 17,
@@ -89,7 +71,6 @@ internal class JobBookmarkReminderNotificationPersistenceTest @Autowired constru
 
         // then
         assertEquals(0, notificationRepository.findAllByDeduplicationKeyIn(listOf(key)).size)
-        assertEquals(newEndAt.minusHours(24), job.bookmarkReminderAt)
     }
 
     private fun jobDto(recruitmentEndAt: LocalDateTime) = JobAppendDto(

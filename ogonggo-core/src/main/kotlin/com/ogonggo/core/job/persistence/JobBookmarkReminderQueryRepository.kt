@@ -30,6 +30,11 @@ internal class JobBookmarkReminderQueryRepository(
     ): List<JobBookmarkReminderCandidateDto> {
         // Entity 전체를 로딩하지 않고 알림 적재에 필요한 값만 projection으로 조회한다.
         // 이미 적재된 알림은 재실행 시 제외해 별도 일정 커서 없이 다음 대상으로 진행한다.
+        val reminderAt = Expressions.dateTimeTemplate(
+            LocalDateTime::class.java,
+            "timestampadd(hour, -24, {0})",
+            job.recruitmentEndAt,
+        )
         val jobNotificationPrefix = Expressions.stringTemplate(
             "concat('clip-remind:job:', {0}, ':')",
             job.id,
@@ -39,7 +44,7 @@ internal class JobBookmarkReminderQueryRepository(
             .where(
                 notification.recipientUserId.eq(jobBookmark.userId),
                 notification.channel.eq(NotificationChannel.KAKAO),
-                notification.scheduledAt.eq(job.bookmarkReminderAt),
+                notification.scheduledAt.eq(reminderAt),
                 notification.deduplicationKey.startsWith(jobNotificationPrefix),
             )
             .notExists()
@@ -48,8 +53,7 @@ internal class JobBookmarkReminderQueryRepository(
             jobBookmark.id,
             jobBookmark.jobId,
             jobBookmark.userId,
-            job.recruitmentEndAt,
-            job.bookmarkReminderAt,
+            reminderAt,
             userProfile.phoneNum,
             userProfile.name,
             job.title,
@@ -60,9 +64,9 @@ internal class JobBookmarkReminderQueryRepository(
             .join(userProfile).on(userProfile.userId.eq(user.id))
             .where(
                 // 공고·모집·스크랩·계정의 발송 자격은 매 실행 시 다시 확인한다.
-                job.bookmarkReminderAt.isNotNull,
-                job.bookmarkReminderAt.loe(now),
-                jobBookmark.activeSince.loe(job.bookmarkReminderAt),
+                job.recruitmentEndAt.isNotNull,
+                job.recruitmentEndAt.loe(now.plusHours(24)),
+                jobBookmark.activeSince.loe(reminderAt),
                 jobBookmark.deletedAt.isNull,
                 jobBookmark.applicationStatus.`in`(JobApplicationStatus.SCRAPPED, JobApplicationStatus.PREPARING),
                 job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
@@ -87,8 +91,7 @@ internal class JobBookmarkReminderQueryRepository(
                     bookmarkId = checkNotNull(row.get(jobBookmark.id)),
                     jobId = checkNotNull(row.get(jobBookmark.jobId)),
                     userId = checkNotNull(row.get(jobBookmark.userId)),
-                    recruitmentEndAt = checkNotNull(row.get(job.recruitmentEndAt)),
-                    reminderAt = checkNotNull(row.get(job.bookmarkReminderAt)),
+                    reminderAt = checkNotNull(row.get(reminderAt)),
                     recipientNo = checkNotNull(row.get(userProfile.phoneNum)),
                     recipientName = checkNotNull(row.get(userProfile.name)),
                     postingTitle = checkNotNull(row.get(job.title)),

@@ -31,12 +31,12 @@ class NotificationManager internal constructor(
     @Transactional(readOnly = true)
     fun countPendingTotal(): Long = notificationRepository.countByStatus(NotificationStatus.PENDING)
 
-    /** 현재 dispatcher의 8분 발송 창에 들어오는 PENDING 건수다. */
+    /** max(scheduledAt, createdAt) 기준 현재 dispatcher의 8분 발송 창에 들어오는 PENDING 건수다. */
     @Transactional(readOnly = true)
     fun countPendingDue(now: LocalDateTime, notBefore: LocalDateTime): Long =
         notificationRepository.countDuePending(now, notBefore, NotificationStatus.PENDING)
 
-    /** 발송 창을 넘겨 자동 발송되지 않는 PENDING 건수다. */
+    /** 예정 시각과 적재 시각이 모두 발송 창을 넘긴 PENDING 건수다. */
     @Transactional(readOnly = true)
     fun countPendingExpired(notBefore: LocalDateTime): Long =
         notificationRepository.countExpiredPending(notBefore, NotificationStatus.PENDING)

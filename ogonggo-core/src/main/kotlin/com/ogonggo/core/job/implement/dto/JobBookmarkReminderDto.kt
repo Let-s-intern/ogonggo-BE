@@ -7,7 +7,6 @@ data class JobBookmarkReminderCandidateDto(
     val bookmarkId: Long,
     val jobId: Long,
     val userId: Long,
-    val recruitmentEndAt: LocalDateTime,
     val reminderAt: LocalDateTime,
     val recipientNo: String,
     val recipientName: String,

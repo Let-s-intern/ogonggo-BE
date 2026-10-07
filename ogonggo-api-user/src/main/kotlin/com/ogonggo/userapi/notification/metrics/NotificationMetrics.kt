@@ -51,7 +51,7 @@ class NotificationMetrics(
     private fun registerPendingGauge(state: PendingState) {
         Gauge.builder(PENDING_METRIC, this) { metrics -> metrics.readPendingCount(state).toDouble() }
             .tag(STATE_TAG, state.tag)
-            .description("notifications의 PENDING 건수. due/expired는 dispatcher 8분 발송 창 기준")
+            .description("notifications의 PENDING 건수. due/expired는 max(scheduled_at, created_at) 기준 dispatcher 8분 창")
             .register(meterRegistry)
     }
 

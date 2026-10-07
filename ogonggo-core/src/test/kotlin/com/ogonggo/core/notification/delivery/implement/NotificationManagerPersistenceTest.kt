@@ -8,6 +8,7 @@ import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
+import org.springframework.jdbc.core.JdbcTemplate
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -30,6 +31,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     private val notificationAppender: NotificationAppender,
     private val notificationManager: NotificationManager,
     private val notificationRepository: NotificationJpaRepository,
+    private val jdbcTemplate: JdbcTemplate,
 ) {
 
     @BeforeEach
@@ -38,13 +40,18 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("예정 시각 이후 8분 안의 PENDING 알림만 발송 대상으로 읽는다")
+    @DisplayName("예정 시각 또는 적재 시각부터 8분 안의 PENDING 알림을 발송 대상으로 읽는다")
     fun `멱등성 보호 시간 안의 due 알림만 조회한다`() {
         // given
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
         append("recent", now.minusMinutes(7).minusSeconds(59))
         append("cutoff", now.minusMinutes(8))
         append("stale", now.minusMinutes(8).minusNanos(1))
+        append(
+            key = "late-enqueued",
+            scheduledAt = now.minusMinutes(20),
+            createdAt = now.minusMinutes(1),
+        )
         append("due-now", now)
         append("future", now.plusMinutes(1))
         append("sent", now.minusMinutes(2))
@@ -59,7 +66,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         )
 
         // then
-        assertEquals(listOf("recent", "due-now"), due.map { it.deduplicationKey })
+        assertEquals(listOf("late-enqueued", "recent", "due-now"), due.map { it.deduplicationKey })
         assertEquals(
             NotificationStatus.PENDING,
             notificationRepository.findAllByDeduplicationKeyIn(listOf("stale")).single().status,
@@ -72,13 +79,14 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
         append("due", now.minusMinutes(1))
         append("expired", now.minusMinutes(9))
+        append("late-enqueued", now.minusMinutes(20), createdAt = now.minusMinutes(1))
         append("future", now.plusMinutes(1))
         append("sent", now.minusMinutes(1))
         val sent = notificationRepository.findAllByDeduplicationKeyIn(listOf("sent")).single()
         notificationManager.complete(sent.id!!, NotificationDeliveryResult.Sent("provider"), now)
 
-        assertEquals(3L, notificationManager.countPendingTotal())
-        assertEquals(1L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
+        assertEquals(4L, notificationManager.countPendingTotal())
+        assertEquals(2L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
         assertEquals(1L, notificationManager.countPendingExpired(now.minusMinutes(8)))
         assertEquals(1L, notificationManager.countPendingFuture(now))
     }
@@ -200,7 +208,11 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertEquals(NotificationStatus.PENDING, remaining["other-job:pending"]?.status)
     }
 
-    private fun append(key: String, scheduledAt: LocalDateTime) {
+    private fun append(
+        key: String,
+        scheduledAt: LocalDateTime,
+        createdAt: LocalDateTime = scheduledAt.minusSeconds(1),
+    ) {
         notificationAppender.append(
             NotificationAppendDto(
                 deduplicationKey = key,
@@ -211,6 +223,11 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
                 scheduledAt = scheduledAt,
                 recipientUserId = 17,
             ),
+        )
+        jdbcTemplate.update(
+            "update notifications set created_at = ? where deduplication_key = ?",
+            createdAt,
+            key,
         )
     }
 }

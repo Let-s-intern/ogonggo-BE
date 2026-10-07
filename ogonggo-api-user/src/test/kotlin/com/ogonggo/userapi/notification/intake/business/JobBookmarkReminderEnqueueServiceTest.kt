@@ -71,8 +71,7 @@ class JobBookmarkReminderEnqueueServiceTest {
         bookmarkId = bookmarkId,
         jobId = 7,
         userId = bookmarkId,
-        // 발송 예정 시각은 마감 시각에서 재계산하지 않고 저장된 일정(work.reminderAt)을 따라야 한다.
-        recruitmentEndAt = LocalDateTime.of(2026, 10, 5, 9, 0, 0, 123_456_000),
+        // D-1 시각은 조회 쿼리에서 모집 마감으로부터 계산해 전달한다.
         reminderAt = LocalDateTime.of(2026, 10, 4, 9, 0, 0, 123_456_000),
         recipientNo = phoneNumber,
         recipientName = "홍길동",

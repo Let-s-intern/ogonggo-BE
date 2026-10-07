@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.job.persistence.JobBookmarkReminderQueryRepository
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
@@ -32,6 +33,7 @@ import java.time.LocalDateTime
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
     JobAppender::class,
+    JobManager::class,
     JobBookmarkManager::class,
     JobBookmarkReminderReader::class,
     JobBookmarkReminderNotificationListener::class,
@@ -43,6 +45,7 @@ import java.time.LocalDateTime
 internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructor(
     private val jobAppender: JobAppender,
     private val reminderReader: JobBookmarkReminderReader,
+    private val jobManager: JobManager,
     private val notificationAppender: NotificationAppender,
     private val entityManager: EntityManager,
     private val jobBookmarkManager: JobBookmarkManager,
@@ -205,6 +208,56 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         // then
         assertEquals(listOf(changedLaterUserId, lastUserId), nextRunCandidates.map { it.userId })
         assertTrue(nextRunCandidates.none { it.userId == firstUserId })
+    }
+
+    @Test
+    @DisplayName("D-1이 지났어도 실제 마감 전이면 기존 활성 스크랩을 대상으로 조회한다")
+    fun `D-1 경과 후 마감 전까지 기존 스크랩을 조회한다`() {
+        // given
+        val registeredAt = LocalDateTime.of(2026, 10, 4, 9, 0)
+        val now = LocalDateTime.of(2026, 10, 7, 9, 0)
+        val initialRecruitmentEndAt = now.plusDays(3)
+        val job = jobAppender.append(
+            JobAppendDto(
+                companyName = "오늘의공고",
+                title = "백엔드 개발자",
+                employmentType = EmploymentType.FULL_TIME,
+                experienceType = ExperienceType.NEWCOMER,
+                recruitmentType = JobRecruitmentType.PERIOD,
+                recruitmentEndAt = initialRecruitmentEndAt,
+                publicationStatus = JobPublicationStatus.PUBLISHED,
+            ),
+            registeredAt,
+        )
+        val recruitmentEndAt = now.plusHours(12)
+        val userId = appendUser("01012345678", "기존 스크랩 회원")
+        entityManager.persist(
+            JobBookmark(
+                jobId = checkNotNull(job.id),
+                userId = userId,
+                activeSince = recruitmentEndAt.minusHours(30),
+            ),
+        )
+        entityManager.flush()
+        jobManager.update(
+            job,
+            JobUpdateDto(
+                companyName = "오늘의공고",
+                title = "백엔드 개발자",
+                employmentType = EmploymentType.FULL_TIME,
+                experienceType = ExperienceType.NEWCOMER,
+                recruitmentType = JobRecruitmentType.PERIOD,
+                recruitmentEndAt = recruitmentEndAt,
+            ),
+            now,
+        )
+
+        // when
+        val candidates = reminderReader.readEligibleCandidates(now, null, limit = 10)
+
+        // then
+        assertEquals(listOf(userId), candidates.map { it.userId })
+        assertEquals(recruitmentEndAt.minusHours(24), candidates.single().reminderAt)
     }
 
     private fun appendUser(
