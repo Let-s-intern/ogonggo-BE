@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-01
+- 최종 변경일: 2026-10-08
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -296,6 +296,31 @@ DELETE /api/v1/admin/announcements/{announcementId}
 - 공지는 관리자만 작성하므로 쓰기 경로는 관리자 API에만 둡니다. 사용자 API에는 GET만 열고 나머지 메서드는 거부합니다.
 - 노출·상단 고정도 콘솔의 다른 콘텐츠처럼 `PATCH`로 내용과 함께 부분 수정합니다. 1절의 관리자 콘솔 예외와 같은 이유입니다.
 - 응답 계약은 [API 성공 응답의 공지사항](api-response.md#공지사항)을 따릅니다.
+
+### 취준고민
+
+```text
+GET    /api/v1/concerns                                                        로그인 없이 조회
+GET    /api/v1/concerns/popular                                                로그인 없이 조회
+POST   /api/v1/concerns
+GET    /api/v1/concerns/{concernId}                                            로그인 선택
+PUT    /api/v1/concerns/{concernId}
+DELETE /api/v1/concerns/{concernId}
+GET    /api/v1/concerns/{concernId}/comments                                   로그인 선택
+POST   /api/v1/concerns/{concernId}/comments
+GET    /api/v1/concerns/{concernId}/comments/{commentId}/replies               로그인 선택
+DELETE /api/v1/concerns/{concernId}/comments/{commentId}
+PUT    /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
+DELETE /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
+```
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 수정은 카테고리·제목·본문 세 값을 모두 받아 바꾸므로 PUT이며 200과 `data: null`로 응답합니다.
+- 지금 가장 핫한 고민은 기간·개수가 정해진 고민글 모음이라 인기 공고(`/jobs/popular`)처럼 `/concerns/popular`에 둡니다. 목록 API의 정렬로 대신하지 않는 이유는 최근 일주일이라는 기간 조건이 목록에는 없기 때문입니다.
+- 답변과 답글은 같은 `comments` 컬렉션에 두고, 답글은 요청 본문의 `parentId`로 구분합니다. 모집글 댓글과 같은 구조입니다.
+- 좋아요는 로그인한 사용자 자신의 표시 하나를 가리키는 단일 리소스(`likes/me`)로 보고, 북마크와 달리 PUT·DELETE로 둡니다. 버튼을 빠르게 두 번 눌러도 409 없이 같은 결과가 되게 하려는 것입니다.
+- 답변·답글 삭제는 모집글 댓글과 같이 이미 지운 댓글이면 404입니다.
+- 응답 계약은 [API 성공 응답의 취준고민](api-response.md#취준고민)을 따릅니다.
 
 ### 관리자 회원 조회
 

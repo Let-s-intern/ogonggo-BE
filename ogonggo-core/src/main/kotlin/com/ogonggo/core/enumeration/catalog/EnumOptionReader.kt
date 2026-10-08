@@ -11,6 +11,9 @@ import com.ogonggo.core.bootcamp.domain.BootcampSortType
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
 import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
+import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
+import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.enumeration.EnumOption
 import com.ogonggo.core.enumeration.enumOptionMapOf
 import com.ogonggo.core.enumeration.enumOptionsOf
@@ -109,6 +112,10 @@ class EnumOptionReader {
             enumOptionsOf<RecruitmentPostManagementSortType>(),
             enumOptionsOf<RecruitmentPostApplicationProgressStatus>(),
             enumOptionsOf<RecruitmentPostApplicationSortType>(),
+            // 취준고민
+            enumOptionsOf<ConcernCategory>(),
+            enumOptionsOf<ConcernSortType>(),
+            enumOptionsOf<ConcernPopularSortType>(),
             // 회원
             enumOptionsOf<UserRole>(),
             enumOptionsOf<UserStatus>(),

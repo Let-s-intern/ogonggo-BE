@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-01
+- 최종 변경일: 2026-10-08
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -80,6 +80,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 | `GET /api/v1/bootcamps` | `category` | `keyword` — 운영 회사명 또는 프로그램명 |
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
 | `GET /api/v1/announcements` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
+| `GET /api/v1/concerns` | `category`. `sort`는 `LATEST`·`VIEW_COUNT`·`COMMENT_COUNT`([취준고민](#취준고민) 참고) | 없음 |
 
 검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. `jobRole`은 `jobRole=IT_BACKEND&jobRole=IT_FRONTEND`처럼 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며, 나머지 필터는 하나씩 고릅니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
@@ -353,6 +354,31 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 사용자 상세는 비노출·삭제 공지를 없는 공지와 같이 404 `ANNOUNCEMENT_NOT_FOUND`로 응답합니다. 조회 수는 세지 않습니다.
 - 콘솔 등록은 201과 등록한 공지 전체를, 수정(`PATCH`)은 수정된 공지 전체를 `data`로 돌려줍니다. 삭제는 소프트 삭제이며 반복해도 200입니다.
 - 공지 본문에는 이미지를 넣지 않습니다. 그래서 커뮤니티 모집글과 달리 이미지 자산과 연결하지 않고, 관리자 API에도 이미지 업로드를 두지 않습니다.
+
+### 취준고민
+
+취준생이 고민글을 올리고 다른 사용자와 운영자가 답변을 다는 게시판입니다. 코드·테이블 이름은 `Concern`(고민글)입니다.
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 고민글은 `category`(`ConcernCategory`: `JOB_POSTING` 공고 질문, `CAREER` 직무·커리어, `APPLICATION_INTERVIEW` 서류·면접, `SIDE_EXPERIENCE` 사이드·경험, `ETC` 기타), 제목(100자 이하), 본문(2000자 이하 일반 텍스트)으로 이루어집니다. 에디터 JSON이나 이미지는 받지 않습니다.
+- 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·좋아요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
+- 작성자는 렛츠커리어 프로필의 `nickname`·`profileImageUrl`로 보여 주고 사용자 식별자는 싣지 않습니다. 대신 상세와 답변에 내가 쓴 것인지(`mine`)를 줍니다. 프로필이 없는 회원(기업 회원 등)은 두 값이 `null`입니다.
+- 목록 정렬은 `LATEST`(최신순, 기본값, `id DESC`), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)이며 같은 값이면 `id DESC`입니다.
+- "지금 가장 핫한 고민"(`GET /api/v1/concerns/popular`)은 **최근 일주일**, 즉 조회 시각부터 7일 전까지 등록한 고민글 중 `sort`(`ConcernPopularSortType`: `VIEW_COUNT` 기본값, `COMMENT_COUNT`) 값이 큰 것을 최대 3건 배열로 줍니다. 값이 같으면 최근 글이 앞이고, 조회·답변이 없는 글도 대상이라 일주일 안에 글이 있으면 비지 않습니다. 항목은 목록과 같습니다. 카테고리로 거르지 않습니다.
+- 목록 항목은 본문 전체를 싣고 미리보기 줄임은 클라이언트가 합니다.
+- 조회 수와 답변 수는 `concern_metrics`가 소유합니다. 조회 수는 채용공고처럼 상세 조회마다 `ConcernViewedEvent`로 비동기로 올리므로 상세 응답의 `viewCount`에는 이번 조회가 들어가지 않습니다. 지표 행은 고민글을 등록할 때 함께 만듭니다.
+- 고민글을 지우면 소프트 삭제하고 목록·상세에서 빠집니다(404 `CONCERN_NOT_FOUND`). 이미 지운 내 고민글을 다시 지워도 200입니다.
+
+#### 답변과 답글
+
+- 부모 댓글이 화면의 **답변**, 대댓글이 **답글**입니다. 답글에는 다시 답글을 달 수 없습니다(400 `CONCERN_COMMENT_NESTING_NOT_ALLOWED`). 댓글은 1000자 이하이며 수정 기능은 없습니다.
+- `commentCount`는 남아 있는 답변 수이고 답글은 세지 않습니다. 답변마다의 답글 수는 `replies.pageInfo.totalElements`입니다.
+- `ADMIN` 역할 계정이 쓴 댓글은 운영자 답변(`official=true`, 화면의 "렛츠커리어 매니저" 배지)입니다. 관리자도 사용자 API로 로그인하므로([인증](authentication.md#7-3-관리자-콘솔-인증)) 별도 관리자 API를 두지 않았습니다. 작성할 때의 역할을 저장하므로 나중에 역할이 바뀌어도 배지는 그대로입니다. 운영자 답변이 남아 있는 고민글은 목록·상세의 `hasOfficialComment`가 `true`입니다(화면의 "오공고 답변" 배지).
+- 답변 목록은 운영자 답변도 구분 없이 등록 순서(`createdAt ASC, id ASC`)로 줍니다. 답변마다 먼저 단 답글 5개를 함께 주고 나머지는 답글 더보기로 읽습니다.
+- 고민글 작성자(질문자)가 쓴 답변·답글은 `concernAuthor=true`입니다. 응답에 사용자 식별자를 싣지 않으므로 클라이언트가 비교할 수 없어 서버가 알려 줍니다.
+- 지운 답변은 남은 답글이 있으면 `"삭제된 댓글입니다"`와 `deleted=true`로 자리를 지키고, 남은 답글이 없으면 목록에서 빠집니다.
+- 좋아요(`likeCount`, 내가 눌렀는지 `liked`)는 답변과 답글 모두에 누를 수 있습니다. 화면에는 "도움돼요"로 보이지만 서버는 일반 좋아요로 다룹니다(2026-10-08). 누르기(`PUT`)와 취소(`DELETE`)는 반복해도 결과가 같고 200입니다. 사용자와 댓글마다 `concern_comment_likes` 한 행을 두고 `(comment_id, user_id)` 유니크 제약을 걸며, 취소는 소프트 삭제, 다시 누르면 그 행을 복구합니다. 내 댓글에 누르는 것을 막을지는 **확인 필요**입니다.
+- 신고와 관리자 콘솔 관리(숨김·목록)는 아직 없습니다.
 
 ### 고용24 Open API 조회
 
