@@ -1,12 +1,13 @@
 package com.ogonggo.adminapi.content.business
 
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
+import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.enumeration.EnumField
 import com.ogonggo.core.job.domain.JobSortType
 
 /**
- * 관리자 콘솔 목록의 정렬 기준이다. 채용공고·부트캠프·사이드·스터디가 같은 값을 쓴다.
+ * 관리자 콘솔 목록의 정렬 기준이다. 채용공고·부트캠프·사이드·스터디·취준고민이 같은 값을 쓴다.
  * 등록일순은 식별자 역순과 같으므로 사용자 목록의 최신순으로 옮긴다.
  * 조회수순은 조회 수가 같으면 등록일 역순으로 순서를 확정한다.
  */
@@ -16,13 +17,22 @@ enum class AdminContentSortType(
     val jobSortType: JobSortType,
     val bootcampSortType: BootcampSortType,
     val recruitmentPostSortType: RecruitmentPostSortType,
+    val concernSortType: ConcernSortType,
 ) : EnumField {
-    REGISTERED_AT(1, "등록일순", JobSortType.LATEST, BootcampSortType.LATEST, RecruitmentPostSortType.LATEST),
+    REGISTERED_AT(
+        1,
+        "등록일순",
+        JobSortType.LATEST,
+        BootcampSortType.LATEST,
+        RecruitmentPostSortType.LATEST,
+        ConcernSortType.LATEST,
+    ),
     VIEW_COUNT(
         2,
         "조회수순",
         JobSortType.VIEW_COUNT,
         BootcampSortType.VIEW_COUNT,
         RecruitmentPostSortType.VIEW_COUNT,
+        ConcernSortType.VIEW_COUNT,
     ),
 }
