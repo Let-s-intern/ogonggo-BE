@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.concern.presentation
 
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.concern.business.ConcernAuthorResult
@@ -61,6 +62,28 @@ class ConcernControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].author.nickname").value("슬픈 어피치"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(8))
+    }
+
+    @Test
+    fun `지금 가장 핫한 고민은 페이지 없이 배열로 주고 기본 기준은 조회 많은 순이다`() {
+        // given
+        Mockito.`when`(concernService.readPopularConcerns(ConcernPopularSortType.VIEW_COUNT)).thenReturn(listOf(summary()))
+
+        // when
+        mockMvc.perform(get("/api/v1/concerns/popular"))
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].id").value(CONCERN_ID))
+    }
+
+    @Test
+    fun `지금 가장 핫한 고민에 최신순은 고를 수 없다`() {
+        // when
+        mockMvc.perform(get("/api/v1/concerns/popular").param("sort", "LATEST"))
+            // then
+            .andExpect(status().isBadRequest)
+
+        Mockito.verifyNoInteractions(concernService)
     }
 
     @Test

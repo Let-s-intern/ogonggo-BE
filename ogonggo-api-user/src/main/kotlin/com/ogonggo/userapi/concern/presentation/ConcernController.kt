@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.concern.presentation
 
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.userapi.concern.business.ConcernService
 import com.ogonggo.userapi.concern.presentation.request.ConcernListRequest
 import com.ogonggo.userapi.concern.presentation.request.SaveConcernRequest
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Validated
@@ -34,6 +36,12 @@ class ConcernController(
         @ModelAttribute request: ConcernListRequest,
     ): ResponseEntity<SuccessResponse<PageResponse<ConcernSummaryResponse>>> =
         SuccessResponse.ok(concernService.readConcerns(request.toQuery()).toPageResponse())
+
+    @GetMapping("/popular")
+    override fun listPopularConcerns(
+        @RequestParam(name = "sort", defaultValue = "VIEW_COUNT") sort: ConcernPopularSortType,
+    ): ResponseEntity<SuccessResponse<List<ConcernSummaryResponse>>> =
+        SuccessResponse.ok(concernService.readPopularConcerns(sort).map(ConcernSummaryResponse::from))
 
     @GetMapping("/{concernId}")
     override fun getConcern(

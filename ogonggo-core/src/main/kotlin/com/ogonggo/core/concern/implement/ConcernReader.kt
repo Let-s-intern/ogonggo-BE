@@ -2,6 +2,7 @@ package com.ogonggo.core.concern.implement
 
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.concern.error.ConcernErrorCode
 import com.ogonggo.core.concern.implement.dto.ConcernPageDto
@@ -10,6 +11,7 @@ import com.ogonggo.core.concern.persistence.ConcernQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.paging.validatePageRequest
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 @Component
 class ConcernReader internal constructor(
@@ -42,6 +44,12 @@ class ConcernReader internal constructor(
             totalElements = result.totalElements,
             totalPages = result.totalPages,
         )
+    }
+
+    /** [createdFrom] 이후에 등록한 고민글 중 조회 수나 답변 수가 많은 것을 [limit]건까지 읽는다. */
+    fun readPopular(createdFrom: LocalDateTime, sortType: ConcernPopularSortType, limit: Int): List<Concern> {
+        require(limit in 1..100) { "인기 고민글 개수는 1 이상 100 이하여야 합니다." }
+        return concernQueryRepository.findPopular(createdFrom, sortType, limit)
     }
 
     private fun notFound() = EntityNotFoundException(ConcernErrorCode.CONCERN_NOT_FOUND)

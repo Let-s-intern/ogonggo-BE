@@ -2,6 +2,7 @@ package com.ogonggo.core.concern.persistence
 
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.concern.domain.QConcern.concern
 import com.ogonggo.core.concern.domain.QConcernMetric.concernMetric
@@ -12,6 +13,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Repository
+import java.time.LocalDateTime
 
 @Repository
 internal class ConcernQueryRepository(
@@ -40,6 +42,23 @@ internal class ConcernQueryRepository(
             .from(concern)
             .where(*predicates)
         return pageOf(content, pageable, countQuery)
+    }
+
+    /** [createdFrom] 이후에 등록한 고민글 중 기준 값이 큰 순서로 [limit]건을 읽는다. 값이 같으면 최근 글이 앞이다. */
+    fun findPopular(
+        createdFrom: LocalDateTime,
+        sortType: ConcernPopularSortType,
+        limit: Int,
+    ): List<Concern> = queryFactory.selectFrom(concern)
+        .leftJoin(concernMetric).on(concernMetric.concernId.eq(concern.id))
+        .where(concern.deletedAt.isNull, concern.createdAt.goe(createdFrom))
+        .orderBy(*sortType.toOrder())
+        .limit(limit.toLong())
+        .fetch()
+
+    private fun ConcernPopularSortType.toOrder(): Array<OrderSpecifier<*>> = when (this) {
+        ConcernPopularSortType.VIEW_COUNT -> arrayOf(concernMetric.viewCount.coalesce(0L).desc(), concern.id.desc())
+        ConcernPopularSortType.COMMENT_COUNT -> arrayOf(concernMetric.commentCount.coalesce(0L).desc(), concern.id.desc())
     }
 
     private fun ConcernSortType.toOrder(): Array<OrderSpecifier<*>> = when (this) {

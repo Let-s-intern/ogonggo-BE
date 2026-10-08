@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.concern.business
 
 import com.ogonggo.core.concern.domain.Concern
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.error.ConcernErrorCode
 import com.ogonggo.core.concern.implement.ConcernAppender
 import com.ogonggo.core.concern.implement.ConcernCommentReader
@@ -35,32 +36,19 @@ class ConcernService(
 
     fun readConcerns(query: ConcernListQuery): ConcernPageResult {
         val result = concernReader.readPage(query.category, query.sortType, query.page, query.size)
-        val concernIds = result.concerns.map { it.requiredId() }
-        val profiles = userProfileReader.readAll(result.concerns.map { it.authorUserId }.toSet())
-        val metrics = concernMetricReader.readAll(concernIds)
-        val officialCommentedIds = commentReader.readConcernIdsWithOfficialComment(concernIds)
-
         return ConcernPageResult(
-            items = result.concerns.map { concern ->
-                val concernId = concern.requiredId()
-                val metric = checkNotNull(metrics[concernId]) { "고민글 지표가 없습니다." }
-                ConcernSummaryResult(
-                    id = concernId,
-                    category = concern.category,
-                    title = concern.title,
-                    content = concern.content,
-                    author = profiles[concern.authorUserId].toAuthor(),
-                    createdAt = concern.createdAt,
-                    viewCount = metric.viewCount,
-                    commentCount = metric.commentCount,
-                    hasOfficialComment = concernId in officialCommentedIds,
-                )
-            },
+            items = toSummaries(result.concerns),
             page = result.page,
             size = result.size,
             totalElements = result.totalElements,
             totalPages = result.totalPages,
         )
+    }
+
+    /** 최근 일주일 안에 등록한 고민글 중 조회 수나 답변 수가 많은 것을 고른다. */
+    fun readPopularConcerns(sortType: ConcernPopularSortType): List<ConcernSummaryResult> {
+        val createdFrom = LocalDateTime.now(clock).minusDays(POPULAR_PERIOD_DAYS)
+        return toSummaries(concernReader.readPopular(createdFrom, sortType, POPULAR_CONCERN_LIMIT))
     }
 
     /** 조회 수는 비동기로 올리므로 응답의 `viewCount`에는 이번 조회가 들어가지 않는다. */
@@ -118,6 +106,29 @@ class ConcernService(
         concernManager.delete(concern, LocalDateTime.now(clock))
     }
 
+    private fun toSummaries(concerns: List<Concern>): List<ConcernSummaryResult> {
+        val concernIds = concerns.map { it.requiredId() }
+        val profiles = userProfileReader.readAll(concerns.map { it.authorUserId }.toSet())
+        val metrics = concernMetricReader.readAll(concernIds)
+        val officialCommentedIds = commentReader.readConcernIdsWithOfficialComment(concernIds)
+
+        return concerns.map { concern ->
+            val concernId = concern.requiredId()
+            val metric = checkNotNull(metrics[concernId]) { "고민글 지표가 없습니다." }
+            ConcernSummaryResult(
+                id = concernId,
+                category = concern.category,
+                title = concern.title,
+                content = concern.content,
+                author = profiles[concern.authorUserId].toAuthor(),
+                createdAt = concern.createdAt,
+                viewCount = metric.viewCount,
+                commentCount = metric.commentCount,
+                hasOfficialComment = concernId in officialCommentedIds,
+            )
+        }
+    }
+
     private fun verifyAuthor(concern: Concern, userId: Long) {
         if (!concern.isWrittenBy(userId)) {
             throw ForbiddenException(ConcernErrorCode.CONCERN_PERMISSION_DENIED)
@@ -125,6 +136,11 @@ class ConcernService(
     }
 
     private fun Concern.requiredId(): Long = checkNotNull(id) { "고민글 식별자가 없습니다." }
+
+    companion object {
+        private const val POPULAR_PERIOD_DAYS = 7L
+        private const val POPULAR_CONCERN_LIMIT = 3
+    }
 }
 
 internal fun UserProfileDto?.toAuthor(): ConcernAuthorResult = ConcernAuthorResult(

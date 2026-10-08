@@ -343,7 +343,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 고민글은 `category`(`ConcernCategory`: `JOB_POSTING` 공고 질문, `CAREER` 직무·커리어, `APPLICATION_INTERVIEW` 서류·면접, `SIDE_EXPERIENCE` 사이드·경험, `ETC` 기타), 제목(100자 이하), 본문(2000자 이하 일반 텍스트)으로 이루어집니다. 에디터 JSON이나 이미지는 받지 않습니다.
 - 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·좋아요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
 - 작성자는 렛츠커리어 프로필의 `nickname`·`profileImageUrl`로 보여 주고 사용자 식별자는 싣지 않습니다. 대신 상세와 답변에 내가 쓴 것인지(`mine`)를 줍니다. 프로필이 없는 회원(기업 회원 등)은 두 값이 `null`입니다.
-- 목록 정렬은 `LATEST`(최신순, 기본값, `id DESC`), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)이며 같은 값이면 `id DESC`입니다. 화면의 "지금 가장 핫한 고민"은 같은 목록을 `size=3`으로 부릅니다. 기간을 최근으로 좁힐지는 **확인 필요**입니다.
+- 목록 정렬은 `LATEST`(최신순, 기본값, `id DESC`), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)이며 같은 값이면 `id DESC`입니다.
+- "지금 가장 핫한 고민"(`GET /api/v1/concerns/popular`)은 **최근 일주일**, 즉 조회 시각부터 7일 전까지 등록한 고민글 중 `sort`(`ConcernPopularSortType`: `VIEW_COUNT` 기본값, `COMMENT_COUNT`) 값이 큰 것을 최대 3건 배열로 줍니다. 값이 같으면 최근 글이 앞이고, 조회·답변이 없는 글도 대상이라 일주일 안에 글이 있으면 비지 않습니다. 항목은 목록과 같습니다. 카테고리로 거르지 않습니다.
 - 목록 항목은 본문 전체를 싣고 미리보기 줄임은 클라이언트가 합니다.
 - 조회 수와 답변 수는 `concern_metrics`가 소유합니다. 조회 수는 채용공고처럼 상세 조회마다 `ConcernViewedEvent`로 비동기로 올리므로 상세 응답의 `viewCount`에는 이번 조회가 들어가지 않습니다. 지표 행은 고민글을 등록할 때 함께 만듭니다.
 - 고민글을 지우면 소프트 삭제하고 목록·상세에서 빠집니다(404 `CONCERN_NOT_FOUND`). 이미 지운 내 고민글을 다시 지워도 200입니다.

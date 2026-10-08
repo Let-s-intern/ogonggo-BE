@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.concern.presentation
 
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.userapi.concern.presentation.request.ConcernListRequest
 import com.ogonggo.userapi.concern.presentation.request.SaveConcernRequest
 import com.ogonggo.userapi.concern.presentation.response.ConcernDetailResponse
@@ -33,7 +34,6 @@ interface ConcernApi {
 
             - `category`를 보내지 않으면 전체 카테고리입니다.
             - `sort`는 `LATEST`(최신순, 기본값), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)입니다.
-            - "지금 가장 핫한 고민"은 `sort=VIEW_COUNT&size=3` 또는 `sort=COMMENT_COUNT&size=3`으로 조회합니다.
             - 조회 수는 비동기로 집계되어 정렬에 바로 반영되지 않을 수 있습니다.
         """,
     )
@@ -50,6 +50,32 @@ interface ConcernApi {
     fun listConcerns(
         @ParameterObject @Valid request: ConcernListRequest,
     ): ResponseEntity<SuccessResponse<PageResponse<ConcernSummaryResponse>>>
+
+    @Operation(
+        operationId = "listPublicPopularConcerns",
+        summary = "지금 가장 핫한 고민 조회",
+        description = """
+            최근 일주일(조회 시각부터 7일 전까지) 안에 등록한 고민글 중 `sort` 기준 값이 큰 것을 최대 3건 반환합니다.
+            페이지 정보는 없습니다. 로그인 없이 호출할 수 있습니다.
+
+            - `sort`는 `VIEW_COUNT`(조회 많은 순, 기본값) 또는 `COMMENT_COUNT`(답변 많은 순)입니다.
+            - 값이 같으면 최근에 등록한 고민글이 앞입니다. 조회·답변이 없는 고민글도 대상입니다.
+            - 조회 수는 비동기로 집계되어 순서에 바로 반영되지 않을 수 있습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: sort가 올바르지 않음",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun listPopularConcerns(
+        sort: ConcernPopularSortType,
+    ): ResponseEntity<SuccessResponse<List<ConcernSummaryResponse>>>
 
     @Operation(
         operationId = "getPublicConcern",

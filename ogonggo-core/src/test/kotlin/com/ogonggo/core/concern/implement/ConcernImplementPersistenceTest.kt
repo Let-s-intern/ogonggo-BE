@@ -2,6 +2,7 @@ package com.ogonggo.core.concern.implement
 
 import com.ogonggo.core.concern.domain.ConcernCategory
 import com.ogonggo.core.concern.domain.ConcernComment
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
 import com.ogonggo.core.concern.implement.dto.ConcernCommentAppendDto
@@ -75,6 +76,26 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
         // then
         assertEquals(listOf(mostViewed, lessViewed), page.concerns.map { it.id })
         assertEquals(2L, page.totalElements)
+    }
+
+    @Test
+    fun `인기 고민글은 기준 시각 이후에 등록한 글 중 답변이 많은 순으로 고른다`() {
+        // given
+        val old = appendConcern(ConcernCategory.ETC)
+        val fewAnswers = appendConcern(ConcernCategory.ETC)
+        val manyAnswers = appendConcern(ConcernCategory.ETC)
+        repeat(5) { metricManager.increaseCommentCount(old, NOW) }
+        metricManager.increaseCommentCount(fewAnswers, NOW)
+        repeat(2) { metricManager.increaseCommentCount(manyAnswers, NOW) }
+        setCreatedAt(old, NOW.minusDays(8))
+        setCreatedAt(fewAnswers, NOW.minusDays(1))
+        setCreatedAt(manyAnswers, NOW.minusDays(1))
+
+        // when
+        val result = concernReader.readPopular(NOW.minusDays(7), ConcernPopularSortType.COMMENT_COUNT, limit = 3)
+
+        // then
+        assertEquals(listOf(manyAnswers, fewAnswers), result.map { it.id })
     }
 
     @Test
@@ -159,6 +180,13 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
             ConcernAppendDto(authorUserId = USER_ID, category = category, title = "제목", content = "본문"),
         ).id,
     )
+
+    private fun setCreatedAt(concernId: Long, createdAt: LocalDateTime) {
+        entityManager.createQuery("update Concern c set c.createdAt = :createdAt where c.id = :id")
+            .setParameter("createdAt", createdAt)
+            .setParameter("id", concernId)
+            .executeUpdate()
+    }
 
     private fun appendComment(concernId: Long, parentId: Long? = null, official: Boolean): ConcernComment =
         commentAppender.append(

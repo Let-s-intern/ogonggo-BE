@@ -2,6 +2,7 @@ package com.ogonggo.userapi.concern.business
 
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.implement.ConcernAppender
 import com.ogonggo.core.concern.implement.ConcernCommentReader
 import com.ogonggo.core.concern.implement.ConcernManager
@@ -64,6 +65,20 @@ class ConcernServiceTest {
         assertTrue(result.hasOfficialComment)
         assertEquals(7L, result.viewCount)
         Mockito.verify(eventPublisher).publishEvent(ConcernViewedEvent(CONCERN_ID))
+    }
+
+    @Test
+    fun `지금 가장 핫한 고민은 조회 시각부터 7일 전까지 등록한 글에서 3건을 고른다`() {
+        // given
+        val createdFrom = LocalDateTime.now(clock).minusDays(7)
+        Mockito.`when`(concernReader.readPopular(createdFrom, ConcernPopularSortType.COMMENT_COUNT, 3)).thenReturn(emptyList())
+
+        // when
+        val result = service.readPopularConcerns(ConcernPopularSortType.COMMENT_COUNT)
+
+        // then
+        assertEquals(emptyList<ConcernSummaryResult>(), result)
+        Mockito.verify(concernReader).readPopular(createdFrom, ConcernPopularSortType.COMMENT_COUNT, 3)
     }
 
     @Test
