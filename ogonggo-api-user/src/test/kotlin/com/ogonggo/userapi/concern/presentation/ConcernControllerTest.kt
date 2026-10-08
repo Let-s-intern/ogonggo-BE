@@ -77,7 +77,7 @@ class ConcernControllerTest @Autowired constructor(
     @Test
     fun `로그인한 사용자가 고민글을 작성하면 201과 식별자를 준다`() {
         // given
-        val command = SaveConcernCommand(ConcernCategory.JOB_CAREER, "정규직 전환율 높은 편일까요?", "궁금합니다.")
+        val command = SaveConcernCommand(ConcernCategory.CAREER, "정규직 전환율 높은 편일까요?", "궁금합니다.")
         Mockito.`when`(concernService.create(USER_ID, command)).thenReturn(CONCERN_ID)
 
         // when
@@ -85,7 +85,7 @@ class ConcernControllerTest @Autowired constructor(
             post("/api/v1/concerns")
                 .with(authenticatedUser())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"category":"JOB_CAREER","title":"정규직 전환율 높은 편일까요?","content":"궁금합니다."}"""),
+                .content("""{"category":"CAREER","title":"정규직 전환율 높은 편일까요?","content":"궁금합니다."}"""),
         )
             // then
             .andExpect(status().isCreated)

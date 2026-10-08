@@ -13,10 +13,10 @@ class ConcernDomainTest {
         val concern = concern()
 
         // when
-        concern.update(ConcernCategory.JOB_CAREER, "바뀐 제목", "바뀐 본문")
+        concern.update(ConcernCategory.CAREER, "바뀐 제목", "바뀐 본문")
 
         // then
-        assertEquals(ConcernCategory.JOB_CAREER, concern.category)
+        assertEquals(ConcernCategory.CAREER, concern.category)
         assertEquals("바뀐 제목", concern.title)
         assertEquals("바뀐 본문", concern.content)
     }

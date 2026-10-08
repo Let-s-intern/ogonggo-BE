@@ -115,7 +115,7 @@ class ConcernServiceTest {
         Mockito.`when`(concern.authorUserId).thenReturn(authorUserId)
         Mockito.`when`(concern.isWrittenBy(USER_ID)).thenReturn(authorUserId == USER_ID)
         Mockito.`when`(concern.isDeleted()).thenReturn(deleted)
-        Mockito.`when`(concern.category).thenReturn(ConcernCategory.JOB_CAREER)
+        Mockito.`when`(concern.category).thenReturn(ConcernCategory.CAREER)
         Mockito.`when`(concern.title).thenReturn("제목")
         Mockito.`when`(concern.content).thenReturn("본문")
         Mockito.`when`(concern.createdAt).thenReturn(NOW)

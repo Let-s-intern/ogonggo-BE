@@ -340,7 +340,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 취준생이 고민글을 올리고 다른 사용자와 운영자가 답변을 다는 게시판입니다. 코드·테이블 이름은 `Concern`(고민글)입니다.
 
 - 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
-- 고민글은 `category`(`ConcernCategory`: 공고 질문·직무·커리어·서류·면접·사이드·경험·기타), 제목(100자 이하), 본문(2000자 이하 일반 텍스트)으로 이루어집니다. 에디터 JSON이나 이미지는 받지 않습니다.
+- 고민글은 `category`(`ConcernCategory`: `JOB_POSTING` 공고 질문, `CAREER` 직무·커리어, `APPLICATION_INTERVIEW` 서류·면접, `SIDE_EXPERIENCE` 사이드·경험, `ETC` 기타), 제목(100자 이하), 본문(2000자 이하 일반 텍스트)으로 이루어집니다. 에디터 JSON이나 이미지는 받지 않습니다.
 - 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·도움돼요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
 - 작성자는 렛츠커리어 프로필의 `nickname`·`profileImageUrl`로 보여 주고 사용자 식별자는 싣지 않습니다. 대신 상세와 답변에 내가 쓴 것인지(`mine`)를 줍니다. 프로필이 없는 회원(기업 회원 등)은 두 값이 `null`입니다.
 - 목록 정렬은 `LATEST`(최신순, 기본값, `id DESC`), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)이며 같은 값이면 `id DESC`입니다. 화면의 "지금 가장 핫한 고민"은 같은 목록을 `size=3`으로 부릅니다. 기간을 최근으로 좁힐지는 **확인 필요**입니다.

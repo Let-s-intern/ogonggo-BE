@@ -59,10 +59,10 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
     @Test
     fun `목록은 삭제된 고민글을 빼고 카테고리로 거르며 조회 많은 순으로 정렬한다`() {
         // given
-        val lessViewed = appendConcern(ConcernCategory.JOB_CAREER)
-        val mostViewed = appendConcern(ConcernCategory.JOB_CAREER)
+        val lessViewed = appendConcern(ConcernCategory.CAREER)
+        val mostViewed = appendConcern(ConcernCategory.CAREER)
         val otherCategory = appendConcern(ConcernCategory.ETC)
-        val deleted = appendConcern(ConcernCategory.JOB_CAREER)
+        val deleted = appendConcern(ConcernCategory.CAREER)
         repeat(3) { metricManager.increaseViewCount(mostViewed, NOW) }
         metricManager.increaseViewCount(lessViewed, NOW)
         repeat(5) { metricManager.increaseViewCount(otherCategory, NOW) }
@@ -70,7 +70,7 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
         entityManager.flush()
 
         // when
-        val page = concernReader.readPage(ConcernCategory.JOB_CAREER, ConcernSortType.VIEW_COUNT, page = 0, size = 10)
+        val page = concernReader.readPage(ConcernCategory.CAREER, ConcernSortType.VIEW_COUNT, page = 0, size = 10)
 
         // then
         assertEquals(listOf(mostViewed, lessViewed), page.concerns.map { it.id })
