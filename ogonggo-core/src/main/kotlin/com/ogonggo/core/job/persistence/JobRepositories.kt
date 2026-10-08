@@ -1,6 +1,7 @@
 package com.ogonggo.core.job.persistence
 
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobAnalysis
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobMetric
@@ -91,6 +92,32 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
         @Param("closedStatus") closedStatus: JobRecruitmentStatus = JobRecruitmentStatus.CLOSED,
     ): Int
 
+    /**
+     * 공고 분석을 다시 볼 후보다. 게시 중인 모집 중 공고 가운데 분석이 없거나, 분석·확인한 뒤로 공고가 바뀐 것이다.
+     * 바뀐 것이 본문인지는 해시로 다시 가린다. 최근 공고부터 읽는다.
+     */
+    @Query(
+        """
+        select job
+        from Job job
+        where job.publicationStatus = :published
+          and job.recruitmentStatus = :recruiting
+          and job.deletedAt is null
+          and not exists (
+              select analysis.id
+              from JobAnalysis analysis
+              where analysis.jobId = job.id
+                and analysis.jobUpdatedAt = job.updatedAt
+          )
+        order by job.id desc
+        """,
+    )
+    fun findAnalysisCandidates(
+        pageable: Pageable,
+        @Param("published") published: JobPublicationStatus = JobPublicationStatus.PUBLISHED,
+        @Param("recruiting") recruiting: JobRecruitmentStatus = JobRecruitmentStatus.RECRUITING,
+    ): List<Job>
+
     fun findByIdAndOwnerUserIdAndDeletedAtIsNull(id: Long, ownerUserId: Long): Job?
 
     fun findAllByOwnerUserIdAndDeletedAtIsNull(ownerUserId: Long, pageable: Pageable): Page<Job>
@@ -155,6 +182,12 @@ internal interface JobMetricJpaRepository : JpaRepository<JobMetric, Long> {
         """,
     )
     fun syncBookmarkCount(@Param("jobId") jobId: Long, @Param("now") now: LocalDateTime): Int
+}
+
+internal interface JobAnalysisJpaRepository : JpaRepository<JobAnalysis, Long> {
+    fun findByJobId(jobId: Long): JobAnalysis?
+
+    fun findAllByJobIdIn(jobIds: Collection<Long>): List<JobAnalysis>
 }
 
 internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {

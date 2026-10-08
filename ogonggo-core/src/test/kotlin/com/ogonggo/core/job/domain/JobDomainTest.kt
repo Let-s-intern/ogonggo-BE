@@ -242,6 +242,22 @@ class JobDomainTest {
         }
     }
 
+    @Test
+    fun `본문 해시는 제목과 본문 칸이 같으면 같고 본문이 아닌 칸은 보지 않는다`() {
+        // given
+        val job = createJob()
+        val other = createJob(companyName = "다른 회사", industry = "제조")
+        val before = job.contentHash()
+
+        // when
+        job.editContent(title = null, contents = mapOf(JobContentField.QUALIFICATIONS to "바뀐 자격 요건"))
+
+        // then
+        assertEquals(before, other.contentHash())
+        assertEquals(64, before.length)
+        assert(before != job.contentHash())
+    }
+
     private fun createJob(
         ownerUserId: Long? = null,
         source: ContentSource = ContentSource.of(ownerUserId),
