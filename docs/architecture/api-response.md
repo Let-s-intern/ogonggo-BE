@@ -131,6 +131,26 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`를 반환합니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
 
+### 채용공고 공고 분석
+
+채용공고 상세(`GET /api/v1/jobs/{jobId}`)의 `analysis`는 상세 화면 '공고 분석' 탭의 내용입니다. 크롤러가 AI로 만들어 보내며([REST API 설계의 크롤러 공고 분석](rest-api-design.md#크롤러-공고-분석)), 목록·달력에는 싣지 않습니다.
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 분석은 `job_analyses`에 공고마다 한 행으로 두고, 분석한 본문의 해시를 함께 남깁니다. 본문 해시는 제목과 본문 여덟 칸(`recruitmentNotice` 포함)으로 셉니다.
+- 분석이 아직 없거나, 분석한 뒤 운영자·크롤러가 본문을 바꿔 해시가 다르면 `analysis`는 `null`입니다. 다시 분석될 때까지 예전 분석을 보여 주지 않으며, 클라이언트는 원문만 보여 줍니다. 저장된 분석을 읽지 못해도 상세 조회는 실패하지 않고 `null`입니다.
+- 항목과 개수는 다음과 같습니다. 개수를 넘는 분석은 저장할 때 거절합니다.
+
+| 필드 | 내용 |
+| --- | --- |
+| `tasks` | 실제 하는 일 3개까지. `{ tag, text }` |
+| `required`, `preferred` | 필수·우대 지원 조건 각 8개까지. 화면에서 사용자가 체크해 보는 목록이며 체크 결과는 서버에 저장하지 않습니다 |
+| `employment` | 고용 형태 `type`·`conversion`·`salary`·`affiliation`. 칸마다 `{ value, note }` |
+| `submission` | 제출물과 전형 `documents`·`essay`·`process`·`deadline`. 칸마다 `{ value, note }` |
+| `competencies` | 연결하기 좋은 경험. 역량 3개까지 `{ name, quote, description, experiences }`, 역량마다 경험 3개까지 |
+
+- `value`가 `null`이면 공고에서 확인할 수 없는 값이며 화면은 '공고에 명시 없음'으로 그립니다. `note`는 짧은 보충이고 없으면 `null`입니다.
+- `quote`는 그 역량을 요구하는 공고 문장입니다. 크롤러가 본문에서 찾을 수 있는 문장만 보냅니다. 그 문장이 상세에 싣지 않는 `recruitmentNotice`에서 올 수 있으며, 상세에 `recruitmentNotice`를 함께 실을지는 **확인 필요**입니다.
+
 ### 지표
 
 채용공고와 부트캠프의 목록·상세 응답은 `viewCount`, `bookmarkCount`, `commentCount`를 포함합니다. 세 값은 `job_metrics`, `bootcamp_metrics`가 소유하며 지표 행이 아직 없으면 `0`으로 응답합니다. 댓글 기능은 아직 없어 `commentCount`는 항상 `0`입니다. 달력 응답은 카드에 필요한 필드만 두므로 지표를 추가하지 않습니다.

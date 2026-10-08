@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.presentation.response
 
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -130,6 +131,8 @@ data class UserJobDetailResponse(
     val viewCount: Long,
     val bookmarkCount: Long,
     val commentCount: Long,
+    @field:Schema(description = "공고 분석. 아직 없거나 본문이 바뀐 뒤 다시 분석하기 전이면 null이며, 그때는 원문만 보여 줍니다")
+    val analysis: UserJobAnalysisResponse?,
 ) {
     companion object {
         internal fun from(result: UserJobResult): UserJobDetailResponse = UserJobDetailResponse(
@@ -163,6 +166,67 @@ data class UserJobDetailResponse(
             viewCount = result.viewCount,
             bookmarkCount = result.bookmarkCount,
             commentCount = result.commentCount,
+            analysis = result.analysis?.let(UserJobAnalysisResponse::from),
         )
+    }
+}
+
+/**
+ * 공고 상세의 '공고 분석' 탭 내용이다. 크롤러가 AI로 만든다.
+ * 값이 null인 칸은 공고에서 확인할 수 없다는 뜻이며 '공고에 명시 없음'으로 그린다.
+ */
+data class UserJobAnalysisResponse(
+    @field:Schema(description = "실제 하는 일. 3개까지")
+    val tasks: List<Task>,
+    @field:Schema(description = "필수 지원 조건. 8개까지. 사용자가 체크해 보는 목록이며 서버에 저장하지 않습니다")
+    val required: List<String>,
+    @field:Schema(description = "우대 조건. 8개까지")
+    val preferred: List<String>,
+    val employment: Employment,
+    val submission: Submission,
+    @field:Schema(description = "연결하기 좋은 경험. 역량 3개까지")
+    val competencies: List<Competency>,
+) {
+    data class Task(
+        @field:Schema(description = "일의 성격", example = "기획")
+        val tag: String,
+        val text: String,
+    )
+
+    data class Fact(
+        @field:Schema(description = "값. 공고에 없으면 null")
+        val value: String?,
+        @field:Schema(description = "보충 설명", example = "PDF 권장")
+        val note: String?,
+    )
+
+    data class Employment(val type: Fact, val conversion: Fact, val salary: Fact, val affiliation: Fact)
+
+    data class Submission(val documents: Fact, val essay: Fact, val process: Fact, val deadline: Fact)
+
+    data class Competency(
+        val name: String,
+        @field:Schema(description = "그 역량을 요구하는 공고 문장 그대로")
+        val quote: String,
+        val description: String,
+        @field:Schema(description = "연결할 수 있는 경험. 3개까지")
+        val experiences: List<String>,
+    )
+
+    companion object {
+        internal fun from(content: JobAnalysisContent): UserJobAnalysisResponse = UserJobAnalysisResponse(
+            tasks = content.tasks.map { Task(it.tag, it.text) },
+            required = content.required,
+            preferred = content.preferred,
+            employment = content.employment.let {
+                Employment(fact(it.type), fact(it.conversion), fact(it.salary), fact(it.affiliation))
+            },
+            submission = content.submission.let {
+                Submission(fact(it.documents), fact(it.essay), fact(it.process), fact(it.deadline))
+            },
+            competencies = content.competencies.map { Competency(it.name, it.quote, it.description, it.experiences) },
+        )
+
+        private fun fact(fact: JobAnalysisContent.Fact) = Fact(fact.value, fact.note)
     }
 }

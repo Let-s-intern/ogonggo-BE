@@ -10,6 +10,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.job.domain.JobAnalysisContent
+import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
@@ -32,6 +34,7 @@ class UserJobServiceTest {
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val jobBookmarkReader = Mockito.mock(JobBookmarkReader::class.java)
     private val jobMetricReader = Mockito.mock(JobMetricReader::class.java)
+    private val jobAnalysisReader = Mockito.mock(JobAnalysisReader::class.java)
     private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
@@ -39,6 +42,7 @@ class UserJobServiceTest {
         jobReader,
         jobBookmarkReader,
         jobMetricReader,
+        jobAnalysisReader,
         sourceUrlClickAppender,
         userProfileReader,
         eventPublisher,
@@ -78,6 +82,30 @@ class UserJobServiceTest {
         assertEquals(3L, result.bookmarkCount)
         assertEquals(1L, result.commentCount)
         Mockito.verify(jobReader).readPublished(1L)
+    }
+
+    @Test
+    fun `상세 조회는 지금 본문에 대한 공고 분석을 함께 싣고 없으면 비운다`() {
+        // given
+        val analyzed = createJobMock()
+        val notAnalyzed = createJobMock(id = 2L)
+        val empty = JobAnalysisContent.Fact(value = null, note = null)
+        val analysis = JobAnalysisContent(
+            tasks = listOf(JobAnalysisContent.Task(tag = "기획", text = "MVP를 기획해요.")),
+            required = listOf("문제를 정의할 수 있는 분"),
+            preferred = emptyList(),
+            employment = JobAnalysisContent.Employment(empty, empty, empty, empty),
+            submission = JobAnalysisContent.Submission(empty, empty, empty, empty),
+            competencies = emptyList(),
+        )
+        Mockito.`when`(jobReader.readPublished(1L)).thenReturn(analyzed)
+        Mockito.`when`(jobReader.readPublished(2L)).thenReturn(notAnalyzed)
+        Mockito.`when`(jobMetricReader.read(Mockito.anyLong())).thenReturn(JobMetricDto.EMPTY)
+        Mockito.`when`(jobAnalysisReader.readCurrent(analyzed)).thenReturn(analysis)
+
+        // when & then
+        assertEquals(analysis, service.getJob(USER_ID, 1L).analysis)
+        assertEquals(null, service.getJob(USER_ID, 2L).analysis)
     }
 
     @Test

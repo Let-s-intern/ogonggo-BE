@@ -4,6 +4,7 @@ import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
@@ -159,9 +160,16 @@ data class UserJobResult(
     val viewCount: Long,
     val bookmarkCount: Long,
     val commentCount: Long,
+    /** 공고 분석. 지금 본문에 대한 분석이 없으면 null이다. */
+    val analysis: JobAnalysisContent?,
 ) {
     companion object {
-        internal fun from(job: Job, bookmarked: Boolean, metric: JobMetricDto): UserJobResult = UserJobResult(
+        internal fun from(
+            job: Job,
+            bookmarked: Boolean,
+            metric: JobMetricDto,
+            analysis: JobAnalysisContent?,
+        ): UserJobResult = UserJobResult(
             id = job.requiredId(),
             companyName = job.companyName,
             title = job.title,
@@ -192,6 +200,7 @@ data class UserJobResult(
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,
             commentCount = metric.commentCount,
+            analysis = analysis,
         )
     }
 }

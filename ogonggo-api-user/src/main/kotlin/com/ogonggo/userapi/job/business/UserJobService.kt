@@ -6,6 +6,7 @@ import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
@@ -22,6 +23,7 @@ class UserJobService(
     private val jobReader: JobReader,
     private val jobBookmarkReader: JobBookmarkReader,
     private val jobMetricReader: JobMetricReader,
+    private val jobAnalysisReader: JobAnalysisReader,
     private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val userProfileReader: UserProfileReader,
     private val eventPublisher: ApplicationEventPublisher,
@@ -108,11 +110,17 @@ class UserJobService(
     /**
      * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.
      * 기록이 비동기이므로 상세 응답의 조회 수에는 이번 조회가 아직 반영되지 않는다.
+     * 공고 분석은 지금 본문에 대한 것만 싣는다. 없거나 본문이 바뀐 뒤 아직 다시 분석하지 않았으면 비운다.
      */
     fun getJob(userId: Long?, jobId: Long): UserJobResult {
         val job = jobReader.readPublished(jobId)
         val bookmarked = jobId in readBookmarkedJobIds(userId, listOf(jobId))
-        val result = UserJobResult.from(job, bookmarked, jobMetricReader.read(jobId))
+        val result = UserJobResult.from(
+            job = job,
+            bookmarked = bookmarked,
+            metric = jobMetricReader.read(jobId),
+            analysis = jobAnalysisReader.readCurrent(job),
+        )
         eventPublisher.publishEvent(JobViewedEvent(jobId))
         return result
     }

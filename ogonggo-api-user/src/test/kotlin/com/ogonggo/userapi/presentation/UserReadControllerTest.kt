@@ -11,6 +11,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.UnauthorizedException
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -116,6 +117,44 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.bookmarkCount").value(3))
             .andExpect(jsonPath("$.data.commentCount").value(0))
             .andExpect(jsonPath("$.data.content").doesNotExist())
+            .andExpect(jsonPath("$.data.analysis").isEmpty)
+    }
+
+    @Test
+    fun `공고 상세는 공고 분석을 칸 이름 그대로 싣고 공고에 없는 값은 null로 준다`() {
+        val empty = JobAnalysisContent.Fact(value = null, note = null)
+        val analysis = JobAnalysisContent(
+            tasks = listOf(JobAnalysisContent.Task(tag = "기획", text = "MVP를 기획해요.")),
+            required = listOf("문제를 정의할 수 있는 분"),
+            preferred = emptyList(),
+            employment = JobAnalysisContent.Employment(
+                type = JobAnalysisContent.Fact(value = "전환형 인턴십 3개월", note = "평가 후 정규직 전환"),
+                conversion = empty,
+                salary = empty,
+                affiliation = empty,
+            ),
+            submission = JobAnalysisContent.Submission(empty, empty, empty, empty),
+            competencies = listOf(
+                JobAnalysisContent.Competency(
+                    name = "문제 정의",
+                    quote = "모호한 요구 사항 속에서 핵심 문제를 정의",
+                    description = "진짜 문제를 골라내는 역량이에요.",
+                    experiences = listOf("요구사항을 정리해 우선순위를 정한 경험"),
+                ),
+            ),
+        )
+        Mockito.`when`(userJobService.getJob(USER_ID, 1L)).thenReturn(jobResult(analysis = analysis))
+
+        mockMvc.perform(get("/api/v1/jobs/1").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.analysis.tasks[0].tag").value("기획"))
+            .andExpect(jsonPath("$.data.analysis.required[0]").value("문제를 정의할 수 있는 분"))
+            .andExpect(jsonPath("$.data.analysis.employment.type.value").value("전환형 인턴십 3개월"))
+            .andExpect(jsonPath("$.data.analysis.employment.type.note").value("평가 후 정규직 전환"))
+            .andExpect(jsonPath("$.data.analysis.employment.salary.value").isEmpty)
+            .andExpect(jsonPath("$.data.analysis.submission.deadline.value").isEmpty)
+            .andExpect(jsonPath("$.data.analysis.competencies[0].quote").value("모호한 요구 사항 속에서 핵심 문제를 정의"))
+            .andExpect(jsonPath("$.data.analysis.competencies[0].experiences[0]").value("요구사항을 정리해 우선순위를 정한 경험"))
     }
 
     @Test
@@ -780,7 +819,7 @@ class UserReadControllerTest @Autowired constructor(
         commentCount = 0,
     )
 
-    private fun jobResult(bookmarked: Boolean = true): UserJobResult = UserJobResult(
+    private fun jobResult(bookmarked: Boolean = true, analysis: JobAnalysisContent? = null): UserJobResult = UserJobResult(
         id = 1L,
         companyName = "오공고",
         title = "백엔드 개발자",
@@ -811,6 +850,7 @@ class UserReadControllerTest @Autowired constructor(
         viewCount = 12,
         bookmarkCount = 3,
         commentCount = 0,
+        analysis = analysis,
     )
 
     private fun authenticatedUser() = authentication(
