@@ -47,6 +47,7 @@ data class ConcernCommentResult(
     val parentId: Long?,
     val author: ConcernAuthorResult,
     val official: Boolean,
+    val concernAuthor: Boolean,
     val content: String,
     val deleted: Boolean,
     val createdAt: LocalDateTime,

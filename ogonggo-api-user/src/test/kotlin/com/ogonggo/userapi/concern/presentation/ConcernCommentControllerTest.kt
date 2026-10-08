@@ -128,6 +128,7 @@ class ConcernCommentControllerTest @Autowired constructor(
         parentId = null,
         author = ConcernAuthorResult(nickname = "렛츠커리어 매니저 쥬디", profileImageUrl = null),
         official = official,
+        concernAuthor = false,
         content = "전환율은 공개된 수치가 없어요.",
         deleted = false,
         createdAt = CREATED_AT,

@@ -18,6 +18,8 @@ data class ConcernCommentResponse(
     val author: ConcernAuthorResponse,
     @field:Schema(description = "관리자가 쓴 운영자 답변이면 true (렛츠커리어 매니저 배지)")
     val official: Boolean,
+    @field:Schema(description = "고민글 작성자(질문자)가 쓴 댓글이면 true")
+    val concernAuthor: Boolean,
     @field:Schema(description = "삭제된 댓글은 \"삭제된 댓글입니다\"")
     val content: String,
     val deleted: Boolean,
@@ -35,6 +37,7 @@ data class ConcernCommentResponse(
             parentId = result.parentId,
             author = ConcernAuthorResponse.from(result.author),
             official = result.official,
+            concernAuthor = result.concernAuthor,
             content = result.content,
             deleted = result.deleted,
             createdAt = result.createdAt,
@@ -51,6 +54,8 @@ data class ConcernCommentRootResponse(
     val author: ConcernAuthorResponse,
     @field:Schema(description = "관리자가 쓴 운영자 답변이면 true (렛츠커리어 매니저 배지)")
     val official: Boolean,
+    @field:Schema(description = "고민글 작성자(질문자)가 쓴 답변이면 true")
+    val concernAuthor: Boolean,
     @field:Schema(description = "삭제된 답변은 \"삭제된 댓글입니다\". 남은 답글이 있을 때만 목록에 남습니다.")
     val content: String,
     val deleted: Boolean,
@@ -69,6 +74,7 @@ data class ConcernCommentRootResponse(
                 id = comment.id,
                 author = ConcernAuthorResponse.from(comment.author),
                 official = comment.official,
+                concernAuthor = comment.concernAuthor,
                 content = comment.content,
                 deleted = comment.deleted,
                 createdAt = comment.createdAt,

@@ -108,6 +108,24 @@ class ConcernCommentServiceTest {
     }
 
     @Test
+    fun `고민글 작성자가 단 답글은 질문자가 쓴 것으로 표시한다`() {
+        // given
+        val concern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(concern.authorUserId).thenReturn(OTHER_USER_ID)
+        val byQuestioner = comment(parentId = PARENT_ID, userId = OTHER_USER_ID)
+        val byOther = comment(parentId = PARENT_ID, userId = USER_ID)
+        Mockito.`when`(concernReader.read(CONCERN_ID)).thenReturn(concern)
+        Mockito.`when`(commentReader.readReplyPage(CONCERN_ID, PARENT_ID, 0, 5))
+            .thenReturn(ConcernCommentPageDto(listOf(byQuestioner, byOther), page = 0, size = 5, totalElements = 2, totalPages = 1))
+
+        // when
+        val result = service.readReplies(null, CONCERN_ID, PARENT_ID, page = 0, size = 5)
+
+        // then
+        assertEquals(listOf(true, false), result.items.map { it.concernAuthor })
+    }
+
+    @Test
     fun `남의 댓글은 지울 수 없다`() {
         // given
         val comment = comment(parentId = null, userId = OTHER_USER_ID)
@@ -141,7 +159,9 @@ class ConcernCommentServiceTest {
     fun `삭제된 답변은 삭제 문구로 바꾸고 좋아요 수와 내가 누른 여부를 채운다`() {
         // given
         val deleted = comment(parentId = null, deletedAt = now)
-        Mockito.`when`(concernReader.read(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
+        val concern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(concern.authorUserId).thenReturn(OTHER_USER_ID)
+        Mockito.`when`(concernReader.read(CONCERN_ID)).thenReturn(concern)
         Mockito.`when`(commentReader.readRootPage(CONCERN_ID, 0, 10))
             .thenReturn(ConcernCommentPageDto(listOf(deleted), page = 0, size = 10, totalElements = 1, totalPages = 1))
         Mockito.`when`(commentReader.readReplyPreviews(CONCERN_ID, listOf(COMMENT_ID), 5)).thenReturn(emptyMap())

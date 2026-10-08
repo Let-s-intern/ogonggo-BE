@@ -42,10 +42,10 @@ class ConcernCommentService(
 ) {
 
     fun readComments(viewerUserId: Long?, concernId: Long, page: Int, size: Int): ConcernCommentPageResult {
-        concernReader.read(concernId)
+        val concern = concernReader.read(concernId)
         val result = commentReader.readRootPage(concernId, page, size)
         val previews = commentReader.readReplyPreviews(concernId, result.comments.map { it.requiredId() }, REPLY_PREVIEW_SIZE)
-        val context = readContext(viewerUserId, result.comments + previews.values.flatMap { it.comments })
+        val context = readContext(viewerUserId, concern.authorUserId, result.comments + previews.values.flatMap { it.comments })
 
         return ConcernCommentPageResult(
             items = result.comments.map { comment ->
@@ -69,10 +69,10 @@ class ConcernCommentService(
         page: Int,
         size: Int,
     ): ConcernCommentReplyPageResult {
-        concernReader.read(concernId)
+        val concern = concernReader.read(concernId)
         commentReader.readRoot(concernId, parentId)
         val result = commentReader.readReplyPage(concernId, parentId, page, size)
-        return result.toReplyPageResult(readContext(viewerUserId, result.comments))
+        return result.toReplyPageResult(readContext(viewerUserId, concern.authorUserId, result.comments))
     }
 
     /** 작성할 때 관리자였으면 운영자 답변(`official`)으로 남긴다. */
@@ -132,10 +132,15 @@ class ConcernCommentService(
         likeManager.unlike(commentId, userId, LocalDateTime.now(clock))
     }
 
-    private fun readContext(viewerUserId: Long?, comments: Collection<ConcernComment>): CommentViewContext {
+    private fun readContext(
+        viewerUserId: Long?,
+        concernAuthorUserId: Long,
+        comments: Collection<ConcernComment>,
+    ): CommentViewContext {
         val commentIds = comments.map { it.requiredId() }
         return CommentViewContext(
             viewerUserId = viewerUserId,
+            concernAuthorUserId = concernAuthorUserId,
             profiles = userProfileReader.readAll(comments.map { it.userId }.toSet()),
             likeCounts = likeReader.countAll(commentIds),
             likedCommentIds = viewerUserId
@@ -152,6 +157,7 @@ class ConcernCommentService(
             parentId = parentId,
             author = context.profiles[userId].toAuthor(),
             official = official,
+            concernAuthor = userId == context.concernAuthorUserId,
             content = if (deleted) DELETED_COMMENT_CONTENT else content,
             deleted = deleted,
             createdAt = createdAt,
@@ -182,6 +188,7 @@ class ConcernCommentService(
 
     private class CommentViewContext(
         val viewerUserId: Long?,
+        val concernAuthorUserId: Long,
         val profiles: Map<Long, UserProfileDto>,
         val likeCounts: Map<Long, Long>,
         val likedCommentIds: Set<Long>,
