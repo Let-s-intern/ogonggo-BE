@@ -14,10 +14,7 @@ import java.time.LocalDateTime
 
 internal interface ConcernCommentJpaRepository : JpaRepository<ConcernComment, Long> {
 
-    /**
-     * 관리자 답변을 먼저, 그 안에서 먼저 단 답변을 앞에 둔다.
-     * 삭제된 답변은 남은 답글이 있을 때만 자리를 지킨다.
-     */
+    /** 먼저 단 답변을 앞에 둔다. 삭제된 답변은 남은 답글이 있을 때만 자리를 지킨다. */
     @Query(
         value = """
         SELECT comment
@@ -31,7 +28,7 @@ internal interface ConcernCommentJpaRepository : JpaRepository<ConcernComment, L
                   WHERE reply.parentId = comment.id AND reply.deletedAt IS NULL
               )
           )
-        ORDER BY comment.official DESC, comment.createdAt ASC, comment.id ASC
+        ORDER BY comment.createdAt ASC, comment.id ASC
         """,
         countQuery = """
         SELECT COUNT(comment.id)

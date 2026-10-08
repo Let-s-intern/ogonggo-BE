@@ -78,7 +78,7 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `답변은 관리자 답변을 먼저 두고 먼저 단 순서로 주며 답글이 없는 삭제 답변은 뺀다`() {
+    fun `답변은 운영자 답변도 구분 없이 먼저 단 순서로 주며 답글이 없는 삭제 답변은 뺀다`() {
         // given
         val concernId = appendConcern(ConcernCategory.ETC)
         val first = appendComment(concernId, official = false)
@@ -94,7 +94,7 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
         val page = commentReader.readRootPage(concernId, page = 0, size = 10)
 
         // then
-        assertEquals(listOf(official.id, first.id, deletedWithReply.id), page.comments.map { it.id })
+        assertEquals(listOf(first.id, deletedWithReply.id, official.id), page.comments.map { it.id })
         assertEquals(3L, page.totalElements)
     }
 
