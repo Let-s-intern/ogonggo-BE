@@ -24,10 +24,10 @@ data class ConcernCommentResponse(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val mine: Boolean,
-    @field:Schema(description = "도움돼요 수")
-    val helpfulCount: Long,
-    @field:Schema(description = "로그인한 사용자가 도움돼요를 눌렀으면 true")
-    val helpfulVoted: Boolean,
+    @field:Schema(description = "좋아요 수")
+    val likeCount: Long,
+    @field:Schema(description = "로그인한 사용자가 좋아요를 눌렀으면 true")
+    val liked: Boolean,
 ) {
     companion object {
         fun from(result: ConcernCommentResult) = ConcernCommentResponse(
@@ -40,8 +40,8 @@ data class ConcernCommentResponse(
             createdAt = result.createdAt,
             updatedAt = result.updatedAt,
             mine = result.mine,
-            helpfulCount = result.helpfulCount,
-            helpfulVoted = result.helpfulVoted,
+            likeCount = result.likeCount,
+            liked = result.liked,
         )
     }
 }
@@ -57,8 +57,8 @@ data class ConcernCommentRootResponse(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val mine: Boolean,
-    val helpfulCount: Long,
-    val helpfulVoted: Boolean,
+    val likeCount: Long,
+    val liked: Boolean,
     @field:Schema(description = "앞쪽 답글 5개. 답글 수는 `replies.pageInfo.totalElements`입니다.")
     val replies: PageResponse<ConcernCommentResponse>,
 ) {
@@ -74,8 +74,8 @@ data class ConcernCommentRootResponse(
                 createdAt = comment.createdAt,
                 updatedAt = comment.updatedAt,
                 mine = comment.mine,
-                helpfulCount = comment.helpfulCount,
-                helpfulVoted = comment.helpfulVoted,
+                likeCount = comment.likeCount,
+                liked = comment.liked,
                 replies = result.replies.toPageResponse(),
             )
         }

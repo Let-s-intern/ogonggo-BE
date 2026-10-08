@@ -52,8 +52,8 @@ data class ConcernCommentResult(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val mine: Boolean,
-    val helpfulCount: Long,
-    val helpfulVoted: Boolean,
+    val likeCount: Long,
+    val liked: Boolean,
 )
 
 data class ConcernCommentReplyPageResult(

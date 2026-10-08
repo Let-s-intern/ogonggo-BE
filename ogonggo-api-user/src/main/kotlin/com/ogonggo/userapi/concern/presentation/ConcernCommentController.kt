@@ -72,23 +72,23 @@ class ConcernCommentController(
         return SuccessResponse.ok()
     }
 
-    @PutMapping("/{commentId}/helpful-votes/me")
-    override fun voteHelpful(
+    @PutMapping("/{commentId}/likes/me")
+    override fun like(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("concernId") concernId: Long,
         @PathVariable("commentId") commentId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        concernCommentService.voteHelpful(userId, concernId, commentId)
+        concernCommentService.like(userId, concernId, commentId)
         return SuccessResponse.ok()
     }
 
-    @DeleteMapping("/{commentId}/helpful-votes/me")
-    override fun cancelHelpful(
+    @DeleteMapping("/{commentId}/likes/me")
+    override fun unlike(
         @AuthenticationPrincipal userId: Long,
         @PathVariable("concernId") concernId: Long,
         @PathVariable("commentId") commentId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        concernCommentService.cancelHelpful(userId, concernId, commentId)
+        concernCommentService.unlike(userId, concernId, commentId)
         return SuccessResponse.ok()
     }
 }

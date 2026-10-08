@@ -292,14 +292,14 @@ GET    /api/v1/concerns/{concernId}/comments                                   �
 POST   /api/v1/concerns/{concernId}/comments
 GET    /api/v1/concerns/{concernId}/comments/{commentId}/replies               로그인 선택
 DELETE /api/v1/concerns/{concernId}/comments/{commentId}
-PUT    /api/v1/concerns/{concernId}/comments/{commentId}/helpful-votes/me
-DELETE /api/v1/concerns/{concernId}/comments/{commentId}/helpful-votes/me
+PUT    /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
+DELETE /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
 ```
 
 - 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
 - 수정은 카테고리·제목·본문 세 값을 모두 받아 바꾸므로 PUT이며 200과 `data: null`로 응답합니다.
 - 답변과 답글은 같은 `comments` 컬렉션에 두고, 답글은 요청 본문의 `parentId`로 구분합니다. 모집글 댓글과 같은 구조입니다.
-- 도움돼요는 로그인한 사용자 자신의 표시 하나를 가리키는 단일 리소스(`helpful-votes/me`)로 보고, 북마크와 달리 PUT·DELETE로 둡니다. 버튼을 빠르게 두 번 눌러도 409 없이 같은 결과가 되게 하려는 것입니다.
+- 좋아요는 로그인한 사용자 자신의 표시 하나를 가리키는 단일 리소스(`likes/me`)로 보고, 북마크와 달리 PUT·DELETE로 둡니다. 버튼을 빠르게 두 번 눌러도 409 없이 같은 결과가 되게 하려는 것입니다.
 - 답변·답글 삭제는 모집글 댓글과 같이 이미 지운 댓글이면 404입니다.
 - 응답 계약은 [API 성공 응답의 취준고민](api-response.md#취준고민)을 따릅니다.
 

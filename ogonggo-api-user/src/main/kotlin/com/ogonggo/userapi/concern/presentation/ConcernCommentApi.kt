@@ -30,7 +30,7 @@ interface ConcernCommentApi {
         summary = "고민글 답변 목록 조회",
         description = """
             답변(부모 댓글)을 페이지로 조회하고 답변마다 앞쪽 답글 5개를 함께 줍니다. 로그인 없이 호출할 수 있고,
-            토큰을 보내면 `mine`, `helpfulVoted`가 채워집니다.
+            토큰을 보내면 `mine`, `liked`가 채워집니다.
 
             - 운영자 답변도 구분 없이 먼저 단 답변부터 줍니다.
             - 삭제된 답변은 남은 답글이 있을 때만 `"삭제된 댓글입니다"`로 남고, 없으면 목록에서 빠집니다.
@@ -173,9 +173,9 @@ interface ConcernCommentApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
-        operationId = "replaceMyConcernCommentHelpfulVote",
-        summary = "도움돼요 누르기",
-        description = "답변·답글에 도움돼요를 누릅니다. 이미 누른 상태에서 다시 보내도 200이며 한 번으로 셉니다.",
+        operationId = "replaceMyConcernCommentLike",
+        summary = "좋아요 누르기",
+        description = "답변·답글에 좋아요를 누릅니다. 이미 누른 상태에서 다시 보내도 200이며 한 번으로 셉니다.",
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -198,16 +198,16 @@ interface ConcernCommentApi {
             ),
         ],
     )
-    fun voteHelpful(
+    fun like(
         @Parameter(hidden = true) userId: Long,
         @Positive concernId: Long,
         @Positive commentId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
-        operationId = "deleteMyConcernCommentHelpfulVote",
-        summary = "도움돼요 취소",
-        description = "누른 도움돼요를 취소합니다. 누르지 않은 상태에서 보내도 200입니다.",
+        operationId = "deleteMyConcernCommentLike",
+        summary = "좋아요 취소",
+        description = "누른 좋아요를 취소합니다. 누르지 않은 상태에서 보내도 200입니다.",
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -225,7 +225,7 @@ interface ConcernCommentApi {
             ),
         ],
     )
-    fun cancelHelpful(
+    fun unlike(
         @Parameter(hidden = true) userId: Long,
         @Positive concernId: Long,
         @Positive commentId: Long,

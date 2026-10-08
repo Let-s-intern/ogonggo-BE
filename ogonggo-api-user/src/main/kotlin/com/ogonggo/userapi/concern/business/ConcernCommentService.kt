@@ -3,8 +3,8 @@ package com.ogonggo.userapi.concern.business
 import com.ogonggo.core.concern.domain.ConcernComment
 import com.ogonggo.core.concern.error.ConcernCommentErrorCode
 import com.ogonggo.core.concern.implement.ConcernCommentAppender
-import com.ogonggo.core.concern.implement.ConcernCommentHelpfulVoteManager
-import com.ogonggo.core.concern.implement.ConcernCommentHelpfulVoteReader
+import com.ogonggo.core.concern.implement.ConcernCommentLikeManager
+import com.ogonggo.core.concern.implement.ConcernCommentLikeReader
 import com.ogonggo.core.concern.implement.ConcernCommentReader
 import com.ogonggo.core.concern.implement.ConcernCommentRemover
 import com.ogonggo.core.concern.implement.ConcernMetricManager
@@ -36,8 +36,8 @@ class ConcernCommentService(
     private val commentReader: ConcernCommentReader,
     private val commentAppender: ConcernCommentAppender,
     private val commentRemover: ConcernCommentRemover,
-    private val helpfulVoteReader: ConcernCommentHelpfulVoteReader,
-    private val helpfulVoteManager: ConcernCommentHelpfulVoteManager,
+    private val likeReader: ConcernCommentLikeReader,
+    private val likeManager: ConcernCommentLikeManager,
     private val clock: Clock,
 ) {
 
@@ -118,18 +118,18 @@ class ConcernCommentService(
     }
 
     @Transactional
-    fun voteHelpful(userId: Long, concernId: Long, commentId: Long) {
+    fun like(userId: Long, concernId: Long, commentId: Long) {
         userReader.read(userId).status.requireActive()
         concernReader.read(concernId)
         commentReader.read(concernId, commentId)
-        helpfulVoteManager.vote(commentId, userId, LocalDateTime.now(clock))
+        likeManager.like(commentId, userId, LocalDateTime.now(clock))
     }
 
     @Transactional
-    fun cancelHelpful(userId: Long, concernId: Long, commentId: Long) {
+    fun unlike(userId: Long, concernId: Long, commentId: Long) {
         concernReader.read(concernId)
         commentReader.read(concernId, commentId)
-        helpfulVoteManager.cancel(commentId, userId, LocalDateTime.now(clock))
+        likeManager.unlike(commentId, userId, LocalDateTime.now(clock))
     }
 
     private fun readContext(viewerUserId: Long?, comments: Collection<ConcernComment>): CommentViewContext {
@@ -137,9 +137,9 @@ class ConcernCommentService(
         return CommentViewContext(
             viewerUserId = viewerUserId,
             profiles = userProfileReader.readAll(comments.map { it.userId }.toSet()),
-            helpfulCounts = helpfulVoteReader.countAll(commentIds),
-            votedCommentIds = viewerUserId
-                ?.let { helpfulVoteReader.readVotedCommentIds(it, commentIds) }
+            likeCounts = likeReader.countAll(commentIds),
+            likedCommentIds = viewerUserId
+                ?.let { likeReader.readLikedCommentIds(it, commentIds) }
                 ?: emptySet(),
         )
     }
@@ -157,8 +157,8 @@ class ConcernCommentService(
             createdAt = createdAt,
             updatedAt = updatedAt,
             mine = context.viewerUserId == userId,
-            helpfulCount = context.helpfulCounts[commentId] ?: 0L,
-            helpfulVoted = commentId in context.votedCommentIds,
+            likeCount = context.likeCounts[commentId] ?: 0L,
+            liked = commentId in context.likedCommentIds,
         )
     }
 
@@ -183,8 +183,8 @@ class ConcernCommentService(
     private class CommentViewContext(
         val viewerUserId: Long?,
         val profiles: Map<Long, UserProfileDto>,
-        val helpfulCounts: Map<Long, Long>,
-        val votedCommentIds: Set<Long>,
+        val likeCounts: Map<Long, Long>,
+        val likedCommentIds: Set<Long>,
     )
 
     companion object {

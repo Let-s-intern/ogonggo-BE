@@ -10,15 +10,15 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
-/** 댓글의 "도움돼요" 표시다. 사용자와 댓글마다 한 행을 두고, 취소했다 다시 누르면 행을 복구한다. */
+/** 댓글의 좋아요 표시다. 사용자와 댓글마다 한 행을 두고, 취소했다 다시 누르면 행을 복구한다. */
 @Entity
 @Table(
-    name = "concern_comment_helpful_votes",
+    name = "concern_comment_likes",
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_concern_comment_helpful_vote_comment_user", columnNames = ["comment_id", "user_id"]),
+        UniqueConstraint(name = "uk_concern_comment_like_comment_user", columnNames = ["comment_id", "user_id"]),
     ],
 )
-internal class ConcernCommentHelpfulVote(
+internal class ConcernCommentLike(
     @Column(name = "comment_id", nullable = false)
     val commentId: Long,
 

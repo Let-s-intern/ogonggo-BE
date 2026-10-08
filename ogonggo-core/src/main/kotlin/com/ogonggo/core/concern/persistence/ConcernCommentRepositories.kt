@@ -1,7 +1,7 @@
 package com.ogonggo.core.concern.persistence
 
 import com.ogonggo.core.concern.domain.ConcernComment
-import com.ogonggo.core.concern.domain.ConcernCommentHelpfulVote
+import com.ogonggo.core.concern.domain.ConcernCommentLike
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -164,19 +164,19 @@ internal interface ConcernCommentJpaRepository : JpaRepository<ConcernComment, L
     ): ConcernComment?
 }
 
-internal interface ConcernCommentHelpfulVoteJpaRepository : JpaRepository<ConcernCommentHelpfulVote, Long> {
+internal interface ConcernCommentLikeJpaRepository : JpaRepository<ConcernCommentLike, Long> {
 
-    fun findByCommentIdAndUserId(commentId: Long, userId: Long): ConcernCommentHelpfulVote?
+    fun findByCommentIdAndUserId(commentId: Long, userId: Long): ConcernCommentLike?
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
-        update ConcernCommentHelpfulVote vote
-        set vote.deletedAt = null,
-            vote.updatedAt = :now
-        where vote.commentId = :commentId
-          and vote.userId = :userId
-          and vote.deletedAt is not null
+        update ConcernCommentLike commentLike
+        set commentLike.deletedAt = null,
+            commentLike.updatedAt = :now
+        where commentLike.commentId = :commentId
+          and commentLike.userId = :userId
+          and commentLike.deletedAt is not null
         """,
     )
     fun restore(
@@ -188,12 +188,12 @@ internal interface ConcernCommentHelpfulVoteJpaRepository : JpaRepository<Concer
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
-        update ConcernCommentHelpfulVote vote
-        set vote.deletedAt = :now,
-            vote.updatedAt = :now
-        where vote.commentId = :commentId
-          and vote.userId = :userId
-          and vote.deletedAt is null
+        update ConcernCommentLike commentLike
+        set commentLike.deletedAt = :now,
+            commentLike.updatedAt = :now
+        where commentLike.commentId = :commentId
+          and commentLike.userId = :userId
+          and commentLike.deletedAt is null
         """,
     )
     fun cancel(
@@ -204,22 +204,22 @@ internal interface ConcernCommentHelpfulVoteJpaRepository : JpaRepository<Concer
 
     @Query(
         """
-        SELECT new com.ogonggo.core.concern.persistence.ConcernCountRow(vote.commentId, COUNT(vote.id))
-        FROM ConcernCommentHelpfulVote vote
-        WHERE vote.commentId IN :commentIds
-          AND vote.deletedAt IS NULL
-        GROUP BY vote.commentId
+        SELECT new com.ogonggo.core.concern.persistence.ConcernCountRow(commentLike.commentId, COUNT(commentLike.id))
+        FROM ConcernCommentLike commentLike
+        WHERE commentLike.commentId IN :commentIds
+          AND commentLike.deletedAt IS NULL
+        GROUP BY commentLike.commentId
         """,
     )
     fun countActiveByCommentIds(@Param("commentIds") commentIds: Collection<Long>): List<ConcernCountRow>
 
     @Query(
         """
-        SELECT vote.commentId
-        FROM ConcernCommentHelpfulVote vote
-        WHERE vote.userId = :userId
-          AND vote.commentId IN :commentIds
-          AND vote.deletedAt IS NULL
+        SELECT commentLike.commentId
+        FROM ConcernCommentLike commentLike
+        WHERE commentLike.userId = :userId
+          AND commentLike.commentId IN :commentIds
+          AND commentLike.deletedAt IS NULL
         """,
     )
     fun findActiveCommentIds(
@@ -228,7 +228,7 @@ internal interface ConcernCommentHelpfulVoteJpaRepository : JpaRepository<Concer
     ): List<Long>
 }
 
-/** 식별자별 개수 집계 결과다. 답글 수와 도움돼요 수에 함께 쓴다. */
+/** 식별자별 개수 집계 결과다. 답글 수와 좋아요 수에 함께 쓴다. */
 data class ConcernCountRow(
     val id: Long,
     val count: Long,

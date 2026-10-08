@@ -27,9 +27,9 @@ import java.time.LocalDateTime
     ConcernCommentAppender::class,
     ConcernCommentReader::class,
     ConcernCommentRemover::class,
-    ConcernCommentHelpfulVoteAppender::class,
-    ConcernCommentHelpfulVoteManager::class,
-    ConcernCommentHelpfulVoteReader::class,
+    ConcernCommentLikeAppender::class,
+    ConcernCommentLikeManager::class,
+    ConcernCommentLikeReader::class,
 )
 internal class ConcernImplementPersistenceTest @Autowired constructor(
     private val concernAppender: ConcernAppender,
@@ -39,8 +39,8 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
     private val commentAppender: ConcernCommentAppender,
     private val commentReader: ConcernCommentReader,
     private val commentRemover: ConcernCommentRemover,
-    private val voteManager: ConcernCommentHelpfulVoteManager,
-    private val voteReader: ConcernCommentHelpfulVoteReader,
+    private val likeManager: ConcernCommentLikeManager,
+    private val likeReader: ConcernCommentLikeReader,
     private val entityManager: EntityManager,
 ) {
 
@@ -135,23 +135,23 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `도움돼요는 반복해 눌러도 한 번으로 세고 취소 후 다시 누르면 되살린다`() {
+    fun `좋아요는 반복해 눌러도 한 번으로 세고 취소 후 다시 누르면 되살린다`() {
         // given
         val commentId = 9_001L
 
         // when
-        voteManager.vote(commentId, USER_ID, NOW)
-        voteManager.vote(commentId, USER_ID, NOW)
-        voteManager.vote(commentId, OTHER_USER_ID, NOW)
-        voteManager.cancel(commentId, OTHER_USER_ID, NOW)
-        voteManager.cancel(commentId, OTHER_USER_ID, NOW)
-        voteManager.cancel(commentId, USER_ID, NOW)
-        voteManager.vote(commentId, USER_ID, NOW)
+        likeManager.like(commentId, USER_ID, NOW)
+        likeManager.like(commentId, USER_ID, NOW)
+        likeManager.like(commentId, OTHER_USER_ID, NOW)
+        likeManager.unlike(commentId, OTHER_USER_ID, NOW)
+        likeManager.unlike(commentId, OTHER_USER_ID, NOW)
+        likeManager.unlike(commentId, USER_ID, NOW)
+        likeManager.like(commentId, USER_ID, NOW)
 
         // then
-        assertEquals(mapOf(commentId to 1L), voteReader.countAll(listOf(commentId)))
-        assertEquals(setOf(commentId), voteReader.readVotedCommentIds(USER_ID, listOf(commentId)))
-        assertEquals(emptySet<Long>(), voteReader.readVotedCommentIds(OTHER_USER_ID, listOf(commentId)))
+        assertEquals(mapOf(commentId to 1L), likeReader.countAll(listOf(commentId)))
+        assertEquals(setOf(commentId), likeReader.readLikedCommentIds(USER_ID, listOf(commentId)))
+        assertEquals(emptySet<Long>(), likeReader.readLikedCommentIds(OTHER_USER_ID, listOf(commentId)))
     }
 
     private fun appendConcern(category: ConcernCategory): Long = checkNotNull(

@@ -341,7 +341,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 - 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
 - 고민글은 `category`(`ConcernCategory`: `JOB_POSTING` 공고 질문, `CAREER` 직무·커리어, `APPLICATION_INTERVIEW` 서류·면접, `SIDE_EXPERIENCE` 사이드·경험, `ETC` 기타), 제목(100자 이하), 본문(2000자 이하 일반 텍스트)으로 이루어집니다. 에디터 JSON이나 이미지는 받지 않습니다.
-- 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·도움돼요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
+- 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·좋아요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
 - 작성자는 렛츠커리어 프로필의 `nickname`·`profileImageUrl`로 보여 주고 사용자 식별자는 싣지 않습니다. 대신 상세와 답변에 내가 쓴 것인지(`mine`)를 줍니다. 프로필이 없는 회원(기업 회원 등)은 두 값이 `null`입니다.
 - 목록 정렬은 `LATEST`(최신순, 기본값, `id DESC`), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)이며 같은 값이면 `id DESC`입니다. 화면의 "지금 가장 핫한 고민"은 같은 목록을 `size=3`으로 부릅니다. 기간을 최근으로 좁힐지는 **확인 필요**입니다.
 - 목록 항목은 본문 전체를 싣고 미리보기 줄임은 클라이언트가 합니다.
@@ -355,7 +355,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - `ADMIN` 역할 계정이 쓴 댓글은 운영자 답변(`official=true`, 화면의 "렛츠커리어 매니저" 배지)입니다. 관리자도 사용자 API로 로그인하므로([인증](authentication.md#7-3-관리자-콘솔-인증)) 별도 관리자 API를 두지 않았습니다. 작성할 때의 역할을 저장하므로 나중에 역할이 바뀌어도 배지는 그대로입니다. 운영자 답변이 남아 있는 고민글은 목록·상세의 `hasOfficialComment`가 `true`입니다(화면의 "오공고 답변" 배지).
 - 답변 목록은 운영자 답변도 구분 없이 등록 순서(`createdAt ASC, id ASC`)로 줍니다. 답변마다 먼저 단 답글 5개를 함께 주고 나머지는 답글 더보기로 읽습니다.
 - 지운 답변은 남은 답글이 있으면 `"삭제된 댓글입니다"`와 `deleted=true`로 자리를 지키고, 남은 답글이 없으면 목록에서 빠집니다.
-- 도움돼요(`helpfulCount`, 내가 눌렀는지 `helpfulVoted`)는 답변과 답글 모두에 누를 수 있습니다. 누르기(`PUT`)와 취소(`DELETE`)는 반복해도 결과가 같고 200입니다. 사용자와 댓글마다 `concern_comment_helpful_votes` 한 행을 두고 `(comment_id, user_id)` 유니크 제약을 걸며, 취소는 소프트 삭제, 다시 누르면 그 행을 복구합니다. 내 댓글에 누르는 것을 막을지는 **확인 필요**입니다.
+- 좋아요(`likeCount`, 내가 눌렀는지 `liked`)는 답변과 답글 모두에 누를 수 있습니다. 화면에는 "도움돼요"로 보이지만 서버는 일반 좋아요로 다룹니다(2026-10-08). 누르기(`PUT`)와 취소(`DELETE`)는 반복해도 결과가 같고 200입니다. 사용자와 댓글마다 `concern_comment_likes` 한 행을 두고 `(comment_id, user_id)` 유니크 제약을 걸며, 취소는 소프트 삭제, 다시 누르면 그 행을 복구합니다. 내 댓글에 누르는 것을 막을지는 **확인 필요**입니다.
 - 신고와 관리자 콘솔 관리(숨김·목록)는 아직 없습니다.
 
 ### 고용24 Open API 조회

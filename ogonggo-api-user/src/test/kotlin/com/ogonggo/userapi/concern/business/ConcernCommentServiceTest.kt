@@ -3,8 +3,8 @@ package com.ogonggo.userapi.concern.business
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernComment
 import com.ogonggo.core.concern.implement.ConcernCommentAppender
-import com.ogonggo.core.concern.implement.ConcernCommentHelpfulVoteManager
-import com.ogonggo.core.concern.implement.ConcernCommentHelpfulVoteReader
+import com.ogonggo.core.concern.implement.ConcernCommentLikeManager
+import com.ogonggo.core.concern.implement.ConcernCommentLikeReader
 import com.ogonggo.core.concern.implement.ConcernCommentReader
 import com.ogonggo.core.concern.implement.ConcernCommentRemover
 import com.ogonggo.core.concern.implement.ConcernMetricManager
@@ -36,8 +36,8 @@ class ConcernCommentServiceTest {
     private val commentReader = Mockito.mock(ConcernCommentReader::class.java)
     private val commentAppender = Mockito.mock(ConcernCommentAppender::class.java)
     private val commentRemover = Mockito.mock(ConcernCommentRemover::class.java)
-    private val helpfulVoteReader = Mockito.mock(ConcernCommentHelpfulVoteReader::class.java)
-    private val helpfulVoteManager = Mockito.mock(ConcernCommentHelpfulVoteManager::class.java)
+    private val likeReader = Mockito.mock(ConcernCommentLikeReader::class.java)
+    private val likeManager = Mockito.mock(ConcernCommentLikeManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-10-08T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val now = LocalDateTime.now(clock)
     private val service = ConcernCommentService(
@@ -48,8 +48,8 @@ class ConcernCommentServiceTest {
         commentReader,
         commentAppender,
         commentRemover,
-        helpfulVoteReader,
-        helpfulVoteManager,
+        likeReader,
+        likeManager,
         clock,
     )
 
@@ -138,7 +138,7 @@ class ConcernCommentServiceTest {
     }
 
     @Test
-    fun `삭제된 답변은 삭제 문구로 바꾸고 도움돼요 수와 내가 누른 여부를 채운다`() {
+    fun `삭제된 답변은 삭제 문구로 바꾸고 좋아요 수와 내가 누른 여부를 채운다`() {
         // given
         val deleted = comment(parentId = null, deletedAt = now)
         Mockito.`when`(concernReader.read(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
@@ -146,8 +146,8 @@ class ConcernCommentServiceTest {
             .thenReturn(ConcernCommentPageDto(listOf(deleted), page = 0, size = 10, totalElements = 1, totalPages = 1))
         Mockito.`when`(commentReader.readReplyPreviews(CONCERN_ID, listOf(COMMENT_ID), 5)).thenReturn(emptyMap())
         Mockito.`when`(userProfileReader.readAll(setOf(USER_ID))).thenReturn(emptyMap())
-        Mockito.`when`(helpfulVoteReader.countAll(listOf(COMMENT_ID))).thenReturn(mapOf(COMMENT_ID to 3L))
-        Mockito.`when`(helpfulVoteReader.readVotedCommentIds(USER_ID, listOf(COMMENT_ID))).thenReturn(setOf(COMMENT_ID))
+        Mockito.`when`(likeReader.countAll(listOf(COMMENT_ID))).thenReturn(mapOf(COMMENT_ID to 3L))
+        Mockito.`when`(likeReader.readLikedCommentIds(USER_ID, listOf(COMMENT_ID))).thenReturn(setOf(COMMENT_ID))
 
         // when
         val result = service.readComments(USER_ID, CONCERN_ID, page = 0, size = 10).items.single()
@@ -155,8 +155,8 @@ class ConcernCommentServiceTest {
         // then
         assertEquals("삭제된 댓글입니다", result.comment.content)
         assertTrue(result.comment.deleted)
-        assertEquals(3L, result.comment.helpfulCount)
-        assertTrue(result.comment.helpfulVoted)
+        assertEquals(3L, result.comment.likeCount)
+        assertTrue(result.comment.liked)
         assertEquals(0L, result.replies.totalElements)
     }
 

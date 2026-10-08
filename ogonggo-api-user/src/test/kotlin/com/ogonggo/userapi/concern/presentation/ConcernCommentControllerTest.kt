@@ -63,7 +63,7 @@ class ConcernCommentControllerTest @Autowired constructor(
             // then
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].official").value(true))
-            .andExpect(jsonPath("$.data.items[0].helpfulCount").value(51))
+            .andExpect(jsonPath("$.data.items[0].likeCount").value(51))
             .andExpect(jsonPath("$.data.items[0].replies.pageInfo.totalElements").value(0))
     }
 
@@ -101,22 +101,22 @@ class ConcernCommentControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `도움돼요를 누르고 취소한다`() {
+    fun `좋아요를 누르고 취소한다`() {
         // when
-        mockMvc.perform(put("/api/v1/concerns/$CONCERN_ID/comments/$COMMENT_ID/helpful-votes/me").with(authenticatedUser()))
+        mockMvc.perform(put("/api/v1/concerns/$CONCERN_ID/comments/$COMMENT_ID/likes/me").with(authenticatedUser()))
             .andExpect(status().isOk)
-        mockMvc.perform(delete("/api/v1/concerns/$CONCERN_ID/comments/$COMMENT_ID/helpful-votes/me").with(authenticatedUser()))
+        mockMvc.perform(delete("/api/v1/concerns/$CONCERN_ID/comments/$COMMENT_ID/likes/me").with(authenticatedUser()))
             .andExpect(status().isOk)
 
         // then
-        Mockito.verify(concernCommentService).voteHelpful(USER_ID, CONCERN_ID, COMMENT_ID)
-        Mockito.verify(concernCommentService).cancelHelpful(USER_ID, CONCERN_ID, COMMENT_ID)
+        Mockito.verify(concernCommentService).like(USER_ID, CONCERN_ID, COMMENT_ID)
+        Mockito.verify(concernCommentService).unlike(USER_ID, CONCERN_ID, COMMENT_ID)
     }
 
     @Test
-    fun `비로그인 사용자는 도움돼요를 누를 수 없다`() {
+    fun `비로그인 사용자는 좋아요를 누를 수 없다`() {
         // when
-        mockMvc.perform(put("/api/v1/concerns/$CONCERN_ID/comments/$COMMENT_ID/helpful-votes/me"))
+        mockMvc.perform(put("/api/v1/concerns/$CONCERN_ID/comments/$COMMENT_ID/likes/me"))
             // then
             .andExpect(status().isUnauthorized)
 
@@ -133,8 +133,8 @@ class ConcernCommentControllerTest @Autowired constructor(
         createdAt = CREATED_AT,
         updatedAt = CREATED_AT,
         mine = false,
-        helpfulCount = 51,
-        helpfulVoted = false,
+        likeCount = 51,
+        liked = false,
     )
 
     private fun authenticatedUser() = authentication(UsernamePasswordAuthenticationToken(USER_ID, null, emptyList()))
