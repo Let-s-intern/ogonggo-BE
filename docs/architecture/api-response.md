@@ -313,7 +313,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
 - 목록은 core의 `EnumOptionReader`가 한 곳에서 관리합니다. core에 업무 enum을 새로 만들면 이 목록에 추가하며, 빠뜨리면 core 테스트가 실패합니다.
 - core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(사용자: 광고 문의 유형·홍보 채널, 관리자: 관리 목록 정렬·노출). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
-- 모집글 enum 이름에 `RecruitmentPost` 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`). 프런트가 새 키로 옮기는 동안 `UserEnumService.LEGACY_KEYS`가 같은 선택지를 예전 키 7개로도 내려 주며, 프런트 배포 후 제거합니다. 모집 포지션의 `MOBILE`도 같은 기간에만 남아 있는 값이라 선택지 목록 맨 뒤에 오고, 화면에서는 기존 글의 라벨로만 씁니다.
+- enum 이름에 루트 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`, `EmploymentType` → `JobEmploymentType`). 프런트가 새 키로 옮기는 동안 `UserEnumService.LEGACY_KEYS`가 같은 선택지를 예전 키 17개로도 내려 주며, 프런트 배포 후 제거합니다.
 
 #### 목록을 한 곳에서 관리하는 이유
 

@@ -3,6 +3,7 @@ package com.ogonggo.userapi.enumeration.business
 import com.ogonggo.core.enumeration.EnumField
 import com.ogonggo.core.enumeration.catalog.EnumOptionReader
 import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -37,6 +38,14 @@ class UserEnumServiceTest {
             enums.getValue("RecruitmentPostApplicationSortType"),
             enums.getValue("RecruitmentApplicationSortType"),
         )
+    }
+
+    @Test
+    fun `모집 포지션 MARKETING의 라벨은 마케팅으로 제공한다`() {
+        val marketing = enums.getValue("RecruitmentPostPosition")
+            .single { it.name == RecruitmentPostPosition.MARKETING.name }
+
+        assertEquals("마케팅", marketing.desc)
     }
 
     /**
