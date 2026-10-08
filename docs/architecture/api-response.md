@@ -129,7 +129,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 채용공고 상세 내용
 
-채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`를 반환합니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
+채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`, `recruitmentNotice`를 반환합니다. 채용 안내사항(`recruitmentNotice`)은 2026-10-08에 추가했습니다(리뷰 상태: 팀 리뷰 필요). 공고 분석의 본문 해시와 '공고 속 문구'가 이 칸까지 보므로, 사용자가 원문에서 그 문장을 찾을 수 있게 하려는 것입니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
 
 ### 채용공고 공고 분석
 
@@ -149,7 +149,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `competencies` | 연결하기 좋은 경험. 역량 3개까지 `{ name, quote, description, experiences }`, 역량마다 경험 3개까지 |
 
 - `value`가 `null`이면 공고에서 확인할 수 없는 값이며 화면은 '공고에 명시 없음'으로 그립니다. `note`는 짧은 보충이고 없으면 `null`입니다.
-- `quote`는 그 역량을 요구하는 공고 문장입니다. 크롤러가 본문에서 찾을 수 있는 문장만 보냅니다. 그 문장이 상세에 싣지 않는 `recruitmentNotice`에서 올 수 있으며, 상세에 `recruitmentNotice`를 함께 실을지는 **확인 필요**입니다.
+- `quote`는 그 역량을 요구하는 공고 문장입니다. 크롤러가 제목과 본문 여덟 칸에서 찾을 수 있는 문장만 보내므로, 상세 응답의 본문 칸에서 그대로 찾을 수 있습니다.
 
 ### 지표
 

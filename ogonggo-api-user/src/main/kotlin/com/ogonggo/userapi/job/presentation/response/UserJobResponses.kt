@@ -124,6 +124,8 @@ data class UserJobDetailResponse(
     val compensation: String?,
     val benefits: String?,
     val hiringProcess: String?,
+    @field:Schema(description = "채용 안내사항. 제출 서류·근무 조건·유의사항 등")
+    val recruitmentNotice: String?,
     val sourceUrl: String?,
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
@@ -159,6 +161,7 @@ data class UserJobDetailResponse(
             compensation = result.compensation,
             benefits = result.benefits,
             hiringProcess = result.hiringProcess,
+            recruitmentNotice = result.recruitmentNotice,
             sourceUrl = result.sourceUrl,
             applyEmail = result.applyEmail,
             closedAt = result.closedAt,

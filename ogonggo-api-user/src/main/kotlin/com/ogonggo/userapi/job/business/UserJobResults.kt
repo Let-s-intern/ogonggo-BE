@@ -152,6 +152,7 @@ data class UserJobResult(
     val compensation: String?,
     val benefits: String?,
     val hiringProcess: String?,
+    val recruitmentNotice: String?,
     val sourceUrl: String?,
     /** 이메일로 지원받는 공고가 지원서를 받는 주소다. */
     val applyEmail: String?,
@@ -193,6 +194,7 @@ data class UserJobResult(
             compensation = job.compensation,
             benefits = job.benefits,
             hiringProcess = job.hiringProcess,
+            recruitmentNotice = job.recruitmentNotice,
             sourceUrl = job.sourceUrl,
             applyEmail = job.applyEmail,
             closedAt = job.closedAt,

@@ -111,6 +111,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.jobRole").value("IT_BACKEND"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
             .andExpect(jsonPath("$.data.qualifications").value("자격 요건"))
+            .andExpect(jsonPath("$.data.recruitmentNotice").value("제출 서류: 이력서"))
             .andExpect(jsonPath("$.data.applyEmail").value("recruit@example.com"))
             .andExpect(jsonPath("$.data.bookmarked").value(true))
             .andExpect(jsonPath("$.data.viewCount").value(12))
@@ -843,6 +844,7 @@ class UserReadControllerTest @Autowired constructor(
         compensation = "급여 및 처우",
         benefits = "복지 및 혜택",
         hiringProcess = "채용 절차",
+        recruitmentNotice = "제출 서류: 이력서",
         sourceUrl = null,
         applyEmail = "recruit@example.com",
         closedAt = null,
