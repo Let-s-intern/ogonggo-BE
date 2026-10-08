@@ -2,14 +2,17 @@ package com.ogonggo.core.concern.implement
 
 import com.ogonggo.core.concern.domain.ConcernCategory
 import com.ogonggo.core.concern.domain.ConcernComment
+import com.ogonggo.core.concern.domain.ConcernConsoleSearchCondition
 import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
 import com.ogonggo.core.concern.implement.dto.ConcernCommentAppendDto
 import com.ogonggo.core.concern.persistence.ConcernQueryRepository
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -22,6 +25,7 @@ import java.time.LocalDateTime
 @Import(
     ConcernAppender::class,
     ConcernReader::class,
+    ConcernManager::class,
     ConcernQueryRepository::class,
     ConcernMetricManager::class,
     ConcernMetricReader::class,
@@ -35,6 +39,7 @@ import java.time.LocalDateTime
 internal class ConcernImplementPersistenceTest @Autowired constructor(
     private val concernAppender: ConcernAppender,
     private val concernReader: ConcernReader,
+    private val concernManager: ConcernManager,
     private val metricManager: ConcernMetricManager,
     private val metricReader: ConcernMetricReader,
     private val commentAppender: ConcernCommentAppender,
@@ -96,6 +101,70 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
 
         // then
         assertEquals(listOf(manyAnswers, fewAnswers), result.map { it.id })
+    }
+
+    @Test
+    fun `숨긴 고민글은 사용자 목록과 인기 고민과 상세에서 빠진다`() {
+        // given
+        val visible = appendConcern(ConcernCategory.ETC)
+        val hidden = appendConcern(ConcernCategory.ETC)
+        concernManager.hide(concernReader.read(hidden))
+        entityManager.flush()
+
+        // when
+        val page = concernReader.readPage(null, ConcernSortType.LATEST, page = 0, size = 10)
+        val popular = concernReader.readPopular(NOW.minusYears(1), ConcernPopularSortType.VIEW_COUNT, limit = 3)
+
+        // then
+        assertEquals(listOf(visible), page.concerns.map { it.id })
+        assertEquals(listOf(visible), popular.map { it.id })
+        assertThrows(EntityNotFoundException::class.java) { concernReader.read(hidden) }
+        assertEquals(hidden, concernReader.readIncludingHidden(hidden).id)
+    }
+
+    @Test
+    fun `콘솔 목록은 숨긴 고민글도 싣고 노출과 카테고리와 제목 검색어로 거른다`() {
+        // given
+        val hidden = appendConcern(ConcernCategory.CAREER, title = "면접 준비 고민")
+        appendConcern(ConcernCategory.CAREER, title = "면접 준비 고민")
+        appendConcern(ConcernCategory.ETC, title = "면접 준비 고민")
+        val deleted = appendConcern(ConcernCategory.CAREER, title = "면접 준비 고민")
+        appendConcern(ConcernCategory.CAREER, title = "서류 고민")
+        concernManager.hide(concernReader.read(hidden))
+        concernReader.read(deleted).delete(NOW)
+        entityManager.flush()
+
+        // when
+        val all = concernReader.readConsolePage(ConcernConsoleSearchCondition(), ConcernSortType.LATEST, page = 0, size = 10)
+        val hiddenOnly = concernReader.readConsolePage(
+            ConcernConsoleSearchCondition(visible = false, category = ConcernCategory.CAREER, keyword = "면접"),
+            ConcernSortType.LATEST,
+            page = 0,
+            size = 10,
+        )
+
+        // then
+        assertEquals(4L, all.totalElements)
+        assertEquals(listOf(hidden), hiddenOnly.concerns.map { it.id })
+    }
+
+    @Test
+    fun `여러 고민글을 잠가 읽을 때 없거나 삭제된 고민글이 있으면 그 식별자를 모두 담아 실패한다`() {
+        // given
+        val hidden = appendConcern(ConcernCategory.ETC)
+        val deleted = appendConcern(ConcernCategory.ETC)
+        concernManager.hide(concernReader.read(hidden))
+        concernReader.read(deleted).delete(NOW)
+        entityManager.flush()
+
+        // when
+        val exception = assertThrows(EntityNotFoundException::class.java) {
+            concernReader.readAllIncludingHiddenForUpdate(listOf(hidden, deleted, 999_999L))
+        }
+
+        // then
+        assertEquals("고민글을 찾을 수 없습니다. (id: $deleted, 999999)", exception.message)
+        assertEquals(listOf(hidden), concernReader.readAllIncludingHiddenForUpdate(listOf(hidden, hidden)).map { it.id })
     }
 
     @Test
@@ -175,9 +244,9 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
         assertEquals(emptySet<Long>(), likeReader.readLikedCommentIds(OTHER_USER_ID, listOf(commentId)))
     }
 
-    private fun appendConcern(category: ConcernCategory): Long = checkNotNull(
+    private fun appendConcern(category: ConcernCategory, title: String = "제목"): Long = checkNotNull(
         concernAppender.append(
-            ConcernAppendDto(authorUserId = USER_ID, category = category, title = "제목", content = "본문"),
+            ConcernAppendDto(authorUserId = USER_ID, category = category, title = title, content = "본문"),
         ).id,
     )
 

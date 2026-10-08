@@ -16,6 +16,16 @@ class ConcernManager internal constructor(
         concernRepository.save(concern)
     }
 
+    fun hide(concern: Concern) {
+        concern.hide()
+        concernRepository.save(concern)
+    }
+
+    fun unhide(concern: Concern) {
+        concern.unhide()
+        concernRepository.save(concern)
+    }
+
     fun delete(concern: Concern, deletedAt: LocalDateTime) {
         concern.delete(deletedAt)
         concernRepository.save(concern)
