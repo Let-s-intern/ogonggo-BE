@@ -12,11 +12,36 @@ import java.time.LocalDateTime
 
 internal interface ConcernJpaRepository : JpaRepository<Concern, Long> {
 
+    /** 숨긴 고민글은 사용자에게 없는 글과 같으므로 뺀다. */
+    fun findByIdAndHiddenFalseAndDeletedAtIsNull(id: Long): Concern?
+
+    /** 관리자 콘솔은 숨긴 고민글도 읽는다. */
     fun findByIdAndDeletedAtIsNull(id: Long): Concern?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select concern from Concern concern where concern.id = :concernId and concern.deletedAt is null")
+    @Query(
+        """
+        select concern
+        from Concern concern
+        where concern.id = :concernId
+          and concern.hidden = false
+          and concern.deletedAt is null
+        """,
+    )
     fun findActiveByIdForUpdate(@Param("concernId") concernId: Long): Concern?
+
+    /** 관리자 콘솔이 숨긴 고민글을 포함해 여러 건을 잠근다. 교착을 막으려고 식별자 순으로 잠근다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select concern
+        from Concern concern
+        where concern.id in :concernIds
+          and concern.deletedAt is null
+        order by concern.id
+        """,
+    )
+    fun findAllByIdInForUpdate(@Param("concernIds") concernIds: Collection<Long>): List<Concern>
 
     /** 삭제를 반복 요청해도 같은 결과를 주려고 삭제된 고민글도 읽는다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

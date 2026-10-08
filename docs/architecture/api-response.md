@@ -261,6 +261,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/jobs` | `visibility`, `source`, `reviewStatus`, `recruitmentStatus`, `jobField`, `jobRole` | 제목, 회사명 |
 | `GET /api/v1/admin/bootcamps` | `visibility`, `source`, `reviewStatus`, `status`(`RECRUITING`·`CLOSED`) | 과정명, 운영사 |
 | `GET /api/v1/admin/recruitment-posts` | `visibility`, `recruitmentType`(`SIDE_PROJECT`·`STUDY`), `recruitmentStatus` | 제목 |
+| `GET /api/v1/admin/concerns` | `visibility`, `category`(`ConcernCategory`) | 제목 |
 | `GET /api/v1/admin/content-rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
 | `GET /api/v1/admin/announcements` | `visibility`, `pinned` | 제목 |
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
@@ -368,6 +369,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 목록 항목은 본문 전체를 싣고 미리보기 줄임은 클라이언트가 합니다.
 - 조회 수와 답변 수는 `concern_metrics`가 소유합니다. 조회 수는 채용공고처럼 상세 조회마다 `ConcernViewedEvent`로 비동기로 올리므로 상세 응답의 `viewCount`에는 이번 조회가 들어가지 않습니다. 지표 행은 고민글을 등록할 때 함께 만듭니다.
 - 고민글을 지우면 소프트 삭제하고 목록·상세에서 빠집니다(404 `CONCERN_NOT_FOUND`). 이미 지운 내 고민글을 다시 지워도 200입니다.
+- 운영자가 관리자 콘솔에서 숨긴 고민글(`concerns.hidden = true`)은 목록·인기 고민에서 빠지고 상세·수정·답변 조회·답변 작성과 삭제·좋아요가 404 `CONCERN_NOT_FOUND`입니다. 작성자에게도 같고, 작성자가 지우는 것만 막지 않습니다. 다시 내놓는 것은 운영자만 합니다(2026-10-08).
 
 #### 답변과 답글
 
@@ -378,7 +380,13 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 고민글 작성자(질문자)가 쓴 답변·답글은 `concernAuthor=true`입니다. 응답에 사용자 식별자를 싣지 않으므로 클라이언트가 비교할 수 없어 서버가 알려 줍니다.
 - 지운 답변은 남은 답글이 있으면 `"삭제된 댓글입니다"`와 `deleted=true`로 자리를 지키고, 남은 답글이 없으면 목록에서 빠집니다.
 - 좋아요(`likeCount`, 내가 눌렀는지 `liked`)는 답변과 답글 모두에 누를 수 있습니다. 화면에는 "도움돼요"로 보이지만 서버는 일반 좋아요로 다룹니다(2026-10-08). 누르기(`PUT`)와 취소(`DELETE`)는 반복해도 결과가 같고 200입니다. 사용자와 댓글마다 `concern_comment_likes` 한 행을 두고 `(comment_id, user_id)` 유니크 제약을 걸며, 취소는 소프트 삭제, 다시 누르면 그 행을 복구합니다. 내 댓글에 누르는 것을 막을지는 **확인 필요**입니다.
-- 신고와 관리자 콘솔 관리(숨김·목록)는 아직 없습니다.
+- 신고는 아직 없습니다.
+
+#### 관리자 콘솔
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 목록(`GET /api/v1/admin/concerns`)은 [관리자 콘솔 목록](#관리자-콘솔-목록) 규칙을 따르며 숨긴 고민글도 싣습니다. 항목은 `id`, `category`, `title`, `viewCount`, `commentCount`, `hasOfficialComment`, `visibility`, 작성자 `authorUserId`·`authorNickname`(프로필이 없으면 `null`), `registeredAt`이고 본문은 싣지 않습니다.
+- 상세(`GET /api/v1/admin/concerns/{concernId}`)는 목록 항목에 `content`와 `updatedAt`을 더해 줍니다. 숨긴 고민글도 주고, 사용자 상세와 달리 조회 수를 올리지 않습니다. 없거나 삭제된 고민글은 404 `CONCERN_NOT_FOUND`입니다. 답변 목록은 싣지 않습니다.
 
 ### 고용24 Open API 조회
 

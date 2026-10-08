@@ -54,6 +54,11 @@ class Concern internal constructor(
     var content: String = content
         protected set
 
+    /** 운영자가 숨긴 고민글은 사용자에게 없는 글과 같다. 다시 내놓는 것도 운영자만 한다. */
+    @Column(nullable = false)
+    var hidden: Boolean = false
+        protected set
+
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null
         protected set
@@ -68,6 +73,16 @@ class Concern internal constructor(
         this.category = category
         this.title = title
         this.content = content
+    }
+
+    fun hide() {
+        check(deletedAt == null) { "삭제된 고민글은 숨길 수 없습니다." }
+        hidden = true
+    }
+
+    fun unhide() {
+        check(deletedAt == null) { "삭제된 고민글은 다시 노출할 수 없습니다." }
+        hidden = false
     }
 
     fun delete(deletedAt: LocalDateTime) {
