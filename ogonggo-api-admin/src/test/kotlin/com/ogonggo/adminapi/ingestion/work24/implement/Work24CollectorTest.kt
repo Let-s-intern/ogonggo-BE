@@ -2,13 +2,13 @@ package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.OperationType
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -18,9 +18,8 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.storage.s3.S3ImageStorage
-import com.ogonggo.core.storage.s3.S3ImageStorageProperties
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -121,9 +120,9 @@ class Work24CollectorTest {
         assertEquals(JobRole.IT_BACKEND, job.jobRole)
         assertEquals(Region.SEOUL, job.region)
         assertEquals(SubRegion.SEOUL_GANGNAM_GU, job.subRegion)
-        assertEquals(EmploymentType.FULL_TIME, job.employmentType)
-        assertEquals(ExperienceType.NEWCOMER, job.experienceType)
-        assertEquals(EducationLevel.BACHELOR, job.educationLevel)
+        assertEquals(JobEmploymentType.FULL_TIME, job.employmentType)
+        assertEquals(JobExperienceType.NEWCOMER, job.experienceType)
+        assertEquals(JobEducationLevel.BACHELOR, job.educationLevel)
         assertEquals(JobRecruitmentType.PERIOD, job.recruitmentType)
         assertEquals(LocalDateTime.of(2026, 9, 25, 0, 0), job.recruitmentStartAt)
         assertEquals(LocalDateTime.of(2026, 10, 31, 23, 59, 59), job.recruitmentEndAt)
@@ -266,7 +265,7 @@ class Work24CollectorTest {
         assertTrue(bootcamp.images.all { it.url.matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.jpg""")) })
         // 고용24는 K-디지털 트레이닝 조건에 다른 훈련유형도 함께 주므로 목록의 훈련유형 이름을 쓴다.
         assertEquals("국가기간전략산업직종", bootcamp.programType)
-        assertEquals(OperationType.ONLINE, bootcamp.operationType)
+        assertEquals(BootcampOperationType.ONLINE, bootcamp.operationType)
         // 총 훈련비가 아니라 교육생이 내는 본인부담액이다.
         assertEquals(600_000L, bootcamp.tuitionAmount)
         assertEquals(ContentSource.WORK24, bootcamp.source)
@@ -362,8 +361,8 @@ class Work24CollectorTest {
         )
         assertNull(job.qualifications)
         assertEquals("2026년_공동훈련센터형_선박도장_L2_25V1_거제대학교_주식회사화인기업", job.title)
-        assertEquals(EmploymentType.WORK_STUDY, job.employmentType)
-        assertEquals(ExperienceType.IRRELEVANT, job.experienceType)
+        assertEquals(JobEmploymentType.WORK_STUDY, job.employmentType)
+        assertEquals(JobExperienceType.IRRELEVANT, job.experienceType)
         assertEquals(Region.GYEONGNAM, job.region)
         assertEquals(JobRecruitmentType.PERIOD, job.recruitmentType)
         assertEquals(NOW, job.recruitmentStartAt)
@@ -578,8 +577,9 @@ class Work24CollectorTest {
             Work24InstitutionImageImporter(
                 restClientBuilder.build(),
                 // S3 대신 저장 키로 공개 주소를 만들어 돌려준다.
-                Mockito.mock(S3ImageStorage::class.java) { invocation -> "$CDN/${invocation.getArgument<String>(0)}" },
-                S3ImageStorageProperties(bucket = "ogonggo"),
+                Mockito.mock(S3ObjectClient::class.java) { invocation ->
+                    if (invocation.method.name == "isConfigured") true else "$CDN/${invocation.getArgument<String>(0)}"
+                },
             ),
         )
     }

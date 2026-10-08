@@ -33,7 +33,7 @@ class UserEnumControllerTest @Autowired constructor(
         // given
         Mockito.`when`(userEnumService.getEnums()).thenReturn(
             mapOf(
-                "EmploymentType" to listOf(EnumOption(name = "FULL_TIME", desc = "정규직")),
+                "JobEmploymentType" to listOf(EnumOption(name = "FULL_TIME", desc = "정규직")),
                 "SubRegion" to listOf(EnumOption(name = "SEOUL_GANGNAM_GU", desc = "강남구", parent = "SEOUL")),
             ),
         )
@@ -41,10 +41,10 @@ class UserEnumControllerTest @Autowired constructor(
         // when & then
         mockMvc.perform(get("/api/v1/enums"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data.EmploymentType[0].name").value("FULL_TIME"))
-            .andExpect(jsonPath("$.data.EmploymentType[0].desc").value("정규직"))
-            .andExpect(jsonPath("$.data.EmploymentType[0].code").doesNotExist())
-            .andExpect(jsonPath("$.data.EmploymentType[0].parent").isEmpty)
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].name").value("FULL_TIME"))
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].desc").value("정규직"))
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].code").doesNotExist())
+            .andExpect(jsonPath("$.data.JobEmploymentType[0].parent").isEmpty)
             .andExpect(jsonPath("$.data.SubRegion[0].parent").value("SEOUL"))
     }
 }

@@ -10,7 +10,7 @@ data class BootcampSearchCondition(
     /** 운영 회사명 또는 프로그램명에 포함되는지로 찾는다. 비어 있으면 검색하지 않는다. */
     val keyword: String? = null,
     /** 모집 상태. 공개 목록은 모집 중과 마감만 보이므로 임시저장을 고르면 늘 0건이다. */
-    val recruitmentStatus: BootcampStatus? = null,
+    val recruitmentStatus: BootcampRecruitmentStatus? = null,
 ) {
     companion object {
         val NONE = BootcampSearchCondition()

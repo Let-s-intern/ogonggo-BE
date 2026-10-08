@@ -120,8 +120,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `GET /api/v1/jobs/calendar` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false`. `bookmarkedOnly=true`는 토큰이 없으면 401 |
 | `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `GET /api/v1/recommended-challenges` | 선택 | 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘기고, 없거나 기업 회원이면 넘기지 않는다 |
-| `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `job_source_url_clicks.user_id`가 NOT NULL이다 |
-| `POST /api/v1/bootcamps/{bootcampId}/application-url-clicks` | 필수 | `bootcamp_application_url_clicks.user_id`가 NOT NULL이다 |
+| `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
+| `POST /api/v1/bootcamps/{bootcampId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
 | `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
@@ -226,7 +226,7 @@ PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한�
 ```
 
 - 아웃박스는 사용자당 한 행입니다. 여러 번 고쳐도 적재 일시만 갱신하고, 보낼 때 그 시점의 최신 값 전체와 수정 일시를 읽어 보냅니다. 순서가 바뀌거나 같은 요청이 여러 번 가도 받는 쪽 선후 판정 때문에 결과가 같습니다.
-- 성공하면 **적재 일시가 그대로일 때만** 지웁니다. 보내는 사이 다시 고쳤으면 행이 남아 다음 주기에 새 값을 보냅니다.
+- 성공하면 **적재 일시가 그대로일 때만** 보낸 일시(`sent_at`)를 남깁니다. 행은 지우지 않으며, 다시 고치면 보낸 일시를 비워 다시 보낼 대상으로 되돌립니다. 보내는 사이 다시 고쳤으면 보낸 것으로 표시하지 않아 다음 주기에 새 값을 보냅니다.
 - 실패하면 실패 횟수를 올리고 다음 주기에 다시 보냅니다. 계속 실패하는 행이 다른 행을 막지 않도록 실패가 적은 순으로 100건씩 보냅니다.
 - 상대 호출은 트랜잭션 밖에서 하므로 상대 장애가 사용자의 수정 요청을 실패시키지 않습니다.
 - 오공고는 렛츠커리어 계정이 있는 사용자만 적재합니다. 렛츠커리어는 오공고 계정 여부를 모르므로 모두 적재하고, 오공고는 계정이 없는 렛츠커리어 사용자를 `applied: false`로 무시합니다. 그 사람이 나중에 처음 로그인하면 최신 값을 복제합니다.

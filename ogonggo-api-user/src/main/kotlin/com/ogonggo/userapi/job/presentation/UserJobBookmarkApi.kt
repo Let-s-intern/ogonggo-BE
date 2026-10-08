@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
@@ -71,8 +71,8 @@ interface UserJobBookmarkApi {
         @Max(100)
         size: Int,
         sortType: BookmarkSortType,
-        employmentType: EmploymentType?,
-        experienceType: ExperienceType?,
+        employmentType: JobEmploymentType?,
+        experienceType: JobExperienceType?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
         region: Region?,

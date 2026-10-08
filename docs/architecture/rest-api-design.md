@@ -20,12 +20,12 @@
 
 ### 예외: 관리자 콘솔 API
 
-관리자 콘솔 화면이 쓰는 API는 `/api/v1/admin` 아래에 둡니다: `/api/v1/admin/jobs`, `/api/v1/admin/review-queue`.
+관리자 콘솔 화면이 쓰는 API는 `/api/v1/admin` 아래에 둡니다: `/api/v1/admin/jobs`, `/api/v1/admin/content-reviews`.
 
 - 결정일: 2026-09-14 / 리뷰 상태: 팀 리뷰 필요
 - 배경: 콘솔 화면이 목 핸들러로 먼저 만들어졌고 그 경로가 `/api/v1/admin/**`입니다. 화면을 고치지 않고 붙이기로 했습니다.
 - 크롤러의 `/api/v1/internal/**`과 인증 방식(내부 API 키, 관리자 토큰)이 달라 경로 접두사로 인가 규칙을 나눕니다.
-- 콘솔 계약을 따라 `PATCH /api/v1/admin/jobs/{jobId}`가 노출·검수 상태와 내용을 부분 수정으로 함께 받고, 검수 판정은 `PATCH /api/v1/admin/review-queue/{type}/{id}`로 둡니다. 4절의 명령별 엔드포인트 원칙과 다르며 같은 이유의 예외입니다.
+- 콘솔 계약을 따라 `PATCH /api/v1/admin/jobs/{jobId}`가 노출·검수 상태와 내용을 부분 수정으로 함께 받고, 검수 판정은 `PATCH /api/v1/admin/content-reviews/{type}/{id}`로 둡니다. 4절의 명령별 엔드포인트 원칙과 다르며 같은 이유의 예외입니다.
 - 영향 범위: 관리자 API의 콘솔 Controller와 인가 규칙. 사용자 API와 크롤러 경로는 바뀌지 않습니다.
 
 ## 2. URI
@@ -62,7 +62,6 @@ CRUD만으로 의도가 불분명한 도메인 명령은 동사형 하위 경로
 ```text
 POST /api/v1/jobs/{jobId}/publish
 POST /api/v1/jobs/{jobId}/hide
-POST /api/v1/jobs/{jobId}/archive
 POST /api/v1/jobs/{jobId}/close
 ```
 
@@ -92,7 +91,7 @@ DELETE /api/v1/job-bookmarks/{jobId}
 
 ```text
 POST /api/v1/jobs/{jobId}/source-url-clicks
-POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
+POST /api/v1/bootcamps/{bootcampId}/source-url-clicks
 ```
 
 외부 링크를 눌렀다는 사실을 남기는 기록이며 경로 이름은 기록하는 필드(`sourceUrl`, `applicationUrl`)를 따릅니다. 새 행이 생기지 않는 호출이 있어 201이 아니라 200과 `data: null`로 응답합니다.
@@ -138,7 +137,7 @@ GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&recruitmentStatus={�
 PUT  /api/v1/bootcamp-bookmarks/{bootcampId}/application-status
 
 GET  /api/v1/recruitment-post-bookmarks?recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}&sort=RECENTLY_SAVED
-GET  /api/v1/me/recruitment-applications?applicationStatus={단계}&recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}
+GET  /api/v1/users/me/recruitment-post-applications?applicationStatus={단계}&recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}
 POST /api/v1/recruitment-post-bookmarks/{postId}/prepare
 POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
 ```
@@ -153,7 +152,7 @@ POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
 | 사이드·스터디 | 스크랩, 지원 준비 중(`PREPARING`), 지원 완료(`COMPLETED`), 활동 중(`IN_PROGRESS`), 활동 완료(`ENDED`) | 스크랩은 북마크, 나머지는 지원 이력 |
 
 - 채용공고·부트캠프는 단계를 북마크 행이 가지며, 등록하거나 해제 후 다시 등록하면 스크랩에서 시작합니다. 각 단계 목록은 북마크 목록에 `applicationStatus`를 주어 조회하고, 단계별 건수는 그 응답의 전체 건수를 씁니다. 한 단계만 모아 보는 필터도 같은 `applicationStatus`를 씁니다.
-- 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/me/recruitment-applications/{postId}`를 씁니다.
+- 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/users/me/recruitment-post-applications/{postId}`를 씁니다.
 - 마감 상태는 채용공고·부트캠프·사이드·스터디 모두 `recruitmentStatus`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 사용자 공개 목록(`GET /api/v1/jobs`, `GET /api/v1/bootcamps`)도 같은 파라미터를 받습니다. 부트캠프는 `DRAFT`를 보내면 400 `BAD_REQUEST`입니다. 관리자 부트캠프 목록은 응답 필드 이름을 따라 계속 `status`를 씁니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
 - 북마크 목록 정렬은 `sort`로 고르며 지금은 최근 저장순(`RECENTLY_SAVED`)만 있고 기본값입니다. 등록·재등록하거나 단계를 옮긴 시각이 최근인 순서입니다. 다른 정렬은 필요할 때 값을 추가합니다.
 - 채용공고·부트캠프 단계에는 선후 관계가 없어 어느 단계에서든 다른 어느 단계로든 옮길 수 있습니다. 그래서 이동마다 명령 경로를 두지 않고 `PUT .../application-status`가 `{ "applicationStatus": "INTERVIEWING" }`처럼 목표 단계를 받습니다. 4절의 명령별 경로 원칙은 전이 규칙이 행위마다 다를 때를 위한 것이라, 전이 규칙이 없는 이 경우에는 적용하지 않습니다.
@@ -201,10 +200,10 @@ PATCH /api/v1/admin/recruitment-posts/visibility
 - 결정일: 2026-10-01 / 리뷰 상태: 팀 리뷰 필요
 - 운영자가 콘솔에서 검색한 뒤 여러 건을 골라 한 번에 노출·비노출로 바꿉니다. 단건 `PATCH /{jobId}`를 프런트가 반복 호출하기에는 건수가 많아 서버가 한 요청으로 받습니다.
 - 본문은 `{ "ids": [7, 3], "visibility": "HIDDEN" }`입니다. `visibility`는 단건 수정과 같은 `VISIBLE`·`HIDDEN`이며, 고른 항목의 노출 상태 한 칸만 바꾸므로 PATCH입니다. 경로는 컬렉션의 `visibility` 속성을 가리키며 `/{jobId}`보다 먼저 매칭됩니다.
-- 노출만 바꾸고 검수 상태·내용은 바꾸지 않습니다. 이미 요청한 노출인 항목은 건드리지 않고 성공으로 봅니다. 그래서 같은 요청을 반복해도 결과가 같고, 비노출로 보이는 보관 공고에 `HIDDEN`을 보내도 실패하지 않으며 초안도 초안으로 남습니다. 같은 식별자가 여러 번 와도 거절하지 않고 한 번만 바꿉니다.
+- 노출만 바꾸고 검수 상태·내용은 바꾸지 않습니다. 이미 요청한 노출인 항목은 건드리지 않고 성공으로 봅니다. 그래서 같은 요청을 반복해도 결과가 같고, 초안에 `HIDDEN`을 보내도 초안으로 남습니다. 같은 식별자가 여러 번 와도 거절하지 않고 한 번만 바꿉니다.
 - 한 트랜잭션에서 모두 바꾸며, 하나라도 바꿀 수 없으면 아무것도 바꾸지 않습니다. 일부만 바뀌면 운영자가 어느 항목이 바뀌었는지 다시 찾아야 하기 때문입니다.
   - 없거나 삭제된 항목이 있으면 404 `JOB_NOT_FOUND`·`BOOTCAMP_NOT_FOUND`·`RECRUITMENT_POST_NOT_FOUND`이며, 운영자가 골라낼 수 있게 `message` 끝에 그 식별자를 오름차순으로 담습니다: `일자리 공고를 찾을 수 없습니다. (id: 7, 999)`. 오류 응답의 세 필드 계약은 그대로 두었습니다([예외 처리 기준](error-handling.md#3-예외-분류와-응답)).
-  - 승인 전 기업회원 콘텐츠나 보관된 채용공고를 `VISIBLE`로 바꾸려 하면 409 `REVIEW_NOT_APPROVED`·`JOB_ARCHIVED`입니다. 어느 항목 때문인지는 담지 않습니다.
+  - 승인 전 기업회원 콘텐츠를 `VISIBLE`로 바꾸려 하면 409 `REVIEW_NOT_APPROVED`입니다. 어느 항목 때문인지는 담지 않습니다.
 - `ids`는 1건 이상 1000건 이하입니다. 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고 한 트랜잭션의 잠금이 길어지지 않을 만큼으로 정했습니다. 비었거나 넘치거나 양수가 아닌 값이 있거나 `visibility`가 없으면 400 `BAD_REQUEST`입니다.
 - 여러 요청이 같은 항목을 잠글 때 교착되지 않도록 식별자 순으로 잠급니다.
 - 성공하면 200과 `data: null`로 응답합니다. 바뀐 항목은 목록을 다시 조회해 확인합니다.
@@ -265,17 +264,18 @@ DELETE /api/v1/internal/bootcamps/{bootcampId}
 ### 공지사항
 
 ```text
-GET    /api/v1/notices                        사용자 API, 로그인 없이 조회
-GET    /api/v1/notices/{noticeId}
+GET    /api/v1/announcements                          사용자 API, 로그인 없이 조회
+GET    /api/v1/announcements/{announcementId}
 
-GET    /api/v1/admin/notices                  관리자 콘솔
-POST   /api/v1/admin/notices
-GET    /api/v1/admin/notices/{noticeId}
-PATCH  /api/v1/admin/notices/{noticeId}
-DELETE /api/v1/admin/notices/{noticeId}
+GET    /api/v1/admin/announcements                    관리자 콘솔
+POST   /api/v1/admin/announcements
+GET    /api/v1/admin/announcements/{announcementId}
+PATCH  /api/v1/admin/announcements/{announcementId}
+DELETE /api/v1/admin/announcements/{announcementId}
 ```
 
 - 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요
+- 2026-10-06에 경로와 코드·테이블 이름을 `notices`에서 `announcements`로 바꿨습니다(리뷰 상태: 팀 리뷰 필요). 앞으로 생길 알림(notification)과 이름이 헷갈리지 않게 하려는 것입니다. 에러 코드도 `ANNOUNCEMENT_NOT_FOUND`로 바뀌었습니다.
 - 공지는 관리자만 작성하므로 쓰기 경로는 관리자 API에만 둡니다. 사용자 API에는 GET만 열고 나머지 메서드는 거부합니다.
 - 노출·상단 고정도 콘솔의 다른 콘텐츠처럼 `PATCH`로 내용과 함께 부분 수정합니다. 1절의 관리자 콘솔 예외와 같은 이유입니다.
 - 응답 계약은 [API 성공 응답의 공지사항](api-response.md#공지사항)을 따릅니다.

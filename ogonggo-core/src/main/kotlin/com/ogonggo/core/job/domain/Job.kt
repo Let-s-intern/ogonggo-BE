@@ -1,15 +1,14 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.job.error.JobErrorCode
 import com.querydsl.core.annotations.PropertyType
 import com.querydsl.core.annotations.QueryType
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -106,10 +105,10 @@ class Job internal constructor(
     industry: String? = null,
     coverImageUrl: String? = null,
     logoUrl: String? = null,
-    employmentType: EmploymentType,
-    experienceType: ExperienceType,
+    employmentType: JobEmploymentType,
+    experienceType: JobExperienceType,
     experienceMinYears: Int? = null,
-    educationLevel: EducationLevel = EducationLevel.ANY,
+    educationLevel: JobEducationLevel = JobEducationLevel.ANY,
     region: Region? = null,
     subRegion: SubRegion? = null,
     recruitmentType: JobRecruitmentType,
@@ -219,12 +218,12 @@ class Job internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "employment_type", nullable = false, length = 30)
-    var employmentType: EmploymentType = employmentType /* 고용 형태 */
+    var employmentType: JobEmploymentType = employmentType /* 고용 형태 */
         protected set
 
     @Enumerated(EnumType.STRING)
     @Column(name = "experience_type", nullable = false, length = 30)
-    var experienceType: ExperienceType = experienceType /* 요구 경력 유형 */
+    var experienceType: JobExperienceType = experienceType /* 요구 경력 유형 */
         protected set
 
     @Column(name = "experience_min_years")
@@ -233,7 +232,7 @@ class Job internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "education_level", nullable = false, length = 30)
-    var educationLevel: EducationLevel = educationLevel /* 요구 학력 */
+    var educationLevel: JobEducationLevel = educationLevel /* 요구 학력 */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -353,7 +352,7 @@ class Job internal constructor(
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", length = 20)
-    var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
+    var reviewStatus: ContentReviewStatus? = if (ownerUserId == null) null else ContentReviewStatus.PENDING /* 검수 상태 */
         protected set
 
     /** 운영자나 기업회원이 직접 마감한 일시다. 모집 종료 일시가 지나 자동으로 마감하면 값을 남기지 않는다. */
@@ -383,10 +382,10 @@ class Job internal constructor(
         industry: String?,
         coverImageUrl: String?,
         logoUrl: String?,
-        employmentType: EmploymentType,
-        experienceType: ExperienceType,
+        employmentType: JobEmploymentType,
+        experienceType: JobExperienceType,
         experienceMinYears: Int?,
-        educationLevel: EducationLevel,
+        educationLevel: JobEducationLevel,
         region: Region?,
         subRegion: SubRegion?,
         recruitmentType: JobRecruitmentType,
@@ -409,7 +408,7 @@ class Job internal constructor(
         sourceUrl: String?,
         now: LocalDateTime,
     ) {
-        checkModifiable()
+        checkNotDeleted()
         validateJobValues(
             companyName = companyName,
             parentCompanyName = parentCompanyName,
@@ -470,7 +469,7 @@ class Job internal constructor(
      * 수집한 공고도 고칠 수 있다. 크롤러가 원문 구조를 잘못 읽어 왔을 때 통째로 내리지 않게 하기 위해서다.
      */
     fun editContent(title: String?, contents: Map<JobContentField, String?>) {
-        checkModifiable()
+        checkNotDeleted()
         require(title == null || title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
         require(contents.values.all { it == null || it.isNotBlank() }) { "본문 칸은 공백일 수 없습니다." }
 
@@ -507,25 +506,20 @@ class Job internal constructor(
     // TODO: MVP 이후 DRAFT -> PUBLISHED 등 허용 상태 전이를 명시적인 상태 머신으로 강화한다.
     /** 기업회원 공고는 검수 승인을 받아야만 노출한다. 게시하는 쪽이 누구든 같은 규칙을 따른다. */
     fun publish() {
-        checkModifiable()
-        if (reviewStatus != null && reviewStatus != ReviewStatus.APPROVED) {
-            throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
+        checkNotDeleted()
+        if (reviewStatus != null && reviewStatus != ContentReviewStatus.APPROVED) {
+            throw ConflictException(ContentReviewErrorCode.REVIEW_NOT_APPROVED)
         }
         publicationStatus = JobPublicationStatus.PUBLISHED
     }
 
     fun hide() {
-        checkModifiable()
+        checkNotDeleted()
         publicationStatus = JobPublicationStatus.HIDDEN
     }
 
-    fun archive() {
-        checkNotDeleted()
-        publicationStatus = JobPublicationStatus.ARCHIVED
-    }
-
     fun close(now: LocalDateTime) {
-        checkModifiable()
+        checkNotDeleted()
         if (closedAt == null) {
             closedAt = now
         }
@@ -541,20 +535,20 @@ class Job internal constructor(
     /** 승인하면 곧바로 노출한다. 승인 결과를 알릴 경로가 없어 다시 게시하게 하면 공고가 비노출로 남는다. */
     fun approveReview() {
         checkReviewable()
-        reviewStatus = ReviewStatus.APPROVED
+        reviewStatus = ContentReviewStatus.APPROVED
         publicationStatus = JobPublicationStatus.PUBLISHED
     }
 
     fun rejectReview() {
         checkReviewable()
-        reviewStatus = ReviewStatus.REJECTED
+        reviewStatus = ContentReviewStatus.REJECTED
         unpublish()
     }
 
     /** 기업회원이 내용을 고치거나 운영자가 판정을 되돌리면 다시 검수를 기다리며, 그동안 노출하지 않는다. */
     fun requestReview() {
         checkReviewable()
-        reviewStatus = ReviewStatus.PENDING
+        reviewStatus = ContentReviewStatus.PENDING
         unpublish()
     }
 
@@ -565,16 +559,9 @@ class Job internal constructor(
     }
 
     private fun checkReviewable() {
-        checkModifiable()
-        if (reviewStatus == null) {
-            throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
-        }
-    }
-
-    private fun checkModifiable() {
         checkNotDeleted()
-        if (publicationStatus == JobPublicationStatus.ARCHIVED) {
-            throw ConflictException(JobErrorCode.JOB_ARCHIVED)
+        if (reviewStatus == null) {
+            throw ConflictException(ContentReviewErrorCode.CONTENT_NOT_REVIEWABLE)
         }
     }
 

@@ -1,7 +1,7 @@
 package com.ogonggo.adminapi.content.business
 
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.community.domain.RecruitmentPostSortType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.enumeration.EnumField
 import com.ogonggo.core.job.domain.JobSortType
 

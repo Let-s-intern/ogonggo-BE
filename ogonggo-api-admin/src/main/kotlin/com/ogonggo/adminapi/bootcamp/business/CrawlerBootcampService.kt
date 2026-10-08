@@ -2,7 +2,7 @@ package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
@@ -41,7 +41,7 @@ class CrawlerBootcampService(
         }
 
         val bootcamp = bootcampAppender.append(command.toAppendDto())
-        changeStatus(bootcamp, from = BootcampStatus.RECRUITING, to = command.status ?: BootcampStatus.RECRUITING)
+        changeStatus(bootcamp, from = BootcampRecruitmentStatus.RECRUITING, to = command.status ?: BootcampRecruitmentStatus.RECRUITING)
         return checkNotNull(bootcamp.id) { "저장된 부트캠프 식별자가 없습니다." }
     }
 
@@ -74,14 +74,14 @@ class CrawlerBootcampService(
         checkNotNull(bootcampReader.readCrawledBySourceUrl(sourceUrl).id) { "부트캠프 식별자가 없습니다." }
 
     /** 모집 마감은 마감 일시가 함께 있어야 하므로 상태를 직접 넣지 않고 도메인 전이로 바꾼다. */
-    private fun changeStatus(bootcamp: Bootcamp, from: BootcampStatus, to: BootcampStatus) {
+    private fun changeStatus(bootcamp: Bootcamp, from: BootcampRecruitmentStatus, to: BootcampRecruitmentStatus) {
         if (from == to) {
             return
         }
         when (to) {
-            BootcampStatus.RECRUITING -> bootcampManager.startRecruitment(bootcamp)
-            BootcampStatus.CLOSED -> bootcampManager.close(bootcamp, LocalDateTime.now(clock))
-            BootcampStatus.DRAFT -> throw IllegalArgumentException("크롤러 부트캠프는 임시저장으로 바꿀 수 없습니다.")
+            BootcampRecruitmentStatus.RECRUITING -> bootcampManager.startRecruitment(bootcamp)
+            BootcampRecruitmentStatus.CLOSED -> bootcampManager.close(bootcamp, LocalDateTime.now(clock))
+            BootcampRecruitmentStatus.DRAFT -> throw IllegalArgumentException("크롤러 부트캠프는 임시저장으로 바꿀 수 없습니다.")
         }
     }
 }
@@ -110,7 +110,7 @@ private fun CrawlerBootcampCommand.toAppendDto(): BootcampAppendDto = BootcampAp
     inquiryUrl = inquiryUrl,
     sourceUrl = sourceUrl,
     curriculums = curriculumDtos(),
-    status = BootcampStatus.RECRUITING,
+    status = BootcampRecruitmentStatus.RECRUITING,
     publicationStatus = BootcampPublicationStatus.PUBLISHED,
 )
 

@@ -8,13 +8,13 @@ import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.number
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.section
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.text
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24WorkStudyPageDto
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import java.time.LocalDateTime
 import java.time.LocalTime
 
@@ -63,8 +63,8 @@ internal object Work24WorkStudyJobMapper {
         return JobAppendDto(
             companyName = requireNotNull(company ?: institution) { "학습기업과 훈련기관 이름이 없습니다." }.limit(COMPANY_NAME_MAX),
             title = title.limit(TITLE_MAX),
-            employmentType = EmploymentType.WORK_STUDY,
-            experienceType = ExperienceType.IRRELEVANT,
+            employmentType = JobEmploymentType.WORK_STUDY,
+            experienceType = JobExperienceType.IRRELEVANT,
             region = subRegion?.region ?: Work24JobMapper.region(item.text("trngAreaCd"), item.text("address")),
             subRegion = subRegion,
             recruitmentType = if (hasPeriod) JobRecruitmentType.PERIOD else JobRecruitmentType.ALWAYS_OPEN,

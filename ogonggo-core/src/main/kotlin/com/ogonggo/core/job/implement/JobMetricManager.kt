@@ -2,11 +2,11 @@ package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.persistence.JobMetricJpaRepository
-import org.springframework.dao.DataIntegrityViolationException
+import com.ogonggo.core.jpa.ensureRowCreated
+import java.time.LocalDateTime
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
 
 /**
  * 지표 행 생성만 호출자와 분리된 트랜잭션에서 처리한다.
@@ -16,7 +16,7 @@ import java.time.LocalDateTime
  * 실패한 쪽은 상대가 만든 행을 읽지도, 이어서 갱신하지도 못한다.
  */
 @Component
-internal class JobMetricRegistrar(
+internal class JobMetricAppender(
     private val jobMetricRepository: JobMetricJpaRepository,
 ) {
 
@@ -29,7 +29,7 @@ internal class JobMetricRegistrar(
 @Component
 class JobMetricManager internal constructor(
     private val jobMetricRepository: JobMetricJpaRepository,
-    private val jobMetricRegistrar: JobMetricRegistrar,
+    private val jobMetricAppender: JobMetricAppender,
 ) {
 
     fun increaseViewCount(jobId: Long, now: LocalDateTime) {
@@ -46,20 +46,8 @@ class JobMetricManager internal constructor(
         jobMetricRepository.syncBookmarkCount(jobId, now)
     }
 
-    /**
-     * 갱신보다 먼저 행을 준비한다.
-     * 없는 행을 UPDATE로 먼저 찾으면 MySQL이 그 자리에 gap lock을 걸어,
-     * 같은 스레드가 여는 생성 전용 트랜잭션의 INSERT가 잠금 대기 시간 초과로 실패한다.
-     * 다른 요청이 먼저 만들었으면 생성 전용 트랜잭션만 롤백되므로 그대로 이어서 갱신한다.
-     */
-    private fun ensureMetric(jobId: Long) {
-        if (jobMetricRepository.findByJobId(jobId) != null) {
-            return
-        }
-        try {
-            jobMetricRegistrar.create(jobId)
-        } catch (exception: DataIntegrityViolationException) {
-            return
-        }
-    }
+    private fun ensureMetric(jobId: Long) = ensureRowCreated(
+        exists = { jobMetricRepository.findByJobId(jobId) != null },
+        create = { jobMetricAppender.create(jobId) },
+    )
 }

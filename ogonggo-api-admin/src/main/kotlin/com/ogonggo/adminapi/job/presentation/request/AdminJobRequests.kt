@@ -5,7 +5,7 @@ import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.AdminJobUpdateCommand
 import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.job.domain.JobContentField
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import jakarta.validation.constraints.Size
 
 /** 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고, 한 트랜잭션의 잠금이 지나치게 길어지지 않을 만큼으로 둔다. */
@@ -19,7 +19,7 @@ private const val MAX_VISIBILITY_CHANGE_IDS = 1000
  */
 data class UpdateAdminJobRequest(
     val visibility: AdminContentVisibility?,
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     @field:Size(max = 255) val title: String?,
     val fields: Map<String, String?>?,
 ) {
@@ -27,7 +27,7 @@ data class UpdateAdminJobRequest(
         if (title != null && title.isBlank()) {
             throw InvalidRequestFieldException("title", "제목을 입력해 주세요.")
         }
-        if (reviewStatus == ReviewStatus.REJECTED) {
+        if (reviewStatus == ContentReviewStatus.REJECTED) {
             throw InvalidRequestFieldException("reviewStatus", "반려는 검수 화면에서 사유와 함께 처리해 주세요.")
         }
         return AdminJobUpdateCommand(

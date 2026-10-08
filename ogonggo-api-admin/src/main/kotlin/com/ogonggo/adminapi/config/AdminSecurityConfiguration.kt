@@ -5,8 +5,8 @@ import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.implement.AdminAccessTokenParser
 import com.ogonggo.adminapi.auth.implement.AdminJwtProperties
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter
-import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter
-import com.ogonggo.adminapi.internal.implement.InternalApiProperties
+import com.ogonggo.adminapi.auth.presentation.InternalApiKeyAuthenticationFilter
+import com.ogonggo.adminapi.auth.implement.InternalApiProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

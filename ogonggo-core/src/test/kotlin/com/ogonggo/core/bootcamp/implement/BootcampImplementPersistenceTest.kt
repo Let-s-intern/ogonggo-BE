@@ -1,6 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
@@ -8,9 +8,9 @@ import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
@@ -19,17 +19,16 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
-import com.ogonggo.core.bootcamp.persistence.BootcampApplicationUrlClickJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampCurriculumJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampMetricJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampPartnerJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -51,10 +50,9 @@ import org.springframework.test.context.ContextConfiguration
     BootcampManager::class,
     BootcampMetricReader::class,
     BootcampMetricManager::class,
-    BootcampMetricRegistrar::class,
+    BootcampMetricAppender::class,
     BootcampBookmarkManager::class,
     BootcampBookmarkReader::class,
-    BootcampApplicationUrlClickAppender::class,
     ContentRejectionManager::class,
 )
 internal class BootcampImplementPersistenceTest @Autowired constructor(
@@ -66,9 +64,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     private val bootcampMetricManager: BootcampMetricManager,
     private val bootcampBookmarkManager: BootcampBookmarkManager,
     private val bootcampBookmarkReader: BootcampBookmarkReader,
-    private val bootcampApplicationUrlClickAppender: BootcampApplicationUrlClickAppender,
     private val bootcampBookmarkRepository: BootcampBookmarkJpaRepository,
-    private val bootcampApplicationUrlClickRepository: BootcampApplicationUrlClickJpaRepository,
     private val bootcampMetricRepository: BootcampMetricJpaRepository,
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
@@ -230,7 +226,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         bootcampManager.startRecruitment(lockedBootcamp)
 
         assertEquals(
-            BootcampStatus.RECRUITING,
+            BootcampRecruitmentStatus.RECRUITING,
             bootcampReader.readPublic(bootcampId).status,
         )
     }
@@ -309,11 +305,11 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
 
         assertEquals(
             listOf(recruiting.id),
-            publicPage(condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.RECRUITING), now = now).bootcamps.map { it.id },
+            publicPage(condition = BootcampSearchCondition(recruitmentStatus = BootcampRecruitmentStatus.RECRUITING), now = now).bootcamps.map { it.id },
         )
         assertEquals(
             listOf(closed.id),
-            publicPage(condition = BootcampSearchCondition(recruitmentStatus = BootcampStatus.CLOSED), now = now).bootcamps.map { it.id },
+            publicPage(condition = BootcampSearchCondition(recruitmentStatus = BootcampRecruitmentStatus.CLOSED), now = now).bootcamps.map { it.id },
         )
         assertEquals(2L, publicPage(now = now).totalElements)
     }
@@ -344,13 +340,13 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     fun `검색어는 회사명과 프로그램명을 대소문자 없이 찾고 다른 필터와 함께 걸린다`() {
         val now = LocalDateTime.of(2026, 9, 15, 12, 0)
         val byTitle = bootcampAppender.append(
-            createCommand(companyName = "다른 교육사", title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE),
+            createCommand(companyName = "다른 교육사", title = "Spring 백엔드 부트캠프", tuitionType = BootcampTuitionType.FREE),
         )
         val byCompany = bootcampAppender.append(
             work24Command("A-1").copy(companyName = "SPRING 교육사", title = "데이터 부트캠프"),
         )
         val unrelated = bootcampAppender.append(
-            createCommand(companyName = "다른 교육사", title = "디자인 부트캠프", tuitionType = TuitionType.FREE),
+            createCommand(companyName = "다른 교육사", title = "디자인 부트캠프", tuitionType = BootcampTuitionType.FREE),
         )
         listOf(byTitle, byCompany, unrelated).forEach(bootcampManager::startRecruitment)
 
@@ -368,27 +364,6 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         )
         // 공백만 있는 검색어는 검색하지 않은 것과 같다.
         assertEquals(3L, publicPage(condition = BootcampSearchCondition(keyword = " "), now = now).totalElements)
-    }
-
-    @Test
-    fun `지원 페이지 이동은 사용자와 부트캠프마다 한 행만 남긴다`() {
-        val bootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
-        val otherBootcampId = checkNotNull(bootcampAppender.append(createCommand()).id)
-
-        bootcampApplicationUrlClickAppender.append(USER_ID, bootcampId)
-        bootcampApplicationUrlClickAppender.append(USER_ID, bootcampId)
-        bootcampApplicationUrlClickAppender.append(OTHER_USER_ID, bootcampId)
-        bootcampApplicationUrlClickAppender.append(USER_ID, otherBootcampId)
-
-        assertEquals(3L, bootcampApplicationUrlClickRepository.count())
-        assertEquals(
-            true,
-            bootcampApplicationUrlClickRepository.existsByBootcampIdAndUserId(bootcampId, USER_ID),
-        )
-        assertEquals(
-            false,
-            bootcampApplicationUrlClickRepository.existsByBootcampIdAndUserId(otherBootcampId, OTHER_USER_ID),
-        )
     }
 
     /** 고용24에서 수집한 부트캠프다. 외부 식별값이 있어야 한다. */
@@ -499,7 +474,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         curriculums: List<BootcampCurriculumDto.Request> = emptyList(),
         companyName: String = "오공고 교육사",
         title: String = "백엔드 부트캠프",
-        tuitionType: TuitionType = TuitionType.FREE,
+        tuitionType: BootcampTuitionType = BootcampTuitionType.FREE,
         publicationStatus: BootcampPublicationStatus =
             BootcampPublicationStatus.PUBLISHED,
         ownerUserId: Long? = null,
@@ -510,7 +485,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         companyName = companyName,
         title = title,
         programType = "개발",
-        operationType = OperationType.ONLINE,
+        operationType = BootcampOperationType.ONLINE,
         recruitmentType = BootcampRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 8, 1, 0, 0),
         recruitmentEndAt = LocalDateTime.of(2026, 8, 31, 23, 59),
@@ -522,7 +497,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         representativeImageUrl = "https://example.com/images/bootcamp.png",
         shortDescription = "백엔드 개발자로 성장하는 12주",
         content = "부트캠프 상세 내용",
-        applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+        applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
         publicationStartAt = publicationStartAt,
         publicationEndAt = publicationEndAt,
@@ -734,17 +709,17 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     fun `북마크 목록은 공개 목록과 같은 필터와 검색어로 좁히고 전체 건수에도 반영한다`() {
         // given
         val target = startedRecruitmentBootcampId(
-            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE),
+            createCommand(title = "Spring 백엔드 부트캠프", tuitionType = BootcampTuitionType.FREE),
         )
         val otherCategory = startedRecruitmentBootcampId(
             work24Command("A-1").copy(title = "Spring 백엔드 부트캠프"),
         )
         val otherTitle = startedRecruitmentBootcampId(
-            createCommand(title = "디자인 부트캠프", tuitionType = TuitionType.FREE),
+            createCommand(title = "디자인 부트캠프", tuitionType = BootcampTuitionType.FREE),
         )
         listOf(target, otherCategory, otherTitle).forEach { bootcampBookmarkManager.append(USER_ID, it, NOW) }
         // 북마크하지 않은 부트캠프는 조건에 맞아도 나오지 않는다.
-        startedRecruitmentBootcampId(createCommand(title = "Spring 백엔드 부트캠프", tuitionType = TuitionType.FREE))
+        startedRecruitmentBootcampId(createCommand(title = "Spring 백엔드 부트캠프", tuitionType = BootcampTuitionType.FREE))
 
         // when
         val page = bootcampBookmarkReader.readBookmarkedPublicPage(
@@ -794,18 +769,18 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         companyName = "변경 교육사",
         title = "변경 부트캠프",
         programType = "데이터",
-        operationType = OperationType.OFFLINE,
+        operationType = BootcampOperationType.OFFLINE,
         recruitmentType = BootcampRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0),
         recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59),
         programStartDate = LocalDate.of(2026, 10, 1),
         programEndDate = LocalDate.of(2027, 1, 1),
-        tuitionType = TuitionType.PAID,
+        tuitionType = BootcampTuitionType.PAID,
         tuitionAmount = 1_000_000,
         representativeImageUrl = "https://example.com/images/updated.png",
         shortDescription = "데이터 분석가로 성장하는 12주",
         content = "변경된 부트캠프 상세 내용",
-        applicationMethod = ApplicationMethod.EMAIL,
+        applicationMethod = BootcampApplicationMethod.EMAIL,
         partners = partners,
         curriculums = curriculums,
     )

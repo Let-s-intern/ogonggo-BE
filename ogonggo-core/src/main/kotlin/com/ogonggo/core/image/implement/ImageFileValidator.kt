@@ -2,7 +2,7 @@ package com.ogonggo.core.image.implement
 
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.error.ImageUploadErrorCode
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
 import org.springframework.stereotype.Component
 
 /**
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class ImageFileValidator {
 
-    fun validate(command: ImageUploadCommand): ValidatedImage {
+    fun validate(command: ImageUploadDto): ValidatedImage {
         if (command.content.isEmpty()) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_REQUIRED)
         }

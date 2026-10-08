@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Component
 
-private fun invalid(reason: String): Nothing = throw LexicalEditorStateException(reason)
-
 object LexicalEditorStateJson {
     fun isValid(content: String): Boolean {
         if (content.length > MAX_SERIALIZED_LENGTH || content.isBlank()) return false
@@ -19,13 +17,15 @@ object LexicalEditorStateJson {
 /**
  * Lexical EditorState를 저장하기 전에 JSON 형식과 크기만 검증한다.
  * 검증을 통과한 JSON은 DB에 저장할 수 있는 canonical 문자열로 반환한다.
+ *
+ * 형식 오류는 요청 필드 검증 오류라 응답 형식을 정하는 각 API가 [invalid]로 예외를 정한다.
  */
 @Component
 class LexicalEditorStateValidator(
     private val objectMapper: ObjectMapper,
 ) {
 
-    fun validateAndSerialize(content: String): String {
+    fun validateAndSerialize(content: String, invalid: (reason: String) -> Nothing): String {
         if (content.length > MAX_SERIALIZED_LENGTH) {
             invalid("본문 JSON은 ${MAX_SERIALIZED_LENGTH}자 이하여야 합니다.")
         }

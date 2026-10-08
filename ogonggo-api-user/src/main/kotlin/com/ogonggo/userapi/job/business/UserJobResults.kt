@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -20,8 +20,8 @@ data class UserJobCalendarItem(
     val title: String,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val recruitmentStartAt: LocalDateTime,
@@ -83,12 +83,12 @@ data class UserJobSummary(
     val title: String,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val experienceMinYears: Int?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val region: Region?,
     val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
@@ -133,12 +133,12 @@ data class UserJobResult(
     val title: String,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val experienceMinYears: Int?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val region: Region?,
     val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,

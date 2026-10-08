@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.job.presentation.request
 
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -12,6 +12,7 @@ import com.ogonggo.userapi.error.InvalidRequestFieldException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.LocalDateTime
 
 class CompanyJobRequestTest {
 
@@ -62,6 +63,19 @@ class CompanyJobRequestTest {
     }
 
     @Test
+    fun `모집 시작 일시가 종료 일시보다 늦으면 시작 일시 칸이 틀렸다고 알린다`() {
+        val exception = assertThrows<InvalidRequestFieldException> {
+            request(
+                recruitmentType = JobRecruitmentType.PERIOD,
+                recruitmentStartAt = LocalDateTime.of(2026, 10, 1, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
+            ).toCommand()
+        }
+
+        assertEquals("recruitmentStartAt", exception.fieldName)
+    }
+
+    @Test
     fun `직무가 보낸 직군에 속하지 않으면 직무 칸이 틀렸다고 알린다`() {
         // when
         val exception = assertThrows<InvalidRequestFieldException> {
@@ -89,6 +103,9 @@ class CompanyJobRequestTest {
         subRegion: SubRegion? = null,
         jobField: JobField? = null,
         jobRole: JobRole? = null,
+        recruitmentType: JobRecruitmentType = JobRecruitmentType.ALWAYS_OPEN,
+        recruitmentStartAt: LocalDateTime? = null,
+        recruitmentEndAt: LocalDateTime? = null,
     ) = CreateCompanyJobRequest(
         companyName = "오공고",
         parentCompanyName = null,
@@ -98,16 +115,16 @@ class CompanyJobRequestTest {
         industry = null,
         coverImageUrl = null,
         logoUrl = logoUrl,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.NEWCOMER,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.NEWCOMER,
         experienceMinYears = null,
         educationLevel = null,
         region = region,
         subRegion = subRegion,
-        recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
+        recruitmentType = recruitmentType,
         recruitmentHeadcount = null,
-        recruitmentStartAt = null,
-        recruitmentEndAt = null,
+        recruitmentStartAt = recruitmentStartAt,
+        recruitmentEndAt = recruitmentEndAt,
         closesWhenFilled = null,
         autoCloseEnabled = null,
         companyAndTeamIntroduction = null,

@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.presentation
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobField
@@ -42,8 +42,8 @@ class UserJobBookmarkController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
-        @RequestParam(name = "employmentType", required = false) employmentType: EmploymentType?,
-        @RequestParam(name = "experienceType", required = false) experienceType: ExperienceType?,
+        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
+        @RequestParam(name = "experienceType", required = false) experienceType: JobExperienceType?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
         @RequestParam(name = "region", required = false) region: Region?,

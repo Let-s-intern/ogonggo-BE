@@ -5,13 +5,13 @@ import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionTarget
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Collector
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24CollectDto
 import com.ogonggo.core.error.InternalServerException
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 
 class AdminWork24CollectionServiceTest {
 
