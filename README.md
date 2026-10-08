@@ -21,7 +21,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 ogonggo-api-user  ---> ogonggo-core <--- ogonggo-api-admin
 ```
 
-- `ogonggo-core`: user, job, bootcamp, recruitment post and announcement domain boundaries; JPA persistence
+- `ogonggo-core`: user, job, bootcamp, recruitment post, concern (취준고민) and announcement domain boundaries; JPA persistence
 - `ogonggo-api-user`: public API and LetsCareer login integration
 - `ogonggo-api-admin`: administrator API boundary
 
