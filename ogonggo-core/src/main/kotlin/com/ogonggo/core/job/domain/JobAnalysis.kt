@@ -41,7 +41,7 @@ internal class JobAnalysis(
     var id: Long? = null /* 공고 분석 식별자 */
         protected set
 
-    @Column(name = "content_hash", nullable = false, length = CONTENT_HASH_LENGTH)
+    @Column(name = "content_hash", nullable = false, length = JobAnalysisContent.CONTENT_HASH_LENGTH)
     var contentHash: String = contentHash /* 분석한 본문의 해시 */
         protected set
 
@@ -53,7 +53,7 @@ internal class JobAnalysis(
     var guideVersion: Int? = guideVersion /* 크롤러의 분석 방법 판 번호 */
         protected set
 
-    @Column(name = "model", nullable = false, length = MODEL_MAX_LENGTH)
+    @Column(name = "model", nullable = false, length = JobAnalysisContent.MODEL_MAX_LENGTH)
     var model: String = model /* 분석한 AI 모델 */
         protected set
 
@@ -72,10 +72,5 @@ internal class JobAnalysis(
     /** 본문이 그대로임을 확인했다. 다음 대상 선정에서 다시 비교하지 않는다. */
     fun confirm(jobUpdatedAt: LocalDateTime) {
         this.jobUpdatedAt = jobUpdatedAt
-    }
-
-    companion object {
-        const val CONTENT_HASH_LENGTH = 64
-        const val MODEL_MAX_LENGTH = 100
     }
 }

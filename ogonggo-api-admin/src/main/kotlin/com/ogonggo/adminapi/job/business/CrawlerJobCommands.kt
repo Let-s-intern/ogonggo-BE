@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.job.business
 
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -50,4 +51,12 @@ data class CrawlerJobCommand(
 data class CrawlerJobRegistrationCommand(
     val job: CrawlerJobCommand,
     val tags: List<String>,
+)
+
+/** 크롤러가 보낸 공고 분석이다. [contentHash]는 분석한 본문의 해시다. */
+data class CrawlerJobAnalysisCommand(
+    val contentHash: String,
+    val guideVersion: Int?,
+    val model: String,
+    val content: JobAnalysisContent,
 )

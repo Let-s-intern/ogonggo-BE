@@ -51,5 +51,9 @@ data class JobAnalysisContent(
         const val MAX_CONDITIONS = 8
         const val MAX_COMPETENCIES = 3
         const val MAX_EXPERIENCES = 3
+
+        /** 본문 해시([Job.contentHash]) 길이와 분석 모델 이름의 최대 길이. 저장 칸의 크기다. */
+        const val CONTENT_HASH_LENGTH = 64
+        const val MODEL_MAX_LENGTH = 100
     }
 }
