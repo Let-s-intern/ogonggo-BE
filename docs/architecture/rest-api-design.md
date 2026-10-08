@@ -195,6 +195,7 @@ PUT /api/v1/admin/jobs/today
 PATCH /api/v1/admin/jobs/visibility
 PATCH /api/v1/admin/bootcamps/visibility
 PATCH /api/v1/admin/recruitment-posts/visibility
+PATCH /api/v1/admin/concerns/visibility
 ```
 
 - 결정일: 2026-10-01 / 리뷰 상태: 팀 리뷰 필요
@@ -202,12 +203,13 @@ PATCH /api/v1/admin/recruitment-posts/visibility
 - 본문은 `{ "ids": [7, 3], "visibility": "HIDDEN" }`입니다. `visibility`는 단건 수정과 같은 `VISIBLE`·`HIDDEN`이며, 고른 항목의 노출 상태 한 칸만 바꾸므로 PATCH입니다. 경로는 컬렉션의 `visibility` 속성을 가리키며 `/{jobId}`보다 먼저 매칭됩니다.
 - 노출만 바꾸고 검수 상태·내용은 바꾸지 않습니다. 이미 요청한 노출인 항목은 건드리지 않고 성공으로 봅니다. 그래서 같은 요청을 반복해도 결과가 같고, 초안에 `HIDDEN`을 보내도 초안으로 남습니다. 같은 식별자가 여러 번 와도 거절하지 않고 한 번만 바꿉니다.
 - 한 트랜잭션에서 모두 바꾸며, 하나라도 바꿀 수 없으면 아무것도 바꾸지 않습니다. 일부만 바뀌면 운영자가 어느 항목이 바뀌었는지 다시 찾아야 하기 때문입니다.
-  - 없거나 삭제된 항목이 있으면 404 `JOB_NOT_FOUND`·`BOOTCAMP_NOT_FOUND`·`RECRUITMENT_POST_NOT_FOUND`이며, 운영자가 골라낼 수 있게 `message` 끝에 그 식별자를 오름차순으로 담습니다: `일자리 공고를 찾을 수 없습니다. (id: 7, 999)`. 오류 응답의 세 필드 계약은 그대로 두었습니다([예외 처리 기준](error-handling.md#3-예외-분류와-응답)).
+  - 없거나 삭제된 항목이 있으면 404 `JOB_NOT_FOUND`·`BOOTCAMP_NOT_FOUND`·`RECRUITMENT_POST_NOT_FOUND`·`CONCERN_NOT_FOUND`이며, 운영자가 골라낼 수 있게 `message` 끝에 그 식별자를 오름차순으로 담습니다: `일자리 공고를 찾을 수 없습니다. (id: 7, 999)`. 오류 응답의 세 필드 계약은 그대로 두었습니다([예외 처리 기준](error-handling.md#3-예외-분류와-응답)).
   - 승인 전 기업회원 콘텐츠를 `VISIBLE`로 바꾸려 하면 409 `REVIEW_NOT_APPROVED`입니다. 어느 항목 때문인지는 담지 않습니다.
 - `ids`는 1건 이상 1000건 이하입니다. 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고 한 트랜잭션의 잠금이 길어지지 않을 만큼으로 정했습니다. 비었거나 넘치거나 양수가 아닌 값이 있거나 `visibility`가 없으면 400 `BAD_REQUEST`입니다.
 - 여러 요청이 같은 항목을 잠글 때 교착되지 않도록 식별자 순으로 잠급니다.
 - 성공하면 200과 `data: null`로 응답합니다. 바뀐 항목은 목록을 다시 조회해 확인합니다.
 - 사이드·스터디 모집글(결정일: 2026-10-02 / 리뷰 상태: 팀 리뷰 필요)은 공개(`PUBLISHED`)를 `VISIBLE`, 비공개(`HIDDEN`)를 `HIDDEN`으로 봅니다. 임시저장은 작성자만 보는 글이라 콘솔 목록에 없고, `ids`에 있으면 없는 모집글과 같이 404입니다. 운영자가 숨긴 모집글은 작성자의 내 모집글 관리에 비공개로 보이며, 작성자가 게시(`POST .../publish`)로 되돌릴 수 없어 400 `RECRUITMENT_POST_NOT_READY`입니다. 다시 내놓는 것은 운영자만 합니다. 숨긴 모집글을 작성자가 복사해 새로 게시하는 것을 막을지는 **확인 필요**입니다.
+- 취준고민 고민글(결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요)은 게시 상태 대신 숨김 여부(`concerns.hidden`)를 두고, 숨기지 않은 글을 `VISIBLE`, 숨긴 글을 `HIDDEN`으로 봅니다. 숨긴 고민글은 사용자 API에서 없는 글과 같습니다([API 성공 응답의 취준고민](api-response.md#취준고민)).
 - 검색 조건 전체를 받아 서버가 대상을 고르는 방식(`ids` 대신 필터)은 화면이 고른 항목만 바꾸는 요구와 달라 두지 않았습니다. 필요해지면 그때 정합니다.
 
 ### 서비스 개선 의견
@@ -312,6 +314,9 @@ GET    /api/v1/concerns/{concernId}/comments/{commentId}/replies               �
 DELETE /api/v1/concerns/{concernId}/comments/{commentId}
 PUT    /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
 DELETE /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
+GET    /api/v1/admin/concerns                                                  관리자 콘솔
+GET    /api/v1/admin/concerns/{concernId}
+PATCH  /api/v1/admin/concerns/visibility
 ```
 
 - 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
@@ -320,6 +325,7 @@ DELETE /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
 - 답변과 답글은 같은 `comments` 컬렉션에 두고, 답글은 요청 본문의 `parentId`로 구분합니다. 모집글 댓글과 같은 구조입니다.
 - 좋아요는 로그인한 사용자 자신의 표시 하나를 가리키는 단일 리소스(`likes/me`)로 보고, 북마크와 달리 PUT·DELETE로 둡니다. 버튼을 빠르게 두 번 눌러도 409 없이 같은 결과가 되게 하려는 것입니다.
 - 답변·답글 삭제는 모집글 댓글과 같이 이미 지운 댓글이면 404입니다.
+- 관리자 콘솔은 목록·상세 조회와 노출 일괄 변경([관리자 콘솔 노출 일괄 변경](#관리자-콘솔-노출-일괄-변경))만 둡니다. 운영자가 고민글을 고치거나 지우는 API와 답변 관리 API는 두지 않았습니다(2026-10-08).
 - 응답 계약은 [API 성공 응답의 취준고민](api-response.md#취준고민)을 따릅니다.
 
 ### 관리자 회원 조회
