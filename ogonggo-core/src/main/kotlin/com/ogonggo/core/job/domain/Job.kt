@@ -19,6 +19,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import java.security.MessageDigest
 import java.time.LocalDateTime
 
 /**
@@ -497,6 +498,27 @@ class Job internal constructor(
         JobContentField.HIRING_PROCESS -> hiringProcess
     }
 
+    /**
+     * 공고 분석([JobAnalysis])이 어느 본문에 대한 것인지 가르는 해시다. 제목과 본문 여덟 칸으로 센다.
+     * 사용자가 원문 탭에서 보는 글이 바뀌면 분석도 다시 만들어야 하므로, 그 밖의 칸(마감·노출 등)은 넣지 않는다.
+     */
+    fun contentHash(): String {
+        val text = listOf(
+            title,
+            companyAndTeamIntroduction,
+            responsibilities,
+            qualifications,
+            preferredQualifications,
+            compensation,
+            benefits,
+            hiringProcess,
+            recruitmentNotice,
+        ).joinToString(CONTENT_HASH_SEPARATOR) { it.orEmpty() }
+        return MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
     /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. 자동 마감 작업과 경계를 맞춘다. */
     private fun recruitmentStatusAt(now: LocalDateTime): JobRecruitmentStatus {
         val expired = recruitmentEndAt?.isBefore(now) == true
@@ -608,3 +630,6 @@ private fun validateJobValues(
         "모집 시작 일시는 종료 일시보다 늦을 수 없습니다."
     }
 }
+
+/** 칸 사이 구분자. 본문에 나오지 않는 글자를 써서 칸의 경계가 옮겨 가도 같은 해시가 되지 않게 한다. */
+private const val CONTENT_HASH_SEPARATOR = "\u0000"

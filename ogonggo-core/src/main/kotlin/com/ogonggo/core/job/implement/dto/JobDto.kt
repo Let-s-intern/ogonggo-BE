@@ -121,3 +121,9 @@ data class JobMetricDto(
         )
     }
 }
+
+/** 공고 분석 후보. `targets`는 분석이 없거나 본문이 바뀐 공고, `unchanged`는 본문이 그대로인 공고다. */
+data class JobAnalysisCandidateDto(
+    val targets: List<Job>,
+    val unchanged: List<Job>,
+)
