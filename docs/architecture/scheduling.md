@@ -37,6 +37,7 @@ scheduled_jobs (name, cron, enabled)
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
 | `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |
+| `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 
 2026-09-27 이전에는 앞의 두 작업이 기동 직후부터 1시간 간격(`fixedDelay`)으로 돌았고 주기를 `application.yml`로 바꿨다. 지금은 매시 정해진 분에 돌며 해당 설정 키는 쓰지 않는다.
 

@@ -174,6 +174,18 @@ GET /api/v1/recommended-challenges
 - 오공고 리소스가 아니라 렛츠커리어가 이 사용자에게 추천한 챌린지 모음이므로, `/challenges`가 아닌 `recommended-challenges`로 이름에 추천임을 드러냅니다. 오공고가 챌린지 목록·상세를 따로 열 계획은 없습니다.
 - 응답 계약은 [API 성공 응답의 추천 렛츠커리어 챌린지](api-response.md#추천-렛츠커리어-챌린지)를 따릅니다.
 
+### 채용공고별 렛츠커리어 콘텐츠 추천
+
+```text
+GET /api/v1/jobs/{jobId}/recommended-lets-career-contents
+```
+
+- 결정일: 2026-10-09 / 리뷰 상태: 팀 리뷰 필요
+- 추천은 공고마다 다르므로 채용공고 하위에 둡니다. 오공고가 소유한 리소스가 아니라 렛츠커리어 콘텐츠 가운데 이 공고에 맞춰 고른 모음이라 `recommended-`로 추천임을 드러냅니다.
+- 채용공고 조회와 같이 로그인 없이 엽니다(`GET /api/v1/jobs/**`).
+- 공고 상세 응답에 싣지 않고 따로 둔 이유는 추천 계산이 실패해도 상세는 떠야 하고, 화면에서 따로 늦게 그려도 되기 때문입니다.
+- 응답 계약은 [API 성공 응답의 채용공고별 렛츠커리어 콘텐츠 추천](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)을 따릅니다.
+
 ### 오늘의 공고
 
 ```text
@@ -259,6 +271,20 @@ PUT /api/v1/internal/jobs/{jobId}/analysis
   - 요청의 `contentHash`가 지금 본문 해시와 다르면 409 `JOB_ANALYSIS_OUTDATED`입니다. 대상을 받은 뒤 본문이 바뀐 경우이며, 그 공고는 다음 대상 조회에 다시 나옵니다.
   - 없거나 지워진 공고는 404 `JOB_NOT_FOUND`입니다. 게시 상태는 보지 않습니다.
 - 크롤러는 매일 고용24 수집(04:00)과 크롤러 매일 수집 뒤에 이 두 API로 분석합니다. 실행 시각은 크롤러 설정이 정합니다.
+
+### 크롤러 렛츠커리어 콘텐츠 태그
+
+```text
+GET /api/v1/internal/lets-career-contents/tag-targets?size={개수}
+PUT /api/v1/internal/lets-career-contents/{contentId}/tags
+```
+
+- 결정일: 2026-10-09 / 리뷰 상태: 팀 리뷰 필요
+- 공고별 콘텐츠 추천([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천))에 쓰는 태그를 크롤러가 AI로 붙입니다. 공고 분석과 같은 이유로 서버에는 AI 클라이언트를 두지 않습니다. 인증은 같은 내부 API 키입니다.
+- 대상 조회는 렛츠커리어 목록에 있는 콘텐츠 가운데 태그가 없거나 태그한 뒤로 종류·분류·제목·설명·단서의 해시(`contentHash`)가 바뀐 것을 오래된 것부터 `size`건(기본 50, 1 이상 200 이하) 줍니다. 모집 기간만 바뀐 콘텐츠는 다시 태그하지 않습니다.
+- 태그는 직군(`jobFields`)·직무(`jobRoles`)·준비 단계(`topics`)이며 콘텐츠마다 하나뿐이라 통째로 바꾸는 PUT입니다. 200과 `data: null`로 응답합니다. 직군·직무를 모두 비우면 어느 직무에나 맞는 콘텐츠로 봅니다.
+  - 요청의 `contentHash`가 지금 해시와 다르면 409 `LETS_CAREER_CONTENT_TAGS_OUTDATED`입니다. 그 콘텐츠는 다음 대상 조회에 다시 나옵니다.
+  - 없거나 렛츠커리어 목록에서 빠진 콘텐츠는 404 `LETS_CAREER_CONTENT_NOT_FOUND`입니다.
 
 ### 크롤러 부트캠프
 

@@ -4,6 +4,7 @@ import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.userapi.bootcamp.presentation.BootcampAutoCloseScheduler
 import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.job.presentation.JobAutoCloseScheduler
+import com.ogonggo.userapi.letscareercontent.presentation.LetsCareerContentSyncScheduler
 import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.user.presentation.LetsCareerJobProfileSyncScheduler
 import org.springframework.context.annotation.Bean
@@ -56,5 +57,13 @@ class UserScheduledJobConfiguration {
         defaultCron = "*/30 * * * * *",
         description = "오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송 (30초마다)",
         action = scheduler::sendPending,
+    )
+
+    @Bean
+    fun letsCareerContentSyncJob(scheduler: LetsCareerContentSyncScheduler) = ScheduledJobDefinition(
+        name = LetsCareerContentSyncScheduler.SCHEDULER_NAME,
+        defaultCron = "0 10 * * * *",
+        description = "공고 상세 추천에 쓰는 렛츠커리어 프로그램·자료집·블로그 사본을 렛츠커리어 목록과 맞춤 (매시 10분)",
+        action = scheduler::sync,
     )
 }
