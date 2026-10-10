@@ -4,6 +4,7 @@ import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContent
 import com.ogonggo.core.letscareercontent.implement.LetsCareerContentReader
+import com.ogonggo.core.letscareercontent.implement.LetsCareerContentRecommendSettingReader
 import com.ogonggo.userapi.letscareercontent.implement.LetsCareerContentRecommendPolicy
 import com.ogonggo.userapi.letscareercontent.implement.dto.RecommendedLetsCareerContentDto
 import org.springframework.stereotype.Service
@@ -15,6 +16,7 @@ class UserLetsCareerContentService(
     private val jobReader: JobReader,
     private val jobAnalysisReader: JobAnalysisReader,
     private val letsCareerContentReader: LetsCareerContentReader,
+    private val letsCareerContentRecommendSettingReader: LetsCareerContentRecommendSettingReader,
     private val letsCareerContentRecommendPolicy: LetsCareerContentRecommendPolicy,
     private val clock: Clock,
 ) {
@@ -24,7 +26,14 @@ class UserLetsCareerContentService(
         val job = jobReader.readPublished(jobId)
         val analysis = jobAnalysisReader.readCurrent(job)
         return letsCareerContentRecommendPolicy
-            .recommend(job, analysis, letsCareerContentReader.readAll(), LocalDateTime.now(clock), RECOMMEND_SIZE)
+            .recommend(
+                job = job,
+                analysis = analysis,
+                contents = letsCareerContentReader.readAll(),
+                weights = letsCareerContentRecommendSettingReader.readWeights(),
+                now = LocalDateTime.now(clock),
+                size = RECOMMEND_SIZE,
+            )
             .map(LetsCareerContent::toRecommendedDto)
     }
 
