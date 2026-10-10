@@ -37,6 +37,7 @@ scheduled_jobs (name, cron, enabled)
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
 | `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |
+| `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 | `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
 | `jobBookmarkAlimTalkDelivery` | 사용자 | `* * * * * *` | due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |

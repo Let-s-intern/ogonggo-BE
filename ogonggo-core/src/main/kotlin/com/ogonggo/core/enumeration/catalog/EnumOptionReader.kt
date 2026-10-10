@@ -43,6 +43,8 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
+import com.ogonggo.core.letscareercontent.domain.LetsCareerContentKind
+import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTopic
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
@@ -102,6 +104,9 @@ class EnumOptionReader {
             enumOptionsOf<ContentReviewTargetType>(),
             enumOptionsOf<ContentReviewStatus>(),
             enumOptionsOf<ContentSource>(),
+            // 공고 상세의 렛츠커리어 콘텐츠 추천
+            enumOptionsOf<LetsCareerContentKind>(),
+            enumOptionsOf<LetsCareerContentTopic>(),
             // 북마크
             enumOptionsOf<BookmarkSortType>(),
             // 사이드 프로젝트·스터디 모집글
