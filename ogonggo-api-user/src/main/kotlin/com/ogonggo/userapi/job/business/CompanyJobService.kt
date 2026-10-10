@@ -1,19 +1,19 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.user.domain.UserRole
-import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserReader
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 /**
  * 기업회원이 자기 채용공고를 등록하고 관리한다.
@@ -81,11 +81,7 @@ class CompanyJobService(
 
     private fun verifyCompany(userId: Long) {
         val account = userReader.read(userId)
-        when (account.status) {
-            UserStatus.ACTIVE -> Unit
-            UserStatus.SUSPENDED -> throw ForbiddenException(UserErrorCode.USER_SUSPENDED)
-            UserStatus.WITHDRAWN -> throw ForbiddenException(UserErrorCode.USER_WITHDRAWN)
-        }
+        account.status.requireActive()
         if (account.role != UserRole.COMPANY) {
             throw ForbiddenException(UserErrorCode.COMPANY_ROLE_REQUIRED)
         }

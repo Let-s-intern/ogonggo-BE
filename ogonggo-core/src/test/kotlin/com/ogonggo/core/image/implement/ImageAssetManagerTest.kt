@@ -6,7 +6,7 @@ import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
-import com.ogonggo.core.storage.s3.S3ImageStorage
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -18,7 +18,7 @@ import java.time.LocalDateTime
 class ImageAssetManagerTest {
 
     private val repository = Mockito.mock(ImageAssetJpaRepository::class.java)
-    private val storage = Mockito.mock(S3ImageStorage::class.java)
+    private val storage = Mockito.mock(S3ObjectClient::class.java)
     private val manager = ImageAssetManager(repository, storage, ObjectMapper())
     private val now = LocalDateTime.of(2026, 9, 12, 10, 0)
 
@@ -54,7 +54,7 @@ class ImageAssetManagerTest {
         Mockito.`when`(
             repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(setOf(asset.id), 17L),
         ).thenReturn(listOf(asset))
-        Mockito.`when`(storage.publicUrl(Mockito.anyString())).thenAnswer { invocation ->
+        Mockito.`when`(storage.urlOf(Mockito.anyString())).thenAnswer { invocation ->
             "https://cdn.example.com/${invocation.arguments[0]}"
         }
 

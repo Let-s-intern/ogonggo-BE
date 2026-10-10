@@ -1,9 +1,9 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -15,9 +15,9 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -63,7 +63,7 @@ internal class JobManagementPersistenceTest @Autowired constructor(
             listOf(companyApproved.id, companyPending.id),
             ids(JobManagementSearchCondition(source = ContentSource.COMPANY)),
         )
-        assertEquals(listOf(companyPending.id), ids(JobManagementSearchCondition(reviewStatus = ReviewStatus.PENDING)))
+        assertEquals(listOf(companyPending.id), ids(JobManagementSearchCondition(reviewStatus = ContentReviewStatus.PENDING)))
         assertEquals(
             listOf(crawledHidden.id),
             ids(JobManagementSearchCondition(source = ContentSource.CRAWLER, published = false)),
@@ -211,8 +211,8 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         title = title,
         jobField = jobField,
         jobRole = jobRole,
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         recruitmentType = recruitmentType,
         recruitmentEndAt = recruitmentEndAt,
         publicationStatus = publicationStatus,
@@ -221,8 +221,8 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     private fun updateCommand(recruitmentEndAt: LocalDateTime): JobUpdateDto = JobUpdateDto(
         companyName = "오공고",
         title = "백엔드 개발자",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentEndAt = recruitmentEndAt,
     )

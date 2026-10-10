@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional
  * 태그는 공고와 독립적인 마스터 데이터이므로 따로 커밋해도 무결성이 깨지지 않는다.
  */
 @Component
-internal class TagRegistrar(
+internal class TagAppender(
     private val tagRepository: TagJpaRepository,
 ) {
 
@@ -30,7 +30,7 @@ internal class TagRegistrar(
 class JobTagAppender internal constructor(
     private val tagRepository: TagJpaRepository,
     private val jobTagRepository: JobTagJpaRepository,
-    private val tagRegistrar: TagRegistrar,
+    private val tagAppender: TagAppender,
 ) {
 
     /**
@@ -60,7 +60,7 @@ class JobTagAppender internal constructor(
     private fun readOrCreateTagId(name: String): Long =
         findTagId(name)
             ?: try {
-                tagRegistrar.create(name)
+                tagAppender.create(name)
             } catch (exception: DataIntegrityViolationException) {
                 findTagId(name) ?: throw exception
             }

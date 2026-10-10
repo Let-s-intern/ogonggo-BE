@@ -3,7 +3,7 @@ package com.ogonggo.userapi.advertisement.presentation
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryService
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
+import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.business.CreateAdvertisementInquiryCommand
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -137,7 +137,7 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
-            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
+            promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }

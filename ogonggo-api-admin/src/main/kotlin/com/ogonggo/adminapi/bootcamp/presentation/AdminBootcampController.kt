@@ -11,9 +11,9 @@ import com.ogonggo.adminapi.error.InvalidRequestParameterException
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -40,11 +40,11 @@ class AdminBootcampController(
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "visibility", required = false) visibility: AdminContentVisibility?,
         @RequestParam(name = "source", required = false) source: ContentSource?,
-        @RequestParam(name = "reviewStatus", required = false) reviewStatus: ReviewStatus?,
-        @RequestParam(name = "status", required = false) status: BootcampStatus?,
+        @RequestParam(name = "reviewStatus", required = false) reviewStatus: ContentReviewStatus?,
+        @RequestParam(name = "status", required = false) status: BootcampRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminBootcampSummaryResponse>>> {
         // 임시저장은 콘솔에서 만들 수 있는 상태가 아니라 필터로 두면 골라도 늘 0건이다.
-        if (status == BootcampStatus.DRAFT) {
+        if (status == BootcampRecruitmentStatus.DRAFT) {
             throw InvalidRequestParameterException("status", "RECRUITING 또는 CLOSED만 고를 수 있습니다.")
         }
         val result = adminBootcampService.getBootcamps(

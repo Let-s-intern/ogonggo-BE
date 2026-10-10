@@ -1,6 +1,6 @@
 package com.ogonggo.core.notification.delivery.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult

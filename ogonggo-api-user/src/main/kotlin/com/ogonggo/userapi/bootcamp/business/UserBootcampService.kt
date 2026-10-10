@@ -3,11 +3,12 @@ package com.ogonggo.userapi.bootcamp.business
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.implement.BootcampApplicationUrlClickAppender
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
+import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
@@ -16,7 +17,7 @@ class UserBootcampService(
     private val bootcampReader: BootcampReader,
     private val bootcampBookmarkReader: BootcampBookmarkReader,
     private val bootcampContentReader: BootcampContentReader,
-    private val bootcampApplicationUrlClickAppender: BootcampApplicationUrlClickAppender,
+    private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val bootcampMetricReader: BootcampMetricReader,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
@@ -65,9 +66,9 @@ class UserBootcampService(
      * 열어 두면 동시에 누른 두 요청 중 하나가 유니크 제약에 걸릴 때
      * 그 실패가 트랜잭션을 롤백 대상으로 만들어, 기록은 이미 남았는데도 응답이 실패한다.
      */
-    fun recordApplicationUrlClick(userId: Long, bootcampId: Long) {
+    fun recordSourceUrlClick(userId: Long, bootcampId: Long) {
         bootcampReader.readPublic(bootcampId)
-        bootcampApplicationUrlClickAppender.append(userId, bootcampId)
+        sourceUrlClickAppender.append(SourceUrlClickTargetType.BOOTCAMP, bootcampId, userId)
     }
 
     /** 비로그인 조회에서는 북마크 저장소를 아예 건드리지 않는다. */

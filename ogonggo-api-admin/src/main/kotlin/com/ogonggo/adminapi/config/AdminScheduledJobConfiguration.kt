@@ -1,6 +1,6 @@
 package com.ogonggo.adminapi.config
 
-import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionScheduler
+import com.ogonggo.adminapi.ingestion.work24.presentation.Work24CollectionScheduler
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

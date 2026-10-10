@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.image.presentation
 
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
 import com.ogonggo.userapi.image.business.ImageUploadService
 import com.ogonggo.userapi.image.presentation.response.ImageUploadResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -26,7 +26,7 @@ class ImageUploadController(
     ): ResponseEntity<SuccessResponse<ImageUploadResponse>> {
         val result = imageUploadService.upload(
             userId = userId,
-            command = ImageUploadCommand(
+            command = ImageUploadDto(
                 content = file.bytes,
             ),
         )

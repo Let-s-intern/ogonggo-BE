@@ -1,9 +1,9 @@
 package com.ogonggo.userapi.job.presentation.request
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
@@ -12,6 +12,7 @@ import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestFieldException
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
@@ -37,10 +38,10 @@ interface CompanyJobWriteRequest {
     val coverImageUrl: String?
     /** 대표 이미지와 따로 보이는 기업 로고다. */
     val logoUrl: String?
-    val employmentType: EmploymentType
-    val experienceType: ExperienceType
+    val employmentType: JobEmploymentType
+    val experienceType: JobExperienceType
     val experienceMinYears: Int?
-    val educationLevel: EducationLevel?
+    val educationLevel: JobEducationLevel?
     val region: Region?
     val subRegion: SubRegion?
     val recruitmentType: JobRecruitmentType
@@ -65,15 +66,23 @@ interface CompanyJobWriteRequest {
 }
 
 /** 학력을 보내지 않으면 조건을 두지 않는다는 뜻이므로 학력 무관으로 본다. */
-private fun CompanyJobWriteRequest.educationLevelOrAny(): EducationLevel =
-    educationLevel ?: EducationLevel.ANY
+private fun CompanyJobWriteRequest.educationLevelOrAny(): JobEducationLevel =
+    educationLevel ?: JobEducationLevel.ANY
 
-/** 상시 채용은 종료 일시가 없어야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
+/**
+ * 상시 채용은 종료 일시가 없어야 하고, 시작 일시는 종료 일시보다 늦을 수 없다.
+ * 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다.
+ */
 private fun CompanyJobWriteRequest.validRecruitmentEndAt(): LocalDateTime? {
     if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN && recruitmentEndAt != null) {
         throw InvalidRequestFieldException("recruitmentEndAt", "상시 채용에는 모집 종료 일시를 둘 수 없습니다.")
     }
-    return recruitmentEndAt
+    val start = recruitmentStartAt
+    val end = recruitmentEndAt
+    if (start != null && end != null && start.isAfter(end)) {
+        throw InvalidRequestFieldException("recruitmentStartAt", "모집 종료 일시보다 늦을 수 없습니다.")
+    }
+    return end
 }
 
 /** 직무는 함께 보낸 직군에 속해야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
@@ -117,10 +126,11 @@ data class CreateCompanyJobRequest(
     @field:Size(max = 100) override val industry: String?,
     @field:Size(max = 2048) @field:URL override val coverImageUrl: String?,
     @field:Size(max = 2048) @field:URL override val logoUrl: String?,
-    override val employmentType: EmploymentType,
-    override val experienceType: ExperienceType,
+    override val employmentType: JobEmploymentType,
+    override val experienceType: JobExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
-    override val educationLevel: EducationLevel?,
+    @field:Schema(description = "학력 조건입니다. 보내지 않으면 학력 무관(ANY)으로 저장합니다.")
+    override val educationLevel: JobEducationLevel?,
     override val region: Region?,
     override val subRegion: SubRegion?,
     override val recruitmentType: JobRecruitmentType,
@@ -186,10 +196,11 @@ data class UpdateCompanyJobRequest(
     @field:Size(max = 100) override val industry: String?,
     @field:Size(max = 2048) @field:URL override val coverImageUrl: String?,
     @field:Size(max = 2048) @field:URL override val logoUrl: String?,
-    override val employmentType: EmploymentType,
-    override val experienceType: ExperienceType,
+    override val employmentType: JobEmploymentType,
+    override val experienceType: JobExperienceType,
     @field:PositiveOrZero override val experienceMinYears: Int?,
-    override val educationLevel: EducationLevel?,
+    @field:Schema(description = "학력 조건입니다. 보내지 않으면 학력 무관(ANY)으로 저장합니다.")
+    override val educationLevel: JobEducationLevel?,
     override val region: Region?,
     override val subRegion: SubRegion?,
     override val recruitmentType: JobRecruitmentType,

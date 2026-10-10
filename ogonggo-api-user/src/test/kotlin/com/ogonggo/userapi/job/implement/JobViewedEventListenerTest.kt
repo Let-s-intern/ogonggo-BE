@@ -5,6 +5,8 @@ import com.ogonggo.userapi.job.business.JobViewedEvent
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -14,7 +16,11 @@ class JobViewedEventListenerTest {
 
     private val jobMetricManager = Mockito.mock(JobMetricManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZONE)
-    private val listener = JobViewedEventListener(jobMetricManager, clock)
+    private val listener = JobViewedEventListener(
+        jobMetricManager,
+        TransactionTemplate(Mockito.mock(PlatformTransactionManager::class.java)),
+        clock,
+    )
 
     @Test
     fun `조회 이벤트를 받으면 현재 시각으로 조회 수를 증가시킨다`() {

@@ -1,7 +1,7 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 
 /**
  * 게시 상태와 무관하게 모든 미삭제 채용공고를 관리할 때 고르는 선택 필터다.
@@ -11,7 +11,7 @@ data class JobManagementSearchCondition(
     /** true면 게시 중인 공고만, false면 게시 중이 아닌 공고만 고른다. */
     val published: Boolean? = null,
     val source: ContentSource? = null,
-    val reviewStatus: ReviewStatus? = null,
+    val reviewStatus: ContentReviewStatus? = null,
     val recruitmentStatus: JobRecruitmentStatus? = null,
     /** 직군. 직무까지 정한 공고도 직군이 같으면 걸린다. */
     val jobField: JobField? = null,

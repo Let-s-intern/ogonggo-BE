@@ -4,7 +4,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.job.implement.event.JobRecruitmentDeadlineChangedEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component

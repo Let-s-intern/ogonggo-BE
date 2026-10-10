@@ -1,8 +1,8 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
@@ -11,7 +11,7 @@ import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -76,8 +76,8 @@ internal class JobBookmarkReminderNotificationPersistenceTest @Autowired constru
     private fun jobDto(recruitmentEndAt: LocalDateTime) = JobAppendDto(
         companyName = "오늘의공고",
         title = "백엔드 개발자",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.NEWCOMER,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.NEWCOMER,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentEndAt = recruitmentEndAt,
     )
@@ -85,8 +85,8 @@ internal class JobBookmarkReminderNotificationPersistenceTest @Autowired constru
     private fun updateDto(recruitmentEndAt: LocalDateTime) = JobUpdateDto(
         companyName = "오늘의공고",
         title = "백엔드 개발자",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.NEWCOMER,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.NEWCOMER,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentEndAt = recruitmentEndAt,
     )

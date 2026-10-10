@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSearchCondition
@@ -68,9 +68,9 @@ class UserJobBookmarkServiceTest {
         Mockito.`when`(job.id).thenReturn(JOB_ID)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
-        Mockito.`when`(job.employmentType).thenReturn(EmploymentType.FULL_TIME)
-        Mockito.`when`(job.experienceType).thenReturn(ExperienceType.EXPERIENCED)
-        Mockito.`when`(job.educationLevel).thenReturn(EducationLevel.ANY)
+        Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
+        Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
+        Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
         Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10)).thenReturn(

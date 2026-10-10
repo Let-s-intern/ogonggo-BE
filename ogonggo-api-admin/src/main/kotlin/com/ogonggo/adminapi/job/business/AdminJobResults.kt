@@ -1,9 +1,9 @@
 package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -14,8 +14,8 @@ import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import java.time.LocalDateTime
 
 data class AdminJobPageResult(
@@ -46,11 +46,11 @@ data class AdminJobSummary(
     val id: Long,
     val title: String,
     val companyName: String,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
@@ -62,7 +62,7 @@ data class AdminJobSummary(
     val commentCount: Long,
     val visibility: AdminContentVisibility,
     val source: ContentSource,
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
 ) {

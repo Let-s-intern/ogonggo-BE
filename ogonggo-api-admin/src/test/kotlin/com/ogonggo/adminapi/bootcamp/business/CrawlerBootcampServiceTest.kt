@@ -1,12 +1,12 @@
 package com.ogonggo.adminapi.bootcamp.business
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
@@ -74,11 +74,11 @@ class CrawlerBootcampServiceTest {
         assertEquals(BOOTCAMP_ID, bootcampId)
         val appended = checkNotNull(appendedCommand)
         assertNull(appended.ownerUserId)
-        assertEquals(BootcampStatus.RECRUITING, appended.status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, appended.status)
         assertEquals(BootcampPublicationStatus.PUBLISHED, appended.publicationStatus)
         assertEquals(SOURCE_URL, appended.sourceUrl)
         assertEquals("오공고 교육사", appended.companyName)
-        assertEquals(TuitionType.GOVERNMENT_FUNDED, appended.tuitionType)
+        assertEquals(BootcampTuitionType.GOVERNMENT_FUNDED, appended.tuitionType)
         assertEquals("edu@example.com", appended.managerEmail)
         // 로고는 대표 이미지와 따로 저장한다.
         assertEquals("https://example.com/images/bootcamp.png", appended.representativeImageUrl)
@@ -98,11 +98,11 @@ class CrawlerBootcampServiceTest {
     fun `모집 마감으로 보내면 모집 중으로 저장한 뒤 현재 시각으로 마감하고 게시한다`() {
         Mockito.`when`(bootcampReader.existsBySourceUrl(SOURCE_URL)).thenReturn(false)
 
-        val bootcampId = service.register(command(status = BootcampStatus.CLOSED))
+        val bootcampId = service.register(command(status = BootcampRecruitmentStatus.CLOSED))
 
         assertEquals(BOOTCAMP_ID, bootcampId)
         val appended = checkNotNull(appendedCommand)
-        assertEquals(BootcampStatus.RECRUITING, appended.status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, appended.status)
         assertNull(appended.closedAt)
         assertEquals(BootcampPublicationStatus.PUBLISHED, appended.publicationStatus)
         assertEquals(listOf("close"), managerCalls)
@@ -113,9 +113,9 @@ class CrawlerBootcampServiceTest {
     fun `모집 중으로 보내면 따로 상태를 바꾸지 않는다`() {
         Mockito.`when`(bootcampReader.existsBySourceUrl(SOURCE_URL)).thenReturn(false)
 
-        service.register(command(status = BootcampStatus.RECRUITING))
+        service.register(command(status = BootcampRecruitmentStatus.RECRUITING))
 
-        assertEquals(BootcampStatus.RECRUITING, checkNotNull(appendedCommand).status)
+        assertEquals(BootcampRecruitmentStatus.RECRUITING, checkNotNull(appendedCommand).status)
         assertEquals(emptyList<String>(), managerCalls)
     }
 
@@ -153,9 +153,9 @@ class CrawlerBootcampServiceTest {
     @Test
     fun `교체에 모집 마감을 보내면 모집 중이던 부트캠프를 현재 시각으로 마감한다`() {
         val bootcamp = stubCrawledBootcamp()
-        Mockito.`when`(bootcamp.status).thenReturn(BootcampStatus.RECRUITING)
+        Mockito.`when`(bootcamp.status).thenReturn(BootcampRecruitmentStatus.RECRUITING)
 
-        service.replace(BOOTCAMP_ID, command(status = BootcampStatus.CLOSED))
+        service.replace(BOOTCAMP_ID, command(status = BootcampRecruitmentStatus.CLOSED))
 
         assertEquals(listOf("update", "close"), managerCalls)
         assertEquals(NOW, closedAt)
@@ -164,16 +164,16 @@ class CrawlerBootcampServiceTest {
     @Test
     fun `교체에 모집 중을 보내면 마감된 부트캠프를 다시 모집 중으로 바꾼다`() {
         val bootcamp = stubCrawledBootcamp()
-        Mockito.`when`(bootcamp.status).thenReturn(BootcampStatus.CLOSED)
+        Mockito.`when`(bootcamp.status).thenReturn(BootcampRecruitmentStatus.CLOSED)
 
-        service.replace(BOOTCAMP_ID, command(status = BootcampStatus.RECRUITING))
+        service.replace(BOOTCAMP_ID, command(status = BootcampRecruitmentStatus.RECRUITING))
 
         assertEquals(listOf("update", "startRecruitment"), managerCalls)
     }
 
     @Test
     fun `교체에 지금과 같은 모집 상태를 보내면 상태를 바꾸지 않는다`() {
-        listOf(BootcampStatus.RECRUITING, BootcampStatus.CLOSED).forEach { status ->
+        listOf(BootcampRecruitmentStatus.RECRUITING, BootcampRecruitmentStatus.CLOSED).forEach { status ->
             managerCalls.clear()
             val bootcamp = stubCrawledBootcamp()
             Mockito.`when`(bootcamp.status).thenReturn(status)
@@ -227,27 +227,27 @@ class CrawlerBootcampServiceTest {
     private fun command(
         title: String = "백엔드 부트캠프",
         sourceUrl: String = SOURCE_URL,
-        status: BootcampStatus? = null,
+        status: BootcampRecruitmentStatus? = null,
         curriculums: List<CrawlerBootcampCurriculumCommand> = listOf(curriculum(1, 4, "자바 기초"), curriculum(5, 8, "스프링")),
     ): CrawlerBootcampCommand = CrawlerBootcampCommand(
         companyName = "오공고 교육사",
         title = title,
         programType = "개발",
-        operationType = OperationType.HYBRID,
+        operationType = BootcampOperationType.HYBRID,
         recruitmentType = BootcampRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0),
         recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
         programStartDate = LocalDate.of(2026, 10, 6),
         programEndDate = LocalDate.of(2027, 1, 30),
         capacity = 30,
-        tuitionType = TuitionType.GOVERNMENT_FUNDED,
+        tuitionType = BootcampTuitionType.GOVERNMENT_FUNDED,
         tuitionAmount = null,
         representativeImageUrl = "https://example.com/images/bootcamp.png",
         logoUrl = LOGO_URL,
         shortDescription = "백엔드 개발자로 성장하는 16주",
         content = "부트캠프 상세 내용",
         eligibilityAndSelectionProcess = null,
-        applicationMethod = ApplicationMethod.EXTERNAL_PAGE,
+        applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
         applicationUrl = "https://example.com/apply",
         managerEmail = "edu@example.com",
         inquiryUrl = null,

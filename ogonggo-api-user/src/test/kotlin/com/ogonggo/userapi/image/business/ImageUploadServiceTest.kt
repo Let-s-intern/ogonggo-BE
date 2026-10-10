@@ -4,8 +4,8 @@ import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.implement.ImageUploader
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
-import com.ogonggo.core.image.implement.dto.ImageUploadResult
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
+import com.ogonggo.core.image.implement.dto.ImageUploadResultDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -20,8 +20,8 @@ class ImageUploadServiceTest {
     @Test
     fun `공통 이미지 업로더를 호출하고 업로드 결과를 반환한다`() {
         val content = byteArrayOf(1, 2, 3)
-        val command = ImageUploadCommand(content)
-        val result = ImageUploadResult(
+        val command = ImageUploadDto(content)
+        val result = ImageUploadResultDto(
             id = "image-id",
             url = "https://cdn.example.com/images/image.png",
             mimeType = "image/png",
@@ -37,7 +37,7 @@ class ImageUploadServiceTest {
 
     @Test
     fun `공통 업로더의 이미지 검증 오류는 그대로 전달한다`() {
-        val command = ImageUploadCommand(byteArrayOf())
+        val command = ImageUploadDto(byteArrayOf())
         val exception = InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_REQUIRED)
         Mockito.`when`(imageUploader.upload(17L, command)).thenThrow(exception)
 
@@ -50,7 +50,7 @@ class ImageUploadServiceTest {
 
     @Test
     fun `공통 업로더의 저장 오류는 사용자 API 오류로 변환한다`() {
-        val command = ImageUploadCommand(byteArrayOf(1, 2, 3))
+        val command = ImageUploadDto(byteArrayOf(1, 2, 3))
         Mockito.`when`(imageUploader.upload(17L, command)).thenThrow(IllegalStateException("S3 unavailable"))
 
         val thrown = assertThrows(InternalServerException::class.java) {

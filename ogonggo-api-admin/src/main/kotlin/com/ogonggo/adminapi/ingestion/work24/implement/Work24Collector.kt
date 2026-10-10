@@ -6,7 +6,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -103,6 +103,7 @@ class Work24Collector(
     /**
      * 구인인증번호로 이미 등록했으면 건너뛴다. 운영자가 지운 공고도 등록한 것으로 본다.
      * 크롤러가 같은 원문을 먼저 등록했어도 건너뛰어 같은 공고가 두 번 보이지 않게 한다.
+     * 임시로 최소 경력이 [TEMPORARY_MAX_CAREER_YEARS]년보다 긴 공고는 뺀다. 연수는 상세에만 있다.
      */
     private fun importJob(target: Work24CollectionTarget, item: JsonNode): Outcome {
         val externalId = requireNotNull(id(target, item)) { "구인인증번호가 없습니다." }
@@ -112,6 +113,9 @@ class Work24Collector(
         }
 
         val detail = work24Client.fetch(target.detailApi, Work24JobMapper.detailParameters(item))
+        if ((Work24JobMapper.minCareerYears(detail) ?: 0) > TEMPORARY_MAX_CAREER_YEARS) {
+            return Outcome.EXCLUDED
+        }
         jobAppender.append(Work24JobMapper.toAppendDto(item, detail, sourceUrl, externalId))
         return Outcome.APPENDED
     }

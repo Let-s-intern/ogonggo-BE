@@ -1,9 +1,9 @@
 package com.ogonggo.adminapi.job.presentation.request
 
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,14 +17,14 @@ class CrawlerJobRegistrationRequestTest {
     fun `크롤러가 고른 판단 값을 서버가 다른 값으로 바꾸지 않는다`() {
         // 예전에는 모집 일시와 경력 연수가 없으면 상시 채용·경력 무관으로 바꿨다. 이제는 크롤러가 보낸 그대로다.
         val command = request(
-            experienceType = ExperienceType.NEWCOMER,
-            educationLevel = EducationLevel.HIGH_SCHOOL,
+            experienceType = JobExperienceType.NEWCOMER,
+            educationLevel = JobEducationLevel.HIGH_SCHOOL,
             recruitmentType = JobRecruitmentType.PERIOD,
         ).toCommand().job
 
-        assertEquals(ExperienceType.NEWCOMER, command.experienceType)
+        assertEquals(JobExperienceType.NEWCOMER, command.experienceType)
         assertEquals(null, command.experienceMinYears)
-        assertEquals(EducationLevel.HIGH_SCHOOL, command.educationLevel)
+        assertEquals(JobEducationLevel.HIGH_SCHOOL, command.educationLevel)
         assertEquals(JobRecruitmentType.PERIOD, command.recruitmentType)
         assertEquals(null, command.recruitmentStartAt)
         assertEquals(null, command.recruitmentEndAt)
@@ -69,13 +69,26 @@ class CrawlerJobRegistrationRequestTest {
     }
 
     @Test
+    fun `모집 시작 일시가 종료 일시보다 늦으면 시작 일시 칸이 틀렸다고 알린다`() {
+        val exception = assertThrows<InvalidRequestFieldException> {
+            request(
+                recruitmentType = JobRecruitmentType.PERIOD,
+                recruitmentStartAt = LocalDateTime.of(2026, 10, 1, 0, 0),
+                recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
+            ).toCommand()
+        }
+
+        assertEquals("recruitmentStartAt", exception.fieldName)
+    }
+
+    @Test
     fun `교체 요청은 등록 요청과 같은 칸을 옮긴다`() {
         val replace = CrawlerJobReplaceRequest(
             companyName = "오공고",
             title = "백엔드 개발자",
-            employmentType = EmploymentType.CONTRACT,
-            experienceType = ExperienceType.BOTH,
-            educationLevel = EducationLevel.ANY,
+            employmentType = JobEmploymentType.CONTRACT,
+            experienceType = JobExperienceType.BOTH,
+            educationLevel = JobEducationLevel.ANY,
             recruitmentType = JobRecruitmentType.PERIOD,
             recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59, 59),
             applyEmail = "recruit@example.com",
@@ -83,8 +96,8 @@ class CrawlerJobRegistrationRequestTest {
             sourceUrl = "https://example.com/jobs/1#2",
         ).toCommand()
 
-        assertEquals(EmploymentType.CONTRACT, replace.employmentType)
-        assertEquals(ExperienceType.BOTH, replace.experienceType)
+        assertEquals(JobEmploymentType.CONTRACT, replace.employmentType)
+        assertEquals(JobExperienceType.BOTH, replace.experienceType)
         assertEquals(LocalDateTime.of(2026, 9, 30, 23, 59, 59), replace.recruitmentEndAt)
         assertEquals("recruit@example.com", replace.applyEmail)
         assertEquals("hr@example.com", replace.inquiryEmail)
@@ -92,9 +105,10 @@ class CrawlerJobRegistrationRequestTest {
     }
 
     private fun request(
-        experienceType: ExperienceType = ExperienceType.IRRELEVANT,
-        educationLevel: EducationLevel = EducationLevel.ANY,
+        experienceType: JobExperienceType = JobExperienceType.IRRELEVANT,
+        educationLevel: JobEducationLevel = JobEducationLevel.ANY,
         recruitmentType: JobRecruitmentType = JobRecruitmentType.ALWAYS_OPEN,
+        recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
         recruitmentHeadcount: Int? = null,
         recruitmentNotice: String? = null,
@@ -105,10 +119,11 @@ class CrawlerJobRegistrationRequestTest {
         title = "백엔드 개발자",
         coverImageUrl = "https://example.com/cover.png",
         logoUrl = "https://example.com/logo.png",
-        employmentType = EmploymentType.FULL_TIME,
+        employmentType = JobEmploymentType.FULL_TIME,
         experienceType = experienceType,
         educationLevel = educationLevel,
         recruitmentType = recruitmentType,
+        recruitmentStartAt = recruitmentStartAt,
         recruitmentEndAt = recruitmentEndAt,
         recruitmentHeadcount = recruitmentHeadcount,
         closesWhenFilled = true,

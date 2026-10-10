@@ -1,8 +1,8 @@
 package com.ogonggo.core.job.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -14,7 +14,7 @@ import com.ogonggo.core.job.persistence.JobBookmarkReminderQueryRepository
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
-import com.ogonggo.core.review.implement.ContentRejectionManager
+import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.domain.UserRole
@@ -62,8 +62,8 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
             JobAppendDto(
                 companyName = "오늘의공고",
                 title = "백엔드 개발자",
-                employmentType = EmploymentType.FULL_TIME,
-                experienceType = ExperienceType.NEWCOMER,
+                employmentType = JobEmploymentType.FULL_TIME,
+                experienceType = JobExperienceType.NEWCOMER,
                 recruitmentType = JobRecruitmentType.PERIOD,
                 recruitmentEndAt = recruitmentEndAt,
                 publicationStatus = JobPublicationStatus.PUBLISHED,
@@ -149,8 +149,8 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
             JobAppendDto(
                 companyName = "오늘의공고",
                 title = "백엔드 개발자",
-                employmentType = EmploymentType.FULL_TIME,
-                experienceType = ExperienceType.NEWCOMER,
+                employmentType = JobEmploymentType.FULL_TIME,
+                experienceType = JobExperienceType.NEWCOMER,
                 recruitmentType = JobRecruitmentType.PERIOD,
                 recruitmentEndAt = recruitmentEndAt,
                 publicationStatus = JobPublicationStatus.PUBLISHED,
@@ -221,8 +221,8 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
             JobAppendDto(
                 companyName = "오늘의공고",
                 title = "백엔드 개발자",
-                employmentType = EmploymentType.FULL_TIME,
-                experienceType = ExperienceType.NEWCOMER,
+                employmentType = JobEmploymentType.FULL_TIME,
+                experienceType = JobExperienceType.NEWCOMER,
                 recruitmentType = JobRecruitmentType.PERIOD,
                 recruitmentEndAt = initialRecruitmentEndAt,
                 publicationStatus = JobPublicationStatus.PUBLISHED,
@@ -244,8 +244,8 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
             JobUpdateDto(
                 companyName = "오늘의공고",
                 title = "백엔드 개발자",
-                employmentType = EmploymentType.FULL_TIME,
-                experienceType = ExperienceType.NEWCOMER,
+                employmentType = JobEmploymentType.FULL_TIME,
+                experienceType = JobExperienceType.NEWCOMER,
                 recruitmentType = JobRecruitmentType.PERIOD,
                 recruitmentEndAt = recruitmentEndAt,
             ),

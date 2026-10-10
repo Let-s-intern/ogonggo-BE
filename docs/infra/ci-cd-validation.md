@@ -71,7 +71,7 @@ ECS를 건드리지도 않습니다.
 만들 수 있는지까지 함께 확인됩니다.
 
 ShedLock 테이블은 JPA 엔티티가 아니므로 `ddl-auto`가 생성하지 않습니다. 운영 DB에는 배포 전에
-`docs/schema/2026-09-17-lc3309-shedlock.sql`을 적용해 둔다는 전제로, 사용자 API는 기동 시 테이블
+테이블을 만들어 둔다는 전제로, 사용자 API는 기동 시 테이블
 존재 여부를 검사하지 않고 LockProvider만 초기화합니다. CI의 빈 MySQL은 ShedLock 잠금 실행까지
 검증하지 않으며, 운영 DB의 테이블·권한·잠금 동작은 별도의 운영 점검 대상입니다.
 
@@ -161,7 +161,7 @@ python3 .github/scripts/test_mask_application_secrets.py
 - **두 서비스가 공유하는 스키마의 정합성.** `deploy-main.yml`은 user와 admin을 병렬로 배포합니다.
   두 서비스의 운영 `ddl-auto`가 `none`이라 동시에 스키마를 바꾸지 않는다는 전제입니다. 시크릿의
   `ddl-auto` 값은 검사하지 않으므로, 한쪽을 `update`로 바꾸면 동시 스키마 갱신이 다시 생길 수 있습니다.
-  운영 DB 스키마가 새 엔티티와 맞는지도 확인하지 않습니다. `docs/schema`의 SQL을 배포 전에 적용해야 합니다.
+  운영 DB 스키마가 새 엔티티와 맞는지도 확인하지 않습니다. 스키마 변경은 배포 전에 운영 DB에 적용해야 합니다.
 
 ## 검증을 끄는 방법
 

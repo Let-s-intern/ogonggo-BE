@@ -1,13 +1,14 @@
 package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
-import com.ogonggo.userapi.bootcamp.implement.BootcampAutoCloseScheduler
-import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
-import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
-import com.ogonggo.userapi.job.implement.JobAutoCloseScheduler
+import com.ogonggo.userapi.bootcamp.presentation.BootcampAutoCloseScheduler
+import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
+import com.ogonggo.userapi.job.presentation.JobAutoCloseScheduler
+import com.ogonggo.userapi.letscareercontent.presentation.LetsCareerContentSyncScheduler
+import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
-import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler
+import com.ogonggo.userapi.user.presentation.LetsCareerJobProfileSyncScheduler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -76,5 +77,13 @@ class UserScheduledJobConfiguration {
         defaultCron = "0 30 3 * * *",
         description = "최종 상태로 바뀐 지 30일 지난 알림 정리 (매일 03:30)",
         action = scheduler::cleanup,
+    )
+
+    @Bean
+    fun letsCareerContentSyncJob(scheduler: LetsCareerContentSyncScheduler) = ScheduledJobDefinition(
+        name = LetsCareerContentSyncScheduler.SCHEDULER_NAME,
+        defaultCron = "0 10 * * * *",
+        description = "공고 상세 추천에 쓰는 렛츠커리어 프로그램·자료집·블로그 사본을 렛츠커리어 목록과 맞춤 (매시 10분)",
+        action = scheduler::sync,
     )
 }

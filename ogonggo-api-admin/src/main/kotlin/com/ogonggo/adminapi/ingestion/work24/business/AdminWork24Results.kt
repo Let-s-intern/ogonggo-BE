@@ -3,7 +3,7 @@ package com.ogonggo.adminapi.ingestion.work24.business
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionTarget
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24CollectDto
 
-/** 수집 대상 하나의 결과다. */
+/** 일일 수집에서 대상 하나의 결과다. */
 sealed interface AdminWork24CollectResult {
     val target: Work24CollectionTarget
 

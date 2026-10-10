@@ -1,9 +1,9 @@
 package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
@@ -85,9 +85,9 @@ class CrawlerJobServiceTest {
         assertEquals("https://example.com/cover.png", appended.coverImageUrl)
         assertEquals("https://example.com/logo.png", appended.logoUrl)
         // 크롤러가 고른 판단 값을 서버가 다른 값으로 바꾸지 않는다.
-        assertEquals(ExperienceType.BOTH, appended.experienceType)
+        assertEquals(JobExperienceType.BOTH, appended.experienceType)
         assertEquals(0, appended.experienceMinYears)
-        assertEquals(EducationLevel.BACHELOR, appended.educationLevel)
+        assertEquals(JobEducationLevel.BACHELOR, appended.educationLevel)
         assertEquals(JobRecruitmentType.PERIOD, appended.recruitmentType)
         assertEquals(3, appended.recruitmentHeadcount)
         assertEquals(true, appended.closesWhenFilled)
@@ -169,10 +169,10 @@ class CrawlerJobServiceTest {
         industry = "IT·정보통신업",
         coverImageUrl = "https://example.com/cover.png",
         logoUrl = "https://example.com/logo.png",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.BOTH,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.BOTH,
         experienceMinYears = 0,
-        educationLevel = EducationLevel.BACHELOR,
+        educationLevel = JobEducationLevel.BACHELOR,
         region = Region.SEOUL,
         subRegion = SubRegion.SEOUL_GANGNAM_GU,
         recruitmentType = JobRecruitmentType.PERIOD,

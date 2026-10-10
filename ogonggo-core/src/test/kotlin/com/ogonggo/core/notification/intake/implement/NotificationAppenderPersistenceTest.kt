@@ -1,6 +1,6 @@
 package com.ogonggo.core.notification.intake.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto

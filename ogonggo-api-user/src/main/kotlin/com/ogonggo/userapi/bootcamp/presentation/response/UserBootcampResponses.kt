@@ -1,10 +1,10 @@
 package com.ogonggo.userapi.bootcamp.presentation.response
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampImageResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampPartnerResult
@@ -19,21 +19,21 @@ data class UserBootcampSummaryResponse(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
     val representativeImageUrl: String?,
     @Schema(description = "운영 회사 로고 이미지 주소. 없으면 null")
     val logoUrl: String?,
     val shortDescription: String,
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     val closedAt: LocalDateTime?,
     val bookmarked: Boolean,
     val viewCount: Long,
@@ -73,14 +73,14 @@ data class UserBootcampDetailResponse(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     @Schema(description = "고용24에서 수집한 과정은 이미지가 없어 null입니다. 클라이언트가 기본 이미지를 보여 줍니다.")
     val representativeImageUrl: String?,
@@ -91,14 +91,14 @@ data class UserBootcampDetailResponse(
     val instructorInfo: String?,
     val programFeatures: String?,
     val completionRequirements: String?,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String?,
     val managerEmail: String?,
     val inquiryUrl: String?,
     val publicationStartAt: LocalDateTime?,
     val publicationEndAt: LocalDateTime?,
     val sourceUrl: String?,
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     val closedAt: LocalDateTime?,
     val bookmarked: Boolean,
     val viewCount: Long,

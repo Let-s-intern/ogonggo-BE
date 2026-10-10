@@ -117,7 +117,31 @@ class AdminJobService(
 
 `JobReader`는 조회 방법을 재사용하게 하고, 두 Service는 각자의 유스케이스 순서를 소유합니다. core에 `CoreJobService.getJob()`을 만들고 API Service가 그대로 위임하는 구조는 사용하지 않습니다.
 
-## 5. Implement 컴포넌트 이름
+## 5. 이름 규칙
+
+- 결정일: 2026-10-06 / 리뷰 상태: 팀 리뷰 필요
+- 배경: `common`처럼 "여러 곳에서 쓴다"는 이유로 모은 패키지와 `Post`·`PublicationStatus`처럼 루트가 드러나지 않는 이름이, 새 기능(취업고민 게시글 등)이 같은 단어를 쓰려 할 때 충돌했습니다. 이름이 무엇인지를 말하게 하려고 아래 규칙을 정했습니다.
+
+### 패키지
+
+> 업무 패키지는 그 안의 루트 엔티티 이름으로 짓는다.
+
+- `job` 패키지에는 `Job`, `recruitmentpost` 패키지에는 `RecruitmentPost`가 있습니다. 두 단어 이상이면 붙여 씁니다.
+- `common`, `util`, `community`, `content`, `board`처럼 범주나 화면 메뉴를 뜻하는 이름은 쓰지 않습니다. 범주 이름은 나중에 다른 기능이 들어오면서 뜻이 바뀌고, 어디에 둘지 애매한 코드가 모이는 곳이 됩니다.
+- 루트 엔티티가 없는 기술 패키지는 하는 일로 짓습니다. 예: `jpa`, `time`, `error`, `enumeration`, `paging`, `storage/s3`, `editor/lexical`.
+- 무엇을 둘지 고민될 때는 "이것은 무엇인가"를 묻고 그 답을 이름으로 씁니다. 답이 "여러 곳에서 쓰는 것"뿐이면 아직 묶을 근거가 없는 것이고, 한 단어로 답하기 어려우면 서로 다른 것이 섞여 있는 것입니다.
+
+### 딸린 타입
+
+> 상태, 유형, 방식, 정렬, 지표, 검색 조건, 에러 코드 같은 딸린 타입에는 루트 이름을 앞에 붙인다.
+
+- 예: `JobRecruitmentStatus`, `BootcampPublicationStatus`, `RecruitmentPostMetric`, `RecruitmentPostErrorCode`.
+- `PublicationStatus`, `ApplicationMethod`, `Status`, `Type`처럼 단독으로 쓰면 다른 도메인이 같은 단어를 쓸 때 충돌합니다.
+- 여러 루트가 같은 뜻으로 함께 쓰는 타입은 공통 개념 이름으로 짓습니다. 예: 채용공고·부트캠프·모집글 북마크가 함께 쓰는 `BookmarkSortType`, 검수 대상 콘텐츠 공통인 `ContentReviewStatus`·`ContentSource`.
+- 루트 엔티티 이름 자체는 일반 명사여도 됩니다. 이 프로젝트에서 그 이름으로 부르는 것이 하나뿐이면 `Post`도 쓸 수 있습니다.
+- 외부 시스템의 개념은 그 시스템 이름을 앞에 붙이고, 외부 시스템이 쓰는 용어를 그대로 씁니다. 예: `Work24Service`(고용24의 인증키 발급 단위).
+
+### Implement 컴포넌트
 
 `Helper`는 계층을 설명하는 포괄적 표현으로만 사용하고 클래스 이름에는 구체적인 책임을 표시합니다.
 
@@ -126,10 +150,34 @@ class AdminJobService(
 | `Reader` | 조회, not-found 처리, 조회 정책, 잠금 | `readPublished()`, `readForUpdate()` |
 | `Appender` | 신규 객체 생성과 최초 저장 | `append()` |
 | `Manager` | 기존 객체 변경 또는 구현 작업 조율 | `publish()`, `hide()` |
+| `Remover` | 삭제 정책이 따로 있는 삭제 | `remove()` |
 | `Validator` | 여러 흐름이 재사용하는 검증 | `validateBookmarkable()` |
 | `Policy` | 재사용 가능한 판단이나 계산 | `calculatePriority()` |
+| `Client` | 외부 시스템 호출 | `Work24Client`, `S3ObjectClient` |
 
-`CommonHelper`, `CoreHelper`, `UtilService`처럼 범위를 알 수 없는 이름은 사용하지 않습니다. 모든 역할을 기계적으로 분리할 필요는 없지만, 변경 이유가 둘 이상이면 책임별 분리를 검토합니다.
+`CommonHelper`, `CoreHelper`, `UtilService`처럼 범위를 알 수 없는 이름은 사용하지 않습니다. `Storage`, `Registrar`처럼 위 표에 없는 이름은 역할이 정말 다를 때만 쓰며, Spring 용어를 따르는 `ScheduledJobRegistrar`가 그 예입니다. 모든 역할을 기계적으로 분리할 필요는 없지만, 변경 이유가 둘 이상이면 책임별 분리를 검토합니다.
+
+core에는 `Service`라는 이름을 쓰지 않습니다. 유스케이스는 각 API의 Business Service가 소유합니다.
+
+### 코드·API·DB 이름 맞추기
+
+같은 개념은 클래스, 패키지, API 경로, 테이블 이름을 같은 단어로 씁니다. 예: `Announcement`, `announcement`, `/api/v1/announcements`, `announcements`.
+
+이름을 바꾸면 밖으로 드러나는 것이 함께 바뀌므로 범위를 먼저 확인합니다.
+
+| 바꾸는 것 | 함께 바뀌는 것 | 필요한 일 |
+| --- | --- | --- |
+| `EnumField` enum 클래스 이름 | `/enums` 응답 키(클래스 이름을 그대로 씀) | 프런트 협의, 전환 기간에는 예전 키를 함께 내려 줌 |
+| 요청·응답 DTO 클래스 이름 | OpenAPI 스키마 이름 | 프런트가 명세로 타입을 생성하면 알림 |
+| API 경로, `operationId`, 에러 코드 | 프런트 계약 | 프런트 협의 |
+| 엔티티의 테이블·칼럼·인덱스 이름 | 운영 DB | 배포 전 운영 DB 변경, 배포 순서 |
+| 패키지, 그 밖의 클래스 이름 | 없음 | 바로 변경 가능 |
+
+### 아직 규칙과 다른 곳
+
+루트 엔티티가 없는 패키지가 남아 있습니다. 해당 기능을 바꿀 때 함께 정리합니다(확인 필요).
+
+- `adminapi/content`(관리 목록 공통 정렬·노출), `userapi/challenge`, `userapi/advertisement`, `userapi/scheduling`(메트릭 모듈 분리 전까지 유지)
 
 ## 6. 의존성과 구현 규칙
 

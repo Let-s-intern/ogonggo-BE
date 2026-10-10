@@ -31,12 +31,13 @@ scheduled_jobs (name, cron, enabled)
 
 | 이름 | API | 기본 cron | 내용 |
 | --- | --- | --- | --- |
-| `communityRecruitmentPostAutoClose` | 사용자 | `0 0 * * * *` | 기간이 끝난 모집글 자동 마감 |
+| `recruitmentPostAutoClose` | 사용자 | `0 0 * * * *` | 기간이 끝난 모집글 자동 마감 |
 | `jobAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 채용공고 자동 마감. 직접 마감한 것이 아니므로 `closed_at`은 남기지 않는다 |
 | `bootcampAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 부트캠프 자동 마감 |
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
 | `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |
+| `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 | `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
 | `jobBookmarkAlimTalkDelivery` | 사용자 | `* * * * * *` | due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
@@ -45,7 +46,9 @@ scheduled_jobs (name, cron, enabled)
 
 ## 3. 작업을 추가하는 방법
 
-1. 작업 메서드를 가진 빈을 API의 `implement`에 두고 메서드에 `@SchedulerLock(name = 작업 이름)`을 붙인다.
+1. 스케줄러는 HTTP의 Controller처럼 진입점이므로 도메인의 `presentation`에 두고, 작업 메서드에 `@SchedulerLock(name = 작업 이름)`을 붙인다. 스케줄러는 실행 시간·결과 기록(`SchedulerExecutionObserver`)과 로그만 맡고, 할 일은 Business Service에 맡긴다.
+   - 트랜잭션은 [레이어 규칙](layers-and-modules.md#7-트랜잭션과-영속성-컨텍스트-규칙)대로 Service가 연다. core Implement는 트랜잭션을 열지 않는다.
+   - 외부 호출(렛츠커리어, S3, 고용24)을 기다리는 작업은 Service 전체를 트랜잭션으로 묶지 않고, 기록이 필요한 순간에만 짧게 연다.
 2. 같은 API의 `*ScheduledJobConfiguration`에 `ScheduledJobDefinition` 빈을 추가한다. `action`에는 그 빈의 메서드 참조를 넘겨야 프록시를 거쳐 잠금이 걸린다.
 3. 이 문서의 작업 목록을 갱신한다.
 

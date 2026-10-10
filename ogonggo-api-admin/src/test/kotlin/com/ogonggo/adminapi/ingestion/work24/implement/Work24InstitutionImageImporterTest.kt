@@ -1,8 +1,7 @@
 package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24InstitutionImagesDto
-import com.ogonggo.core.storage.s3.S3ImageStorage
-import com.ogonggo.core.storage.s3.S3ImageStorageProperties
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -20,13 +19,7 @@ class Work24InstitutionImageImporterTest {
     private val restClientBuilder = RestClient.builder()
     private val server = MockRestServiceServer.bindTo(restClientBuilder).build()
 
-    /** S3 대신 올린 키를 기록하고 공개 주소를 돌려준다. */
     private val uploadedKeys = mutableListOf<String>()
-    private val storage = Mockito.mock(S3ImageStorage::class.java) { invocation ->
-        val key = invocation.getArgument<String>(0)
-        uploadedKeys += key
-        "https://cdn.ogonggo.test/$key"
-    }
 
     @Test
     fun `훈련기관 소개 화면의 로고와 사진을 저장소로 옮기고 같은 기관은 다시 받지 않는다`() {
@@ -95,9 +88,18 @@ class Work24InstitutionImageImporterTest {
 
     private fun importer(bucket: String) = Work24InstitutionImageImporter(
         restClientBuilder.build(),
-        storage,
-        S3ImageStorageProperties(bucket = bucket),
+        s3ObjectClient(configured = bucket.isNotBlank()),
     )
+
+    /** S3 대신 올린 키를 기록하고 공개 주소를 돌려준다. */
+    private fun s3ObjectClient(configured: Boolean) = Mockito.mock(S3ObjectClient::class.java) { invocation ->
+        if (invocation.method.name == "isConfigured") {
+            return@mock configured
+        }
+        val key = invocation.getArgument<String>(0)
+        uploadedKeys += key
+        "https://cdn.ogonggo.test/$key"
+    }
 
     private companion object {
         const val SITE = "https://www.work24.go.kr"

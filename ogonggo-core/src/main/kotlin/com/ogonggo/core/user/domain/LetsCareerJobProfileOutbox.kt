@@ -11,6 +11,7 @@ import java.time.LocalDateTime
 /**
  * 렛츠커리어로 보낼 학력·희망 조건 변경이다. 사용자당 한 행만 두고, 보낼 때 그 시점의 최신 값을 읽어 보낸다.
  * 여러 번 고쳐도 마지막 상태 한 번만 보내면 되기 때문이다.
+ * 보낸 행은 지우지 않고 보낸 일시를 남기며, 다시 고치면 같은 행을 다시 보낼 대상으로 되돌린다.
  */
 @Entity
 @Table(name = "letscareer_job_profile_outbox")
@@ -34,8 +35,13 @@ internal class LetsCareerJobProfileOutbox(
     var attemptCount: Int = 0 /* 실패한 전송 횟수. 계속 실패하는 행이 다른 행을 막지 않도록 적은 순으로 보낸다 */
         protected set
 
+    @Column(name = "sent_at")
+    var sentAt: LocalDateTime? = null /* 보낸 일시. 비어 있으면 아직 보낼 대상이다 */
+        protected set
+
     fun requestAgain(requestedAt: LocalDateTime) {
         this.requestedAt = requestedAt
         attemptCount = 0
+        sentAt = null
     }
 }

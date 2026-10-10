@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-01
+- 최종 변경일: 2026-10-08
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -20,12 +20,12 @@
 
 ### 예외: 관리자 콘솔 API
 
-관리자 콘솔 화면이 쓰는 API는 `/api/v1/admin` 아래에 둡니다: `/api/v1/admin/jobs`, `/api/v1/admin/review-queue`.
+관리자 콘솔 화면이 쓰는 API는 `/api/v1/admin` 아래에 둡니다: `/api/v1/admin/jobs`, `/api/v1/admin/content-reviews`.
 
 - 결정일: 2026-09-14 / 리뷰 상태: 팀 리뷰 필요
 - 배경: 콘솔 화면이 목 핸들러로 먼저 만들어졌고 그 경로가 `/api/v1/admin/**`입니다. 화면을 고치지 않고 붙이기로 했습니다.
 - 크롤러의 `/api/v1/internal/**`과 인증 방식(내부 API 키, 관리자 토큰)이 달라 경로 접두사로 인가 규칙을 나눕니다.
-- 콘솔 계약을 따라 `PATCH /api/v1/admin/jobs/{jobId}`가 노출·검수 상태와 내용을 부분 수정으로 함께 받고, 검수 판정은 `PATCH /api/v1/admin/review-queue/{type}/{id}`로 둡니다. 4절의 명령별 엔드포인트 원칙과 다르며 같은 이유의 예외입니다.
+- 콘솔 계약을 따라 `PATCH /api/v1/admin/jobs/{jobId}`가 노출·검수 상태와 내용을 부분 수정으로 함께 받고, 검수 판정은 `PATCH /api/v1/admin/content-reviews/{type}/{id}`로 둡니다. 4절의 명령별 엔드포인트 원칙과 다르며 같은 이유의 예외입니다.
 - 영향 범위: 관리자 API의 콘솔 Controller와 인가 규칙. 사용자 API와 크롤러 경로는 바뀌지 않습니다.
 
 ## 2. URI
@@ -62,7 +62,6 @@ CRUD만으로 의도가 불분명한 도메인 명령은 동사형 하위 경로
 ```text
 POST /api/v1/jobs/{jobId}/publish
 POST /api/v1/jobs/{jobId}/hide
-POST /api/v1/jobs/{jobId}/archive
 POST /api/v1/jobs/{jobId}/close
 ```
 
@@ -92,7 +91,7 @@ DELETE /api/v1/job-bookmarks/{jobId}
 
 ```text
 POST /api/v1/jobs/{jobId}/source-url-clicks
-POST /api/v1/bootcamps/{bootcampId}/application-url-clicks
+POST /api/v1/bootcamps/{bootcampId}/source-url-clicks
 ```
 
 외부 링크를 눌렀다는 사실을 남기는 기록이며 경로 이름은 기록하는 필드(`sourceUrl`, `applicationUrl`)를 따릅니다. 새 행이 생기지 않는 호출이 있어 201이 아니라 200과 `data: null`로 응답합니다.
@@ -138,7 +137,7 @@ GET  /api/v1/bootcamp-bookmarks?applicationStatus={단계}&recruitmentStatus={�
 PUT  /api/v1/bootcamp-bookmarks/{bootcampId}/application-status
 
 GET  /api/v1/recruitment-post-bookmarks?recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}&sort=RECENTLY_SAVED
-GET  /api/v1/me/recruitment-applications?applicationStatus={단계}&recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}
+GET  /api/v1/users/me/recruitment-post-applications?applicationStatus={단계}&recruitmentStatus={모집 상태}&recruitmentType={유형}&keyword={검색어}
 POST /api/v1/recruitment-post-bookmarks/{postId}/prepare
 POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
 ```
@@ -153,7 +152,7 @@ POST /api/v1/recruitment-post-bookmarks/{postId}/cancel-preparation
 | 사이드·스터디 | 스크랩, 지원 준비 중(`PREPARING`), 지원 완료(`COMPLETED`), 활동 중(`IN_PROGRESS`), 활동 완료(`ENDED`) | 스크랩은 북마크, 나머지는 지원 이력 |
 
 - 채용공고·부트캠프는 단계를 북마크 행이 가지며, 등록하거나 해제 후 다시 등록하면 스크랩에서 시작합니다. 각 단계 목록은 북마크 목록에 `applicationStatus`를 주어 조회하고, 단계별 건수는 그 응답의 전체 건수를 씁니다. 한 단계만 모아 보는 필터도 같은 `applicationStatus`를 씁니다.
-- 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/me/recruitment-applications/{postId}`를 씁니다.
+- 사이드·스터디는 외부 연락처를 열면 생기는 지원 이력(LC-3309)이 이미 지원 준비 중 이후 단계를 가지므로 새로 저장하지 않습니다. 스크랩 칸은 북마크 목록, 나머지 칸은 지원 이력 목록을 씁니다. 지원 이력 단계 변경은 기존 `PATCH /api/v1/users/me/recruitment-post-applications/{postId}`를 씁니다.
 - 마감 상태는 채용공고·부트캠프·사이드·스터디 모두 `recruitmentStatus`로 모집 중(`RECRUITING`)·모집 마감(`CLOSED`)을 고릅니다. 사용자 공개 목록(`GET /api/v1/jobs`, `GET /api/v1/bootcamps`)도 같은 파라미터를 받습니다. 부트캠프는 `DRAFT`를 보내면 400 `BAD_REQUEST`입니다. 관리자 부트캠프 목록은 응답 필드 이름을 따라 계속 `status`를 씁니다. 공고 검색은 목록의 `keyword`를 그대로 씁니다.
 - 북마크 목록 정렬은 `sort`로 고르며 지금은 최근 저장순(`RECENTLY_SAVED`)만 있고 기본값입니다. 등록·재등록하거나 단계를 옮긴 시각이 최근인 순서입니다. 다른 정렬은 필요할 때 값을 추가합니다.
 - 채용공고·부트캠프 단계에는 선후 관계가 없어 어느 단계에서든 다른 어느 단계로든 옮길 수 있습니다. 그래서 이동마다 명령 경로를 두지 않고 `PUT .../application-status`가 `{ "applicationStatus": "INTERVIEWING" }`처럼 목표 단계를 받습니다. 4절의 명령별 경로 원칙은 전이 규칙이 행위마다 다를 때를 위한 것이라, 전이 규칙이 없는 이 경우에는 적용하지 않습니다.
@@ -174,6 +173,18 @@ GET /api/v1/recommended-challenges
 - 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
 - 오공고 리소스가 아니라 렛츠커리어가 이 사용자에게 추천한 챌린지 모음이므로, `/challenges`가 아닌 `recommended-challenges`로 이름에 추천임을 드러냅니다. 오공고가 챌린지 목록·상세를 따로 열 계획은 없습니다.
 - 응답 계약은 [API 성공 응답의 추천 렛츠커리어 챌린지](api-response.md#추천-렛츠커리어-챌린지)를 따릅니다.
+
+### 채용공고별 렛츠커리어 콘텐츠 추천
+
+```text
+GET /api/v1/jobs/{jobId}/recommended-lets-career-contents
+```
+
+- 결정일: 2026-10-09 / 리뷰 상태: 팀 리뷰 필요
+- 추천은 공고마다 다르므로 채용공고 하위에 둡니다. 오공고가 소유한 리소스가 아니라 렛츠커리어 콘텐츠 가운데 이 공고에 맞춰 고른 모음이라 `recommended-`로 추천임을 드러냅니다.
+- 채용공고 조회와 같이 로그인 없이 엽니다(`GET /api/v1/jobs/**`).
+- 공고 상세 응답에 싣지 않고 따로 둔 이유는 추천 계산이 실패해도 상세는 떠야 하고, 화면에서 따로 늦게 그려도 되기 때문입니다.
+- 응답 계약은 [API 성공 응답의 채용공고별 렛츠커리어 콘텐츠 추천](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)을 따릅니다.
 
 ### 오늘의 공고
 
@@ -196,19 +207,21 @@ PUT /api/v1/admin/jobs/today
 PATCH /api/v1/admin/jobs/visibility
 PATCH /api/v1/admin/bootcamps/visibility
 PATCH /api/v1/admin/recruitment-posts/visibility
+PATCH /api/v1/admin/concerns/visibility
 ```
 
 - 결정일: 2026-10-01 / 리뷰 상태: 팀 리뷰 필요
 - 운영자가 콘솔에서 검색한 뒤 여러 건을 골라 한 번에 노출·비노출로 바꿉니다. 단건 `PATCH /{jobId}`를 프런트가 반복 호출하기에는 건수가 많아 서버가 한 요청으로 받습니다.
 - 본문은 `{ "ids": [7, 3], "visibility": "HIDDEN" }`입니다. `visibility`는 단건 수정과 같은 `VISIBLE`·`HIDDEN`이며, 고른 항목의 노출 상태 한 칸만 바꾸므로 PATCH입니다. 경로는 컬렉션의 `visibility` 속성을 가리키며 `/{jobId}`보다 먼저 매칭됩니다.
-- 노출만 바꾸고 검수 상태·내용은 바꾸지 않습니다. 이미 요청한 노출인 항목은 건드리지 않고 성공으로 봅니다. 그래서 같은 요청을 반복해도 결과가 같고, 비노출로 보이는 보관 공고에 `HIDDEN`을 보내도 실패하지 않으며 초안도 초안으로 남습니다. 같은 식별자가 여러 번 와도 거절하지 않고 한 번만 바꿉니다.
+- 노출만 바꾸고 검수 상태·내용은 바꾸지 않습니다. 이미 요청한 노출인 항목은 건드리지 않고 성공으로 봅니다. 그래서 같은 요청을 반복해도 결과가 같고, 초안에 `HIDDEN`을 보내도 초안으로 남습니다. 같은 식별자가 여러 번 와도 거절하지 않고 한 번만 바꿉니다.
 - 한 트랜잭션에서 모두 바꾸며, 하나라도 바꿀 수 없으면 아무것도 바꾸지 않습니다. 일부만 바뀌면 운영자가 어느 항목이 바뀌었는지 다시 찾아야 하기 때문입니다.
-  - 없거나 삭제된 항목이 있으면 404 `JOB_NOT_FOUND`·`BOOTCAMP_NOT_FOUND`·`RECRUITMENT_POST_NOT_FOUND`이며, 운영자가 골라낼 수 있게 `message` 끝에 그 식별자를 오름차순으로 담습니다: `일자리 공고를 찾을 수 없습니다. (id: 7, 999)`. 오류 응답의 세 필드 계약은 그대로 두었습니다([예외 처리 기준](error-handling.md#3-예외-분류와-응답)).
-  - 승인 전 기업회원 콘텐츠나 보관된 채용공고를 `VISIBLE`로 바꾸려 하면 409 `REVIEW_NOT_APPROVED`·`JOB_ARCHIVED`입니다. 어느 항목 때문인지는 담지 않습니다.
+  - 없거나 삭제된 항목이 있으면 404 `JOB_NOT_FOUND`·`BOOTCAMP_NOT_FOUND`·`RECRUITMENT_POST_NOT_FOUND`·`CONCERN_NOT_FOUND`이며, 운영자가 골라낼 수 있게 `message` 끝에 그 식별자를 오름차순으로 담습니다: `일자리 공고를 찾을 수 없습니다. (id: 7, 999)`. 오류 응답의 세 필드 계약은 그대로 두었습니다([예외 처리 기준](error-handling.md#3-예외-분류와-응답)).
+  - 승인 전 기업회원 콘텐츠를 `VISIBLE`로 바꾸려 하면 409 `REVIEW_NOT_APPROVED`입니다. 어느 항목 때문인지는 담지 않습니다.
 - `ids`는 1건 이상 1000건 이하입니다. 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고 한 트랜잭션의 잠금이 길어지지 않을 만큼으로 정했습니다. 비었거나 넘치거나 양수가 아닌 값이 있거나 `visibility`가 없으면 400 `BAD_REQUEST`입니다.
 - 여러 요청이 같은 항목을 잠글 때 교착되지 않도록 식별자 순으로 잠급니다.
 - 성공하면 200과 `data: null`로 응답합니다. 바뀐 항목은 목록을 다시 조회해 확인합니다.
 - 사이드·스터디 모집글(결정일: 2026-10-02 / 리뷰 상태: 팀 리뷰 필요)은 공개(`PUBLISHED`)를 `VISIBLE`, 비공개(`HIDDEN`)를 `HIDDEN`으로 봅니다. 임시저장은 작성자만 보는 글이라 콘솔 목록에 없고, `ids`에 있으면 없는 모집글과 같이 404입니다. 운영자가 숨긴 모집글은 작성자의 내 모집글 관리에 비공개로 보이며, 작성자가 게시(`POST .../publish`)로 되돌릴 수 없어 400 `RECRUITMENT_POST_NOT_READY`입니다. 다시 내놓는 것은 운영자만 합니다. 숨긴 모집글을 작성자가 복사해 새로 게시하는 것을 막을지는 **확인 필요**입니다.
+- 취준고민 고민글(결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요)은 게시 상태 대신 숨김 여부(`concerns.hidden`)를 두고, 숨기지 않은 글을 `VISIBLE`, 숨긴 글을 `HIDDEN`으로 봅니다. 숨긴 고민글은 사용자 API에서 없는 글과 같습니다([API 성공 응답의 취준고민](api-response.md#취준고민)).
 - 검색 조건 전체를 받아 서버가 대상을 고르는 방식(`ids` 대신 필터)은 화면이 고른 항목만 바꾸는 요구와 달라 두지 않았습니다. 필요해지면 그때 정합니다.
 
 ### 서비스 개선 의견
@@ -242,6 +255,37 @@ DELETE /api/v1/internal/jobs/{jobId}
 - 삭제는 소프트 삭제이며 반복해도 200입니다. 직무별로 나뉘어 새 공고로 등록된 원래 공고를 지울 때 씁니다.
 - 크롤러 공고는 검수를 거치지 않고 등록하면 곧바로 게시합니다. 교체는 게시 상태를 바꾸지 않습니다. [API 성공 응답의 검수와 노출](api-response.md#검수와-노출) 참고.
 
+### 크롤러 공고 분석
+
+```text
+GET /api/v1/internal/jobs/analysis-targets?size={개수}
+PUT /api/v1/internal/jobs/{jobId}/analysis
+```
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 채용공고 상세의 공고 분석([API 성공 응답의 채용공고 공고 분석](api-response.md#채용공고-공고-분석))을 크롤러가 AI로 만듭니다. 서버에는 AI 클라이언트를 두지 않습니다. 크롤러에 분석 방법 편집·시험 화면과 비용 기록이 이미 있어서입니다.
+- 크롤러 채용공고 API와 달리 **등록 경로를 가리지 않습니다.** 고용24·기업회원 공고도 같은 분석을 보여 줘야 하기 때문입니다. 인증은 같은 내부 API 키입니다.
+- 대상 조회는 게시 중인 모집 중 공고 가운데 분석이 없거나 분석한 뒤 본문 해시가 바뀐 공고를 최근 것부터 `size`건(기본 50, 1 이상 200 이하) 줍니다. 항목은 크롤러 등록 요청과 같은 칸 이름의 본문과 `jobId`, `source`, `contentHash`입니다.
+  - 매번 모든 공고의 해시를 세지 않도록, 분석하거나 본문을 확인했을 때의 공고 수정 일시를 `job_analyses.job_updated_at`에 남기고 공고 수정 일시가 그와 다른 공고만 다시 비교합니다. 본문 아닌 칸만 바뀐 공고(크롤러가 같은 내용으로 교체한 공고 등)는 확인한 것으로 남기고 대상에서 뺍니다. 그래서 이 GET은 확인 일시를 쓰는 부작용이 있습니다. 같은 요청을 반복해도 돌려주는 대상은 같습니다.
+- 저장은 공고마다 하나인 분석을 통째로 바꾸므로 PUT이며 200과 `data: null`로 응답합니다. 같은 값을 다시 보내도 결과가 같습니다.
+  - 요청의 `contentHash`가 지금 본문 해시와 다르면 409 `JOB_ANALYSIS_OUTDATED`입니다. 대상을 받은 뒤 본문이 바뀐 경우이며, 그 공고는 다음 대상 조회에 다시 나옵니다.
+  - 없거나 지워진 공고는 404 `JOB_NOT_FOUND`입니다. 게시 상태는 보지 않습니다.
+- 크롤러는 매일 고용24 수집(04:00)과 크롤러 매일 수집 뒤에 이 두 API로 분석합니다. 실행 시각은 크롤러 설정이 정합니다.
+
+### 크롤러 렛츠커리어 콘텐츠 태그
+
+```text
+GET /api/v1/internal/lets-career-contents/tag-targets?size={개수}
+PUT /api/v1/internal/lets-career-contents/{contentId}/tags
+```
+
+- 결정일: 2026-10-09 / 리뷰 상태: 팀 리뷰 필요
+- 공고별 콘텐츠 추천([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천))에 쓰는 태그를 크롤러가 AI로 붙입니다. 공고 분석과 같은 이유로 서버에는 AI 클라이언트를 두지 않습니다. 인증은 같은 내부 API 키입니다.
+- 대상 조회는 렛츠커리어 목록에 있는 콘텐츠 가운데 태그가 없거나 태그한 뒤로 종류·분류·제목·설명·단서의 해시(`contentHash`)가 바뀐 것을 오래된 것부터 `size`건(기본 50, 1 이상 200 이하) 줍니다. 모집 기간만 바뀐 콘텐츠는 다시 태그하지 않습니다.
+- 태그는 직군(`jobFields`)·직무(`jobRoles`)·준비 단계(`topics`)이며 콘텐츠마다 하나뿐이라 통째로 바꾸는 PUT입니다. 200과 `data: null`로 응답합니다. 직군·직무를 모두 비우면 어느 직무에나 맞는 콘텐츠로 봅니다.
+  - 요청의 `contentHash`가 지금 해시와 다르면 409 `LETS_CAREER_CONTENT_TAGS_OUTDATED`입니다. 그 콘텐츠는 다음 대상 조회에 다시 나옵니다.
+  - 없거나 렛츠커리어 목록에서 빠진 콘텐츠는 404 `LETS_CAREER_CONTENT_NOT_FOUND`입니다.
+
 ### 크롤러 부트캠프
 
 ```text
@@ -265,20 +309,50 @@ DELETE /api/v1/internal/bootcamps/{bootcampId}
 ### 공지사항
 
 ```text
-GET    /api/v1/notices                        사용자 API, 로그인 없이 조회
-GET    /api/v1/notices/{noticeId}
+GET    /api/v1/announcements                          사용자 API, 로그인 없이 조회
+GET    /api/v1/announcements/{announcementId}
 
-GET    /api/v1/admin/notices                  관리자 콘솔
-POST   /api/v1/admin/notices
-GET    /api/v1/admin/notices/{noticeId}
-PATCH  /api/v1/admin/notices/{noticeId}
-DELETE /api/v1/admin/notices/{noticeId}
+GET    /api/v1/admin/announcements                    관리자 콘솔
+POST   /api/v1/admin/announcements
+GET    /api/v1/admin/announcements/{announcementId}
+PATCH  /api/v1/admin/announcements/{announcementId}
+DELETE /api/v1/admin/announcements/{announcementId}
 ```
 
 - 결정일: 2026-09-22 / 리뷰 상태: 팀 리뷰 필요
+- 2026-10-06에 경로와 코드·테이블 이름을 `notices`에서 `announcements`로 바꿨습니다(리뷰 상태: 팀 리뷰 필요). 앞으로 생길 알림(notification)과 이름이 헷갈리지 않게 하려는 것입니다. 에러 코드도 `ANNOUNCEMENT_NOT_FOUND`로 바뀌었습니다.
 - 공지는 관리자만 작성하므로 쓰기 경로는 관리자 API에만 둡니다. 사용자 API에는 GET만 열고 나머지 메서드는 거부합니다.
 - 노출·상단 고정도 콘솔의 다른 콘텐츠처럼 `PATCH`로 내용과 함께 부분 수정합니다. 1절의 관리자 콘솔 예외와 같은 이유입니다.
 - 응답 계약은 [API 성공 응답의 공지사항](api-response.md#공지사항)을 따릅니다.
+
+### 취준고민
+
+```text
+GET    /api/v1/concerns                                                        로그인 없이 조회
+GET    /api/v1/concerns/popular                                                로그인 없이 조회
+POST   /api/v1/concerns
+GET    /api/v1/concerns/{concernId}                                            로그인 선택
+PUT    /api/v1/concerns/{concernId}
+DELETE /api/v1/concerns/{concernId}
+GET    /api/v1/concerns/{concernId}/comments                                   로그인 선택
+POST   /api/v1/concerns/{concernId}/comments
+GET    /api/v1/concerns/{concernId}/comments/{commentId}/replies               로그인 선택
+DELETE /api/v1/concerns/{concernId}/comments/{commentId}
+PUT    /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
+DELETE /api/v1/concerns/{concernId}/comments/{commentId}/likes/me
+GET    /api/v1/admin/concerns                                                  관리자 콘솔
+GET    /api/v1/admin/concerns/{concernId}
+PATCH  /api/v1/admin/concerns/visibility
+```
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 수정은 카테고리·제목·본문 세 값을 모두 받아 바꾸므로 PUT이며 200과 `data: null`로 응답합니다.
+- 지금 가장 핫한 고민은 기간·개수가 정해진 고민글 모음이라 인기 공고(`/jobs/popular`)처럼 `/concerns/popular`에 둡니다. 목록 API의 정렬로 대신하지 않는 이유는 최근 일주일이라는 기간 조건이 목록에는 없기 때문입니다.
+- 답변과 답글은 같은 `comments` 컬렉션에 두고, 답글은 요청 본문의 `parentId`로 구분합니다. 모집글 댓글과 같은 구조입니다.
+- 좋아요는 로그인한 사용자 자신의 표시 하나를 가리키는 단일 리소스(`likes/me`)로 보고, 북마크와 달리 PUT·DELETE로 둡니다. 버튼을 빠르게 두 번 눌러도 409 없이 같은 결과가 되게 하려는 것입니다.
+- 답변·답글 삭제는 모집글 댓글과 같이 이미 지운 댓글이면 404입니다.
+- 관리자 콘솔은 목록·상세 조회와 노출 일괄 변경([관리자 콘솔 노출 일괄 변경](#관리자-콘솔-노출-일괄-변경))만 둡니다. 운영자가 고민글을 고치거나 지우는 API와 답변 관리 API는 두지 않았습니다(2026-10-08).
+- 응답 계약은 [API 성공 응답의 취준고민](api-response.md#취준고민)을 따릅니다.
 
 ### 관리자 회원 조회
 

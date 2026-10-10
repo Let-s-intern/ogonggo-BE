@@ -1,16 +1,18 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.EmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
-import com.ogonggo.core.job.implement.JobSourceUrlClickAppender
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
+import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import com.ogonggo.core.user.implement.UserProfileReader
 import java.time.LocalDate
 import org.springframework.context.ApplicationEventPublisher
@@ -21,7 +23,8 @@ class UserJobService(
     private val jobReader: JobReader,
     private val jobBookmarkReader: JobBookmarkReader,
     private val jobMetricReader: JobMetricReader,
-    private val jobSourceUrlClickAppender: JobSourceUrlClickAppender,
+    private val jobAnalysisReader: JobAnalysisReader,
+    private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val userProfileReader: UserProfileReader,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
@@ -43,7 +46,7 @@ class UserJobService(
         )
     }
 
-    fun getPopularJobs(userId: Long?, employmentType: EmploymentType?): List<UserJobSummary> =
+    fun getPopularJobs(userId: Long?, employmentType: JobEmploymentType?): List<UserJobSummary> =
         toSummaries(userId, jobReader.readPopularRecruiting(employmentType, POPULAR_JOB_LIMIT))
 
     /** 운영자가 관리자 콘솔에서 고른 공고를 고른 순서대로 보여 준다. 개수는 운영자가 정한다. */
@@ -107,11 +110,17 @@ class UserJobService(
     /**
      * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.
      * 기록이 비동기이므로 상세 응답의 조회 수에는 이번 조회가 아직 반영되지 않는다.
+     * 공고 분석은 지금 본문에 대한 것만 싣는다. 없거나 본문이 바뀐 뒤 아직 다시 분석하지 않았으면 비운다.
      */
     fun getJob(userId: Long?, jobId: Long): UserJobResult {
         val job = jobReader.readPublished(jobId)
         val bookmarked = jobId in readBookmarkedJobIds(userId, listOf(jobId))
-        val result = UserJobResult.from(job, bookmarked, jobMetricReader.read(jobId))
+        val result = UserJobResult.from(
+            job = job,
+            bookmarked = bookmarked,
+            metric = jobMetricReader.read(jobId),
+            analysis = jobAnalysisReader.readCurrent(job),
+        )
         eventPublisher.publishEvent(JobViewedEvent(jobId))
         return result
     }
@@ -126,7 +135,7 @@ class UserJobService(
      */
     fun recordSourceUrlClick(userId: Long, jobId: Long) {
         jobReader.readPublished(jobId)
-        jobSourceUrlClickAppender.append(userId, jobId)
+        sourceUrlClickAppender.append(SourceUrlClickTargetType.JOB, jobId, userId)
     }
 
     /** 오늘의·인기·비슷한 공고도 목록과 같은 항목으로 보여 주므로 북마크 여부와 지표를 목록과 같은 방식으로 채운다. */

@@ -3,11 +3,11 @@ package com.ogonggo.adminapi.bootcamp.presentation.request
 import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampCommand
 import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampCurriculumCommand
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -41,7 +41,7 @@ data class CrawlerBootcampRequest(
     @field:Size(max = 50, message = "프로그램 유형은 50자 이하여야 합니다.")
     val programType: String,
 
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
 
     val recruitmentType: BootcampRecruitmentType,
 
@@ -61,7 +61,7 @@ data class CrawlerBootcampRequest(
     @field:PositiveOrZero(message = "모집 정원은 0 이상이어야 합니다.")
     val capacity: Int? = null,
 
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
 
     @field:Schema(description = "수강료(원). 원문에 금액이 있을 때만 보낸다")
     @field:PositiveOrZero(message = "수강료는 0 이상이어야 합니다.")
@@ -90,7 +90,7 @@ data class CrawlerBootcampRequest(
     @field:Schema(description = "지원 자격 및 전형 안내")
     val eligibilityAndSelectionProcess: String? = null,
 
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
 
     @field:Schema(description = "외부 지원 페이지 주소. 외부 페이지 지원이면 필수이고 이메일 지원이면 보내지 않는다")
     @field:Size(max = 2048, message = "지원 페이지 주소는 2048자 이하여야 합니다.")
@@ -118,7 +118,7 @@ data class CrawlerBootcampRequest(
             "등록할 때 보내지 않으면 RECRUITING이고, 교체할 때 보내지 않으면 모집 상태를 바꾸지 않는다",
         allowableValues = ["RECRUITING", "CLOSED"],
     )
-    val status: BootcampStatus? = null,
+    val status: BootcampRecruitmentStatus? = null,
 
     @field:Schema(description = "커리큘럼. 보낸 순서대로 노출한다. 교체하면 기존 커리큘럼을 지우고 이 목록으로 바꾼다")
     @field:Valid
@@ -158,7 +158,7 @@ data class CrawlerBootcampRequest(
 
     private fun validateRelations() {
         // 임시저장은 크롤러가 만들 상태가 아니다. 모집 마감 과정도 게시해 두므로 두 값만 받는다.
-        if (status == BootcampStatus.DRAFT) {
+        if (status == BootcampRecruitmentStatus.DRAFT) {
             invalid("status", "RECRUITING 또는 CLOSED만 보낼 수 있습니다.")
         }
         val recruitmentStart = recruitmentStartAt
@@ -178,10 +178,10 @@ data class CrawlerBootcampRequest(
         if (programStartDate.isAfter(programEndDate)) {
             invalid("programStartDate", "교육 종료일보다 늦을 수 없습니다.")
         }
-        if (applicationMethod == ApplicationMethod.EXTERNAL_PAGE && applicationUrl.isNullOrBlank()) {
+        if (applicationMethod == BootcampApplicationMethod.EXTERNAL_PAGE && applicationUrl.isNullOrBlank()) {
             invalid("applicationUrl", "외부 페이지 지원 링크는 필수입니다.")
         }
-        if (applicationMethod == ApplicationMethod.EMAIL && applicationUrl != null) {
+        if (applicationMethod == BootcampApplicationMethod.EMAIL && applicationUrl != null) {
             invalid("applicationUrl", "이메일 지원에는 외부 지원 링크를 설정할 수 없습니다.")
         }
         listOf(

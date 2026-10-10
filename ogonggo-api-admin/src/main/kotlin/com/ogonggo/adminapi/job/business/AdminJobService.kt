@@ -11,7 +11,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -63,7 +63,7 @@ class AdminJobService(
     /**
      * 한 트랜잭션에서 모두 바꾼다. 없거나 삭제된 공고, 승인 전 기업회원 공고의 노출처럼 하나라도 실패하면 아무것도 바꾸지 않는다.
      * 일부만 바뀌면 운영자가 어느 공고가 바뀌었는지 다시 찾아야 하기 때문이다.
-     * 이미 같은 노출인 공고는 건드리지 않는다. 보관 공고도 비노출로 보이므로 비노출 요청이 실패하지 않고, 초안도 초안으로 남는다.
+     * 이미 같은 노출인 공고는 건드리지 않는다. 초안도 비노출로 보이므로 비노출 요청에 초안은 초안으로 남는다.
      */
     @Transactional
     fun changeVisibilities(command: AdminJobVisibilityChangeCommand) {
@@ -100,11 +100,11 @@ class AdminJobService(
         }
     }
 
-    private fun changeReview(job: Job, reviewStatus: ReviewStatus, now: LocalDateTime) {
+    private fun changeReview(job: Job, reviewStatus: ContentReviewStatus, now: LocalDateTime) {
         when (reviewStatus) {
-            ReviewStatus.APPROVED -> jobManager.approveReview(job, now)
-            ReviewStatus.PENDING -> jobManager.requestReview(job, now)
-            ReviewStatus.REJECTED -> throw IllegalArgumentException("반려는 사유와 함께 검수 화면에서 처리합니다.")
+            ContentReviewStatus.APPROVED -> jobManager.approveReview(job, now)
+            ContentReviewStatus.PENDING -> jobManager.requestReview(job, now)
+            ContentReviewStatus.REJECTED -> throw IllegalArgumentException("반려는 사유와 함께 검수 화면에서 처리합니다.")
         }
     }
 }

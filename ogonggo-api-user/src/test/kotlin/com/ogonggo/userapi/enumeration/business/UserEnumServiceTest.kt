@@ -1,7 +1,9 @@
 package com.ogonggo.userapi.enumeration.business
 
 import com.ogonggo.core.enumeration.EnumField
-import com.ogonggo.core.job.domain.EmploymentType
+import com.ogonggo.core.enumeration.catalog.EnumOptionReader
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -14,16 +16,36 @@ import java.util.regex.Pattern
 
 class UserEnumServiceTest {
 
-    private val enums = UserEnumService().getEnums()
+    private val enums = UserEnumService(EnumOptionReader()).getEnums()
 
     @Test
     fun `enum 값을 선언 순서대로 이름과 라벨로 제공한다`() {
-        val employmentTypes = enums.getValue("EmploymentType")
+        val employmentTypes = enums.getValue("JobEmploymentType")
 
         assertEquals(
-            EmploymentType.entries.map { it.name to it.desc },
+            JobEmploymentType.entries.map { it.name to it.desc },
             employmentTypes.map { it.name to it.desc },
         )
+    }
+
+    @Test
+    fun `프런트 전환 기간에는 이름을 바꾼 enum의 선택지를 예전 키로도 같은 값으로 제공한다`() {
+        assertEquals(enums.getValue("JobEmploymentType"), enums.getValue("EmploymentType"))
+        assertEquals(enums.getValue("BootcampRecruitmentStatus"), enums.getValue("BootcampStatus"))
+        assertEquals(enums.getValue("RecruitmentPostType"), enums.getValue("RecruitmentType"))
+        assertEquals(enums.getValue("RecruitmentPostPosition"), enums.getValue("RecruitmentPosition"))
+        assertEquals(
+            enums.getValue("RecruitmentPostApplicationSortType"),
+            enums.getValue("RecruitmentApplicationSortType"),
+        )
+    }
+
+    @Test
+    fun `모집 포지션 MARKETING의 라벨은 마케팅으로 제공한다`() {
+        val marketing = enums.getValue("RecruitmentPostPosition")
+            .single { it.name == RecruitmentPostPosition.MARKETING.name }
+
+        assertEquals("마케팅", marketing.desc)
     }
 
     /**
@@ -54,7 +76,7 @@ class UserEnumServiceTest {
             .toSet()
     }
 
-    /** `List<RecruitmentPosition>`처럼 컬렉션에 담긴 enum도 찾도록 타입 인자까지 푼다. */
+    /** `List<RecruitmentPostPosition>`처럼 컬렉션에 담긴 enum도 찾도록 타입 인자까지 푼다. */
     private fun rawTypes(type: Type): List<Class<*>> = when (type) {
         is Class<*> -> listOf(type)
         is ParameterizedType -> rawTypes(type.rawType) + type.actualTypeArguments.flatMap(::rawTypes)

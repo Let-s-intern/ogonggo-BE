@@ -3,7 +3,7 @@ package com.ogonggo.userapi.advertisement.implement
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementPromotionChannel
+import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -121,7 +121,7 @@ class AdvertisementSlackNotifierTest {
             email = "manager@ogonggo.co.kr",
             phoneNumber = "010-1234-5678",
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
-            promotionChannel = AdvertisementPromotionChannel.OPEN_CHAT_MARKETING,
+            promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
         )
     }

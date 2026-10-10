@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.job.presentation
 
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
@@ -72,8 +72,8 @@ interface UserJobApi {
         @Max(100)
         size: Int,
         sortType: JobSortType,
-        employmentType: EmploymentType?,
-        experienceType: ExperienceType?,
+        employmentType: JobEmploymentType?,
+        experienceType: JobExperienceType?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
         region: Region?,
@@ -106,7 +106,7 @@ interface UserJobApi {
     fun getPopularJobs(
         @Parameter(hidden = true)
         userId: Long?,
-        employmentType: EmploymentType?,
+        employmentType: JobEmploymentType?,
     ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
 
     @Operation(
@@ -254,8 +254,8 @@ interface UserJobApi {
         userId: Long?,
         from: LocalDate,
         to: LocalDate,
-        employmentType: EmploymentType?,
-        experienceType: ExperienceType?,
+        employmentType: JobEmploymentType?,
+        experienceType: JobExperienceType?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
         region: Region?,

@@ -1,6 +1,6 @@
 package com.ogonggo.core.schedule.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.schedule.domain.ScheduledJob
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.core.schedule.persistence.ScheduledJobJpaRepository

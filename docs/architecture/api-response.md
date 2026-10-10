@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-01
+- 최종 변경일: 2026-10-08
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -79,7 +79,8 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 | `GET /api/v1/job-bookmarks` | `GET /api/v1/jobs`와 같음 | `GET /api/v1/jobs`와 같음 |
 | `GET /api/v1/bootcamps` | `category` | `keyword` — 운영 회사명 또는 프로그램명 |
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
-| `GET /api/v1/notices` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
+| `GET /api/v1/announcements` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
+| `GET /api/v1/concerns` | `category`. `sort`는 `LATEST`·`VIEW_COUNT`·`COMMENT_COUNT`([취준고민](#취준고민) 참고) | 없음 |
 
 검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. `jobRole`은 `jobRole=IT_BACKEND&jobRole=IT_FRONTEND`처럼 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며, 나머지 필터는 하나씩 고릅니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
@@ -99,7 +100,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 
 채용공고 공개 목록의 최신순은 크롤러가 수집한 공고를 먼저 보이고, 그 안에서 늦게 등록한 날의 공고를 먼저 보입니다. 같은 날 같은 경로로 등록한 공고끼리는 무작위로 섞습니다. 크롤러가 한 회사의 직무를 한꺼번에 등록해 한 페이지가 한 회사로 채워지는 것을 막기 위해서입니다. 요청마다 섞으면 조건에 맞는 공고를 모두 읽어 정렬해야 하므로, 등록할 때 정렬 키(`list_sort_key`)를 한 번 정해 저장하고 인덱스 순서로 읽습니다. 그래서 같은 요청은 항상 같은 순서를 받고 페이지를 넘겨도 빠지거나 겹치지 않습니다. 무작위라 같은 회사 공고가 드물게 이어질 수 있고, 마감된 크롤러 공고도 앞에 옵니다. 관리자 목록의 등록일순은 이 키를 쓰지 않고 `id DESC`입니다.
 
-부트캠프 공개 목록(`GET /api/v1/bootcamps`)은 어느 정렬이든 **기업 연계 과정을 먼저** 두고 그 안에서 위 순서를 따릅니다(`enterprise_linked DESC`가 맨 앞, 2026-09-30, 리뷰 상태: 팀 리뷰 필요). 기업 연계 과정은 등록할 때 정해지며 지금은 고용24 수집이 [연계 기업 이름표](#연계-기업을-파트너사로-넣는-기준)에 걸린 과정에만 표시합니다. 북마크 목록과 관리자 목록에는 적용하지 않습니다. 배포 전에 `docs/schema/2026-09-30-bootcamp-enterprise-linked.sql`을 적용합니다.
+부트캠프 공개 목록(`GET /api/v1/bootcamps`)은 어느 정렬이든 **기업 연계 과정을 먼저** 두고 그 안에서 위 순서를 따릅니다(`enterprise_linked DESC`가 맨 앞, 2026-09-30, 리뷰 상태: 팀 리뷰 필요). 기업 연계 과정은 등록할 때 정해지며 지금은 고용24 수집이 [연계 기업 이름표](#연계-기업을-파트너사로-넣는-기준)에 걸린 과정에만 표시합니다. 북마크 목록과 관리자 목록에는 적용하지 않습니다.
 
 조회 수는 지표 테이블이 소유하고 공고·부트캠프와 연관관계가 없으므로 정렬 시 명시적으로 조인합니다. 지표 행은 첫 조회 시점에 생기므로 아직 조회되지 않은 항목은 `0`으로 봅니다. 조회 수가 같으면 페이지가 흔들리지 않도록 식별자 내림차순으로 순서를 확정합니다. 정의되지 않은 값을 보내면 400 `BAD_REQUEST`로 응답합니다.
 
@@ -129,7 +130,27 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 채용공고 상세 내용
 
-채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`를 반환합니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
+채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`, `recruitmentNotice`를 반환합니다. 채용 안내사항(`recruitmentNotice`)은 2026-10-08에 추가했습니다(리뷰 상태: 팀 리뷰 필요). 공고 분석의 본문 해시와 '공고 속 문구'가 이 칸까지 보므로, 사용자가 원문에서 그 문장을 찾을 수 있게 하려는 것입니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
+
+### 채용공고 공고 분석
+
+채용공고 상세(`GET /api/v1/jobs/{jobId}`)의 `analysis`는 상세 화면 '공고 분석' 탭의 내용입니다. 크롤러가 AI로 만들어 보내며([REST API 설계의 크롤러 공고 분석](rest-api-design.md#크롤러-공고-분석)), 목록·달력에는 싣지 않습니다.
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 분석은 `job_analyses`에 공고마다 한 행으로 두고, 분석한 본문의 해시를 함께 남깁니다. 본문 해시는 제목과 본문 여덟 칸(`recruitmentNotice` 포함)으로 셉니다.
+- 분석이 아직 없거나, 분석한 뒤 운영자·크롤러가 본문을 바꿔 해시가 다르면 `analysis`는 `null`입니다. 다시 분석될 때까지 예전 분석을 보여 주지 않으며, 클라이언트는 원문만 보여 줍니다. 저장된 분석을 읽지 못해도 상세 조회는 실패하지 않고 `null`입니다.
+- 항목과 개수는 다음과 같습니다. 개수를 넘는 분석은 저장할 때 거절합니다.
+
+| 필드 | 내용 |
+| --- | --- |
+| `tasks` | 실제 하는 일 3개까지. `{ tag, text }` |
+| `required`, `preferred` | 필수·우대 지원 조건 각 8개까지. 화면에서 사용자가 체크해 보는 목록이며 체크 결과는 서버에 저장하지 않습니다 |
+| `employment` | 고용 형태 `type`·`conversion`·`salary`·`affiliation`. 칸마다 `{ value, note }` |
+| `submission` | 제출물과 전형 `documents`·`essay`·`process`·`deadline`. 칸마다 `{ value, note }` |
+| `competencies` | 연결하기 좋은 경험. 역량 3개까지 `{ name, quote, description, experiences }`, 역량마다 경험 3개까지 |
+
+- `value`가 `null`이면 공고에서 확인할 수 없는 값이며 화면은 '공고에 명시 없음'으로 그립니다. `note`는 짧은 보충이고 없으면 `null`입니다.
+- `quote`는 그 역량을 요구하는 공고 문장입니다. 크롤러가 제목과 본문 여덟 칸에서 찾을 수 있는 문장만 보내므로, 상세 응답의 본문 칸에서 그대로 찾을 수 있습니다.
 
 ### 지표
 
@@ -141,7 +162,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 지표 실행기는 스레드를 하나만 두어 지표 기록이 DB 커넥션을 최대 1개만 점유하게 합니다. 지표는 조회 응답의 정확성에 필요하지 않으므로 기록이 실패하거나 대기 큐가 가득 차면 로그만 남기고 버립니다.
 
-`bookmarkCount`도 Business Service가 직접 올리지 않고 `JobBookmarkChangedEvent`, `BootcampBookmarkChangedEvent`로 변경 사실만 발행합니다. 수신자는 등록·해제를 구분하지 않고 활성 북마크를 다시 세므로 갱신을 한 번 놓쳐도 다음 변경에서 값이 스스로 복구됩니다.
+`bookmarkCount`도 Business Service가 직접 올리지 않고 `JobBookmarkChangedEvent`, `BootcampBookmarkChangedEvent`, `RecruitmentPostBookmarkChangedEvent`로 변경 사실만 발행합니다. 모집글도 같은 방식입니다. 수신자는 등록·해제를 구분하지 않고 활성 북마크를 다시 세므로 갱신을 한 번 놓쳐도 다음 변경에서 값이 스스로 복구됩니다.
 
 북마크가 롤백되면 지표도 바뀌면 안 되므로 이 이벤트는 `AFTER_COMMIT`에만 처리합니다. 그 결과 북마크 직후 목록을 다시 조회하면 이전 `bookmarkCount`가 보일 수 있습니다. 사용자 본인의 `bookmarked` 상태는 북마크 행에서 직접 읽으므로 항상 정확합니다.
 
@@ -149,13 +170,13 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 `POST /api/v1/jobs/{jobId}/source-url-clicks`는 사용자가 공고 원문으로 이동하는 버튼을 눌렀다는 사실을 기록합니다. 이동할 주소는 상세 응답의 `sourceUrl`을 사용하며 이 API는 주소를 반환하지 않습니다.
 
-기록은 사용자와 공고마다 한 행만 남기고 `job_source_url_clicks`의 유니크 제약으로 보장합니다. 같은 사용자가 버튼을 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한 채 200으로 응답합니다. 버튼이 항상 동작해야 하므로 북마크와 달리 409를 사용하지 않으며, 새 행이 생기지 않는 호출이 있어 201 대신 200과 `data: null`로 응답합니다.
+기록은 사용자와 공고마다 한 행만 남기고 `source_url_clicks`의 `(target_type, target_id, user_id)` 유니크 제약으로 보장합니다. 채용공고와 부트캠프의 이동 기록은 이 테이블 하나에 종류(`target_type`)로 나눠 둡니다. 같은 사용자가 버튼을 다시 눌러도 실패로 만들지 않고 최초 기록을 유지한 채 200으로 응답합니다. 버튼이 항상 동작해야 하므로 북마크와 달리 409를 사용하지 않으며, 새 행이 생기지 않는 호출이 있어 201 대신 200과 `data: null`로 응답합니다.
 
 북마크와 달리 취소할 수 있는 상태가 아니라 일어난 사실이므로 소프트 삭제 컬럼을 두지 않습니다.
 
 ### 부트캠프 지원 페이지 이동
 
-`POST /api/v1/bootcamps/{bootcampId}/application-url-clicks`도 같은 계약을 사용합니다. 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
+`POST /api/v1/bootcamps/{bootcampId}/source-url-clicks`도 같은 계약을 사용합니다. 2026-10-06에 경로를 채용공고와 맞추면서 예전 경로 `application-url-clicks`는 프런트 전환까지만 명세에 보이지 않게 받습니다. 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
 
 채용공고는 원문(`sourceUrl`) 이동을 기록하지만 부트캠프는 외부 지원 페이지(`applicationUrl`) 이동을 기록합니다. 부트캠프에서 세어야 하는 것이 지원 전환이기 때문입니다. `applicationMethod`가 `EMAIL`이라 `applicationUrl`이 없는 부트캠프는 클라이언트가 이동 버튼을 띄우지 않으므로, 서버는 링크 유무를 따로 검사하지 않습니다. 원문(`sourceUrl`) 이동을 함께 세야 하면 그때 링크 종류를 구분하는 컬럼을 추가할지 검토합니다.
 
@@ -183,7 +204,6 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
   - `jobIds`가 없거나, 양수가 아닌 값 또는 같은 공고가 두 번 들어 있으면 400 `BAD_REQUEST`이며 메시지는 `[jobIds]`로 시작합니다(필드 자체가 없으면 기본 메시지).
   - 없거나 삭제된 공고가 하나라도 있으면 404 `JOB_NOT_FOUND`이고 기존 목록은 바뀌지 않습니다.
 - 교체는 기존 행을 소프트 삭제하고 새 행을 넣습니다. 그래서 같은 공고의 지난 행이 여러 개 남고 유니크 제약을 두지 않습니다.
-- 기존 DB에는 `docs/schema/2026-09-30-today-jobs.sql`을 배포 전에 적용합니다.
 - 오늘의 공고 수신 이메일(`notificationEmail`)로 이 목록을 보내는 발송은 아직 없습니다. **미정**입니다.
 
 ### 추천 렛츠커리어 챌린지
@@ -198,6 +218,21 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 식별자나 제목이 없는 항목은 카드를 그릴 수 없어 뺍니다.
 - 응답 항목은 `challengeId`, `title`, `shortDescription`, `thumbnailUrl`, 모집 기간(`recruitmentStartAt`·`recruitmentEndAt`), 진행 기간(`programStartAt`·`programEndAt`)입니다. 렛츠커리어 챌린지 상세 주소는 담지 않으며, `challengeId`로 어느 주소를 만들지는 **확인 필요**입니다.
 - 렛츠커리어 호출은 트랜잭션 밖에서 하고, 로그인 교환과 같은 클라이언트 설정(연결 2초·읽기 5초)을 씁니다.
+
+### 채용공고별 렛츠커리어 콘텐츠 추천
+
+`GET /api/v1/jobs/{jobId}/recommended-lets-career-contents`는 게시 중인 채용공고에 맞는 렛츠커리어 프로그램·무료 자료집·블로그를 섞어 최대 3개 반환합니다. 페이지가 없으므로 `data`는 배열입니다. 맞는 콘텐츠가 없으면 빈 배열이며 클라이언트는 구역을 숨깁니다. 없거나 게시 중이 아닌 공고는 404 `JOB_NOT_FOUND`입니다.
+
+- 결정일: 2026-10-09 / 리뷰 상태: 팀 리뷰 필요
+- 콘텐츠는 렛츠커리어가 소유합니다. 사용자 API가 매시 렛츠커리어 내부 API(`/api/v1/internal/catalog`)의 목록으로 사본(`lets_career_contents`)을 덮어쓰고([스케줄 작업](scheduling.md)의 `letsCareerContentSync`), 목록에서 빠진 콘텐츠는 지운 것으로 표시합니다. 그래서 요청마다 렛츠커리어를 부르지 않으며 렛츠커리어 장애가 이 API를 실패시키지 않습니다. 받은 목록이 비어 있으면 덮어쓰지 않습니다.
+- 사본마다 크롤러가 AI로 직군·직무·준비 단계 태그를 붙입니다([크롤러 렛츠커리어 콘텐츠 태그](rest-api-design.md#크롤러-렛츠커리어-콘텐츠-태그)). 태그가 없거나 태그한 뒤 내용이 바뀐 콘텐츠는 추천하지 않습니다.
+- 고르는 규칙은 사용자 API의 `LetsCareerContentRecommendPolicy`입니다.
+  - 모집 기간이 아닌 콘텐츠와 다른 직군 전용 콘텐츠는 뺍니다. 직군·직무 태그가 없는 콘텐츠는 모든 공고에 나올 수 있습니다.
+  - 직무가 같으면 +5, 직군이 같으면 +3, 공고가 요구하는 준비 단계와 겹치면 하나에 +2(최대 두 개)입니다. 준비 단계는 공고 분석의 제출 서류·자소서·전형 칸과 본문의 전형 절차·채용 안내사항에서 찾고(자기소개서·이력서·포트폴리오·면접·인적성 등), 인턴·일경험 공고는 인턴, 경력 전용이 아닌 공고는 취업 준비 시작을 더합니다.
+  - 점수가 같으면 공고 식별자로 섞은 순서를 씁니다. 같은 공고는 다시 열어도 같은 결과이고, 같은 직무의 다른 공고끼리는 다른 콘텐츠가 섞여 나옵니다.
+  - 한 갈래(프로그램·자료집·블로그)는 두 개까지 고르고, 모자라면 남은 것으로 채웁니다.
+- 응답 항목은 `kind`(`LetsCareerContentKind`), `letsCareerContentId`, `title`, `description`, `thumbnailUrl`, `url`, 모집 기간(`recruitmentStartAt`·`recruitmentEndAt`)입니다. `url`은 렛츠커리어 웹 상세 주소이며 카드를 누르면 그대로 이동합니다. 도메인은 운영 주소(`https://www.letscareer.co.kr`)로 코드에 둡니다.
+- 사용자에 맞춘 추천(렛츠커리어 희망 직무 등)은 아직 넣지 않았습니다. 기존 `GET /api/v1/recommended-challenges`는 프런트가 옮기는 동안 남겨 둡니다. 제거 시점은 **확인 필요**입니다.
 
 ### B2B 광고 문의
 
@@ -224,7 +259,6 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 각 문항은 1000자 이하이며 넘으면 해당 필드명으로 400 `BAD_REQUEST`입니다.
 - 제출한 의견은 고치거나 지우는 기능이 없어 소프트 삭제 칼럼을 두지 않습니다.
 - 관리자 목록 `GET /api/v1/admin/service-feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름 등 사용자 정보를 함께 보여줄지는 **확인 필요**입니다.
-- 기존 DB에는 `docs/schema/2026-09-28-service-feedbacks.sql`을 배포 전에 적용합니다.
 
 ### 관리자 콘솔 목록
 
@@ -242,18 +276,19 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/jobs` | `visibility`, `source`, `reviewStatus`, `recruitmentStatus`, `jobField`, `jobRole` | 제목, 회사명 |
 | `GET /api/v1/admin/bootcamps` | `visibility`, `source`, `reviewStatus`, `status`(`RECRUITING`·`CLOSED`) | 과정명, 운영사 |
 | `GET /api/v1/admin/recruitment-posts` | `visibility`, `recruitmentType`(`SIDE_PROJECT`·`STUDY`), `recruitmentStatus` | 제목 |
-| `GET /api/v1/admin/rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
-| `GET /api/v1/admin/notices` | `visibility`, `pinned` | 제목 |
+| `GET /api/v1/admin/concerns` | `visibility`, `category`(`ConcernCategory`) | 제목 |
+| `GET /api/v1/admin/content-rejections` | `type`(`JOB`·`BOOTCAMP`) | 제목, 회사명, 반려 사유 |
+| `GET /api/v1/admin/announcements` | `visibility`, `pinned` | 제목 |
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 | `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`. `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
 | `GET /api/v1/admin/company-members` | `GET /api/v1/admin/general-members`와 같음 | 회사명, 담당자 이름 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - 사이드·스터디 모집글 목록은 임시저장을 싣지 않으므로 `HIDDEN`은 운영자가 숨긴 모집글입니다. 항목에는 작성자 `authorUserId`와 프로필 닉네임 `authorNickname`(프로필이 없으면 `null`)을 싣고, 조회·북마크·댓글 수를 함께 줍니다. 상세·수정·삭제 API는 아직 두지 않았습니다.
-- `source`는 등록할 때 정해 `source` 칼럼에 저장합니다(`COMPANY` 비즈니스 등록, `CRAWLER` 크롤링, `WORK24` 고용24 수집). 비즈니스 등록만 소유자가 있고 고용24 수집만 외부 식별값(`external_id`)을 가지며, 도메인이 이 관계를 강제합니다. 등록 경로는 바꿀 수 없어 수정 요청으로 받지 않습니다. 2026-09-29까지는 저장하지 않고 소유자 유무로 계산했으나, 소유자가 없는 크롤링과 고용24 수집을 구분하려고 저장으로 바꿨습니다(기존 행 전환은 `docs/schema/2026-09-29-content-source.sql`). 크롤러 API(`/api/v1/internal/**`)는 `CRAWLER` 행만 다룹니다.
-- 채용공고 `recruitmentStatus`는 `jobs.recruitment_status`에 저장한 값입니다. 마감 처리 일시가 있거나 모집 종료 일시가 지났으면 `CLOSED`, 그 밖에는 `RECRUITING`입니다. 등록·수정·마감할 때 정하고, 종료 일시가 지난 공고는 매시 정각 자동 마감 작업(`jobAutoClose`)이 `CLOSED`로 바꾸므로 그 전까지는 `RECRUITING`일 수 있습니다. 직접 마감한 공고는 종료 일시를 늘려도 `CLOSED`로 남습니다. 2026-10-02까지는 저장하지 않고 조회할 때 계산했으나, 부트캠프처럼 칼럼으로 거르려고 저장으로 바꿨습니다(기존 행 전환은 `docs/schema/2026-10-02-job-recruitment-status.sql`). 상시 채용은 모집 종료 일시를 둘 수 없습니다.
+- `source`는 등록할 때 정해 `source` 칼럼에 저장합니다(`COMPANY` 비즈니스 등록, `CRAWLER` 크롤링, `WORK24` 고용24 수집). 비즈니스 등록만 소유자가 있고 고용24 수집만 외부 식별값(`external_id`)을 가지며, 도메인이 이 관계를 강제합니다. 등록 경로는 바꿀 수 없어 수정 요청으로 받지 않습니다. 2026-09-29까지는 저장하지 않고 소유자 유무로 계산했으나, 소유자가 없는 크롤링과 고용24 수집을 구분하려고 저장으로 바꿨습니다. 크롤러 API(`/api/v1/internal/**`)는 `CRAWLER` 행만 다룹니다.
+- 채용공고 `recruitmentStatus`는 `jobs.recruitment_status`에 저장한 값입니다. 마감 처리 일시가 있거나 모집 종료 일시가 지났으면 `CLOSED`, 그 밖에는 `RECRUITING`입니다. 등록·수정·마감할 때 정하고, 종료 일시가 지난 공고는 매시 정각 자동 마감 작업(`jobAutoClose`)이 `CLOSED`로 바꾸므로 그 전까지는 `RECRUITING`일 수 있습니다. 직접 마감한 공고는 종료 일시를 늘려도 `CLOSED`로 남습니다. 2026-10-02까지는 저장하지 않고 조회할 때 계산했으나, 부트캠프처럼 칼럼으로 거르려고 저장으로 바꿨습니다. 상시 채용은 모집 종료 일시를 둘 수 없습니다.
 - 목록에는 본문 칸을 싣지 않고 상세에서만 줍니다.
-- 검수 대기(`GET /api/v1/admin/review-queue`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
+- 검수 대기(`GET /api/v1/admin/content-reviews`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
 - 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다. 노출 일괄 변경(`PATCH /visibility`)은 여러 건이라 `data: null`로 응답합니다([REST API 설계](rest-api-design.md#관리자-콘솔-노출-일괄-변경)).
 - 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.
 
@@ -282,7 +317,6 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 크롤러와 기업회원 공고 등록은 enum 이름으로 보냅니다.
 - 고용24 채용정보는 직종코드(`jobsCd`)를 `Work24JobRoles` 표로 직무에 옮기고, 직군은 그 직무의 직군입니다. 표는 고용24 직종 분류와 오공고 분류가 달라 세분류마다 가장 가까운 직무를 고른 것이며, 분류에 맞는 자리가 없는 농림어업·군인 등은 가까운 직군의 "기타" 직무에 둡니다. **기획 검토 필요.**
 - 비슷한 공고 추천은 렛츠커리어 프로필의 희망 직무 문자열이 직무 라벨(`desc`)과 같을 때만 그 직무로 봅니다. 렛츠커리어 희망 직무 값이 이 라벨과 같은 형식인지는 **확인 필요**입니다.
-- 기존 공고의 원문 값은 `docs/schema/2026-09-28-job-field-role-enum.sql`로 옮깁니다.
 
 ### 채용공고 근무 지역
 
@@ -295,15 +329,14 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 시·군·구 이름은 `시·도_시·군·구`(예: `SEOUL_GANGNAM_GU`)입니다. 중구·동구처럼 같은 이름의 구가 여러 시·도에 있어 시·도를 앞에 붙입니다.
 - 둘 다 선택 값입니다. 시·도만 정할 수 있고, 시·군·구를 보내면 같은 시·도의 값이어야 하며 어긋나면 400 `BAD_REQUEST`(`[subRegion]`)입니다.
 - 크롤러와 기업회원 공고 등록은 지역을 자유 문자열 대신 이 enum으로 보냅니다.
-- 기존 공고의 원문 지역은 `docs/schema/2026-09-28-job-region-enum.sql`로 옮깁니다. 옮기지 못한 원문은 비워 둡니다.
 
 ### enum 선택지
 
-`GET /api/v1/enums`는 사용자 API의 요청·응답에 나오는 업무 enum을 enum 이름별로 묶어 반환합니다. 로그인 없이 호출할 수 있으며 값은 선언 순서를 따릅니다.
+`GET /api/v1/enums`(사용자 API, 로그인 불필요)와 `GET /api/v1/admin/enums`(관리자 API, 관리자 토큰 필요)는 업무 enum을 enum 이름별로 묶어 반환합니다. 두 API의 응답 형식과 목록은 같고, 값은 선언 순서를 따릅니다.
 
 ```json
 {
-  "EmploymentType": [
+  "JobEmploymentType": [
     { "name": "FULL_TIME", "desc": "정규직", "parent": null }
   ],
   "SubRegion": [
@@ -315,21 +348,60 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - `name`은 요청과 응답에 쓰는 값이고, `desc`는 화면 라벨입니다. `EnumField.code`는 업무 메타데이터이므로 싣지 않아 클라이언트가 코드 번호로 요청하지 않게 합니다.
 - `parent`는 다른 enum 값에 속하는 값(`HierarchicalEnumField`)의 상위 값 이름이고, 그 밖에는 `null`입니다. 시·군·구(`SubRegion`)의 `parent`는 시·도(`Region`)입니다.
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
-- 어떤 enum을 내보낼지는 사용자 API가 정하며 `UserEnumService`가 목록을 관리합니다. 값을 선택지로 바꾸는 `EnumOption`만 core가 제공합니다.
-- 사용자 API 요청·응답에 새 업무 enum을 쓰면 이 목록에도 추가합니다. presentation의 요청·응답 필드와 Controller 파라미터에 쓰인 `EnumField` enum이 목록에 없으면 테스트가 실패합니다.
-- 관리자 API에는 아직 두지 않습니다. 관리자 콘솔에 필요해지면 두 API의 독립 배포 경계를 지키도록 관리자 API가 자기 목록을 따로 제공합니다.
+- 목록은 core의 `EnumOptionReader`가 한 곳에서 관리합니다. core에 업무 enum을 새로 만들면 이 목록에 추가하며, 빠뜨리면 core 테스트가 실패합니다.
+- core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(사용자: 광고 문의 유형·홍보 채널, 관리자: 관리 목록 정렬·노출). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
+- enum 이름에 루트 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`, `EmploymentType` → `JobEmploymentType`). 프런트가 새 키로 옮기는 동안 `UserEnumService.LEGACY_KEYS`가 같은 선택지를 예전 키 17개로도 내려 주며, 프런트 배포 후 제거합니다.
+
+#### 목록을 한 곳에서 관리하는 이유
+
+- 결정일: 2026-10-06 / 리뷰 상태: 팀 리뷰 필요
+- 배경: 처음에는 "내보낼 enum은 각 API의 계약이 정한다"는 기준으로 사용자 API만 목록을 두었고, 관리자 API에 선택지 API를 추가하면서 목록이 두 벌이 되었습니다. 두 목록의 대부분이 같은 core enum이라, enum을 추가하거나 바꿀 때마다 두 곳을 함께 고쳐야 했습니다.
+- 변경: 공통 목록을 core로 옮기고, 각 API는 자기 전용 enum만 덧붙입니다.
+- 감수한 점: 목록을 바꾸면 두 API를 모두 배포해야 합니다. 두 API가 상대 API에서만 쓰는 enum도 함께 내보냅니다(예: 사용자 API가 `ContentReviewTargetType`, `ContentSource`, `JobContentField`, `BootcampContentField`를, 관리자 API가 사용자 화면의 정렬·지원 상태 enum을 내보냄). 선택지는 화면 라벨이고 접근 권한과 무관하므로 노출해도 문제가 없다고 보았습니다.
 
 ### 공지사항
 
-공지는 운영자가 관리자 콘솔(`/api/v1/admin/notices`)에서만 작성·수정·삭제하고, 사용자 API(`/api/v1/notices`)는 로그인 없이 목록과 상세를 읽기만 합니다.
+공지는 운영자가 관리자 콘솔(`/api/v1/admin/announcements`)에서만 작성·수정·삭제하고, 사용자 API(`/api/v1/announcements`)는 로그인 없이 목록과 상세를 읽기만 합니다.
 
 - 본문 `content`는 커뮤니티 모집글과 같은 Lexical EditorState JSON 문자열이며 200,000자 이하입니다. JSON이 아니면 400 `BAD_REQUEST`이고 메시지는 `[content]`로 시작합니다.
 - 노출 여부는 콘솔의 `visibility`(`VISIBLE`·`HIDDEN`)로 다룹니다. 채용공고와 달리 검수·게시 상태 네 값이 없고 노출·비노출 둘뿐입니다.
 - 상단 고정(`pinned`)은 노출과 별개입니다. 비노출 공지도 고정해 둘 수 있고 다시 노출하면 고정된 채로 나옵니다.
 - 사용자 목록은 노출 중인 미삭제 공지만 고정 공지를 먼저 두고 최신순으로 줍니다. 목록에는 본문을 싣지 않습니다. 고정 공지도 정렬로 앞에 오는 것이라 2쪽부터는 반복되지 않습니다.
-- 사용자 상세는 비노출·삭제 공지를 없는 공지와 같이 404 `NOTICE_NOT_FOUND`로 응답합니다. 조회 수는 세지 않습니다.
+- 사용자 상세는 비노출·삭제 공지를 없는 공지와 같이 404 `ANNOUNCEMENT_NOT_FOUND`로 응답합니다. 조회 수는 세지 않습니다.
 - 콘솔 등록은 201과 등록한 공지 전체를, 수정(`PATCH`)은 수정된 공지 전체를 `data`로 돌려줍니다. 삭제는 소프트 삭제이며 반복해도 200입니다.
 - 공지 본문에는 이미지를 넣지 않습니다. 그래서 커뮤니티 모집글과 달리 이미지 자산과 연결하지 않고, 관리자 API에도 이미지 업로드를 두지 않습니다.
+
+### 취준고민
+
+취준생이 고민글을 올리고 다른 사용자와 운영자가 답변을 다는 게시판입니다. 코드·테이블 이름은 `Concern`(고민글)입니다.
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 고민글은 `category`(`ConcernCategory`: `JOB_POSTING` 공고 질문, `CAREER` 직무·커리어, `APPLICATION_INTERVIEW` 서류·면접, `SIDE_EXPERIENCE` 사이드·경험, `ETC` 기타), 제목(100자 이하), 본문(2000자 이하 일반 텍스트)으로 이루어집니다. 에디터 JSON이나 이미지는 받지 않습니다.
+- 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·좋아요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
+- 작성자는 렛츠커리어 프로필의 `nickname`·`profileImageUrl`로 보여 주고 사용자 식별자는 싣지 않습니다. 대신 상세와 답변에 내가 쓴 것인지(`mine`)를 줍니다. 프로필이 없는 회원(기업 회원 등)은 두 값이 `null`입니다.
+- 목록 정렬은 `LATEST`(최신순, 기본값, `id DESC`), `VIEW_COUNT`(조회 많은 순), `COMMENT_COUNT`(답변 많은 순)이며 같은 값이면 `id DESC`입니다.
+- "지금 가장 핫한 고민"(`GET /api/v1/concerns/popular`)은 **최근 일주일**, 즉 조회 시각부터 7일 전까지 등록한 고민글 중 `sort`(`ConcernPopularSortType`: `VIEW_COUNT` 기본값, `COMMENT_COUNT`) 값이 큰 것을 최대 3건 배열로 줍니다. 값이 같으면 최근 글이 앞이고, 조회·답변이 없는 글도 대상이라 일주일 안에 글이 있으면 비지 않습니다. 항목은 목록과 같습니다. 카테고리로 거르지 않습니다.
+- 목록 항목은 본문 전체를 싣고 미리보기 줄임은 클라이언트가 합니다.
+- 조회 수와 답변 수는 `concern_metrics`가 소유합니다. 조회 수는 채용공고처럼 상세 조회마다 `ConcernViewedEvent`로 비동기로 올리므로 상세 응답의 `viewCount`에는 이번 조회가 들어가지 않습니다. 지표 행은 고민글을 등록할 때 함께 만듭니다.
+- 고민글을 지우면 소프트 삭제하고 목록·상세에서 빠집니다(404 `CONCERN_NOT_FOUND`). 이미 지운 내 고민글을 다시 지워도 200입니다.
+- 운영자가 관리자 콘솔에서 숨긴 고민글(`concerns.hidden = true`)은 목록·인기 고민에서 빠지고 상세·수정·답변 조회·답변 작성과 삭제·좋아요가 404 `CONCERN_NOT_FOUND`입니다. 작성자에게도 같고, 작성자가 지우는 것만 막지 않습니다. 다시 내놓는 것은 운영자만 합니다(2026-10-08).
+
+#### 답변과 답글
+
+- 부모 댓글이 화면의 **답변**, 대댓글이 **답글**입니다. 답글에는 다시 답글을 달 수 없습니다(400 `CONCERN_COMMENT_NESTING_NOT_ALLOWED`). 댓글은 1000자 이하이며 수정 기능은 없습니다.
+- `commentCount`는 남아 있는 답변 수이고 답글은 세지 않습니다. 답변마다의 답글 수는 `replies.pageInfo.totalElements`입니다.
+- `ADMIN` 역할 계정이 쓴 댓글은 운영자 답변(`official=true`, 화면의 "렛츠커리어 매니저" 배지)입니다. 관리자도 사용자 API로 로그인하므로([인증](authentication.md#7-3-관리자-콘솔-인증)) 별도 관리자 API를 두지 않았습니다. 작성할 때의 역할을 저장하므로 나중에 역할이 바뀌어도 배지는 그대로입니다. 운영자 답변이 남아 있는 고민글은 목록·상세의 `hasOfficialComment`가 `true`입니다(화면의 "오공고 답변" 배지).
+- 답변 목록은 운영자 답변도 구분 없이 등록 순서(`createdAt ASC, id ASC`)로 줍니다. 답변마다 먼저 단 답글 5개를 함께 주고 나머지는 답글 더보기로 읽습니다.
+- 고민글 작성자(질문자)가 쓴 답변·답글은 `concernAuthor=true`입니다. 응답에 사용자 식별자를 싣지 않으므로 클라이언트가 비교할 수 없어 서버가 알려 줍니다.
+- 지운 답변은 남은 답글이 있으면 `"삭제된 댓글입니다"`와 `deleted=true`로 자리를 지키고, 남은 답글이 없으면 목록에서 빠집니다.
+- 좋아요(`likeCount`, 내가 눌렀는지 `liked`)는 답변과 답글 모두에 누를 수 있습니다. 화면에는 "도움돼요"로 보이지만 서버는 일반 좋아요로 다룹니다(2026-10-08). 누르기(`PUT`)와 취소(`DELETE`)는 반복해도 결과가 같고 200입니다. 사용자와 댓글마다 `concern_comment_likes` 한 행을 두고 `(comment_id, user_id)` 유니크 제약을 걸며, 취소는 소프트 삭제, 다시 누르면 그 행을 복구합니다. 내 댓글에 누르는 것을 막을지는 **확인 필요**입니다.
+- 신고는 아직 없습니다.
+
+#### 관리자 콘솔
+
+- 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
+- 목록(`GET /api/v1/admin/concerns`)은 [관리자 콘솔 목록](#관리자-콘솔-목록) 규칙을 따르며 숨긴 고민글도 싣습니다. 항목은 `id`, `category`, `title`, `viewCount`, `commentCount`, `hasOfficialComment`, `visibility`, 작성자 `authorUserId`·`authorNickname`(프로필이 없으면 `null`), `registeredAt`이고 본문은 싣지 않습니다.
+- 상세(`GET /api/v1/admin/concerns/{concernId}`)는 목록 항목에 `content`와 `updatedAt`을 더해 줍니다. 숨긴 고민글도 주고, 사용자 상세와 달리 조회 수를 올리지 않습니다. 없거나 삭제된 고민글은 404 `CONCERN_NOT_FOUND`입니다. 답변 목록은 싣지 않습니다.
 
 ### 고용24 Open API 조회
 
@@ -434,7 +506,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 결정일: 2026-09-30 / 리뷰 상태: 팀 리뷰 필요
 - 사용자 `GET /api/v1/bootcamps/{bootcampId}`와 관리자 부트캠프 상세 응답의 `images`는 상세에서만 보여 주는 사진 배열입니다. 항목은 `{ url, caption, displayOrder }`이고 `displayOrder` 오름차순이며, `caption`은 없으면 `null`입니다.
 - 사진이 없으면 빈 배열입니다. 지금은 고용24 수집만 사진을 넣고, 기업회원·크롤러 등록과 수정 API에는 사진 입력이 없습니다. 수정해도 사진은 그대로입니다.
-- 목록 응답에는 넣지 않습니다. 배포 전에 `docs/schema/2026-09-30-bootcamp-images.sql`을 적용합니다.
+- 목록 응답에는 넣지 않습니다.
 
 ### 검수와 노출
 
@@ -452,7 +524,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 승인과 동시에 게시하는 이유는 승인 결과를 기업회원에게 알릴 경로가 아직 없어서입니다. 다시 게시를 누르게 하면 승인된 콘텐츠가 비노출로 남습니다.
 - 반려 기록은 `content_rejections`에 콘텐츠마다 한 행으로 둡니다. 반려가 풀리면 소프트 삭제했다가 다시 반려하면 되살리고, 콘텐츠를 삭제해도 기록은 남깁니다.
 - 부트캠프도 채용공고와 같은 `publication_status`·`review_status` 칼럼을 둡니다. 사용자 공개 조회는 게시 상태, 모집 상태, 공개 기간을 모두 확인합니다.
-- 기존 데이터 전환은 `docs/schema/2026-09-14-admin-review.sql`을 따릅니다. 이미 게시 중이던 기업회원 콘텐츠는 승인으로 봅니다.
+- 이미 게시 중이던 기업회원 콘텐츠는 승인으로 봅니다.
 - **확인 필요:** 반려 사유를 기업회원에게 전달하는 경로(메일·알림)는 정하지 않았습니다. 지금은 기록만 합니다.
 
 ## 6. 검토했지만 선택하지 않은 대안

@@ -1,10 +1,10 @@
 package com.ogonggo.adminapi.bootcamp.business
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -13,14 +13,14 @@ data class CrawlerBootcampCommand(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     val representativeImageUrl: String,
     /** 운영 회사 로고. 대표 이미지와 따로 온다. 없으면 로고를 두지 않는다. */
@@ -28,7 +28,7 @@ data class CrawlerBootcampCommand(
     val shortDescription: String,
     val content: String,
     val eligibilityAndSelectionProcess: String?,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String?,
     val managerEmail: String?,
     val inquiryUrl: String?,
@@ -37,7 +37,7 @@ data class CrawlerBootcampCommand(
      * 모집 상태. `RECRUITING`이나 `CLOSED`만 온다.
      * 없으면 등록은 모집 중으로 저장하고, 교체는 모집 상태를 바꾸지 않는다.
      */
-    val status: BootcampStatus?,
+    val status: BootcampRecruitmentStatus?,
     /** 보낸 순서가 노출 순서다. */
     val curriculums: List<CrawlerBootcampCurriculumCommand>,
 )

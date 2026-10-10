@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.error.ForbiddenException
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
@@ -93,8 +93,8 @@ class CompanyJobServiceTest {
         val update = JobUpdateDto(
             companyName = "오공고",
             title = "고친 백엔드 개발자",
-            employmentType = EmploymentType.FULL_TIME,
-            experienceType = ExperienceType.EXPERIENCED,
+            employmentType = JobEmploymentType.FULL_TIME,
+            experienceType = JobExperienceType.EXPERIENCED,
             recruitmentType = JobRecruitmentType.PERIOD,
         )
 
@@ -132,8 +132,8 @@ class CompanyJobServiceTest {
     private fun command(): JobAppendDto = JobAppendDto(
         companyName = "오공고",
         title = "백엔드 개발자",
-        employmentType = EmploymentType.FULL_TIME,
-        experienceType = ExperienceType.EXPERIENCED,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
         recruitmentType = JobRecruitmentType.PERIOD,
     )
 
