@@ -483,7 +483,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(bodyEnum.contains("| `OPEN_CHAT_MARKETING` | 2 | 오픈채팅방 · 마케팅 |"))
 
         // 쿼리 파라미터로 쓰는 enum
-        val parameterEnum = document.at("/paths/~1api~1v1~1jobs/get/parameters")
+        val parameterEnum = document.at("/paths/~1api~1v1~1jobs~1popular/get/parameters")
             .first { it.at("/name").asText() == "employmentType" }
             .at("/schema/description").asText()
         assertTrue(parameterEnum.contains("| `FULL_TIME` | 1 | 정규직 |"))

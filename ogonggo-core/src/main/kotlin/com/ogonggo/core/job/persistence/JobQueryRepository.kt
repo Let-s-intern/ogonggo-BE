@@ -2,7 +2,6 @@ package com.ogonggo.core.job.persistence
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.JobEmploymentType
-import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
@@ -225,8 +224,8 @@ internal class JobQueryRepository(
     private fun publishedPredicates(condition: JobSearchCondition): Array<Predicate?> = arrayOf(
         job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
         job.deletedAt.isNull,
-        employmentTypeEq(condition.employmentType),
-        experienceTypeEq(condition.experienceType),
+        condition.employmentTypes.takeIf { it.isNotEmpty() }?.let { job.employmentType.`in`(it) },
+        condition.experienceTypes.takeIf { it.isNotEmpty() }?.let { job.experienceType.`in`(it) },
         condition.jobField?.let(job.jobField::eq),
         condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
         condition.region?.let(job.region::eq),
@@ -249,9 +248,6 @@ internal class JobQueryRepository(
 
     private fun employmentTypeEq(employmentType: JobEmploymentType?): BooleanExpression? =
         employmentType?.let(job.employmentType::eq)
-
-    private fun experienceTypeEq(experienceType: JobExperienceType?): BooleanExpression? =
-        experienceType?.let(job.experienceType::eq)
 
     private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {
         null -> null

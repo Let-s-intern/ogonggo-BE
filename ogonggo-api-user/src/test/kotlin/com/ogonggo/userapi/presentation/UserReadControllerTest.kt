@@ -304,10 +304,10 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달되고 직무는 여러 개 고를 수 있다`() {
+    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달되고 고용 형태 경력 유형 직무는 여러 개 고를 수 있다`() {
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
-            experienceType = JobExperienceType.NEWCOMER,
+            employmentTypes = setOf(JobEmploymentType.INTERN, JobEmploymentType.FULL_TIME),
+            experienceTypes = setOf(JobExperienceType.NEWCOMER, JobExperienceType.IRRELEVANT),
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND),
         )
@@ -316,8 +316,8 @@ class UserReadControllerTest @Autowired constructor(
 
         mockMvc.perform(
             get("/api/v1/jobs")
-                .param("employmentType", "INTERN")
-                .param("experienceType", "NEWCOMER")
+                .param("employmentType", "INTERN", "FULL_TIME")
+                .param("experienceType", "NEWCOMER", "IRRELEVANT")
                 .param("jobField", "IT_DEVELOPMENT")
                 .param("jobRole", "IT_BACKEND", "IT_FRONTEND")
                 .param("sort", "VIEW_COUNT")
@@ -330,7 +330,7 @@ class UserReadControllerTest @Autowired constructor(
     @Test
     fun `검색어는 필터 정렬과 함께 조회 조건으로 전달된다`() {
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
+            employmentTypes = setOf(JobEmploymentType.INTERN),
             keyword = "백엔드",
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
@@ -557,8 +557,8 @@ class UserReadControllerTest @Autowired constructor(
         val from = LocalDate.of(2026, 8, 1)
         val to = LocalDate.of(2026, 8, 31)
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
-            experienceType = JobExperienceType.NEWCOMER,
+            employmentTypes = setOf(JobEmploymentType.INTERN),
+            experienceTypes = setOf(JobExperienceType.NEWCOMER),
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",

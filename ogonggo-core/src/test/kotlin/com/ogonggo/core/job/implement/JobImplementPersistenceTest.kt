@@ -257,8 +257,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         // when
         val result = jobReader.readPublishedCalendar(
             condition = JobSearchCondition(
-                employmentType = JobEmploymentType.INTERN,
-                experienceType = JobExperienceType.NEWCOMER,
+                employmentTypes = setOf(JobEmploymentType.INTERN),
+                experienceTypes = setOf(JobExperienceType.NEWCOMER),
                 jobField = JobField.IT_DEVELOPMENT,
                 jobRoles = setOf(JobRole.IT_BACKEND),
                 keyword = "backend",
@@ -807,11 +807,24 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         )
         assertEquals(
             setOf(fullTimeNewcomer, fullTimeExperienced),
-            readIds(JobSearchCondition(employmentType = JobEmploymentType.FULL_TIME)),
+            readIds(JobSearchCondition(employmentTypes = setOf(JobEmploymentType.FULL_TIME))),
         )
         assertEquals(
             setOf(internExperienced, fullTimeExperienced),
-            readIds(JobSearchCondition(experienceType = JobExperienceType.EXPERIENCED)),
+            readIds(JobSearchCondition(experienceTypes = setOf(JobExperienceType.EXPERIENCED))),
+        )
+        assertEquals(
+            setOf(internExperienced, fullTimeNewcomer, fullTimeExperienced),
+            readIds(JobSearchCondition(employmentTypes = setOf(JobEmploymentType.FULL_TIME, JobEmploymentType.INTERN))),
+        )
+        assertEquals(
+            setOf(fullTimeNewcomer),
+            readIds(
+                JobSearchCondition(
+                    employmentTypes = setOf(JobEmploymentType.FULL_TIME, JobEmploymentType.CONTRACT),
+                    experienceTypes = setOf(JobExperienceType.NEWCOMER, JobExperienceType.IRRELEVANT),
+                ),
+            ),
         )
     }
 
@@ -851,7 +864,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val page = jobBookmarkReader.readBookmarkedPublishedPage(
             userId = USER_ID,
             condition = JobSearchCondition(
-                employmentType = JobEmploymentType.INTERN,
+                employmentTypes = setOf(JobEmploymentType.INTERN),
                 jobRoles = setOf(JobRole.IT_BACKEND),
                 keyword = "백엔드",
             ),
@@ -903,8 +916,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             page = 0,
             size = 10,
             condition = JobSearchCondition(
-                employmentType = JobEmploymentType.FULL_TIME,
-                experienceType = JobExperienceType.EXPERIENCED,
+                employmentTypes = setOf(JobEmploymentType.FULL_TIME),
+                experienceTypes = setOf(JobExperienceType.EXPERIENCED),
             ),
         )
 
@@ -923,7 +936,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             page = 0,
             size = 10,
             sortType = JobSortType.VIEW_COUNT,
-            condition = JobSearchCondition(employmentType = JobEmploymentType.FULL_TIME),
+            condition = JobSearchCondition(employmentTypes = setOf(JobEmploymentType.FULL_TIME)),
         )
 
         assertEquals(listOf(popular, quiet), page.jobs.map { it.id })
@@ -974,7 +987,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
             page = 0,
             size = 10,
             sortType = JobSortType.VIEW_COUNT,
-            condition = JobSearchCondition(employmentType = JobEmploymentType.INTERN, keyword = "백엔드"),
+            condition = JobSearchCondition(employmentTypes = setOf(JobEmploymentType.INTERN), keyword = "백엔드"),
         )
 
         assertEquals(listOf(target), page.jobs.map { it.id })
