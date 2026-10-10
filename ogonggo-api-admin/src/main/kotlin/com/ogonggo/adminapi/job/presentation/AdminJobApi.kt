@@ -8,6 +8,7 @@ import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsReques
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
 import com.ogonggo.adminapi.job.presentation.response.AdminJobDetailResponse
 import com.ogonggo.adminapi.job.presentation.response.AdminJobSummaryResponse
+import com.ogonggo.adminapi.job.presentation.response.AdminTodayJobSummaryResponse
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -98,15 +99,17 @@ interface AdminJobApi {
 
             게시 상태와 무관하게 삭제되지 않은 공고를 반환합니다. visibility가 HIDDEN인 공고는 사용자 화면에 나오지 않습니다.
             마감된 공고(recruitmentStatus가 CLOSED)는 뺄 때까지 사용자 화면에 그대로 나옵니다.
+            항목은 채용공고 목록 항목에 공고마다 설정한 추천 문구(recommendationTitle, recommendationDescription)를 더한 것입니다.
         """,
     )
-    fun getTodayJobs(): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>>
+    fun getTodayJobs(): ResponseEntity<SuccessResponse<List<AdminTodayJobSummaryResponse>>>
 
     @Operation(
         operationId = "replaceTodayJobs",
         summary = "오늘의 공고 설정",
         description = """
-            오늘의 공고를 jobIds의 공고로 모두 바꾸고 바뀐 목록을 반환합니다. 배열 순서가 노출 순서이며 개수 제한은 없습니다.
+            오늘의 공고를 jobs의 공고와 추천 문구로 모두 바꾸고 바뀐 목록을 반환합니다. 배열 순서가 노출 순서이며 개수 제한은 없습니다.
+            추천 문구는 사용자 화면 카드에 보여 주며 제목(recommendationTitle, 30자 이하)과 설명(recommendationDescription, 50자 이하)을 모두 적어야 합니다.
             빈 배열을 보내면 오늘의 공고를 비웁니다. 같은 요청을 반복해도 결과가 같습니다.
 
             게시 상태는 가리지 않지만 사용자 화면에는 게시 중인 공고만 나옵니다.
@@ -117,7 +120,7 @@ interface AdminJobApi {
             ApiResponse(responseCode = "200", description = "설정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: jobIds가 없거나 양수가 아닌 값 또는 같은 공고가 두 번 들어 있습니다.",
+                description = "BAD_REQUEST: jobs가 없거나, 항목의 jobId가 양수가 아니거나, 추천 문구가 비었거나 길거나, 같은 공고가 두 번 들어 있습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -129,7 +132,7 @@ interface AdminJobApi {
     )
     fun replaceTodayJobs(
         @Valid request: ReplaceAdminTodayJobsRequest,
-    ): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>>
+    ): ResponseEntity<SuccessResponse<List<AdminTodayJobSummaryResponse>>>
 
     @Operation(
         operationId = "updateJobVisibilities",

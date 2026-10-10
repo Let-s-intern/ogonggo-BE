@@ -29,6 +29,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.notification.domain.NotificationChannel
+import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
@@ -43,8 +45,6 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentKind
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTopic
-import com.ogonggo.core.notification.domain.NotificationChannel
-import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
@@ -80,6 +80,9 @@ class EnumOptionReader {
             enumOptionsOf<JobPublicationStatus>(),
             enumOptionsOf<JobSortType>(),
             enumOptionsOf<JobContentField>(),
+            // 알림
+            enumOptionsOf<NotificationChannel>(),
+            enumOptionsOf<NotificationStatus>(),
             // 직군·직무. JobRole의 parent는 속한 JobField다.
             enumOptionsOf<JobField>(),
             enumOptionsOf<JobRole>(),
@@ -106,9 +109,6 @@ class EnumOptionReader {
             enumOptionsOf<LetsCareerContentTopic>(),
             // 북마크
             enumOptionsOf<BookmarkSortType>(),
-            // 알림
-            enumOptionsOf<NotificationChannel>(),
-            enumOptionsOf<NotificationStatus>(),
             // 사이드 프로젝트·스터디 모집글
             enumOptionsOf<RecruitmentPostType>(),
             enumOptionsOf<RecruitmentPostPosition>(),

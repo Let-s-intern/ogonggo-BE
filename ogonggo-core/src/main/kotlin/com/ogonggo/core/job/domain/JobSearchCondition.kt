@@ -9,8 +9,10 @@ import com.ogonggo.core.region.domain.SubRegion
  * 필터가 늘어나도 조회 계약의 시그니처가 바뀌지 않도록 여기에만 값을 추가한다.
  */
 data class JobSearchCondition(
-    val employmentType: JobEmploymentType? = null,
-    val experienceType: JobExperienceType? = null,
+    /** 고용 형태. 비어 있으면 거르지 않고, 여러 개면 그중 하나라도 맞는 공고가 걸린다. */
+    val employmentTypes: Set<JobEmploymentType> = emptySet(),
+    /** 경력 유형. 비어 있으면 거르지 않고, 여러 개면 그중 하나라도 맞는 공고가 걸린다. */
+    val experienceTypes: Set<JobExperienceType> = emptySet(),
     /** 직군. 직무까지 정한 공고도 직군이 같으면 걸린다. */
     val jobField: JobField? = null,
     /** 직무. 비어 있으면 거르지 않고, 여러 개면 그중 하나라도 맞는 공고가 걸린다. */

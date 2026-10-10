@@ -12,6 +12,7 @@ import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobPageDto
+import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.contentreview.domain.ContentSource
@@ -93,11 +94,11 @@ class JobReader internal constructor(
         return jobQueryRepository.findPopularRecruiting(employmentType, limit)
     }
 
-    /** 운영자가 고른 오늘의 공고 중 게시 중인 공고를 고른 순서대로 읽는다. 마감된 공고도 운영자가 뺄 때까지 남는다. */
-    fun readPublishedToday(): List<Job> = jobQueryRepository.findToday(publishedOnly = true)
+    /** 운영자가 고른 오늘의 공고 중 게시 중인 공고를 추천 문구와 함께 고른 순서대로 읽는다. 마감된 공고도 운영자가 뺄 때까지 남는다. */
+    fun readPublishedToday(): List<TodayJobDto.Response> = jobQueryRepository.findToday(publishedOnly = true)
 
-    /** 운영자가 고른 오늘의 공고를 게시 상태와 무관하게 고른 순서대로 읽는다. 삭제된 공고는 뺀다. */
-    fun readToday(): List<Job> = jobQueryRepository.findToday(publishedOnly = false)
+    /** 운영자가 고른 오늘의 공고를 추천 문구와 함께 게시 상태와 무관하게 고른 순서대로 읽는다. 삭제된 공고는 뺀다. */
+    fun readToday(): List<TodayJobDto.Response> = jobQueryRepository.findToday(publishedOnly = false)
 
     /** 직무와 산업이 모두 비면 조건 없이 모든 공고를 읽게 되므로 둘 중 하나는 있어야 한다. */
     fun readRecruitingMatched(

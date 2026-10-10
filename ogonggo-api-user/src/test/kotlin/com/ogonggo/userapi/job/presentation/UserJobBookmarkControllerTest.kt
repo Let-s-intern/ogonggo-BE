@@ -66,8 +66,8 @@ class UserJobBookmarkControllerTest @Autowired constructor(
     fun `내 북마크 목록의 필터와 검색어는 조회 조건으로 전달된다`() {
         // given
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
-            experienceType = JobExperienceType.NEWCOMER,
+            employmentTypes = setOf(JobEmploymentType.INTERN),
+            experienceTypes = setOf(JobExperienceType.NEWCOMER),
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",

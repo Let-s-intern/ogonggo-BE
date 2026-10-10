@@ -41,6 +41,13 @@ data class AdminJobPageResult(
     }
 }
 
+/** 오늘의 공고 한 건이다. 목록과 같은 항목에 운영자가 적은 추천 문구를 더한다. */
+data class AdminTodayJobSummary(
+    val job: AdminJobSummary,
+    val recommendationTitle: String,
+    val recommendationDescription: String,
+)
+
 /** 목록에는 본문 칸을 싣지 않는다. 한 페이지가 수백 KB가 되므로 본문은 상세에서만 준다. */
 data class AdminJobSummary(
     val id: Long,

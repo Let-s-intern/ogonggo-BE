@@ -16,6 +16,7 @@ import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
@@ -206,9 +207,9 @@ class UserJobServiceTest {
     }
 
     @Test
-    fun `오늘의 공고는 운영자가 고른 순서를 유지하고 북마크 여부와 지표를 채운다`() {
-        val first = createJobMock(id = 5L)
-        val second = createJobMock(id = 2L)
+    fun `오늘의 공고는 운영자가 고른 순서를 유지하고 추천 문구와 북마크 여부와 지표를 채운다`() {
+        val first = TodayJobDto.Response(createJobMock(id = 5L), "추천 제목", "추천 설명")
+        val second = TodayJobDto.Response(createJobMock(id = 2L), "다른 제목", "다른 설명")
         Mockito.`when`(jobReader.readPublishedToday()).thenReturn(listOf(first, second))
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(5L, 2L))).thenReturn(setOf(2L))
         Mockito.`when`(jobMetricReader.readAll(listOf(5L, 2L))).thenReturn(
@@ -217,9 +218,11 @@ class UserJobServiceTest {
 
         val result = service.getTodayJobs(USER_ID)
 
-        assertEquals(listOf(5L, 2L), result.map { it.id })
-        assertEquals(listOf(false, true), result.map { it.bookmarked })
-        assertEquals(listOf(3L, 0L), result.map { it.viewCount })
+        assertEquals(listOf(5L, 2L), result.map { it.job.id })
+        assertEquals(listOf(false, true), result.map { it.job.bookmarked })
+        assertEquals(listOf(3L, 0L), result.map { it.job.viewCount })
+        assertEquals(listOf("추천 제목", "다른 제목"), result.map { it.recommendationTitle })
+        assertEquals(listOf("추천 설명", "다른 설명"), result.map { it.recommendationDescription })
     }
 
     @Test

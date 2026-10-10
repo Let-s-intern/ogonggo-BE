@@ -15,6 +15,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -125,23 +126,29 @@ class AdminJobServiceTest {
 
     @Test
     fun `오늘의 공고는 고른 순서를 유지하고 지표가 없는 공고는 0으로 채운다`() {
-        val first = todayJob(id = 5L)
-        val second = todayJob(id = 2L)
+        val first = TodayJobDto.Response(todayJob(id = 5L), "추천 제목", "추천 설명")
+        val second = TodayJobDto.Response(todayJob(id = 2L), "다른 제목", "다른 설명")
         Mockito.`when`(jobReader.readToday()).thenReturn(listOf(first, second))
         Mockito.`when`(jobMetricReader.readAll(listOf(5L, 2L)))
             .thenReturn(mapOf(2L to JobMetricDto(viewCount = 9, bookmarkCount = 1, commentCount = 0)))
 
         val result = service.getTodayJobs()
 
-        assertEquals(listOf(5L, 2L), result.map { it.id })
-        assertEquals(listOf(0L, 9L), result.map { it.viewCount })
+        assertEquals(listOf(5L, 2L), result.map { it.job.id })
+        assertEquals(listOf(0L, 9L), result.map { it.job.viewCount })
+        assertEquals(listOf("추천 제목", "다른 제목"), result.map { it.recommendationTitle })
     }
 
     @Test
     fun `오늘의 공고 설정은 받은 순서 그대로 현재 시각과 함께 넘긴다`() {
-        service.replaceTodayJobs(listOf(7L, 3L))
+        val todayJobs = listOf(
+            TodayJobDto.Request(7L, "추천 제목", "추천 설명"),
+            TodayJobDto.Request(3L, "다른 제목", "다른 설명"),
+        )
 
-        Mockito.verify(todayJobManager).replace(listOf(7L, 3L), NOW)
+        service.replaceTodayJobs(todayJobs)
+
+        Mockito.verify(todayJobManager).replace(todayJobs, NOW)
     }
 
     private fun todayJob(id: Long): Job = Mockito.mock(Job::class.java).also { job ->

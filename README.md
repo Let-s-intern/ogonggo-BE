@@ -77,22 +77,10 @@ Users sign in by exchanging a LetsCareer access token at `POST /api/v1/auth/lets
 
 Administrator console endpoints (`/api/v1/admin/**`) accept a user API access token whose account has `UserRole.ADMIN`, granted directly in the database. `ogonggo-api-admin` must be configured with the same `ogonggo.auth.jwt.secret` as the user API. Read section 7-3 of [오공고 사용자 인증과 렛츠커리어 연동](docs/architecture/authentication.md) before changing it.
 
-Before deploying notification changes, verify the production schema and apply `docs/schema/2026-10-06-notifications.sql` once before the user API rollout. Pause bookmark writes from migration through rollout because the old version does not populate `active_since`. The reminder job remains disabled until the NHN template is approved.
+Before deploying this branch's notifications, verify the production schema and apply `docs/schema/2026-10-06-notifications.sql` once before the user API rollout. It adds `job_bookmarks.active_since` and creates `notifications` including `result_category`; it does not add a reminder timestamp or separate reminder schedule/cursor table. The D-1 time is calculated from `jobs.recruitment_end_at` during each candidate query. Existing eligible bookmarks can be processed after D-1 as long as the posting deadline has not passed; bookmarks activated after D-1 are excluded. The migration seeds the reminder and delivery jobs disabled and terminal-notification cleanup enabled. The reminder scheduler is currently not registered pending template approval. Pause bookmark writes from migration through user API rollout because the old version does not populate `active_since`. See the notification extension guide for activation policy and implementation limitations.
+일반적인 기존 스키마 변경 SQL은 main의 배포 절차를 따르며, 이 브랜치의 알림 기능에 필요한 SQL만 위 파일로 관리합니다.
 
-If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07-fcm-token.sql` once before the user API rollout. The FCM sender remains disabled until Firebase credentials and `ogonggo.firebase.enabled` are configured. Firebase service-account values are external secrets; do not commit them.
-
-```yaml
-ogonggo:
-  firebase:
-    enabled: ${OGONGGO_FIREBASE_ENABLED:false}
-    project-id: ${OGONGGO_FIREBASE_PROJECT_ID:}
-    client-id: ${OGONGGO_FIREBASE_CLIENT_ID:}
-    client-email: ${OGONGGO_FIREBASE_CLIENT_EMAIL:}
-    private-key-id: ${OGONGGO_FIREBASE_PRIVATE_KEY_ID:}
-    private-key: ${OGONGGO_FIREBASE_PRIVATE_KEY:}
-```
-
-`private-key` may contain real line breaks or escaped `\n`. When `enabled` is `true`, all service-account values must be provided together. If all are omitted, the application falls back to Google Application Default Credentials.
+If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07-fcm-token.sql` once before the user API rollout. The FCM sender remains disabled until Firebase credentials and `ogonggo.firebase.enabled` are configured. Firebase service-account values are external secrets; do not commit them. The FCM configuration format is documented in [알림 추가 가이드](docs/architecture/notification-extension-guide.md#fcm-설정과-payload).
 ## Work24 (고용24) Open API
 
 관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.
@@ -153,4 +141,4 @@ The project intentionally follows the current LetsCareer approach and does not i
 
 로컬과 테스트는 빈 DB에서 시작하므로 `update`나 `create-drop`을 씁니다.
 
-Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 백업 후 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환을 실행하지 않습니다.
+Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 백업 후 배포용 SQL을 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환을 실행하지 않습니다.
