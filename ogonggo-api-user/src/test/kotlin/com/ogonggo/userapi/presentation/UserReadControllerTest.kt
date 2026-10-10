@@ -42,6 +42,7 @@ import com.ogonggo.userapi.job.business.UserJobPageResult
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.business.UserJobSummary
+import com.ogonggo.userapi.job.business.UserTodayJobSummary
 import com.ogonggo.userapi.job.presentation.UserJobController
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -176,9 +177,10 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `오늘의 공고는 페이지 정보 없이 목록으로 응답하고 로그인 없이도 조회한다`() {
-        Mockito.`when`(userJobService.getTodayJobs(USER_ID)).thenReturn(listOf(jobSummary()))
-        Mockito.`when`(userJobService.getTodayJobs(null)).thenReturn(listOf(jobSummary(bookmarked = false)))
+    fun `오늘의 공고는 페이지 정보 없이 추천 문구를 담은 목록으로 응답하고 로그인 없이도 조회한다`() {
+        Mockito.`when`(userJobService.getTodayJobs(USER_ID)).thenReturn(listOf(todayJobSummary(jobSummary())))
+        Mockito.`when`(userJobService.getTodayJobs(null))
+            .thenReturn(listOf(todayJobSummary(jobSummary(bookmarked = false))))
 
         mockMvc.perform(get("/api/v1/jobs/today").with(authenticatedUser()))
             .andExpect(status().isOk)
@@ -188,6 +190,9 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].id").value(1))
             .andExpect(jsonPath("$.data[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data[0].viewCount").value(12))
+            .andExpect(jsonPath("$.data[0].recommendationTitle").value("경력 없이 시작하고 싶다면"))
+            .andExpect(jsonPath("$.data[0].recommendationDescription").value("실무 중심 프로젝트로 빠른 성장"))
+            .andExpect(jsonPath("$.data[0].job").doesNotExist())
 
         mockMvc.perform(get("/api/v1/jobs/today"))
             .andExpect(status().isOk)
@@ -299,10 +304,10 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달되고 직무는 여러 개 고를 수 있다`() {
+    fun `고용 형태 경력 유형 직군 직무 필터는 정렬과 함께 조회 조건으로 전달되고 고용 형태 경력 유형 직무는 여러 개 고를 수 있다`() {
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
-            experienceType = JobExperienceType.NEWCOMER,
+            employmentTypes = setOf(JobEmploymentType.INTERN, JobEmploymentType.FULL_TIME),
+            experienceTypes = setOf(JobExperienceType.NEWCOMER, JobExperienceType.IRRELEVANT),
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND),
         )
@@ -311,8 +316,8 @@ class UserReadControllerTest @Autowired constructor(
 
         mockMvc.perform(
             get("/api/v1/jobs")
-                .param("employmentType", "INTERN")
-                .param("experienceType", "NEWCOMER")
+                .param("employmentType", "INTERN", "FULL_TIME")
+                .param("experienceType", "NEWCOMER", "IRRELEVANT")
                 .param("jobField", "IT_DEVELOPMENT")
                 .param("jobRole", "IT_BACKEND", "IT_FRONTEND")
                 .param("sort", "VIEW_COUNT")
@@ -325,7 +330,7 @@ class UserReadControllerTest @Autowired constructor(
     @Test
     fun `검색어는 필터 정렬과 함께 조회 조건으로 전달된다`() {
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
+            employmentTypes = setOf(JobEmploymentType.INTERN),
             keyword = "백엔드",
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
@@ -552,8 +557,8 @@ class UserReadControllerTest @Autowired constructor(
         val from = LocalDate.of(2026, 8, 1)
         val to = LocalDate.of(2026, 8, 31)
         val condition = JobSearchCondition(
-            employmentType = JobEmploymentType.INTERN,
-            experienceType = JobExperienceType.NEWCOMER,
+            employmentTypes = setOf(JobEmploymentType.INTERN),
+            experienceTypes = setOf(JobExperienceType.NEWCOMER),
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND),
             keyword = "오공고",
@@ -795,6 +800,9 @@ class UserReadControllerTest @Autowired constructor(
         totalPages = 1,
         hasNext = false,
     )
+
+    private fun todayJobSummary(job: UserJobSummary): UserTodayJobSummary =
+        UserTodayJobSummary(job, "경력 없이 시작하고 싶다면", "실무 중심 프로젝트로 빠른 성장")
 
     private fun jobSummary(bookmarked: Boolean = true): UserJobSummary = UserJobSummary(
         id = 1L,

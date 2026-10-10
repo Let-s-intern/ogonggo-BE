@@ -17,6 +17,7 @@ import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
+import com.ogonggo.userapi.job.presentation.response.UserTodayJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import java.time.LocalDate
@@ -45,8 +46,8 @@ class UserJobController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "sort", defaultValue = "LATEST") sortType: JobSortType,
-        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
-        @RequestParam(name = "experienceType", required = false) experienceType: JobExperienceType?,
+        @RequestParam(name = "employmentType", required = false) employmentTypes: List<JobEmploymentType>?,
+        @RequestParam(name = "experienceType", required = false) experienceTypes: List<JobExperienceType>?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
         @RequestParam(name = "region", required = false) region: Region?,
@@ -57,8 +58,8 @@ class UserJobController(
         val result = userJobService.getJobs(
             userId = userId,
             condition = JobSearchCondition(
-                employmentType = employmentType,
-                experienceType = experienceType,
+                employmentTypes = employmentTypes.orEmpty().toSet(),
+                experienceTypes = experienceTypes.orEmpty().toSet(),
                 jobField = jobField,
                 jobRoles = jobRoles.orEmpty().toSet(),
                 region = region,
@@ -91,8 +92,8 @@ class UserJobController(
     @GetMapping("/today")
     override fun getTodayJobs(
         @AuthenticationPrincipal userId: Long?,
-    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>> =
-        SuccessResponse.ok(userJobService.getTodayJobs(userId).map(UserJobSummaryResponse::from))
+    ): ResponseEntity<SuccessResponse<List<UserTodayJobSummaryResponse>>> =
+        SuccessResponse.ok(userJobService.getTodayJobs(userId).map(UserTodayJobSummaryResponse::from))
 
     @GetMapping("/similar")
     override fun getSimilarJobs(
@@ -121,8 +122,8 @@ class UserJobController(
         @AuthenticationPrincipal userId: Long?,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate,
-        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
-        @RequestParam(name = "experienceType", required = false) experienceType: JobExperienceType?,
+        @RequestParam(name = "employmentType", required = false) employmentTypes: List<JobEmploymentType>?,
+        @RequestParam(name = "experienceType", required = false) experienceTypes: List<JobExperienceType>?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
         @RequestParam(name = "region", required = false) region: Region?,
@@ -139,8 +140,8 @@ class UserJobController(
             deadlineOnly = deadlineOnly,
         )
         val condition = JobSearchCondition(
-            employmentType = employmentType,
-            experienceType = experienceType,
+            employmentTypes = employmentTypes.orEmpty().toSet(),
+            experienceTypes = experienceTypes.orEmpty().toSet(),
             jobField = jobField,
             jobRoles = jobRoles.orEmpty().toSet(),
             region = region,

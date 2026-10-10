@@ -42,8 +42,8 @@ class UserJobBookmarkController(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
         @RequestParam(name = "sort", defaultValue = "RECENTLY_SAVED") sortType: BookmarkSortType,
-        @RequestParam(name = "employmentType", required = false) employmentType: JobEmploymentType?,
-        @RequestParam(name = "experienceType", required = false) experienceType: JobExperienceType?,
+        @RequestParam(name = "employmentType", required = false) employmentTypes: List<JobEmploymentType>?,
+        @RequestParam(name = "experienceType", required = false) experienceTypes: List<JobExperienceType>?,
         @RequestParam(name = "jobField", required = false) jobField: JobField?,
         @RequestParam(name = "jobRole", required = false) jobRoles: List<JobRole>?,
         @RequestParam(name = "region", required = false) region: Region?,
@@ -55,8 +55,8 @@ class UserJobBookmarkController(
         val result = userJobBookmarkService.getBookmarks(
             userId = userId,
             condition = JobSearchCondition(
-                employmentType = employmentType,
-                experienceType = experienceType,
+                employmentTypes = employmentTypes.orEmpty().toSet(),
+                experienceTypes = experienceTypes.orEmpty().toSet(),
                 jobField = jobField,
                 jobRoles = jobRoles.orEmpty().toSet(),
                 region = region,

@@ -11,6 +11,7 @@ import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -79,15 +80,21 @@ class AdminJobService(
     }
 
     /** 숨긴 공고도 운영자가 알아보고 뺄 수 있도록 게시 상태와 무관하게 고른 순서대로 보여 준다. */
-    fun getTodayJobs(): List<AdminJobSummary> {
-        val jobs = jobReader.readToday()
-        val metrics = jobMetricReader.readAll(jobs.map { it.requiredId() })
-        return jobs.map { job -> AdminJobSummary.from(job, metrics[job.requiredId()] ?: JobMetricDto.EMPTY) }
+    fun getTodayJobs(): List<AdminTodayJobSummary> {
+        val todayJobs = jobReader.readToday()
+        val metrics = jobMetricReader.readAll(todayJobs.map { it.job.requiredId() })
+        return todayJobs.map { todayJob ->
+            AdminTodayJobSummary(
+                job = AdminJobSummary.from(todayJob.job, metrics[todayJob.job.requiredId()] ?: JobMetricDto.EMPTY),
+                recommendationTitle = todayJob.recommendationTitle,
+                recommendationDescription = todayJob.recommendationDescription,
+            )
+        }
     }
 
     @Transactional
-    fun replaceTodayJobs(jobIds: List<Long>) {
-        todayJobManager.replace(jobIds, LocalDateTime.now(clock))
+    fun replaceTodayJobs(todayJobs: List<TodayJobDto.Request>) {
+        todayJobManager.replace(todayJobs, LocalDateTime.now(clock))
     }
 
     private fun Job.visibility(): AdminContentVisibility =

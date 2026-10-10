@@ -12,6 +12,8 @@ import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobSummary
+import com.ogonggo.userapi.job.business.UserTodayJobSummary
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -96,6 +98,24 @@ data class UserJobSummaryResponse(
             viewCount = result.viewCount,
             bookmarkCount = result.bookmarkCount,
             commentCount = result.commentCount,
+        )
+    }
+}
+
+/** 목록 항목과 같은 필드를 같은 높이에 펼치고 추천 문구를 더한다. 클라이언트가 목록 카드와 같은 코드로 그리기 위해서다. */
+data class UserTodayJobSummaryResponse(
+    @get:JsonUnwrapped
+    val job: UserJobSummaryResponse,
+    @field:Schema(description = "카드에 굵게 보여 주는 추천 문구 제목. 예: 경력 없이 시작하고 싶다면")
+    val recommendationTitle: String,
+    @field:Schema(description = "추천 문구 제목 아래 설명. 예: 실무 중심 프로젝트로 빠른 성장")
+    val recommendationDescription: String,
+) {
+    companion object {
+        internal fun from(result: UserTodayJobSummary): UserTodayJobSummaryResponse = UserTodayJobSummaryResponse(
+            job = UserJobSummaryResponse.from(result.job),
+            recommendationTitle = result.recommendationTitle,
+            recommendationDescription = result.recommendationDescription,
         )
     }
 }

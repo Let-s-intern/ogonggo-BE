@@ -277,6 +277,12 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(todayJobs.isObject)
         assertTrue(todayJobs.at("/security/0/BearerAuth").isArray)
         assertTrue(todayJobs.at("/parameters").isMissingNode)
+        // 항목은 목록 항목의 필드를 같은 높이에 펼치고 추천 문구를 더한다. 중첩된 job 필드로 드러나면 계약과 다르다.
+        val todayJobProperties = document.at("/components/schemas/UserTodayJobSummaryResponse/properties")
+        listOf("id", "title", "bookmarked", "recommendationTitle", "recommendationDescription").forEach { field ->
+            assertTrue(todayJobProperties.has(field), field)
+        }
+        assertFalse(todayJobProperties.has("job"))
 
         // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 인증이 필수다.
         val similarJobs = document.at("/paths/~1api~1v1~1jobs~1similar/get")
@@ -477,7 +483,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(bodyEnum.contains("| `OPEN_CHAT_MARKETING` | 2 | 오픈채팅방 · 마케팅 |"))
 
         // 쿼리 파라미터로 쓰는 enum
-        val parameterEnum = document.at("/paths/~1api~1v1~1jobs/get/parameters")
+        val parameterEnum = document.at("/paths/~1api~1v1~1jobs~1popular/get/parameters")
             .first { it.at("/name").asText() == "employmentType" }
             .at("/schema/description").asText()
         assertTrue(parameterEnum.contains("| `FULL_TIME` | 1 | 정규직 |"))

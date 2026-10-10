@@ -12,6 +12,7 @@ import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
+import com.ogonggo.userapi.job.presentation.response.UserTodayJobSummaryResponse
 import com.ogonggo.userapi.response.ErrorResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -45,8 +46,8 @@ interface UserJobApi {
             같은 날 등록한 공고끼리는 한 회사 공고가 몰리지 않도록 섞되, 순서는 요청마다 같습니다.
 
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다.
-            jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.
-            나머지는 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않습니다.
+            employmentType, experienceType, jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고,
+            그중 하나라도 맞는 공고가 걸립니다. 나머지는 하나씩 고를 수 있고, 보내지 않으면 해당 조건을 적용하지 않습니다.
             jobField(직군), jobRole(직무)은 GET /api/v1/enums의 JobField·JobRole 값을 보냅니다.
             jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             region(시·도), subRegion(시·군·구)은 GET /api/v1/enums의 Region·SubRegion 값을 보냅니다.
@@ -72,8 +73,8 @@ interface UserJobApi {
         @Max(100)
         size: Int,
         sortType: JobSortType,
-        employmentType: JobEmploymentType?,
-        experienceType: JobExperienceType?,
+        employmentTypes: List<JobEmploymentType>?,
+        experienceTypes: List<JobExperienceType>?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
         region: Region?,
@@ -119,6 +120,8 @@ interface UserJobApi {
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
             보내지 않으면 항상 false입니다.
 
+            항목은 채용공고 목록 항목에 운영자가 공고마다 적은 추천 문구(recommendationTitle, recommendationDescription)를 더한 것입니다.
+
             게시 중인 공고만 반환합니다. 고른 뒤에 숨기거나 삭제한 공고는 빠집니다.
             마감 처리됐거나 모집 종료 일시가 지난 공고는 운영자가 뺄 때까지 그대로 나오며,
             closedAt과 recruitmentEndAt으로 마감 여부를 알 수 있습니다.
@@ -128,7 +131,7 @@ interface UserJobApi {
     fun getTodayJobs(
         @Parameter(hidden = true)
         userId: Long?,
-    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>>
+    ): ResponseEntity<SuccessResponse<List<UserTodayJobSummaryResponse>>>
 
     @Operation(
         operationId = "listMySimilarJobs",
@@ -213,7 +216,7 @@ interface UserJobApi {
             시작·종료 일시가 모두 있는 공고만 대상이며 종료 일시, 식별자 오름차순으로 정렬합니다.
 
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion, keyword는 채용공고 목록 조회와 같습니다.
-            jobRole만 여러 번 보내 여러 개를 고를 수 있고 나머지는 하나씩 고릅니다.
+            employmentType, experienceType, jobRole은 여러 번 보내 여러 개를 고를 수 있고 나머지는 하나씩 고릅니다.
             보내지 않으면 해당 조건을 적용하지 않으며 서로 함께 사용할 수 있습니다.
             keyword는 회사명 또는 공고 제목에 포함되는지로 찾으며 대소문자를 가리지 않고 2자 이상 100자 이하여야 합니다.
 
@@ -254,8 +257,8 @@ interface UserJobApi {
         userId: Long?,
         from: LocalDate,
         to: LocalDate,
-        employmentType: JobEmploymentType?,
-        experienceType: JobExperienceType?,
+        employmentTypes: List<JobEmploymentType>?,
+        experienceTypes: List<JobExperienceType>?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
         region: Region?,

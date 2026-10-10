@@ -127,3 +127,18 @@ data class JobAnalysisCandidateDto(
     val targets: List<Job>,
     val unchanged: List<Job>,
 )
+
+/** 오늘의 공고 한 건이다. 고른 공고와 그 카드에 보여 줄 추천 문구를 함께 담는다. */
+object TodayJobDto {
+    data class Request(
+        val jobId: Long,
+        val recommendationTitle: String,
+        val recommendationDescription: String,
+    )
+
+    data class Response(
+        val job: Job,
+        val recommendationTitle: String,
+        val recommendationDescription: String,
+    )
+}

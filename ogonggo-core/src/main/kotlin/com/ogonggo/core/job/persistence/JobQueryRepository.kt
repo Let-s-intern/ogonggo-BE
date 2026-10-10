@@ -2,7 +2,6 @@ package com.ogonggo.core.job.persistence
 
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.job.domain.JobEmploymentType
-import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
@@ -17,6 +16,7 @@ import com.ogonggo.core.job.domain.QJob.job
 import com.ogonggo.core.job.domain.QJobBookmark.jobBookmark
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.job.domain.QTodayJob.todayJob
+import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.jpa.pageOf
 import com.ogonggo.core.jpa.paged
 import com.ogonggo.core.contentreview.domain.ContentSource
@@ -193,8 +193,8 @@ internal class JobQueryRepository(
      * 운영자가 고른 오늘의 공고를 고른 순서대로 읽는다. 공고와 오늘의 공고는 연관관계가 없으므로 명시적으로 조인한다.
      * 고른 뒤에 삭제된 공고는 항상 빼고, 게시 중인 공고만 볼지는 호출하는 쪽이 정한다.
      */
-    fun findToday(publishedOnly: Boolean): List<Job> =
-        queryFactory.select(job)
+    fun findToday(publishedOnly: Boolean): List<TodayJobDto.Response> =
+        queryFactory.select(todayJob, job)
             .from(todayJob)
             .join(job).on(job.id.eq(todayJob.jobId))
             .where(
@@ -204,6 +204,14 @@ internal class JobQueryRepository(
             )
             .orderBy(todayJob.displayOrder.asc(), todayJob.id.asc())
             .fetch()
+            .map { tuple ->
+                val selected = requireNotNull(tuple.get(todayJob))
+                TodayJobDto.Response(
+                    job = requireNotNull(tuple.get(job)),
+                    recommendationTitle = selected.recommendationTitle,
+                    recommendationDescription = selected.recommendationDescription,
+                )
+            }
 
     /** 마감 처리됐거나 모집 종료 일시가 지난 공고는 지원할 수 없으므로 추천 목록에서 뺀다. */
     private fun recruitingPredicates(): Array<Predicate> = arrayOf(
@@ -216,8 +224,8 @@ internal class JobQueryRepository(
     private fun publishedPredicates(condition: JobSearchCondition): Array<Predicate?> = arrayOf(
         job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
         job.deletedAt.isNull,
-        employmentTypeEq(condition.employmentType),
-        experienceTypeEq(condition.experienceType),
+        condition.employmentTypes.takeIf { it.isNotEmpty() }?.let { job.employmentType.`in`(it) },
+        condition.experienceTypes.takeIf { it.isNotEmpty() }?.let { job.experienceType.`in`(it) },
         condition.jobField?.let(job.jobField::eq),
         condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
         condition.region?.let(job.region::eq),
@@ -240,9 +248,6 @@ internal class JobQueryRepository(
 
     private fun employmentTypeEq(employmentType: JobEmploymentType?): BooleanExpression? =
         employmentType?.let(job.employmentType::eq)
-
-    private fun experienceTypeEq(experienceType: JobExperienceType?): BooleanExpression? =
-        experienceType?.let(job.experienceType::eq)
 
     private fun publishedEq(published: Boolean?): BooleanExpression? = when (published) {
         null -> null

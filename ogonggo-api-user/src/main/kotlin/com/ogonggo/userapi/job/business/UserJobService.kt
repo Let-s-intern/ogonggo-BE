@@ -11,6 +11,7 @@ import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
 import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import com.ogonggo.core.user.implement.UserProfileReader
@@ -49,8 +50,18 @@ class UserJobService(
     fun getPopularJobs(userId: Long?, employmentType: JobEmploymentType?): List<UserJobSummary> =
         toSummaries(userId, jobReader.readPopularRecruiting(employmentType, POPULAR_JOB_LIMIT))
 
-    /** 운영자가 관리자 콘솔에서 고른 공고를 고른 순서대로 보여 준다. 개수는 운영자가 정한다. */
-    fun getTodayJobs(userId: Long?): List<UserJobSummary> = toSummaries(userId, jobReader.readPublishedToday())
+    /** 운영자가 관리자 콘솔에서 고른 공고를 추천 문구와 함께 고른 순서대로 보여 준다. 개수는 운영자가 정한다. */
+    fun getTodayJobs(userId: Long?): List<UserTodayJobSummary> {
+        val todayJobs = jobReader.readPublishedToday()
+        return toSummaries(userId, todayJobs.map(TodayJobDto.Response::job))
+            .zip(todayJobs) { summary, todayJob ->
+                UserTodayJobSummary(
+                    job = summary,
+                    recommendationTitle = todayJob.recommendationTitle,
+                    recommendationDescription = todayJob.recommendationDescription,
+                )
+            }
+    }
 
     /**
      * 희망 직무와 산업이 모두 맞는 공고부터 직무만, 산업만 맞는 공고 순으로 채운다.

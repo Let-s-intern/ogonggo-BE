@@ -6,6 +6,10 @@ import com.ogonggo.adminapi.job.business.AdminJobUpdateCommand
 import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.job.implement.dto.TodayJobDto
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 
 /** 콘솔 목록 한 페이지(최대 100건)를 여러 장 골라도 넉넉하고, 한 트랜잭션의 잠금이 지나치게 길어지지 않을 만큼으로 둔다. */
@@ -45,18 +49,31 @@ data class UpdateAdminJobRequest(
 
 /** 배열 순서가 노출 순서다. 빈 배열은 오늘의 공고를 비우라는 뜻이다. */
 data class ReplaceAdminTodayJobsRequest(
-    val jobIds: List<Long?>,
+    @field:Valid val jobs: List<AdminTodayJobRequest?>,
 ) {
-    /** 배열 요소의 제약은 Bean Validation으로 선언할 수 없어 여기서 확인한다. 요소에 null이 와도 500이 되지 않게 한다. */
-    fun toJobIds(): List<Long> {
-        val ids = jobIds.map { id ->
-            id?.takeIf { it > 0 } ?: throw InvalidRequestFieldException("jobIds", "채용공고 식별자는 양수여야 합니다.")
+    /** 요소에 null이 와도 500이 되지 않게 여기서 확인한다. 요소 안의 값은 Bean Validation이 먼저 확인한다. */
+    fun toDtos(): List<TodayJobDto.Request> {
+        val todayJobs = jobs.map { job ->
+            job?.toDto() ?: throw InvalidRequestFieldException("jobs", "오늘의 공고 항목을 비울 수 없습니다.")
         }
-        if (ids.distinct().size != ids.size) {
-            throw InvalidRequestFieldException("jobIds", "같은 공고를 두 번 넣을 수 없습니다.")
+        if (todayJobs.map(TodayJobDto.Request::jobId).let { it.distinct().size != it.size }) {
+            throw InvalidRequestFieldException("jobs", "같은 공고를 두 번 넣을 수 없습니다.")
         }
-        return ids
+        return todayJobs
     }
+}
+
+/** 오늘의 공고 카드에 공고와 함께 보여 줄 추천 문구다. 길이는 카드 폭에서 한 줄 남짓 들어가는 만큼으로 둔다. */
+data class AdminTodayJobRequest(
+    @field:Positive val jobId: Long,
+    @field:NotBlank @field:Size(max = 30) val recommendationTitle: String,
+    @field:NotBlank @field:Size(max = 50) val recommendationDescription: String,
+) {
+    fun toDto(): TodayJobDto.Request = TodayJobDto.Request(
+        jobId = jobId,
+        recommendationTitle = recommendationTitle,
+        recommendationDescription = recommendationDescription,
+    )
 }
 
 /**

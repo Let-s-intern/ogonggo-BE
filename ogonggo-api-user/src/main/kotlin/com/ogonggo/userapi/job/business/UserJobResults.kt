@@ -128,6 +128,13 @@ data class UserJobSummary(
     }
 }
 
+/** 오늘의 공고 카드 한 장이다. 목록과 같은 항목에 운영자가 적은 추천 문구를 더한다. */
+data class UserTodayJobSummary(
+    val job: UserJobSummary,
+    val recommendationTitle: String,
+    val recommendationDescription: String,
+)
+
 data class UserJobResult(
     val id: Long,
     val companyName: String,
