@@ -61,6 +61,27 @@ FCM 알림의 `payload_json`은 다음 형태다. `data`는 Firebase 메시지 �
 }
 ```
 
+수동 발송 경로를 확인할 때는 로그인한 사용자의 FCM 토큰을 먼저 저장한 뒤 다음 API를 호출한다.
+
+```http
+POST /api/v1/users/me/notifications/fcm/test
+Content-Type: application/json
+Authorization: Bearer {ogonggo-access-token}
+```
+
+```json
+{
+  "title": "오공고 FCM 테스트",
+  "body": "FCM 알림 발송 테스트입니다.",
+  "data": {"source": "manual-test"}
+}
+```
+
+- API는 임의 토큰을 받지 않고 저장된 본인 토큰으로 `FCM/PENDING` notification만 적재한다.
+- 응답의 `deduplicationKey`는 적재된 행을 DB에서 찾을 때 사용한다. 실제 provider 요청과 결과는 기존 dispatcher가 비동기로 처리한다.
+- Firebase 설정이 비활성화된 환경에서는 dispatcher가 `CHANNEL_NOT_CONFIGURED`로 결과를 기록하므로, provider 호출 테스트 전 설정 활성화를 확인한다.
+- 잘못된 토큰 테스트는 이 API의 응답 `200`이 아니라 이후 `notifications.status`, `result_code`, CloudWatch 로그에서 확인한다.
+
 ## 구현 규칙
 
 ### 적재와 중복 방지
