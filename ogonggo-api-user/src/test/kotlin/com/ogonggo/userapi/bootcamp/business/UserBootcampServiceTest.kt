@@ -1,43 +1,43 @@
 package com.ogonggo.userapi.bootcamp.business
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
 import com.ogonggo.core.bootcamp.domain.Bootcamp
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.bootcamp.implement.BootcampApplicationUrlClickAppender
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
+import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
+import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampImageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
-import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
-import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
+import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
+import java.time.LocalDate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
-import java.time.LocalDate
 
 class UserBootcampServiceTest {
 
     private val bootcampReader = Mockito.mock(BootcampReader::class.java)
     private val bootcampBookmarkReader = Mockito.mock(BootcampBookmarkReader::class.java)
     private val bootcampContentReader = Mockito.mock(BootcampContentReader::class.java)
-    private val bootcampApplicationUrlClickAppender =
-        Mockito.mock(BootcampApplicationUrlClickAppender::class.java)
+    private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val bootcampMetricReader = Mockito.mock(BootcampMetricReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val service = UserBootcampService(
         bootcampReader,
         bootcampBookmarkReader,
         bootcampContentReader,
-        bootcampApplicationUrlClickAppender,
+        sourceUrlClickAppender,
         bootcampMetricReader,
         eventPublisher,
     )
@@ -145,11 +145,11 @@ class UserBootcampServiceTest {
         val bootcamp = Mockito.mock(Bootcamp::class.java)
         Mockito.`when`(bootcampReader.readPublic(1L)).thenReturn(bootcamp)
 
-        service.recordApplicationUrlClick(USER_ID, 1L)
+        service.recordSourceUrlClick(USER_ID, 1L)
 
-        val inOrder = Mockito.inOrder(bootcampReader, bootcampApplicationUrlClickAppender)
+        val inOrder = Mockito.inOrder(bootcampReader, sourceUrlClickAppender)
         inOrder.verify(bootcampReader).readPublic(1L)
-        inOrder.verify(bootcampApplicationUrlClickAppender).append(USER_ID, 1L)
+        inOrder.verify(sourceUrlClickAppender).append(SourceUrlClickTargetType.BOOTCAMP, 1L, USER_ID)
     }
 
     private fun createBootcampMock(): Bootcamp = Mockito.mock(Bootcamp::class.java).also { bootcamp ->
@@ -157,16 +157,16 @@ class UserBootcampServiceTest {
         Mockito.`when`(bootcamp.companyName).thenReturn("오공고 교육사")
         Mockito.`when`(bootcamp.title).thenReturn("백엔드 부트캠프")
         Mockito.`when`(bootcamp.programType).thenReturn("개발")
-        Mockito.`when`(bootcamp.operationType).thenReturn(OperationType.ONLINE)
+        Mockito.`when`(bootcamp.operationType).thenReturn(BootcampOperationType.ONLINE)
         Mockito.`when`(bootcamp.recruitmentType).thenReturn(BootcampRecruitmentType.PERIOD)
         Mockito.`when`(bootcamp.programStartDate).thenReturn(LocalDate.of(2026, 9, 1))
         Mockito.`when`(bootcamp.programEndDate).thenReturn(LocalDate.of(2026, 12, 1))
-        Mockito.`when`(bootcamp.tuitionType).thenReturn(TuitionType.FREE)
+        Mockito.`when`(bootcamp.tuitionType).thenReturn(BootcampTuitionType.FREE)
         Mockito.`when`(bootcamp.representativeImageUrl).thenReturn("https://example.com/image.png")
         Mockito.`when`(bootcamp.shortDescription).thenReturn("백엔드 개발자로 성장하는 12주")
-        Mockito.`when`(bootcamp.status).thenReturn(BootcampStatus.RECRUITING)
+        Mockito.`when`(bootcamp.status).thenReturn(BootcampRecruitmentStatus.RECRUITING)
         Mockito.`when`(bootcamp.content).thenReturn("부트캠프 상세 내용")
-        Mockito.`when`(bootcamp.applicationMethod).thenReturn(ApplicationMethod.EXTERNAL_PAGE)
+        Mockito.`when`(bootcamp.applicationMethod).thenReturn(BootcampApplicationMethod.EXTERNAL_PAGE)
     }
 
     companion object {

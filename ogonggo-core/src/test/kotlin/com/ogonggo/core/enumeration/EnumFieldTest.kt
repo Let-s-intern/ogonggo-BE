@@ -1,13 +1,13 @@
 package com.ogonggo.core.enumeration
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.user.domain.UserRole
@@ -21,16 +21,16 @@ class EnumFieldTest {
     @Test
     fun `업무 enum은 양수의 고유 코드와 설명을 가진다`() {
         val enumTypes = listOf(
-            EmploymentType.entries,
-            ExperienceType.entries,
-            EducationLevel.entries,
+            JobEmploymentType.entries,
+            JobExperienceType.entries,
+            JobEducationLevel.entries,
             JobRecruitmentType.entries,
             JobPublicationStatus.entries,
-            ApplicationMethod.entries,
-            BootcampStatus.entries,
+            BootcampApplicationMethod.entries,
+            BootcampRecruitmentStatus.entries,
             BootcampRecruitmentType.entries,
-            OperationType.entries,
-            TuitionType.entries,
+            BootcampOperationType.entries,
+            BootcampTuitionType.entries,
             UserStatus.entries,
             UserRole.entries,
         )

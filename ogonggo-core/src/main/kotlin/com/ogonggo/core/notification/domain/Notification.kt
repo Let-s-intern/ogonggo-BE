@@ -1,6 +1,6 @@
 package com.ogonggo.core.notification.domain
 
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.enumeration.EnumField
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

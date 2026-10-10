@@ -6,8 +6,8 @@ import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampCommand
 import com.ogonggo.adminapi.bootcamp.business.CrawlerBootcampService
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
-import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.adminapi.auth.presentation.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -135,7 +135,7 @@ class CrawlerBootcampControllerTest @Autowired constructor(
         )
             .andExpect(status().isCreated)
 
-        assertEquals(BootcampStatus.CLOSED, checkNotNull(registered).status)
+        assertEquals(BootcampRecruitmentStatus.CLOSED, checkNotNull(registered).status)
     }
 
     @Test
@@ -286,7 +286,7 @@ class CrawlerBootcampControllerTest @Autowired constructor(
         }
 
         // 모집 상태를 보내지 않으면 비워 넘겨 교체가 모집 상태를 건드리지 않게 한다.
-        assertEquals(listOf(null, BootcampStatus.RECRUITING), replaced.map { it.status })
+        assertEquals(listOf(null, BootcampRecruitmentStatus.RECRUITING), replaced.map { it.status })
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.config
 
-import com.ogonggo.userapi.auth.implement.LetsCareerInternalApiKeyFilter
+import com.ogonggo.userapi.auth.presentation.LetsCareerInternalApiKeyFilter
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info

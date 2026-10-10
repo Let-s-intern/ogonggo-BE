@@ -5,7 +5,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.userapi.bootcamp.business.UserBootcampBookmarkService
 import com.ogonggo.userapi.bootcamp.presentation.request.UpdateBootcampApplicationStatusRequest
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
@@ -40,7 +40,7 @@ class UserBootcampBookmarkController(
         @RequestParam(name = "category", required = false) category: BootcampCategory?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "applicationStatus", required = false) applicationStatus: BootcampApplicationStatus?,
-        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: BootcampStatus?,
+        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: BootcampRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>> {
         val result = userBootcampBookmarkService.getBookmarks(
             userId = userId,

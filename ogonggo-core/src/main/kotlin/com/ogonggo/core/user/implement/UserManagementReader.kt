@@ -1,5 +1,6 @@
 package com.ogonggo.core.user.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.implement.dto.CompanyMemberDto
 import com.ogonggo.core.user.implement.dto.CompanyMemberPageDto
@@ -41,9 +42,4 @@ class UserManagementReader internal constructor(
             totalPages = result.totalPages,
         )
     }
-}
-
-private fun validatePageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
 }

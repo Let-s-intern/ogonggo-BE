@@ -6,16 +6,16 @@ import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.limit
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.number
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.section
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Values.text
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
-import com.ogonggo.core.review.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentSource
 import java.time.LocalTime
 
 /**
@@ -58,6 +58,7 @@ internal object Work24JobMapper {
             industry = (corp.text("indTpCdNm") ?: item.text("indTpNm"))?.limit(CATEGORY_MAX),
             employmentType = employmentType(info.text("empTpCd") ?: item.text("empTpCd")),
             experienceType = experienceType(info.text("enterTpCd"), item.text("career")),
+            experienceMinYears = minCareerYears(detail)?.takeIf { it >= 1 },
             educationLevel = educationLevel(info.text("minEdubgIcd")),
             region = subRegion?.region ?: region(item.text("strtnmCd"), item.text("region")),
             subRegion = subRegion,
@@ -137,37 +138,50 @@ internal object Work24JobMapper {
         Region.entries.firstOrNull { it.desc == name || it.desc + "도" == name }
 
     /** 10·20은 기간의 정함이 없는·있는 근로계약, 11·21은 그 시간(선택)제, 4는 파견이다. */
-    private fun employmentType(code: String?): EmploymentType = when (code) {
-        "10" -> EmploymentType.FULL_TIME
-        "20" -> EmploymentType.CONTRACT
-        "11", "21" -> EmploymentType.PART_TIME
-        else -> EmploymentType.ETC
+    private fun employmentType(code: String?): JobEmploymentType = when (code) {
+        "10" -> JobEmploymentType.FULL_TIME
+        "20" -> JobEmploymentType.CONTRACT
+        "11", "21" -> JobEmploymentType.PART_TIME
+        else -> JobEmploymentType.ETC
     }
 
     /** 상세의 경력 코드(N 신입, E 경력, Z 관계없음)를 먼저 보고, 없으면 목록의 경력 문구로 판단한다. */
-    private fun experienceType(code: String?, career: String?): ExperienceType = when (code) {
-        "N" -> ExperienceType.NEWCOMER
-        "E" -> ExperienceType.EXPERIENCED
-        "Z" -> ExperienceType.IRRELEVANT
+    private fun experienceType(code: String?, career: String?): JobExperienceType = when (code) {
+        "N" -> JobExperienceType.NEWCOMER
+        "E" -> JobExperienceType.EXPERIENCED
+        "Z" -> JobExperienceType.IRRELEVANT
         else -> when {
-            career == null || career.contains("관계없음") || career.contains("무관") -> ExperienceType.IRRELEVANT
-            career.contains("신입") && career.contains("경력") -> ExperienceType.BOTH
-            career.contains("경력") -> ExperienceType.EXPERIENCED
-            career.contains("신입") -> ExperienceType.NEWCOMER
-            else -> ExperienceType.IRRELEVANT
+            career == null || career.contains("관계없음") || career.contains("무관") -> JobExperienceType.IRRELEVANT
+            career.contains("신입") && career.contains("경력") -> JobExperienceType.BOTH
+            career.contains("경력") -> JobExperienceType.EXPERIENCED
+            career.contains("신입") -> JobExperienceType.NEWCOMER
+            else -> JobExperienceType.IRRELEVANT
         }
     }
 
-    /** 최소 학력 코드다. 초졸·중졸은 오공고에 없는 단계라 학력 무관으로 본다. */
-    private fun educationLevel(code: String?): EducationLevel = when (code) {
-        "03" -> EducationLevel.HIGH_SCHOOL
-        "04" -> EducationLevel.ASSOCIATE
-        "05" -> EducationLevel.BACHELOR
-        "06" -> EducationLevel.MASTER
-        "07" -> EducationLevel.DOCTORATE
-        else -> EducationLevel.ANY
+    /**
+     * 상세의 경력 문구(`enterTpNm`)에서 최소 경력 연수를 읽는다. `경력 (최소2년) 우대`는 2,
+     * `경력 (6개월 이상) 우대`는 0이다. 신입·관계없음처럼 연수가 없으면 null이다.
+     */
+    fun minCareerYears(detail: JsonNode): Int? {
+        val text = detail.path("wantedInfo").text("enterTpNm") ?: return null
+        CAREER_YEARS.find(text)?.let { return it.groupValues[1].toIntOrNull() }
+        return CAREER_MONTHS.find(text)?.groupValues?.get(1)?.toIntOrNull()?.div(MONTHS_PER_YEAR)
     }
 
+    /** 최소 학력 코드다. 초졸·중졸은 오공고에 없는 단계라 학력 무관으로 본다. */
+    private fun educationLevel(code: String?): JobEducationLevel = when (code) {
+        "03" -> JobEducationLevel.HIGH_SCHOOL
+        "04" -> JobEducationLevel.ASSOCIATE
+        "05" -> JobEducationLevel.BACHELOR
+        "06" -> JobEducationLevel.MASTER
+        "07" -> JobEducationLevel.DOCTORATE
+        else -> JobEducationLevel.ANY
+    }
+
+    private val CAREER_YEARS = Regex("""(\d+)\s*년""")
+    private val CAREER_MONTHS = Regex("""(\d+)\s*개월""")
+    private const val MONTHS_PER_YEAR = 12
     private const val UNTIL_FILLED = "채용시까지"
     private const val COMPANY_NAME_MAX = 150
     private const val TITLE_MAX = 255

@@ -1,6 +1,6 @@
 package com.ogonggo.core.user.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto

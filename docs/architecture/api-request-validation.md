@@ -53,7 +53,7 @@ data class CreateItemRequest(
 - 문자열과 컬렉션은 도메인·DB 한계에 맞는 최대 크기를 선언합니다.
 - 중첩 객체와 컬렉션 요소는 `@Valid`로 연쇄 검증합니다.
 - 선택 입력은 nullable로 표현합니다.
-- 생성·수정 요청에 누락 값을 임의의 기본값으로 보완하지 않습니다. Query Parameter의 공개된 기본값은 허용합니다.
+- 생성·수정 요청에 누락 값을 임의의 기본값으로 보완하지 않습니다. 보내지 않았다는 사실 자체가 업무상 뜻을 가지면(예: 학력을 보내지 않으면 학력 무관) 그 기본값을 API 명세에 공개하고 씁니다. Query Parameter의 공개된 기본값과 같은 원칙입니다.
 
 요청 클래스 이름은 `CreateJobRequest`, `UpdateJobRequest`처럼 행위와 대상을 드러냅니다. HTTP 계약이므로 `Request`·`Response`를 접미사로 쓰고 `Dto`는 붙이지 않습니다. core가 Implement 계층에서 주고받는 타입은 [레이어와 모듈](layers-and-modules.md)의 `Dto` 규칙을 따릅니다. Request는 도메인별 `presentation/request`에 둡니다. 관련된 작은 타입은 `UserAuthRequests.kt`처럼 한 파일로 묶을 수 있지만 Controller 파일에는 선언하지 않습니다.
 

@@ -3,7 +3,7 @@ package com.ogonggo.userapi.bootcamp.presentation
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.userapi.bootcamp.presentation.request.UpdateBootcampApplicationStatusRequest
 import com.ogonggo.userapi.bootcamp.presentation.response.UserBootcampSummaryResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -66,7 +66,7 @@ interface UserBootcampBookmarkApi {
         @Size(min = 2, max = 100)
         keyword: String?,
         applicationStatus: BootcampApplicationStatus?,
-        recruitmentStatus: BootcampStatus?,
+        recruitmentStatus: BootcampRecruitmentStatus?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserBootcampSummaryResponse>>>
 
     @Operation(operationId = "createBootcampBookmark", summary = "부트캠프 북마크 등록")

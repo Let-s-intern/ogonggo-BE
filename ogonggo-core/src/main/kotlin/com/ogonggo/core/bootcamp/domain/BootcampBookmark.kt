@@ -1,7 +1,7 @@
 package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType

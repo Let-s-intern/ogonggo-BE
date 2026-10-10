@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.ingestion.work24.implement
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.ogonggo.core.job.domain.JobField
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -48,6 +49,8 @@ enum class Work24CollectionTarget(
      * 채용구분(`empTpGb`)의 일용직(2)은 이 API로 조회되지 않아, 받는 공고는 모두 상용직이다.
      *
      * 직종코드(`jobsCd`)가 [Work24JobRoles] 표에 없는 공고도 뺀다. 오공고 직군·직무로 분류할 수 있는 공고만 받는다.
+     *
+     * 임시로 [TEMPORARY_JOB_FIELDS] 직군만 받는다. 연차는 목록에 연수가 없어 상세를 받은 뒤 거른다([Work24Collector]).
      */
     RECRUITMENTS(
         Work24Api.RECRUITMENTS, Work24Api.RECRUITMENT_DETAIL, Work24Destination.JOB, Work24Paging.START_PAGE,
@@ -55,7 +58,8 @@ enum class Work24CollectionTarget(
         { mapOf("regDate" to "D-3", "sortOrderBy" to "DESC", "empTp" to "10|20") },
         excludes = { item ->
             item.path("salTpNm").asText().trim() in HOURLY_OR_DAILY_WAGES ||
-                Work24JobRoles.of(item.path("jobsCd").asText()) == null
+                // 표에 없는 직종(null)도 임시 직군 밖이라 함께 빠진다. 임시 조건을 풀면 `== null`로 되돌린다.
+                Work24JobRoles.of(item.path("jobsCd").asText())?.jobField !in TEMPORARY_JOB_FIELDS
         },
     ),
 
@@ -84,6 +88,23 @@ enum class Work24CollectionTarget(
         listOf("srchList", "scn_list"), listOf("trprId", "trprDegr"), ::trainingCourseParameters,
     ),
 }
+
+/**
+ * 임시로 받는 채용공고 직군이다(2026-10-06, LC-3444). 마케팅·인사·기획·영업·개발 직무만 받는다.
+ * 상품기획·MD는 마케팅, AI·데이터는 개발로 본다. 풀 때는 이 목록과 [TEMPORARY_MAX_CAREER_YEARS] 검사를 지운다.
+ */
+internal val TEMPORARY_JOB_FIELDS: Set<JobField> = setOf(
+    JobField.MARKETING_ADVERTISING,
+    JobField.MERCHANDISING,
+    JobField.HR_GENERAL_AFFAIRS,
+    JobField.PLANNING_STRATEGY,
+    JobField.SALES,
+    JobField.IT_DEVELOPMENT,
+    JobField.AI_DATA,
+)
+
+/** 임시로 받는 최대 경력 연수다. 인턴부터 3년차까지 받는다. 최소 경력이 이보다 긴 공고는 뺀다. */
+internal const val TEMPORARY_MAX_CAREER_YEARS = 3
 
 private const val TRAINING_START_DAYS = 90L
 private const val K_DIGITAL_TRAINING = "C0104"

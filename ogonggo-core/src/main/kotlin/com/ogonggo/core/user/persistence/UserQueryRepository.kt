@@ -1,5 +1,7 @@
 package com.ogonggo.core.user.persistence
 
+import com.ogonggo.core.jpa.pageOf
+import com.ogonggo.core.jpa.paged
 import com.ogonggo.core.user.domain.CompanyProfile
 import com.ogonggo.core.user.domain.QCompanyProfile.companyProfile
 import com.ogonggo.core.user.domain.QUser.user
@@ -11,7 +13,6 @@ import com.ogonggo.core.user.domain.UserRole
 import com.querydsl.core.types.Predicate
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
 
@@ -41,18 +42,16 @@ internal class UserQueryRepository(
             .leftJoin(userProfile).on(userProfile.userId.eq(user.id))
             .where(*predicates)
             .orderBy(user.id.desc())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
             .map { row -> checkNotNull(row.get(user)) to row.get(userProfile) }
 
-        val total = queryFactory.select(user.count())
+        val countQuery = queryFactory.select(user.count())
             .from(user)
             .leftJoin(userProfile).on(userProfile.userId.eq(user.id))
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     fun findCompanyMemberPage(
@@ -73,18 +72,16 @@ internal class UserQueryRepository(
             .leftJoin(companyProfile).on(companyProfile.userId.eq(user.id))
             .where(*predicates)
             .orderBy(user.id.desc())
-            .offset(pageable.offset)
-            .limit(pageable.pageSize.toLong())
+            .paged(pageable)
             .fetch()
             .map { row -> checkNotNull(row.get(user)) to row.get(companyProfile) }
 
-        val total = queryFactory.select(user.count())
+        val countQuery = queryFactory.select(user.count())
             .from(user)
             .leftJoin(companyProfile).on(companyProfile.userId.eq(user.id))
             .where(*predicates)
-            .fetchOne() ?: 0L
 
-        return PageImpl(content, pageable, total)
+        return pageOf(content, pageable, countQuery)
     }
 
     private fun commonPredicates(condition: UserManagementSearchCondition): Array<Predicate?> = arrayOf(

@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ogonggo.userapi.auth.implement.LetsCareerInternalApiKeyFilter
+import com.ogonggo.userapi.auth.presentation.LetsCareerInternalApiKeyFilter
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.auth.presentation.UserAuthenticationFilter
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest
@@ -99,19 +99,17 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/jobs/similar").authenticated()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").permitAll()
                 it.requestMatchers(
+                    "/api/v1/users/me/recruitment-post-applications",
+                    "/api/v1/users/me/recruitment-post-applications/**",
+                    "/api/v1/users/me/recruitment-posts",
+                    "/api/v1/users/me/recruitment-posts/**",
+                ).authenticated()
+                // 프런트가 새 경로로 옮기는 동안 남겨 둔 예전 경로다(RecruitmentPostLegacyPathController). 서버 2차 배포에서 제거한다.
+                it.requestMatchers(
                     "/api/v1/me/recruitment-applications",
                     "/api/v1/me/recruitment-applications/**",
-                ).authenticated()
-                it.requestMatchers(
-                    HttpMethod.GET,
                     "/api/v1/me/recruitment-posts",
-                    "/api/v1/me/recruitment-posts/*",
-                ).authenticated()
-                it.requestMatchers(
-                    HttpMethod.POST,
-                    "/api/v1/me/recruitment-posts/drafts",
-                    "/api/v1/me/recruitment-posts/*/copies",
-                    "/api/v1/me/recruitment-posts/*/publish",
+                    "/api/v1/me/recruitment-posts/**",
                 ).authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/recruitment-posts/*/applications").authenticated()
                 it.requestMatchers("/api/v1/recruitment-posts", "/api/v1/recruitment-posts/**").authenticated()
@@ -126,12 +124,20 @@ class UserSecurityConfiguration {
                 // enum 선택지는 사용자와 무관한 고정 값이라 로그인 없이 연다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/enums").permitAll()
                 // 공지는 관리자 API에서만 작성하고 사용자는 로그인 없이 읽기만 한다.
-                it.requestMatchers(HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/*").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/api/v1/announcements", "/api/v1/announcements/*").permitAll()
                 // 추천 챌린지는 채용공고 조회처럼 로그인 없이 연다. 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘긴다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/recommended-challenges").permitAll()
+                // 취준고민은 조회만 로그인 없이 연다. 토큰을 보내면 내 글·도움돼요 여부가 채워진다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/concerns", "/api/v1/concerns/**").permitAll()
+                it.requestMatchers("/api/v1/concerns", "/api/v1/concerns/**").authenticated()
                 // 지원 페이지 이동 기록은 부트캠프 하위의 유일한 쓰기 경로이므로 메서드와 경로를 좁혀 허용한다.
                 // 누가 눌렀는지를 남기는 기록이라 조회와 달리 로그인을 요구한다.
-                it.requestMatchers(HttpMethod.POST, "/api/v1/bootcamps/*/application-url-clicks").authenticated()
+                // application-url-clicks는 프런트가 새 경로로 옮기는 동안 남겨 둔 예전 경로다. 서버 2차 배포에서 제거한다.
+                it.requestMatchers(
+                    HttpMethod.POST,
+                    "/api/v1/bootcamps/*/source-url-clicks",
+                    "/api/v1/bootcamps/*/application-url-clicks",
+                ).authenticated()
                 it.requestMatchers("/api/v1/bootcamp-bookmarks", "/api/v1/bootcamp-bookmarks/**").authenticated()
                 it.requestMatchers(
                     "/api/v1/recruitment-post-bookmarks",

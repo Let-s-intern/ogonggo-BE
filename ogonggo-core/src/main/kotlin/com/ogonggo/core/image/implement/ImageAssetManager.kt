@@ -9,21 +9,19 @@ import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
-import com.ogonggo.core.storage.s3.S3ImageStorage
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Component
 class ImageAssetManager internal constructor(
     private val imageAssetRepository: ImageAssetJpaRepository,
-    private val s3ImageStorage: S3ImageStorage,
+    private val s3ObjectClient: S3ObjectClient,
     private val objectMapper: ObjectMapper,
 ) {
 
-    @Transactional
     fun startUploading(
         id: String,
         ownerUserId: Long,
@@ -37,7 +35,6 @@ class ImageAssetManager internal constructor(
         )
     }
 
-    @Transactional
     fun markUploaded(id: String) {
         val asset = imageAssetRepository.findById(id).orElseThrow {
             EntityNotFoundException(ImageUploadErrorCode.IMAGE_ASSET_NOT_FOUND)
@@ -46,7 +43,6 @@ class ImageAssetManager internal constructor(
         imageAssetRepository.save(asset)
     }
 
-    @Transactional
     fun syncPostImages(
         ownerUserId: Long,
         postId: Long,
@@ -73,7 +69,6 @@ class ImageAssetManager internal constructor(
         imageAssetRepository.saveAll(currentAssets)
     }
 
-    @Transactional
     fun copyPostImages(
         ownerUserId: Long,
         sourcePostId: Long,
@@ -105,9 +100,9 @@ class ImageAssetManager internal constructor(
                 val targetId = UUID.randomUUID().toString()
                 val extension = source.storageKey.substringAfterLast('.', "bin")
                 val targetKey = "images/$targetId.$extension"
-                val targetUrl = s3ImageStorage.publicUrl(targetKey)
+                val targetUrl = s3ObjectClient.urlOf(targetKey)
 
-                s3ImageStorage.copy(source.storageKey, targetKey, source.mimeType)
+                s3ObjectClient.copy(source.storageKey, targetKey, source.mimeType)
                 copiedKeys += targetKey
 
                 val targetAsset = ImageAsset.uploading(
@@ -126,12 +121,11 @@ class ImageAssetManager internal constructor(
             }
             return replaceImageReferences(content, replacements)
         } catch (exception: Exception) {
-            copiedKeys.asReversed().forEach { key -> runCatching { s3ImageStorage.delete(key) } }
+            copiedKeys.asReversed().forEach { key -> runCatching { s3ObjectClient.delete(key) } }
             throw exception
         }
     }
 
-    @Transactional
     fun unreferencePostImages(postId: Long, now: LocalDateTime) {
         val assets = imageAssetRepository.findAllByPostIdAndStatusAndDeletedAtIsNull(
             postId = postId,
@@ -145,7 +139,6 @@ class ImageAssetManager internal constructor(
      * 사용자가 올린 이미지를 프로필 이미지(일반 회원 프로필 이미지, 기업 로고)로 연결하고 URL을 돌려준다.
      * 남의 이미지, 게시글에 쓰는 이미지, 아직 올리는 중이거나 정리된 이미지는 쓸 수 없다.
      */
-    @Transactional
     fun attachProfileImage(ownerUserId: Long, imageId: String): String {
         val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId)
         if (asset == null || !asset.isAttachableToProfile()) {
@@ -157,7 +150,6 @@ class ImageAssetManager internal constructor(
     }
 
     /** 더 쓰지 않는 프로필 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
-    @Transactional
     fun unreferenceProfileImage(ownerUserId: Long, imageId: String, now: LocalDateTime) {
         val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId) ?: return
         if (asset.isAttachedToProfile()) {
@@ -196,7 +188,7 @@ class ImageAssetManager internal constructor(
             asset.markDeletePending()
             imageAssetRepository.save(asset)
             try {
-                s3ImageStorage.delete(asset.storageKey)
+                s3ObjectClient.delete(asset.storageKey)
                 asset.markDeleted(now)
                 imageAssetRepository.save(asset)
                 deletedCount++

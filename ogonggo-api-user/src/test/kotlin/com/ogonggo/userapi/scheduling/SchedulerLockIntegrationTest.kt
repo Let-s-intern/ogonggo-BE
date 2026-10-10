@@ -1,11 +1,19 @@
 package com.ogonggo.userapi.scheduling
 
-import com.ogonggo.core.community.implement.RecruitmentPostManager
 import com.ogonggo.core.image.implement.ImageAssetManager
-import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.userapi.config.SchedulerLockConfiguration
-import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
+import com.ogonggo.userapi.image.business.ImageAssetCleanupService
+import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
+import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostAutoCloseService
+import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -14,12 +22,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.io.ClassPathResource
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 class SchedulerLockIntegrationTest {
 
@@ -44,7 +46,9 @@ class SchedulerLockIntegrationTest {
         context.register(
             SchedulerLockConfiguration::class.java,
             SchedulerExecutionObserver::class.java,
+            RecruitmentPostAutoCloseService::class.java,
             RecruitmentPostAutoCloseScheduler::class.java,
+            ImageAssetCleanupService::class.java,
             ImageAssetCleanupScheduler::class.java,
         )
 

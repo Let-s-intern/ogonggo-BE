@@ -1,9 +1,10 @@
 package com.ogonggo.userapi.job.business
 
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
@@ -20,8 +21,8 @@ data class UserJobCalendarItem(
     val title: String,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val recruitmentStartAt: LocalDateTime,
@@ -83,12 +84,12 @@ data class UserJobSummary(
     val title: String,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val experienceMinYears: Int?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val region: Region?,
     val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
@@ -133,12 +134,12 @@ data class UserJobResult(
     val title: String,
     val coverImageUrl: String?,
     val logoUrl: String?,
-    val employmentType: EmploymentType,
-    val experienceType: ExperienceType,
+    val employmentType: JobEmploymentType,
+    val experienceType: JobExperienceType,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val experienceMinYears: Int?,
-    val educationLevel: EducationLevel,
+    val educationLevel: JobEducationLevel,
     val region: Region?,
     val subRegion: SubRegion?,
     val recruitmentType: JobRecruitmentType,
@@ -151,6 +152,7 @@ data class UserJobResult(
     val compensation: String?,
     val benefits: String?,
     val hiringProcess: String?,
+    val recruitmentNotice: String?,
     val sourceUrl: String?,
     /** 이메일로 지원받는 공고가 지원서를 받는 주소다. */
     val applyEmail: String?,
@@ -159,9 +161,16 @@ data class UserJobResult(
     val viewCount: Long,
     val bookmarkCount: Long,
     val commentCount: Long,
+    /** 공고 분석. 지금 본문에 대한 분석이 없으면 null이다. */
+    val analysis: JobAnalysisContent?,
 ) {
     companion object {
-        internal fun from(job: Job, bookmarked: Boolean, metric: JobMetricDto): UserJobResult = UserJobResult(
+        internal fun from(
+            job: Job,
+            bookmarked: Boolean,
+            metric: JobMetricDto,
+            analysis: JobAnalysisContent?,
+        ): UserJobResult = UserJobResult(
             id = job.requiredId(),
             companyName = job.companyName,
             title = job.title,
@@ -185,6 +194,7 @@ data class UserJobResult(
             compensation = job.compensation,
             benefits = job.benefits,
             hiringProcess = job.hiringProcess,
+            recruitmentNotice = job.recruitmentNotice,
             sourceUrl = job.sourceUrl,
             applyEmail = job.applyEmail,
             closedAt = job.closedAt,
@@ -192,6 +202,7 @@ data class UserJobResult(
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,
             commentCount = metric.commentCount,
+            analysis = analysis,
         )
     }
 }

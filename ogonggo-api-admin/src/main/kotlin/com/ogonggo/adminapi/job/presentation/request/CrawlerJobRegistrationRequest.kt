@@ -3,9 +3,9 @@ package com.ogonggo.adminapi.job.presentation.request
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.CrawlerJobCommand
 import com.ogonggo.adminapi.job.business.CrawlerJobRegistrationCommand
-import com.ogonggo.core.job.domain.EducationLevel
-import com.ogonggo.core.job.domain.EmploymentType
-import com.ogonggo.core.job.domain.ExperienceType
+import com.ogonggo.core.job.domain.JobEducationLevel
+import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -36,10 +36,10 @@ interface CrawlerJobWriteRequest {
     val industry: String?
     val coverImageUrl: String?
     val logoUrl: String?
-    val employmentType: EmploymentType
-    val experienceType: ExperienceType
+    val employmentType: JobEmploymentType
+    val experienceType: JobExperienceType
     val experienceMinYears: Int?
-    val educationLevel: EducationLevel
+    val educationLevel: JobEducationLevel
     val region: Region?
     val subRegion: SubRegion?
     val recruitmentType: JobRecruitmentType
@@ -63,12 +63,18 @@ interface CrawlerJobWriteRequest {
 }
 
 /**
- * 상시 채용은 종료 일시가 없어야 하고, 시·군·구와 직무는 함께 보낸 시·도와 직군에 속해야 한다.
+ * 상시 채용은 종료 일시가 없어야 하고, 시작 일시는 종료 일시보다 늦을 수 없으며,
+ * 시·군·구와 직무는 함께 보낸 시·도와 직군에 속해야 한다.
  * 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다.
  */
 private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
     if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN && recruitmentEndAt != null) {
         throw InvalidRequestFieldException("recruitmentEndAt", "상시 채용에는 모집 종료 일시를 둘 수 없습니다.")
+    }
+    val start = recruitmentStartAt
+    val end = recruitmentEndAt
+    if (start != null && end != null && start.isAfter(end)) {
+        throw InvalidRequestFieldException("recruitmentStartAt", "모집 종료 일시보다 늦을 수 없습니다.")
     }
     if (subRegion != null && subRegion?.region != region) {
         throw InvalidRequestFieldException("subRegion", "region과 같은 시·도의 시·군·구여야 합니다.")
@@ -154,15 +160,15 @@ data class CrawlerJobRegistrationRequest(
     @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
     override val logoUrl: String? = null,
 
-    override val employmentType: EmploymentType,
+    override val employmentType: JobEmploymentType,
 
-    override val experienceType: ExperienceType,
+    override val experienceType: JobExperienceType,
 
     @field:Schema(description = "최소 요구 경력 연수. 원문에 근거가 있을 때만 보낸다")
     @field:PositiveOrZero(message = "최소 경력 연수는 0 이상이어야 합니다.")
     override val experienceMinYears: Int? = null,
 
-    override val educationLevel: EducationLevel,
+    override val educationLevel: JobEducationLevel,
 
     @field:Schema(description = "근무 시·도. GET /api/v1/enums(사용자 API)의 Region 값입니다.", example = "SEOUL")
     override val region: Region? = null,
@@ -262,14 +268,14 @@ data class CrawlerJobReplaceRequest(
     @field:URL(message = "로고 주소가 URL 형식이 아닙니다.")
     override val logoUrl: String? = null,
 
-    override val employmentType: EmploymentType,
+    override val employmentType: JobEmploymentType,
 
-    override val experienceType: ExperienceType,
+    override val experienceType: JobExperienceType,
 
     @field:PositiveOrZero(message = "최소 경력 연수는 0 이상이어야 합니다.")
     override val experienceMinYears: Int? = null,
 
-    override val educationLevel: EducationLevel,
+    override val educationLevel: JobEducationLevel,
 
     override val region: Region? = null,
     override val subRegion: SubRegion? = null,

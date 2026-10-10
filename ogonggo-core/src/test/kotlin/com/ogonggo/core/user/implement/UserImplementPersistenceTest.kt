@@ -1,6 +1,6 @@
 package com.ogonggo.core.user.implement
 
-import com.ogonggo.core.common.CoreJpaConfiguration
+import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
@@ -470,16 +470,16 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `보내는 사이 다시 적재됐으면 보낸 것으로 지우지 않는다`() {
+    fun `보내는 사이 다시 적재됐으면 보낸 것으로 표시하지 않는다`() {
         outboxManager.enqueue(17L, NOW)
         val sending = outboxManager.readPending().single()
         outboxManager.enqueue(17L, NOW.plusMinutes(1))
 
-        outboxManager.markSent(sending)
+        outboxManager.markSent(sending, NOW.plusMinutes(2))
 
         assertEquals(NOW.plusMinutes(1), outboxManager.readPending().single().requestedAt)
 
-        outboxManager.markSent(outboxManager.readPending().single())
+        outboxManager.markSent(outboxManager.readPending().single(), NOW.plusMinutes(3))
         assertEquals(0, outboxManager.readPending().size)
     }
 

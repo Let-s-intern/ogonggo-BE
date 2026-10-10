@@ -22,3 +22,17 @@ fun <E> Iterable<E>.toEnumOptions(): List<EnumOption> where E : Enum<E>, E : Enu
             parent = ((value as? HierarchicalEnumField)?.parent as? Enum<*>)?.name,
         )
     }
+
+/** enum 하나를 선택지 목록의 한 항목으로 만든다. 키는 enum 클래스 이름이다. */
+inline fun <reified E> enumOptionsOf(): Pair<String, List<EnumOption>> where E : Enum<E>, E : EnumField =
+    E::class.java.simpleName to enumValues<E>().asIterable().toEnumOptions()
+
+/** 선택지 목록을 합친다. 같은 키가 둘 이상이면 어느 값을 내보낼지 알 수 없으므로 실패한다. */
+fun enumOptionMapOf(vararg groups: Map<String, List<EnumOption>>): Map<String, List<EnumOption>> {
+    val duplicated = groups.flatMap { it.keys }.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+    check(duplicated.isEmpty()) { "enum 이름이 겹칩니다: $duplicated" }
+    return groups.fold(emptyMap()) { merged, group -> merged + group }
+}
+
+fun enumOptionMapOf(vararg entries: Pair<String, List<EnumOption>>): Map<String, List<EnumOption>> =
+    enumOptionMapOf(*entries.map { mapOf(it) }.toTypedArray())

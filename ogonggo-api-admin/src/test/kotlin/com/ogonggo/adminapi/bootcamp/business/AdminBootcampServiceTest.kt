@@ -9,7 +9,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampContentEditDto
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
@@ -34,14 +34,14 @@ class AdminBootcampServiceTest {
 
     @Test
     fun `승인과 숨김을 함께 보내면 승인한 뒤 숨기고 내용을 고친다`() {
-        val bootcamp = lockedBootcamp(reviewStatus = ReviewStatus.REJECTED)
+        val bootcamp = lockedBootcamp(reviewStatus = ContentReviewStatus.REJECTED)
         val contents = mapOf(BootcampContentField.ELIGIBILITY_AND_SELECTION_PROCESS to null)
 
         service.updateBootcamp(
             BOOTCAMP_ID,
             AdminBootcampUpdateCommand(
                 visibility = AdminContentVisibility.HIDDEN,
-                reviewStatus = ReviewStatus.APPROVED,
+                reviewStatus = ContentReviewStatus.APPROVED,
                 contents = contents,
             ),
         )
@@ -55,9 +55,9 @@ class AdminBootcampServiceTest {
 
     @Test
     fun `이미 같은 검수 상태면 다시 전이하지 않는다`() {
-        lockedBootcamp(reviewStatus = ReviewStatus.PENDING)
+        lockedBootcamp(reviewStatus = ContentReviewStatus.PENDING)
 
-        service.updateBootcamp(BOOTCAMP_ID, AdminBootcampUpdateCommand(reviewStatus = ReviewStatus.PENDING))
+        service.updateBootcamp(BOOTCAMP_ID, AdminBootcampUpdateCommand(reviewStatus = ContentReviewStatus.PENDING))
 
         Mockito.verifyNoInteractions(bootcampManager)
     }
@@ -91,7 +91,7 @@ class AdminBootcampServiceTest {
             Mockito.`when`(bootcamp.publicationStatus).thenReturn(publicationStatus)
         }
 
-    private fun lockedBootcamp(reviewStatus: ReviewStatus?): Bootcamp {
+    private fun lockedBootcamp(reviewStatus: ContentReviewStatus?): Bootcamp {
         val bootcamp = Mockito.mock(Bootcamp::class.java)
         Mockito.`when`(bootcamp.reviewStatus).thenReturn(reviewStatus)
         Mockito.`when`(bootcampReader.readForUpdate(BOOTCAMP_ID)).thenReturn(bootcamp)

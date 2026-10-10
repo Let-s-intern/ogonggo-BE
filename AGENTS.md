@@ -17,7 +17,7 @@
 | 주제 | 기준 위치 | 읽어야 하는 경우 |
 | --- | --- | --- |
 | 프로젝트 개요, 실행, 런타임, 모듈 구성, 스키마 운영 | [`README.md`](README.md) | 환경 구성, 실행, 배포 또는 모듈 파악이 필요할 때 |
-| 레이어, 모듈 의존성, API Service와 core의 역할, Helper/Reader/Manager, Repository, 트랜잭션, OSIV, 엔티티 삭제, JPA 연관관계 | [`docs/architecture/layers-and-modules.md`](docs/architecture/layers-and-modules.md) | 기능 추가, 엔티티·연관관계·삭제 방식 변경, 구조 변경, 코드 리뷰를 할 때 |
+| 레이어, 모듈 의존성, API Service와 core의 역할, 패키지·클래스 이름 규칙, Helper/Reader/Manager, Repository, 트랜잭션, OSIV, 엔티티 삭제, JPA 연관관계 | [`docs/architecture/layers-and-modules.md`](docs/architecture/layers-and-modules.md) | 기능 추가, 엔티티·연관관계·삭제 방식 변경, 구조 변경, 패키지·클래스 이름을 짓거나 바꿀 때, 코드 리뷰를 할 때 |
 | 예외 계층, ErrorCode, API 오류 응답, 검증 오류, Security 오류, 예외 로깅 | [`docs/architecture/error-handling.md`](docs/architecture/error-handling.md) | 예외·검증·인증/인가 실패를 추가하거나 오류 응답을 변경할 때 |
 | API Request DTO, Bean Validation, Request→Command 변환 | [`docs/architecture/api-request-validation.md`](docs/architecture/api-request-validation.md) | 요청 필드·검증·Command 변환을 추가하거나 변경할 때 |
 | API 성공 응답, 페이지네이션, HTTP 상태, 응답 DTO 소유 위치 | [`docs/architecture/api-response.md`](docs/architecture/api-response.md) | 도메인 API의 성공·목록 응답을 추가하거나 변경할 때 |

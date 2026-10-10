@@ -1,6 +1,6 @@
 package com.ogonggo.userapi.image.presentation.response
 
-import com.ogonggo.core.image.implement.dto.ImageUploadResult
+import com.ogonggo.core.image.implement.dto.ImageUploadResultDto
 
 data class ImageUploadResponse(
     val id: String,
@@ -9,7 +9,7 @@ data class ImageUploadResponse(
     val size: Long,
 ) {
     companion object {
-        fun from(result: ImageUploadResult): ImageUploadResponse = ImageUploadResponse(
+        fun from(result: ImageUploadResultDto): ImageUploadResponse = ImageUploadResponse(
             id = result.id,
             url = result.url,
             mimeType = result.mimeType,

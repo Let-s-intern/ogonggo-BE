@@ -1,6 +1,6 @@
 package com.ogonggo.adminapi.config
 
-import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter
+import com.ogonggo.adminapi.auth.presentation.InternalApiKeyAuthenticationFilter
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info

@@ -2,16 +2,15 @@ package com.ogonggo.core.bootcamp.persistence
 
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
-import com.ogonggo.core.bootcamp.domain.BootcampApplicationUrlClick
 import com.ogonggo.core.bootcamp.domain.BootcampBookmark
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampImage
 import com.ogonggo.core.bootcamp.domain.BootcampMetric
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -71,7 +70,7 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     )
     fun findPublicById(
         @Param("bootcampId") bootcampId: Long,
-        @Param("statuses") statuses: Collection<BootcampStatus>,
+        @Param("statuses") statuses: Collection<BootcampRecruitmentStatus>,
         @Param("publicationStatus") publicationStatus: BootcampPublicationStatus,
         @Param("now") now: LocalDateTime,
     ): Bootcamp?
@@ -97,9 +96,9 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId")
     fun findIncludingDeletedByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
 
-    fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ReviewStatus): List<Bootcamp>
+    fun findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(reviewStatus: ContentReviewStatus): List<Bootcamp>
 
-    fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ReviewStatus): Long
+    fun countByReviewStatusAndDeletedAtIsNull(reviewStatus: ContentReviewStatus): Long
 
     /** 모집 종료 일시와 같은 시각까지는 모집 중으로 본다. 채용공고의 모집 상태 계산과 경계를 맞춘다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -116,8 +115,8 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
     )
     fun closeExpired(
         @Param("now") now: LocalDateTime,
-        @Param("recruitingStatus") recruitingStatus: BootcampStatus = BootcampStatus.RECRUITING,
-        @Param("closedStatus") closedStatus: BootcampStatus = BootcampStatus.CLOSED,
+        @Param("recruitingStatus") recruitingStatus: BootcampRecruitmentStatus = BootcampRecruitmentStatus.RECRUITING,
+        @Param("closedStatus") closedStatus: BootcampRecruitmentStatus = BootcampRecruitmentStatus.CLOSED,
     ): Int
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -283,11 +282,6 @@ internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmar
         @Param("userId") userId: Long,
         @Param("bootcampIds") bootcampIds: Collection<Long>,
     ): Set<Long>
-}
-
-internal interface BootcampApplicationUrlClickJpaRepository :
-    JpaRepository<BootcampApplicationUrlClick, Long> {
-    fun existsByBootcampIdAndUserId(bootcampId: Long, userId: Long): Boolean
 }
 
 internal interface BootcampPartnerJpaRepository : JpaRepository<BootcampPartner, Long> {

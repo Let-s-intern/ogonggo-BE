@@ -1,18 +1,19 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.paging.validatePageRequest
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampSearchCondition
 import com.ogonggo.core.bootcamp.domain.BootcampSortType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -113,10 +114,10 @@ class BootcampReader internal constructor(
 
     /** 밀린 것부터 처리하도록 등록 순서대로 읽는다. 검수 상태는 기업회원 부트캠프에만 있다. */
     fun readPendingReviews(): List<Bootcamp> =
-        bootcampRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ReviewStatus.PENDING)
+        bootcampRepository.findAllByReviewStatusAndDeletedAtIsNullOrderByIdAsc(ContentReviewStatus.PENDING)
 
     fun countPendingReviews(): Long =
-        bootcampRepository.countByReviewStatusAndDeletedAtIsNull(ReviewStatus.PENDING)
+        bootcampRepository.countByReviewStatusAndDeletedAtIsNull(ContentReviewStatus.PENDING)
 
     fun readOwned(ownerUserId: Long, bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(bootcampId, ownerUserId)
@@ -167,7 +168,7 @@ class BootcampReader internal constructor(
 }
 
 /** 북마크 목록도 같은 공개 조건을 따르므로 Reader 밖에서도 사용한다. */
-internal val PUBLIC_STATUSES = listOf(BootcampStatus.RECRUITING, BootcampStatus.CLOSED)
+internal val PUBLIC_STATUSES = listOf(BootcampRecruitmentStatus.RECRUITING, BootcampRecruitmentStatus.CLOSED)
 
 private fun Page<Bootcamp>.toPageDto(): BootcampPageDto = BootcampPageDto(
     bootcamps = content,
@@ -177,8 +178,3 @@ private fun Page<Bootcamp>.toPageDto(): BootcampPageDto = BootcampPageDto(
     totalPages = totalPages,
     hasNext = hasNext(),
 )
-
-private fun validatePageRequest(page: Int, size: Int) {
-    require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-    require(size in 1..100) { "페이지 크기는 1 이상 100 이하여야 합니다." }
-}

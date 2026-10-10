@@ -4,8 +4,8 @@ import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.implement.ImageUploader
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
-import com.ogonggo.core.image.implement.dto.ImageUploadResult
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
+import com.ogonggo.core.image.implement.dto.ImageUploadResultDto
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -14,7 +14,7 @@ class ImageUploadService(
     private val imageUploader: ImageUploader,
 ) {
 
-    fun upload(userId: Long, command: ImageUploadCommand): ImageUploadResult {
+    fun upload(userId: Long, command: ImageUploadDto): ImageUploadResultDto {
         return try {
             imageUploader.upload(userId, command)
         } catch (exception: BusinessException) {

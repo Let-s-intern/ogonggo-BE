@@ -118,7 +118,7 @@ interface CrawlerJobApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "JOB_ALREADY_EXISTS(다른 공고가 쓰는 원문 URL로 바꾸려 함) 또는 JOB_ARCHIVED",
+                description = "JOB_ALREADY_EXISTS: 다른 공고가 쓰는 원문 URL로 바꾸려 함",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

@@ -1,13 +1,13 @@
 package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
-import com.ogonggo.userapi.bootcamp.implement.BootcampAutoCloseScheduler
-import com.ogonggo.userapi.community.implement.RecruitmentPostAutoCloseScheduler
-import com.ogonggo.userapi.image.implement.ImageAssetCleanupScheduler
-import com.ogonggo.userapi.job.implement.JobAutoCloseScheduler
+import com.ogonggo.userapi.bootcamp.presentation.BootcampAutoCloseScheduler
+import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
+import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
+import com.ogonggo.userapi.job.presentation.JobAutoCloseScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
-import com.ogonggo.userapi.user.implement.LetsCareerJobProfileSyncScheduler
+import com.ogonggo.userapi.user.presentation.LetsCareerJobProfileSyncScheduler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 

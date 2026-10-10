@@ -1,0 +1,276 @@
+package com.ogonggo.core.concern.implement
+
+import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.domain.ConcernComment
+import com.ogonggo.core.concern.domain.ConcernConsoleSearchCondition
+import com.ogonggo.core.concern.domain.ConcernPopularSortType
+import com.ogonggo.core.concern.domain.ConcernSortType
+import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
+import com.ogonggo.core.concern.implement.dto.ConcernCommentAppendDto
+import com.ogonggo.core.concern.persistence.ConcernQueryRepository
+import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.jpa.CoreJpaConfiguration
+import jakarta.persistence.EntityManager
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.ContextConfiguration
+import java.time.LocalDateTime
+
+@DataJpaTest
+@ContextConfiguration(classes = [CoreJpaConfiguration::class])
+@Import(
+    ConcernAppender::class,
+    ConcernReader::class,
+    ConcernManager::class,
+    ConcernQueryRepository::class,
+    ConcernMetricManager::class,
+    ConcernMetricReader::class,
+    ConcernCommentAppender::class,
+    ConcernCommentReader::class,
+    ConcernCommentRemover::class,
+    ConcernCommentLikeAppender::class,
+    ConcernCommentLikeManager::class,
+    ConcernCommentLikeReader::class,
+)
+internal class ConcernImplementPersistenceTest @Autowired constructor(
+    private val concernAppender: ConcernAppender,
+    private val concernReader: ConcernReader,
+    private val concernManager: ConcernManager,
+    private val metricManager: ConcernMetricManager,
+    private val metricReader: ConcernMetricReader,
+    private val commentAppender: ConcernCommentAppender,
+    private val commentReader: ConcernCommentReader,
+    private val commentRemover: ConcernCommentRemover,
+    private val likeManager: ConcernCommentLikeManager,
+    private val likeReader: ConcernCommentLikeReader,
+    private val entityManager: EntityManager,
+) {
+
+    @Test
+    fun `고민글을 등록하면 0으로 시작하는 지표 행을 함께 만든다`() {
+        // given
+        // when
+        val concernId = appendConcern(ConcernCategory.ETC)
+        metricManager.increaseViewCount(concernId, NOW)
+
+        // then
+        assertEquals(1L, metricReader.read(concernId).viewCount)
+        assertEquals(0L, metricReader.read(concernId).commentCount)
+    }
+
+    @Test
+    fun `목록은 삭제된 고민글을 빼고 카테고리로 거르며 조회 많은 순으로 정렬한다`() {
+        // given
+        val lessViewed = appendConcern(ConcernCategory.CAREER)
+        val mostViewed = appendConcern(ConcernCategory.CAREER)
+        val otherCategory = appendConcern(ConcernCategory.ETC)
+        val deleted = appendConcern(ConcernCategory.CAREER)
+        repeat(3) { metricManager.increaseViewCount(mostViewed, NOW) }
+        metricManager.increaseViewCount(lessViewed, NOW)
+        repeat(5) { metricManager.increaseViewCount(otherCategory, NOW) }
+        concernReader.read(deleted).delete(NOW)
+        entityManager.flush()
+
+        // when
+        val page = concernReader.readPage(ConcernCategory.CAREER, ConcernSortType.VIEW_COUNT, page = 0, size = 10)
+
+        // then
+        assertEquals(listOf(mostViewed, lessViewed), page.concerns.map { it.id })
+        assertEquals(2L, page.totalElements)
+    }
+
+    @Test
+    fun `인기 고민글은 기준 시각 이후에 등록한 글 중 답변이 많은 순으로 고른다`() {
+        // given
+        val old = appendConcern(ConcernCategory.ETC)
+        val fewAnswers = appendConcern(ConcernCategory.ETC)
+        val manyAnswers = appendConcern(ConcernCategory.ETC)
+        repeat(5) { metricManager.increaseCommentCount(old, NOW) }
+        metricManager.increaseCommentCount(fewAnswers, NOW)
+        repeat(2) { metricManager.increaseCommentCount(manyAnswers, NOW) }
+        setCreatedAt(old, NOW.minusDays(8))
+        setCreatedAt(fewAnswers, NOW.minusDays(1))
+        setCreatedAt(manyAnswers, NOW.minusDays(1))
+
+        // when
+        val result = concernReader.readPopular(NOW.minusDays(7), ConcernPopularSortType.COMMENT_COUNT, limit = 3)
+
+        // then
+        assertEquals(listOf(manyAnswers, fewAnswers), result.map { it.id })
+    }
+
+    @Test
+    fun `숨긴 고민글은 사용자 목록과 인기 고민과 상세에서 빠진다`() {
+        // given
+        val visible = appendConcern(ConcernCategory.ETC)
+        val hidden = appendConcern(ConcernCategory.ETC)
+        concernManager.hide(concernReader.read(hidden))
+        entityManager.flush()
+
+        // when
+        val page = concernReader.readPage(null, ConcernSortType.LATEST, page = 0, size = 10)
+        val popular = concernReader.readPopular(NOW.minusYears(1), ConcernPopularSortType.VIEW_COUNT, limit = 3)
+
+        // then
+        assertEquals(listOf(visible), page.concerns.map { it.id })
+        assertEquals(listOf(visible), popular.map { it.id })
+        assertThrows(EntityNotFoundException::class.java) { concernReader.read(hidden) }
+        assertEquals(hidden, concernReader.readIncludingHidden(hidden).id)
+    }
+
+    @Test
+    fun `콘솔 목록은 숨긴 고민글도 싣고 노출과 카테고리와 제목 검색어로 거른다`() {
+        // given
+        val hidden = appendConcern(ConcernCategory.CAREER, title = "면접 준비 고민")
+        appendConcern(ConcernCategory.CAREER, title = "면접 준비 고민")
+        appendConcern(ConcernCategory.ETC, title = "면접 준비 고민")
+        val deleted = appendConcern(ConcernCategory.CAREER, title = "면접 준비 고민")
+        appendConcern(ConcernCategory.CAREER, title = "서류 고민")
+        concernManager.hide(concernReader.read(hidden))
+        concernReader.read(deleted).delete(NOW)
+        entityManager.flush()
+
+        // when
+        val all = concernReader.readConsolePage(ConcernConsoleSearchCondition(), ConcernSortType.LATEST, page = 0, size = 10)
+        val hiddenOnly = concernReader.readConsolePage(
+            ConcernConsoleSearchCondition(visible = false, category = ConcernCategory.CAREER, keyword = "면접"),
+            ConcernSortType.LATEST,
+            page = 0,
+            size = 10,
+        )
+
+        // then
+        assertEquals(4L, all.totalElements)
+        assertEquals(listOf(hidden), hiddenOnly.concerns.map { it.id })
+    }
+
+    @Test
+    fun `여러 고민글을 잠가 읽을 때 없거나 삭제된 고민글이 있으면 그 식별자를 모두 담아 실패한다`() {
+        // given
+        val hidden = appendConcern(ConcernCategory.ETC)
+        val deleted = appendConcern(ConcernCategory.ETC)
+        concernManager.hide(concernReader.read(hidden))
+        concernReader.read(deleted).delete(NOW)
+        entityManager.flush()
+
+        // when
+        val exception = assertThrows(EntityNotFoundException::class.java) {
+            concernReader.readAllIncludingHiddenForUpdate(listOf(hidden, deleted, 999_999L))
+        }
+
+        // then
+        assertEquals("고민글을 찾을 수 없습니다. (id: $deleted, 999999)", exception.message)
+        assertEquals(listOf(hidden), concernReader.readAllIncludingHiddenForUpdate(listOf(hidden, hidden)).map { it.id })
+    }
+
+    @Test
+    fun `답변은 운영자 답변도 구분 없이 먼저 단 순서로 주며 답글이 없는 삭제 답변은 뺀다`() {
+        // given
+        val concernId = appendConcern(ConcernCategory.ETC)
+        val first = appendComment(concernId, official = false)
+        val deletedWithoutReply = appendComment(concernId, official = false)
+        val deletedWithReply = appendComment(concernId, official = false)
+        appendComment(concernId, parentId = deletedWithReply.id, official = false)
+        val official = appendComment(concernId, official = true)
+        commentRemover.remove(deletedWithoutReply, NOW)
+        commentRemover.remove(deletedWithReply, NOW)
+        entityManager.flush()
+
+        // when
+        val page = commentReader.readRootPage(concernId, page = 0, size = 10)
+
+        // then
+        assertEquals(listOf(first.id, deletedWithReply.id, official.id), page.comments.map { it.id })
+        assertEquals(3L, page.totalElements)
+    }
+
+    @Test
+    fun `답글 미리보기는 답변마다 앞의 답글만 담고 전체 답글 수를 함께 준다`() {
+        // given
+        val concernId = appendConcern(ConcernCategory.ETC)
+        val parent = appendComment(concernId, official = false)
+        val replies = (1..3).map { appendComment(concernId, parentId = parent.id, official = false) }
+        entityManager.flush()
+
+        // when
+        val previews = commentReader.readReplyPreviews(concernId, listOf(checkNotNull(parent.id)), size = 2)
+
+        // then
+        val preview = checkNotNull(previews[parent.id])
+        assertEquals(replies.take(2).map { it.id }, preview.comments.map { it.id })
+        assertEquals(3L, preview.totalElements)
+        assertEquals(2, preview.totalPages)
+    }
+
+    @Test
+    fun `삭제되지 않은 관리자 답변이 있는 고민글만 고른다`() {
+        // given
+        val answered = appendConcern(ConcernCategory.ETC)
+        val deletedAnswer = appendConcern(ConcernCategory.ETC)
+        val userOnly = appendConcern(ConcernCategory.ETC)
+        appendComment(answered, official = true)
+        commentRemover.remove(appendComment(deletedAnswer, official = true), NOW)
+        appendComment(userOnly, official = false)
+        entityManager.flush()
+
+        // when
+        val result = commentReader.readConcernIdsWithOfficialComment(listOf(answered, deletedAnswer, userOnly))
+
+        // then
+        assertEquals(setOf(answered), result)
+    }
+
+    @Test
+    fun `좋아요는 반복해 눌러도 한 번으로 세고 취소 후 다시 누르면 되살린다`() {
+        // given
+        val commentId = 9_001L
+
+        // when
+        likeManager.like(commentId, USER_ID, NOW)
+        likeManager.like(commentId, USER_ID, NOW)
+        likeManager.like(commentId, OTHER_USER_ID, NOW)
+        likeManager.unlike(commentId, OTHER_USER_ID, NOW)
+        likeManager.unlike(commentId, OTHER_USER_ID, NOW)
+        likeManager.unlike(commentId, USER_ID, NOW)
+        likeManager.like(commentId, USER_ID, NOW)
+
+        // then
+        assertEquals(mapOf(commentId to 1L), likeReader.countAll(listOf(commentId)))
+        assertEquals(setOf(commentId), likeReader.readLikedCommentIds(USER_ID, listOf(commentId)))
+        assertEquals(emptySet<Long>(), likeReader.readLikedCommentIds(OTHER_USER_ID, listOf(commentId)))
+    }
+
+    private fun appendConcern(category: ConcernCategory, title: String = "제목"): Long = checkNotNull(
+        concernAppender.append(
+            ConcernAppendDto(authorUserId = USER_ID, category = category, title = title, content = "본문"),
+        ).id,
+    )
+
+    private fun setCreatedAt(concernId: Long, createdAt: LocalDateTime) {
+        entityManager.createQuery("update Concern c set c.createdAt = :createdAt where c.id = :id")
+            .setParameter("createdAt", createdAt)
+            .setParameter("id", concernId)
+            .executeUpdate()
+    }
+
+    private fun appendComment(concernId: Long, parentId: Long? = null, official: Boolean): ConcernComment =
+        commentAppender.append(
+            ConcernCommentAppendDto(
+                concernId = concernId,
+                parentId = parentId,
+                userId = USER_ID,
+                content = "답변입니다.",
+                official = official,
+            ),
+        )
+
+    companion object {
+        private const val USER_ID = 17L
+        private const val OTHER_USER_ID = 18L
+        private val NOW: LocalDateTime = LocalDateTime.of(2026, 10, 8, 12, 0)
+    }
+}

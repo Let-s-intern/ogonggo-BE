@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.image.presentation
 
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
-import com.ogonggo.core.image.implement.dto.ImageUploadResult
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
+import com.ogonggo.core.image.implement.dto.ImageUploadResultDto
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
@@ -37,10 +37,10 @@ class ImageUploadControllerTest @Autowired constructor(
     fun `인증된 사용자가 이미지를 업로드하면 201과 이미지 정보를 반환한다`() {
         val content = byteArrayOf(1, 2, 3)
         val file = MockMultipartFile("file", "image.png", "image/png", content)
-        val command = ImageUploadCommand(content)
+        val command = ImageUploadDto(content)
         Mockito.`when`(imageUploadService.upload(USER_ID, command))
             .thenReturn(
-                ImageUploadResult(
+                ImageUploadResultDto(
                     id = "image-id",
                     url = "https://cdn.example.com/images/image-id.png",
                     mimeType = "image/png",

@@ -3,7 +3,7 @@ package com.ogonggo.adminapi.auth.presentation
 import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
-import com.ogonggo.adminapi.internal.implement.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
+import com.ogonggo.adminapi.auth.presentation.InternalApiKeyAuthenticationFilter.Companion.INTERNAL_API_KEY_HEADER
 import com.ogonggo.adminapi.job.business.AdminJobService
 import com.ogonggo.adminapi.job.presentation.AdminJobController
 import com.ogonggo.adminapi.job.presentation.AdminJobFixtures

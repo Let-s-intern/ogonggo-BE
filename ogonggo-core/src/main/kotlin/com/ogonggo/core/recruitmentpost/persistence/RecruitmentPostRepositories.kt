@@ -1,0 +1,236 @@
+package com.ogonggo.core.recruitmentpost.persistence
+
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostBookmark
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostMetric
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Page
+import jakarta.persistence.LockModeType
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+internal interface RecruitmentPostJpaRepository : JpaRepository<RecruitmentPost, Long>, JpaSpecificationExecutor<RecruitmentPost> {
+    fun findByIdAndPublicationStatusAndDeletedAtIsNull(id: Long, publicationStatus: RecruitmentPostPublicationStatus): RecruitmentPost?
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPost post
+        set post.recruitmentStatus = :closedStatus,
+            post.closedAt = :closedAt,
+            post.updatedAt = :closedAt
+        where post.publicationStatus = :publishedStatus
+          and post.recruitmentStatus = :recruitingStatus
+          and post.recruitmentEndDate < :today
+          and post.deletedAt is null
+        """,
+    )
+    fun closeExpired(
+        @Param("today") today: LocalDate,
+        @Param("closedAt") closedAt: LocalDateTime,
+        @Param("publishedStatus") publishedStatus: RecruitmentPostPublicationStatus = RecruitmentPostPublicationStatus.PUBLISHED,
+        @Param("recruitingStatus") recruitingStatus: RecruitmentPostRecruitmentStatus = RecruitmentPostRecruitmentStatus.RECRUITING,
+        @Param("closedStatus") closedStatus: RecruitmentPostRecruitmentStatus = RecruitmentPostRecruitmentStatus.CLOSED,
+    ): Int
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id = :postId
+          and post.publicationStatus = :publicationStatus
+          and post.deletedAt is null
+        """,
+    )
+    fun findPublishedByIdForUpdate(
+        @Param("postId") postId: Long,
+        @Param("publicationStatus") publicationStatus: RecruitmentPostPublicationStatus,
+    ): RecruitmentPost?
+
+    /** 여러 요청이 같은 모집글들을 잠글 때 순서가 엇갈려 교착되지 않도록 식별자 순으로 잠근다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id in :postIds
+          and post.publicationStatus <> :draftStatus
+          and post.deletedAt is null
+        order by post.id
+        """,
+    )
+    fun findAllPostedByIdInForUpdate(
+        @Param("postIds") postIds: Collection<Long>,
+        @Param("draftStatus") draftStatus: RecruitmentPostPublicationStatus = RecruitmentPostPublicationStatus.DRAFT,
+    ): List<RecruitmentPost>
+
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id = :postId
+          and post.authorUserId = :authorUserId
+          and post.deletedAt is null
+        """,
+    )
+    fun findOwnedById(
+        @Param("authorUserId") authorUserId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPost?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id = :postId
+          and post.authorUserId = :authorUserId
+          and post.deletedAt is null
+        """,
+    )
+    fun findOwnedByIdForUpdate(
+        @Param("authorUserId") authorUserId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPost?
+
+    /** 삭제는 멱등해야 하므로 이미 삭제된 본인 모집글도 조회한다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        select post
+        from RecruitmentPost post
+        where post.id = :postId
+          and post.authorUserId = :authorUserId
+        """,
+    )
+    fun findOwnedByIdForDelete(
+        @Param("authorUserId") authorUserId: Long,
+        @Param("postId") postId: Long,
+    ): RecruitmentPost?
+}
+
+internal interface RecruitmentPostMetricJpaRepository : JpaRepository<RecruitmentPostMetric, Long> {
+    fun findByPostId(postId: Long): RecruitmentPostMetric?
+
+    fun findAllByPostIdIn(postIds: Collection<Long>): List<RecruitmentPostMetric>
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPostMetric metric
+        set metric.viewCount = metric.viewCount + :amount,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+        """,
+    )
+    fun increaseViewCount(
+        @Param("postId") postId: Long,
+        @Param("amount") amount: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPostMetric metric
+        set metric.commentCount = metric.commentCount + 1,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+        """,
+    )
+    fun increaseCommentCount(@Param("postId") postId: Long, @Param("now") now: LocalDateTime): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPostMetric metric
+        set metric.commentCount = metric.commentCount - :amount,
+            metric.updatedAt = :now
+        where metric.postId = :postId
+          and metric.commentCount >= :amount
+        """,
+    )
+    fun decreaseCommentCount(
+        @Param("postId") postId: Long,
+        @Param("amount") amount: Int,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** 활성 북마크를 다시 세어 맞춘다. 글 하나의 북마크만 (post_id, user_id) 인덱스 범위로 센다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPostMetric metric
+        set metric.bookmarkCount = (
+                select count(bookmark)
+                from RecruitmentPostBookmark bookmark
+                where bookmark.postId = :postId
+                  and bookmark.deletedAt is null
+            ),
+            metric.updatedAt = :now
+        where metric.postId = :postId
+        """,
+    )
+    fun syncBookmarkCount(@Param("postId") postId: Long, @Param("now") now: LocalDateTime): Int
+}
+
+internal interface RecruitmentPostBookmarkJpaRepository : JpaRepository<RecruitmentPostBookmark, Long> {
+    fun findByPostIdAndUserId(postId: Long, userId: Long): RecruitmentPostBookmark?
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPostBookmark bookmark
+        set bookmark.deletedAt = null,
+            bookmark.updatedAt = :now
+        where bookmark.postId = :postId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is not null
+        """,
+    )
+    fun restore(
+        @Param("postId") postId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update RecruitmentPostBookmark bookmark
+        set bookmark.deletedAt = :now,
+            bookmark.updatedAt = :now
+        where bookmark.postId = :postId
+          and bookmark.userId = :userId
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun softDelete(
+        @Param("postId") postId: Long,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Query(
+        """
+        select bookmark.postId
+        from RecruitmentPostBookmark bookmark
+        where bookmark.userId = :userId
+          and bookmark.postId in :postIds
+          and bookmark.deletedAt is null
+        """,
+    )
+    fun findActivePostIds(
+        @Param("userId") userId: Long,
+        @Param("postIds") postIds: Collection<Long>,
+    ): Set<Long>
+}

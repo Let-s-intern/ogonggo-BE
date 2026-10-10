@@ -1,12 +1,12 @@
 package com.ogonggo.userapi.bootcamp.presentation.response
 
-import com.ogonggo.core.bootcamp.domain.ApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampStatus
-import com.ogonggo.core.bootcamp.domain.OperationType
-import com.ogonggo.core.bootcamp.domain.TuitionType
-import com.ogonggo.core.review.domain.ReviewStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.userapi.bootcamp.business.CompanyBootcampResult
 import com.ogonggo.userapi.bootcamp.business.CompanyBootcampSummary
 import com.ogonggo.userapi.bootcamp.business.UserBootcampCurriculumResult
@@ -25,22 +25,22 @@ data class CompanyBootcampSummaryResponse(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     val representativeImageUrl: String?,
     val shortDescription: String,
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     @Schema(description = PUBLICATION_STATUS_DESCRIPTION)
     val publicationStatus: BootcampPublicationStatus,
     @Schema(description = REVIEW_STATUS_DESCRIPTION)
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
@@ -74,14 +74,14 @@ data class CompanyBootcampDetailResponse(
     val companyName: String,
     val title: String,
     val programType: String,
-    val operationType: OperationType,
+    val operationType: BootcampOperationType,
     val recruitmentType: BootcampRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val programStartDate: LocalDate,
     val programEndDate: LocalDate,
     val capacity: Int?,
-    val tuitionType: TuitionType,
+    val tuitionType: BootcampTuitionType,
     val tuitionAmount: Long?,
     val representativeImageUrl: String?,
     val shortDescription: String,
@@ -91,18 +91,18 @@ data class CompanyBootcampDetailResponse(
     val instructorInfo: String?,
     val programFeatures: String?,
     val completionRequirements: String?,
-    val applicationMethod: ApplicationMethod,
+    val applicationMethod: BootcampApplicationMethod,
     val applicationUrl: String?,
     val managerEmail: String?,
     val inquiryUrl: String?,
     val publicationStartAt: LocalDateTime?,
     val publicationEndAt: LocalDateTime?,
     val sourceUrl: String?,
-    val status: BootcampStatus,
+    val status: BootcampRecruitmentStatus,
     @Schema(description = PUBLICATION_STATUS_DESCRIPTION)
     val publicationStatus: BootcampPublicationStatus,
     @Schema(description = REVIEW_STATUS_DESCRIPTION)
-    val reviewStatus: ReviewStatus?,
+    val reviewStatus: ContentReviewStatus?,
     val closedAt: LocalDateTime?,
     val partners: List<CompanyBootcampPartnerResponse>,
     val curriculums: List<CompanyBootcampCurriculumResponse>,

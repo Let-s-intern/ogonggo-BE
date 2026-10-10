@@ -1,11 +1,11 @@
 package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.review.domain.ContentSource
-import com.ogonggo.core.review.domain.ReviewStatus
-import com.ogonggo.core.review.error.ReviewErrorCode
+import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -34,14 +34,14 @@ class Bootcamp internal constructor(
     companyName: String,
     title: String,
     programType: String,
-    operationType: OperationType,
+    operationType: BootcampOperationType,
     recruitmentType: BootcampRecruitmentType,
     recruitmentStartAt: LocalDateTime? = null,
     recruitmentEndAt: LocalDateTime? = null,
     programStartDate: LocalDate,
     programEndDate: LocalDate,
     capacity: Int? = null,
-    tuitionType: TuitionType,
+    tuitionType: BootcampTuitionType,
     tuitionAmount: Long? = null,
     representativeImageUrl: String?,
     shortDescription: String,
@@ -51,14 +51,14 @@ class Bootcamp internal constructor(
     instructorInfo: String? = null,
     programFeatures: String? = null,
     completionRequirements: String? = null,
-    applicationMethod: ApplicationMethod,
+    applicationMethod: BootcampApplicationMethod,
     applicationUrl: String? = null,
     managerEmail: String? = null,
     inquiryUrl: String? = null,
     publicationStartAt: LocalDateTime? = null,
     publicationEndAt: LocalDateTime? = null,
     sourceUrl: String? = null,
-    status: BootcampStatus = BootcampStatus.DRAFT,
+    status: BootcampRecruitmentStatus = BootcampRecruitmentStatus.DRAFT,
     closedAt: LocalDateTime? = null,
     publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.DRAFT,
     source: ContentSource = ContentSource.of(ownerUserId),
@@ -69,7 +69,7 @@ class Bootcamp internal constructor(
     init {
         require(ownerUserId == null || ownerUserId > 0) { "소유자 식별자는 양수여야 합니다." }
         ContentSource.requireConsistent(source, ownerUserId, externalId)
-        require((status == BootcampStatus.CLOSED) == (closedAt != null)) {
+        require((status == BootcampRecruitmentStatus.CLOSED) == (closedAt != null)) {
             "모집 마감 상태와 마감 일시가 일치해야 합니다."
         }
         require(ownerUserId == null || publicationStatus != BootcampPublicationStatus.PUBLISHED) {
@@ -126,7 +126,7 @@ class Bootcamp internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "operation_type", nullable = false, length = 20)
-    var operationType: OperationType = operationType /* 진행 방식 */
+    var operationType: BootcampOperationType = operationType /* 진행 방식 */
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -156,7 +156,7 @@ class Bootcamp internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tuition_type", nullable = false, length = 30)
-    var tuitionType: TuitionType = tuitionType /* 수강료 유형 */
+    var tuitionType: BootcampTuitionType = tuitionType /* 수강료 유형 */
         protected set
 
     @Column(name = "tuition_amount")
@@ -199,7 +199,7 @@ class Bootcamp internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "application_method", nullable = false, length = 20)
-    var applicationMethod: ApplicationMethod = applicationMethod /* 지원 방법 */
+    var applicationMethod: BootcampApplicationMethod = applicationMethod /* 지원 방법 */
         protected set
 
     @Column(name = "application_url", length = 2048)
@@ -239,7 +239,7 @@ class Bootcamp internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    var status: BootcampStatus = status /* 부트캠프 모집 상태 */
+    var status: BootcampRecruitmentStatus = status /* 부트캠프 모집 상태 */
         protected set
 
     @Column(name = "closed_at")
@@ -262,7 +262,7 @@ class Bootcamp internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", length = 20)
-    var reviewStatus: ReviewStatus? = if (ownerUserId == null) null else ReviewStatus.PENDING /* 검수 상태 */
+    var reviewStatus: ContentReviewStatus? = if (ownerUserId == null) null else ContentReviewStatus.PENDING /* 검수 상태 */
         protected set
 
     @Column(name = "deleted_at")
@@ -273,14 +273,14 @@ class Bootcamp internal constructor(
         companyName: String,
         title: String,
         programType: String,
-        operationType: OperationType,
+        operationType: BootcampOperationType,
         recruitmentType: BootcampRecruitmentType,
         recruitmentStartAt: LocalDateTime?,
         recruitmentEndAt: LocalDateTime?,
         programStartDate: LocalDate,
         programEndDate: LocalDate,
         capacity: Int?,
-        tuitionType: TuitionType,
+        tuitionType: BootcampTuitionType,
         tuitionAmount: Long?,
         representativeImageUrl: String?,
         shortDescription: String,
@@ -290,7 +290,7 @@ class Bootcamp internal constructor(
         instructorInfo: String?,
         programFeatures: String?,
         completionRequirements: String?,
-        applicationMethod: ApplicationMethod,
+        applicationMethod: BootcampApplicationMethod,
         applicationUrl: String?,
         managerEmail: String?,
         inquiryUrl: String?,
@@ -378,30 +378,30 @@ class Bootcamp internal constructor(
 
     fun startRecruitment() {
         checkNotDeleted()
-        if (status == BootcampStatus.RECRUITING) {
+        if (status == BootcampRecruitmentStatus.RECRUITING) {
             return
         }
-        status = BootcampStatus.RECRUITING
+        status = BootcampRecruitmentStatus.RECRUITING
         closedAt = null
     }
 
     fun close(now: LocalDateTime) {
         checkNotDeleted()
         when (status) {
-            BootcampStatus.DRAFT -> throw ConflictException(BootcampErrorCode.INVALID_BOOTCAMP_STATUS_TRANSITION)
-            BootcampStatus.RECRUITING -> {
-                status = BootcampStatus.CLOSED
+            BootcampRecruitmentStatus.DRAFT -> throw ConflictException(BootcampErrorCode.INVALID_BOOTCAMP_STATUS_TRANSITION)
+            BootcampRecruitmentStatus.RECRUITING -> {
+                status = BootcampRecruitmentStatus.CLOSED
                 closedAt = now
             }
-            BootcampStatus.CLOSED -> Unit
+            BootcampRecruitmentStatus.CLOSED -> Unit
         }
     }
 
     /** 기업회원 부트캠프는 검수 승인을 받아야만 노출한다. 게시하는 쪽이 누구든 같은 규칙을 따른다. */
     fun publish() {
         checkModifiable()
-        if (reviewStatus != null && reviewStatus != ReviewStatus.APPROVED) {
-            throw ConflictException(ReviewErrorCode.REVIEW_NOT_APPROVED)
+        if (reviewStatus != null && reviewStatus != ContentReviewStatus.APPROVED) {
+            throw ConflictException(ContentReviewErrorCode.REVIEW_NOT_APPROVED)
         }
         publicationStatus = BootcampPublicationStatus.PUBLISHED
     }
@@ -420,20 +420,20 @@ class Bootcamp internal constructor(
     /** 승인하면 곧바로 노출한다. 승인 결과를 알릴 경로가 없어 다시 게시하게 하면 부트캠프가 비노출로 남는다. */
     fun approveReview() {
         checkReviewable()
-        reviewStatus = ReviewStatus.APPROVED
+        reviewStatus = ContentReviewStatus.APPROVED
         publicationStatus = BootcampPublicationStatus.PUBLISHED
     }
 
     fun rejectReview() {
         checkReviewable()
-        reviewStatus = ReviewStatus.REJECTED
+        reviewStatus = ContentReviewStatus.REJECTED
         unpublish()
     }
 
     /** 기업회원이 내용을 고치거나 운영자가 판정을 되돌리면 다시 검수를 기다리며, 그동안 노출하지 않는다. */
     fun requestReview() {
         checkReviewable()
-        reviewStatus = ReviewStatus.PENDING
+        reviewStatus = ContentReviewStatus.PENDING
         unpublish()
     }
 
@@ -446,7 +446,7 @@ class Bootcamp internal constructor(
     private fun checkReviewable() {
         checkModifiable()
         if (reviewStatus == null) {
-            throw ConflictException(ReviewErrorCode.CONTENT_NOT_REVIEWABLE)
+            throw ConflictException(ContentReviewErrorCode.CONTENT_NOT_REVIEWABLE)
         }
     }
 
@@ -478,7 +478,7 @@ private fun validateBootcampValues(
     instructorInfo: String?,
     programFeatures: String?,
     completionRequirements: String?,
-    applicationMethod: ApplicationMethod,
+    applicationMethod: BootcampApplicationMethod,
     applicationUrl: String?,
     managerEmail: String?,
     inquiryUrl: String?,
@@ -516,11 +516,11 @@ private fun validateBootcampValues(
     require(programFeatures == null || programFeatures.isNotBlank()) { "교육 특징은 공백일 수 없습니다." }
     require(completionRequirements == null || completionRequirements.isNotBlank()) { "수료 조건은 공백일 수 없습니다." }
     when (applicationMethod) {
-        ApplicationMethod.EXTERNAL_PAGE -> require(!applicationUrl.isNullOrBlank()) {
+        BootcampApplicationMethod.EXTERNAL_PAGE -> require(!applicationUrl.isNullOrBlank()) {
             "외부 페이지 지원 링크는 필수입니다."
         }
 
-        ApplicationMethod.EMAIL -> require(applicationUrl == null) {
+        BootcampApplicationMethod.EMAIL -> require(applicationUrl == null) {
             "이메일 지원에는 외부 지원 링크를 설정할 수 없습니다."
         }
     }

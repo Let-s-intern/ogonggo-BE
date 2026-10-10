@@ -1,8 +1,8 @@
 package com.ogonggo.core.image.implement
 
-import com.ogonggo.core.image.implement.dto.ImageUploadCommand
-import com.ogonggo.core.image.implement.dto.ImageUploadResult
-import com.ogonggo.core.storage.s3.S3ImageStorage
+import com.ogonggo.core.image.implement.dto.ImageUploadDto
+import com.ogonggo.core.image.implement.dto.ImageUploadResultDto
+import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -14,14 +14,14 @@ import java.util.UUID
 class ImageUploader internal constructor(
     private val imageFileValidator: ImageFileValidator,
     private val imageAssetManager: ImageAssetManager,
-    private val s3ImageStorage: S3ImageStorage,
+    private val s3ObjectClient: S3ObjectClient,
 ) {
 
-    fun upload(ownerUserId: Long, command: ImageUploadCommand): ImageUploadResult {
+    fun upload(ownerUserId: Long, command: ImageUploadDto): ImageUploadResultDto {
         val image = imageFileValidator.validate(command)
         val imageId = UUID.randomUUID().toString()
         val key = "images/$imageId.${image.extension}"
-        val url = s3ImageStorage.publicUrl(key)
+        val url = s3ObjectClient.urlOf(key)
         imageAssetManager.startUploading(
             id = imageId,
             ownerUserId = ownerUserId,
@@ -30,14 +30,14 @@ class ImageUploader internal constructor(
             mimeType = image.mimeType,
             size = image.content.size.toLong(),
         )
-        s3ImageStorage.put(
+        s3ObjectClient.put(
             key = key,
             content = image.content,
             contentType = image.mimeType,
         )
         imageAssetManager.markUploaded(imageId)
 
-        return ImageUploadResult(
+        return ImageUploadResultDto(
             id = imageId,
             url = url,
             mimeType = image.mimeType,

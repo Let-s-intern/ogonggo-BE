@@ -1,6 +1,6 @@
 package com.ogonggo.core.job.domain
 
-import com.ogonggo.core.common.BaseTimeEntity
+import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
