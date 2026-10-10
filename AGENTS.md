@@ -17,6 +17,9 @@
 | 주제 | 기준 위치 | 읽어야 하는 경우 |
 | --- | --- | --- |
 | 프로젝트 개요, 실행, 런타임, 모듈 구성, 스키마 운영 | [`README.md`](README.md) | 환경 구성, 실행, 배포 또는 모듈 파악이 필요할 때 |
+| 서비스 개요, 사용자 유형, 콘텐츠 유입 경로, 외부 연동 | [`docs/domain/overview.md`](docs/domain/overview.md) | 오공고를 처음 맡거나 서비스 전체 흐름을 파악해야 할 때 |
+| 도메인 개념도, 도메인 사이의 관계 | [`docs/domain/domain-map.md`](docs/domain/domain-map.md) | 도메인·엔티티를 추가하거나 도메인 사이의 관계를 바꿀 때 (개념도 SVG도 함께 갱신) |
+| 기획 용어와 코드 이름의 대응, 상태 값의 의미 | [`docs/domain/glossary.md`](docs/domain/glossary.md) | 새 개념·enum을 추가하거나 이름을 짓고 바꿀 때, 모르는 용어를 찾을 때 |
 | 레이어, 모듈 의존성, API Service와 core의 역할, 패키지·클래스 이름 규칙, Helper/Reader/Manager, Repository, 트랜잭션, OSIV, 엔티티 삭제, JPA 연관관계 | [`docs/architecture/layers-and-modules.md`](docs/architecture/layers-and-modules.md) | 기능 추가, 엔티티·연관관계·삭제 방식 변경, 구조 변경, 패키지·클래스 이름을 짓거나 바꿀 때, 코드 리뷰를 할 때 |
 | 예외 계층, ErrorCode, API 오류 응답, 검증 오류, Security 오류, 예외 로깅 | [`docs/architecture/error-handling.md`](docs/architecture/error-handling.md) | 예외·검증·인증/인가 실패를 추가하거나 오류 응답을 변경할 때 |
 | API Request DTO, Bean Validation, Request→Command 변환 | [`docs/architecture/api-request-validation.md`](docs/architecture/api-request-validation.md) | 요청 필드·검증·Command 변환을 추가하거나 변경할 때 |
