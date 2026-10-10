@@ -79,7 +79,20 @@ Administrator console endpoints (`/api/v1/admin/**`) accept a user API access to
 
 Before deploying notification changes, verify the production schema and apply `docs/schema/2026-10-06-notifications.sql` once before the user API rollout. Pause bookmark writes from migration through rollout because the old version does not populate `active_since`. The reminder job remains disabled until the NHN template is approved.
 
-If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07-fcm-token.sql` once before the user API rollout. The FCM sender remains disabled until Firebase credentials and `ogonggo.firebase.enabled` are configured.
+If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07-fcm-token.sql` once before the user API rollout. The FCM sender remains disabled until Firebase credentials and `ogonggo.firebase.enabled` are configured. Firebase service-account values are external secrets; do not commit them.
+
+```yaml
+ogonggo:
+  firebase:
+    enabled: ${OGONGGO_FIREBASE_ENABLED:false}
+    project-id: ${OGONGGO_FIREBASE_PROJECT_ID:}
+    client-id: ${OGONGGO_FIREBASE_CLIENT_ID:}
+    client-email: ${OGONGGO_FIREBASE_CLIENT_EMAIL:}
+    private-key-id: ${OGONGGO_FIREBASE_PRIVATE_KEY_ID:}
+    private-key: ${OGONGGO_FIREBASE_PRIVATE_KEY:}
+```
+
+`private-key` may contain real line breaks or escaped `\n`. When `enabled` is `true`, all service-account values must be provided together. If all are omitted, the application falls back to Google Application Default Credentials.
 ## Work24 (고용24) Open API
 
 관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.

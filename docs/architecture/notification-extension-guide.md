@@ -36,16 +36,20 @@ flowchart LR
 
 ### FCM 설정과 payload
 
-FCM sender를 활성화하려면 사용자 API 설정에 Firebase Admin SDK 인증 정보를 넣는다. `credentials-path`가 없으면 Google Application Default Credentials를 사용한다.
+FCM sender를 활성화하려면 사용자 API 설정에 Firebase 서비스 계정 정보를 넣는다. 모든 값을 생략하면 Google Application Default Credentials를 사용한다. 일부 값만 설정하면 기동 시 실패한다.
 
 ```yaml
 ogonggo:
   firebase:
     enabled: true
-    credentials-path: /secure/path/firebase-service-account.json
+    project-id: ${OGONGGO_FIREBASE_PROJECT_ID:}
+    client-id: ${OGONGGO_FIREBASE_CLIENT_ID:}
+    client-email: ${OGONGGO_FIREBASE_CLIENT_EMAIL:}
+    private-key-id: ${OGONGGO_FIREBASE_PRIVATE_KEY_ID:}
+    private-key: ${OGONGGO_FIREBASE_PRIVATE_KEY:}
 ```
 
-서비스 계정 JSON은 저장소에 커밋하지 않는다. 로컬에서는 `be/firebase` 아래 파일을 사용할 수 있지만 `GOOGLE_APPLICATION_CREDENTIALS` 또는 배포 환경 Secret으로 주입하는 방식을 우선한다.
+서비스 계정 값은 저장소에 커밋하지 않는다. 로컬은 gitignored `application-dev.yml`, 운영은 배포 환경의 Secret YAML에 넣는다. `private-key`는 실제 줄바꿈 또는 escaped `\\n`을 사용할 수 있다.
 
 FCM 알림의 `payload_json`은 다음 형태다. `data`는 Firebase 메시지 데이터 규칙에 맞춰 문자열 값만 사용한다.
 
