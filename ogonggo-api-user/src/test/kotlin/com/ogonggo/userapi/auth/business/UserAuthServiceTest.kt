@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionStatus
@@ -49,8 +50,10 @@ class UserAuthServiceTest {
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val tokenProvider = Mockito.mock(OgonggoTokenProvider::class.java)
     private val refreshTokenStore = Mockito.mock(RefreshTokenStore::class.java)
+    private val transactionManager = NoOpTransactionManager()
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-27T01:00:00Z"), ZONE)
-    private val transactionTemplate = TransactionTemplate(NoOpTransactionManager())
+    private val transactionTemplate = TransactionTemplate(transactionManager)
 
     private val service = UserAuthService(
         letsCareerAuthClient = letsCareerAuthClient,
@@ -61,6 +64,7 @@ class UserAuthServiceTest {
         tokenProvider = tokenProvider,
         refreshTokenStore = refreshTokenStore,
         signInValidator = SignInValidator(),
+        eventPublisher = eventPublisher,
         jwtProperties = JWT_PROPERTIES,
         transactionTemplate = transactionTemplate,
         clock = clock,
@@ -81,6 +85,16 @@ class UserAuthServiceTest {
         assertEquals("og-refresh", result.tokens.refreshToken)
         Mockito.verify(userAppender).append(UserAppendDto(LETSCAREER_USER_ID, NOW))
         Mockito.verify(refreshTokenStore).save(USER_ID, "og-refresh", JWT_PROPERTIES.refreshTokenValidity)
+        Mockito.verify(eventPublisher).publishEvent(
+            UserSignedUpEvent(
+                userId = USER_ID,
+                name = "김렛츠",
+                email = "lets@career.co.kr",
+                phoneNum = "010-1234-5678",
+                authProvider = LetsCareerAuthProvider.SERVICE,
+                joinedAt = JOINED_AT,
+            ),
+        )
     }
 
     @Test
@@ -93,6 +107,7 @@ class UserAuthServiceTest {
 
         assertFalse(result.isNewUser)
         Mockito.verifyNoInteractions(userAppender)
+        Mockito.verifyNoInteractions(eventPublisher)
         Mockito.verify(userProfileManager).sync(
             UserProfileSyncDto(
                 userId = USER_ID,
@@ -145,6 +160,7 @@ class UserAuthServiceTest {
         assertEquals("og-access-2", service.reissueAccessToken("og-refresh"))
 
         Mockito.verifyNoInteractions(letsCareerAuthClient)
+        Mockito.verifyNoInteractions(eventPublisher)
     }
 
     @Test
@@ -188,7 +204,9 @@ class UserAuthServiceTest {
         Mockito.`when`(tokenProvider.createRefreshToken(USER_ID)).thenReturn("og-refresh")
     }
 
-    private fun activeAccount(status: UserStatus = UserStatus.ACTIVE): UserAccountDto =
+    private fun activeAccount(
+        status: UserStatus = UserStatus.ACTIVE,
+    ): UserAccountDto =
         UserAccountDto(
             userId = USER_ID,
             letsCareerUserId = LETSCAREER_USER_ID,
@@ -286,7 +304,7 @@ class UserAuthServiceTest {
     }
 }
 
-/** 트랜잭션 경계만 흉내낸다. 이 테스트는 경계 안에서 무엇을 호출하는지만 검증한다. */
+/** 단위 테스트용이다. 실제 커밋과 이벤트 전달은 가입 알림톡 통합 테스트에서 검증한다. */
 private class NoOpTransactionManager : PlatformTransactionManager {
     override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
     override fun commit(status: TransactionStatus) = Unit

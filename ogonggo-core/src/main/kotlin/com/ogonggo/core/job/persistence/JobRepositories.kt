@@ -203,6 +203,7 @@ internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
         """
         update JobBookmark bookmark
         set bookmark.deletedAt = null,
+            bookmark.activeSince = :now,
             bookmark.applicationStatus = com.ogonggo.core.job.domain.JobApplicationStatus.SCRAPPED,
             bookmark.updatedAt = :now
         where bookmark.jobId = :jobId

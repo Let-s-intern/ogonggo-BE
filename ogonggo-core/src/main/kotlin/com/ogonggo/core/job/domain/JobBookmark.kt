@@ -26,6 +26,8 @@ internal class JobBookmark(
 
     @Column(name = "user_id", nullable = false)
     val userId: Long, /* 북마크한 사용자 식별자 */
+
+    activeSince: LocalDateTime,
 ) : BaseTimeEntity() {
 
     init {
@@ -40,6 +42,11 @@ internal class JobBookmark(
 
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 북마크 해제 일시 */
+        protected set
+
+    /** 최초 등록 또는 해제 후 재활성화한 시각. 지원 상태 변경 시각과 분리한다. */
+    @Column(name = "active_since", nullable = false)
+    var activeSince: LocalDateTime = activeSince
         protected set
 
     @Enumerated(EnumType.STRING)

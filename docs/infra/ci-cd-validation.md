@@ -97,7 +97,7 @@ Spring Boot Actuator의 헬스 항목(`db`, `redis`)을 컨트롤러가 골라 �
 - 메일(SMTP)·디스크는 넣지 않습니다. 잠깐 느려도 서비스가 돌아가는데, 넣으면 그 지연 하나로 모든 태스크가
   트래픽에서 빠집니다.
 - 인증 없이 열린 경로라 응답에는 항목별 `UP`/`DOWN`만 담고 오류 내용이나 접속 주소는 담지 않습니다.
-- `/actuator/**` 경로는 Security 설정에서 열지 않으므로 외부에서 호출할 수 없습니다.
+- `/actuator/**`는 외부 요청에 열지 않습니다. Actuator `health`·`metrics`를 등록하지만 Security는 `/actuator/metrics`의 loopback 요청만 허용해 컨테이너 내부 운영 점검에 사용합니다. `/actuator/health`는 deny-all이며 ALB는 기존 `/health` 컨트롤러를 사용합니다.
 
 **운영 영향.** 배포와 무관하게 RDS나 ElastiCache가 장애를 일으키면 모든 태스크가 비정상이 됩니다.
 ALB는 모든 타겟이 비정상이면 전체 타겟으로 요청을 계속 보내지만, ECS는 ALB 헬스 체크에 실패한 태스크를

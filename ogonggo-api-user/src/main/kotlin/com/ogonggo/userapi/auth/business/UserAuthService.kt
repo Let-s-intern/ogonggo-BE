@@ -15,6 +15,7 @@ import com.ogonggo.userapi.auth.implement.RefreshTokenStore
 import com.ogonggo.userapi.auth.implement.SignInValidator
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
@@ -30,6 +31,7 @@ class UserAuthService(
     private val tokenProvider: OgonggoTokenProvider,
     private val refreshTokenStore: RefreshTokenStore,
     private val signInValidator: SignInValidator,
+    private val eventPublisher: ApplicationEventPublisher,
     private val jwtProperties: JwtProperties,
     private val transactionTemplate: TransactionTemplate,
     private val clock: Clock,
@@ -68,6 +70,19 @@ class UserAuthService(
         signInValidator.validate(account.status)
 
         userProfileManager.sync(letsCareerUser.toSyncCommand(account.userId, now))
+
+        if (existingAccount == null) {
+            eventPublisher.publishEvent(
+                UserSignedUpEvent(
+                    userId = account.userId,
+                    name = letsCareerUser.name,
+                    email = letsCareerUser.email,
+                    phoneNum = letsCareerUser.phoneNum,
+                    authProvider = letsCareerUser.authProvider,
+                    joinedAt = account.joinedAt,
+                ),
+            )
+        }
 
         return SynchronizedAccount(userId = account.userId, isNewUser = existingAccount == null)
     }

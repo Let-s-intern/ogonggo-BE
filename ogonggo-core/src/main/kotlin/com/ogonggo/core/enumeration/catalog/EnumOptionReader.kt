@@ -29,6 +29,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.notification.domain.NotificationChannel
+import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicantPresence
@@ -78,6 +80,9 @@ class EnumOptionReader {
             enumOptionsOf<JobPublicationStatus>(),
             enumOptionsOf<JobSortType>(),
             enumOptionsOf<JobContentField>(),
+            // 알림
+            enumOptionsOf<NotificationChannel>(),
+            enumOptionsOf<NotificationStatus>(),
             // 직군·직무. JobRole의 parent는 속한 JobField다.
             enumOptionsOf<JobField>(),
             enumOptionsOf<JobRole>(),

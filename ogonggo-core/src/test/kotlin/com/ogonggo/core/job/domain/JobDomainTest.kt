@@ -11,17 +11,21 @@ import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 class JobDomainTest {
 
     @Test
+    @DisplayName("공고의 주요 정보를 수정한다")
     fun `채용공고 정보를 수정한다`() {
+        // given
         val job = createJob()
         val startAt = LocalDateTime.of(2026, 9, 1, 0, 0)
         val endAt = startAt.plusDays(30)
 
+        // when
         job.update(
             companyName = "변경 회사",
             title = "백엔드 인턴",
@@ -58,6 +62,7 @@ class JobDomainTest {
             now = startAt,
         )
 
+        // then
         assertEquals("변경 회사", job.companyName)
         assertEquals("recruit@example.com", job.applyEmail)
         assertEquals("hr@example.com", job.inquiryEmail)

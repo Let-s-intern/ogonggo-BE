@@ -77,6 +77,9 @@ Users sign in by exchanging a LetsCareer access token at `POST /api/v1/auth/lets
 
 Administrator console endpoints (`/api/v1/admin/**`) accept a user API access token whose account has `UserRole.ADMIN`, granted directly in the database. `ogonggo-api-admin` must be configured with the same `ogonggo.auth.jwt.secret` as the user API. Read section 7-3 of [오공고 사용자 인증과 렛츠커리어 연동](docs/architecture/authentication.md) before changing it.
 
+Before deploying this branch's notifications, verify the production schema and apply `docs/schema/2026-10-06-notifications.sql` once before the user API rollout. It adds `job_bookmarks.active_since` and creates `notifications` including `result_category`; it does not add a reminder timestamp or separate reminder schedule/cursor table. The D-1 time is calculated from `jobs.recruitment_end_at` during each candidate query. Existing eligible bookmarks can be processed after D-1 as long as the posting deadline has not passed; bookmarks activated after D-1 are excluded. The migration seeds the reminder and delivery jobs disabled and terminal-notification cleanup enabled. The reminder scheduler is currently not registered pending template approval. Pause bookmark writes from migration through user API rollout because the old version does not populate `active_since`. See the notification extension guide for activation policy and implementation limitations.
+일반적인 기존 스키마 변경 SQL은 main의 배포 절차를 따르며, 이 브랜치의 알림 기능에 필요한 SQL만 위 파일로 관리합니다.
+
 ## Work24 (고용24) Open API
 
 관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.
@@ -133,8 +136,8 @@ The project intentionally follows the current LetsCareer approach and does not i
 
 운영의 두 API는 모두 `spring.jpa.hibernate.ddl-auto=none`으로 띄웁니다. 두 서비스가 하나의 DB를 공유하므로, 어느 한쪽이라도 `update`로 뜨면 병렬 배포 중 동시에 스키마를 바꿀 수 있습니다. 운영 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)에 `none` 외의 값을 넣지 않습니다.
 
-엔티티를 바꿔 스키마가 달라지면 두 API를 배포하기 전에 운영 DB에 변경을 한 번 적용합니다. 스키마 변경 SQL은 저장소에 두지 않습니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
+엔티티를 바꿔 스키마가 달라지면 두 API를 배포하기 전에 운영 DB에 변경을 한 번 적용합니다. 일반 변경 SQL은 저장소에 두지 않지만, 이 브랜치의 알림 배포에 필요한 `docs/schema/2026-10-06-notifications.sql`은 예외적으로 포함합니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
 
 로컬과 테스트는 빈 DB에서 시작하므로 `update`나 `create-drop`을 씁니다.
 
-Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 백업 후 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환을 실행하지 않습니다.
+Hibernate `update`는 기존 컬럼의 이름 변경이나 제거를 안전하게 처리하지 않습니다. 기존 DB에 파괴적 스키마 변경을 적용해야 할 때는 백업 후 배포용 SQL을 한 번만 실행합니다. 로컬처럼 `update`로 새로 만든 DB에는 Hibernate가 최종 스키마를 생성하므로 기존 스키마 전환을 실행하지 않습니다.

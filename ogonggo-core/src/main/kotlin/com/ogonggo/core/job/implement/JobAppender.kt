@@ -5,7 +5,10 @@ import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.job.implement.event.JobRecruitmentDeadlineChangedEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.concurrent.ThreadLocalRandom
@@ -13,15 +16,18 @@ import java.util.concurrent.ThreadLocalRandom
 @Component
 class JobAppender internal constructor(
     private val jobRepository: JobJpaRepository,
+    private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
 ) {
 
+    @Transactional
     fun append(command: JobAppendDto): Job = append(command, LocalDateTime.now(clock))
 
     /** 목록 정렬 키는 등록 시각의 날짜로 정한다. 같은 날 등록한 공고끼리 섞이도록 무작위 값을 함께 넣는다. */
+    @Transactional
     fun append(command: JobAppendDto, now: LocalDateTime): Job {
         val source = command.source ?: ContentSource.of(command.ownerUserId)
-        return jobRepository.save(
+        val savedJob = jobRepository.save(
             Job(
                 ownerUserId = command.ownerUserId,
                 companyName = command.companyName,
@@ -63,5 +69,15 @@ class JobAppender internal constructor(
                 now = now,
             ),
         )
+        savedJob.recruitmentEndAt?.let { recruitmentEndAt ->
+            eventPublisher.publishEvent(
+                JobRecruitmentDeadlineChangedEvent(
+                    jobId = checkNotNull(savedJob.id),
+                    previousEndAt = null,
+                    recruitmentEndAt = recruitmentEndAt,
+                ),
+            )
+        }
+        return savedJob
     }
 }

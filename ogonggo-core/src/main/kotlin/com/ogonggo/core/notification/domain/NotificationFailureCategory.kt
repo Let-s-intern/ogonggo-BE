@@ -1,0 +1,19 @@
+package com.ogonggo.core.notification.domain
+
+/** 채널 구현체가 분류한 실패 원인. 채널별 원본 resultCode와 함께 저장한다. */
+enum class NotificationFailureCategory {
+    DUPLICATE_REQUEST,
+    AUTHENTICATION_CONFIGURATION,
+    SENDER_PROFILE_CONFIGURATION,
+    INVALID_REQUEST,
+    TEMPLATE_CONFIGURATION,
+    RATE_LIMITED,
+    PROVIDER_UNAVAILABLE,
+    TRANSPORT_ERROR,
+    HTTP_ERROR,
+    CLIENT_ERROR,
+    INVALID_PROVIDER_RESPONSE,
+    CHANNEL_NOT_CONFIGURED,
+    APPLICATION_ERROR,
+    UNKNOWN_PROVIDER_ERROR,
+}
