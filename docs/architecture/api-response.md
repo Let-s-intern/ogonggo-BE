@@ -219,6 +219,21 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 응답 항목은 `challengeId`, `title`, `shortDescription`, `thumbnailUrl`, 모집 기간(`recruitmentStartAt`·`recruitmentEndAt`), 진행 기간(`programStartAt`·`programEndAt`)입니다. 렛츠커리어 챌린지 상세 주소는 담지 않으며, `challengeId`로 어느 주소를 만들지는 **확인 필요**입니다.
 - 렛츠커리어 호출은 트랜잭션 밖에서 하고, 로그인 교환과 같은 클라이언트 설정(연결 2초·읽기 5초)을 씁니다.
 
+### 채용공고별 렛츠커리어 콘텐츠 추천
+
+`GET /api/v1/jobs/{jobId}/recommended-lets-career-contents`는 게시 중인 채용공고에 맞는 렛츠커리어 프로그램·무료 자료집·블로그를 섞어 최대 3개 반환합니다. 페이지가 없으므로 `data`는 배열입니다. 맞는 콘텐츠가 없으면 빈 배열이며 클라이언트는 구역을 숨깁니다. 없거나 게시 중이 아닌 공고는 404 `JOB_NOT_FOUND`입니다.
+
+- 결정일: 2026-10-09 / 리뷰 상태: 팀 리뷰 필요
+- 콘텐츠는 렛츠커리어가 소유합니다. 사용자 API가 매시 렛츠커리어 내부 API(`/api/v1/internal/catalog`)의 목록으로 사본(`lets_career_contents`)을 덮어쓰고([스케줄 작업](scheduling.md)의 `letsCareerContentSync`), 목록에서 빠진 콘텐츠는 지운 것으로 표시합니다. 그래서 요청마다 렛츠커리어를 부르지 않으며 렛츠커리어 장애가 이 API를 실패시키지 않습니다. 받은 목록이 비어 있으면 덮어쓰지 않습니다.
+- 사본마다 크롤러가 AI로 직군·직무·준비 단계 태그를 붙입니다([크롤러 렛츠커리어 콘텐츠 태그](rest-api-design.md#크롤러-렛츠커리어-콘텐츠-태그)). 태그가 없거나 태그한 뒤 내용이 바뀐 콘텐츠는 추천하지 않습니다.
+- 고르는 규칙은 사용자 API의 `LetsCareerContentRecommendPolicy`입니다.
+  - 모집 기간이 아닌 콘텐츠와 다른 직군 전용 콘텐츠는 뺍니다. 직군·직무 태그가 없는 콘텐츠는 모든 공고에 나올 수 있습니다.
+  - 직무가 같으면 +5, 직군이 같으면 +3, 공고가 요구하는 준비 단계와 겹치면 하나에 +2(최대 두 개)입니다. 준비 단계는 공고 분석의 제출 서류·자소서·전형 칸과 본문의 전형 절차·채용 안내사항에서 찾고(자기소개서·이력서·포트폴리오·면접·인적성 등), 인턴·일경험 공고는 인턴, 경력 전용이 아닌 공고는 취업 준비 시작을 더합니다.
+  - 점수가 같으면 공고 식별자로 섞은 순서를 씁니다. 같은 공고는 다시 열어도 같은 결과이고, 같은 직무의 다른 공고끼리는 다른 콘텐츠가 섞여 나옵니다.
+  - 한 갈래(프로그램·자료집·블로그)는 두 개까지 고르고, 모자라면 남은 것으로 채웁니다.
+- 응답 항목은 `kind`(`LetsCareerContentKind`), `letsCareerContentId`, `title`, `description`, `thumbnailUrl`, `url`, 모집 기간(`recruitmentStartAt`·`recruitmentEndAt`)입니다. `url`은 렛츠커리어 웹 상세 주소이며 카드를 누르면 그대로 이동합니다. 도메인은 운영 주소(`https://www.letscareer.co.kr`)로 코드에 둡니다.
+- 사용자에 맞춘 추천(렛츠커리어 희망 직무 등)은 아직 넣지 않았습니다. 기존 `GET /api/v1/recommended-challenges`는 프런트가 옮기는 동안 남겨 둡니다. 제거 시점은 **확인 필요**입니다.
+
 ### B2B 광고 문의
 
 `POST /api/v1/advertisement-inquiries`는 기업 담당자가 광고 소개 페이지에서 남긴 문의를 영업 슬랙 채널로 전달합니다. 오공고 계정이 없는 상태로 호출하며 문의를 저장하지 않습니다.
