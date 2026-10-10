@@ -17,6 +17,7 @@ import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
+import com.ogonggo.userapi.job.presentation.response.UserTodayJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import java.time.LocalDate
@@ -91,8 +92,8 @@ class UserJobController(
     @GetMapping("/today")
     override fun getTodayJobs(
         @AuthenticationPrincipal userId: Long?,
-    ): ResponseEntity<SuccessResponse<List<UserJobSummaryResponse>>> =
-        SuccessResponse.ok(userJobService.getTodayJobs(userId).map(UserJobSummaryResponse::from))
+    ): ResponseEntity<SuccessResponse<List<UserTodayJobSummaryResponse>>> =
+        SuccessResponse.ok(userJobService.getTodayJobs(userId).map(UserTodayJobSummaryResponse::from))
 
     @GetMapping("/similar")
     override fun getSimilarJobs(

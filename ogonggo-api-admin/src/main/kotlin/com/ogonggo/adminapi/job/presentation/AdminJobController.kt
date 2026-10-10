@@ -8,6 +8,7 @@ import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsReques
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
 import com.ogonggo.adminapi.job.presentation.response.AdminJobDetailResponse
 import com.ogonggo.adminapi.job.presentation.response.AdminJobSummaryResponse
+import com.ogonggo.adminapi.job.presentation.response.AdminTodayJobSummaryResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.core.job.domain.JobField
@@ -75,16 +76,16 @@ class AdminJobController(
     }
 
     @GetMapping("/today")
-    override fun getTodayJobs(): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>> =
-        SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminJobSummaryResponse::from))
+    override fun getTodayJobs(): ResponseEntity<SuccessResponse<List<AdminTodayJobSummaryResponse>>> =
+        SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminTodayJobSummaryResponse::from))
 
     /** 교체가 커밋된 뒤의 목록을 다시 읽어 응답한다. */
     @PutMapping("/today")
     override fun replaceTodayJobs(
         @RequestBody request: ReplaceAdminTodayJobsRequest,
-    ): ResponseEntity<SuccessResponse<List<AdminJobSummaryResponse>>> {
-        adminJobService.replaceTodayJobs(request.toJobIds())
-        return SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminJobSummaryResponse::from))
+    ): ResponseEntity<SuccessResponse<List<AdminTodayJobSummaryResponse>>> {
+        adminJobService.replaceTodayJobs(request.toDtos())
+        return SuccessResponse.ok(adminJobService.getTodayJobs().map(AdminTodayJobSummaryResponse::from))
     }
 
     @PatchMapping("/visibility")

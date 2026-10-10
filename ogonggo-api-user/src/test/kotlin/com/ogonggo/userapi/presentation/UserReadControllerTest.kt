@@ -42,6 +42,7 @@ import com.ogonggo.userapi.job.business.UserJobPageResult
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.business.UserJobSummary
+import com.ogonggo.userapi.job.business.UserTodayJobSummary
 import com.ogonggo.userapi.job.presentation.UserJobController
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -176,9 +177,10 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `오늘의 공고는 페이지 정보 없이 목록으로 응답하고 로그인 없이도 조회한다`() {
-        Mockito.`when`(userJobService.getTodayJobs(USER_ID)).thenReturn(listOf(jobSummary()))
-        Mockito.`when`(userJobService.getTodayJobs(null)).thenReturn(listOf(jobSummary(bookmarked = false)))
+    fun `오늘의 공고는 페이지 정보 없이 추천 문구를 담은 목록으로 응답하고 로그인 없이도 조회한다`() {
+        Mockito.`when`(userJobService.getTodayJobs(USER_ID)).thenReturn(listOf(todayJobSummary(jobSummary())))
+        Mockito.`when`(userJobService.getTodayJobs(null))
+            .thenReturn(listOf(todayJobSummary(jobSummary(bookmarked = false))))
 
         mockMvc.perform(get("/api/v1/jobs/today").with(authenticatedUser()))
             .andExpect(status().isOk)
@@ -188,6 +190,9 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].id").value(1))
             .andExpect(jsonPath("$.data[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data[0].viewCount").value(12))
+            .andExpect(jsonPath("$.data[0].recommendationTitle").value("경력 없이 시작하고 싶다면"))
+            .andExpect(jsonPath("$.data[0].recommendationDescription").value("실무 중심 프로젝트로 빠른 성장"))
+            .andExpect(jsonPath("$.data[0].job").doesNotExist())
 
         mockMvc.perform(get("/api/v1/jobs/today"))
             .andExpect(status().isOk)
@@ -795,6 +800,9 @@ class UserReadControllerTest @Autowired constructor(
         totalPages = 1,
         hasNext = false,
     )
+
+    private fun todayJobSummary(job: UserJobSummary): UserTodayJobSummary =
+        UserTodayJobSummary(job, "경력 없이 시작하고 싶다면", "실무 중심 프로젝트로 빠른 성장")
 
     private fun jobSummary(bookmarked: Boolean = true): UserJobSummary = UserJobSummary(
         id = 1L,

@@ -3,6 +3,8 @@ package com.ogonggo.adminapi.job.presentation.response
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
+import com.ogonggo.adminapi.job.business.AdminTodayJobSummary
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -67,6 +69,24 @@ data class AdminJobSummaryResponse(
             reviewStatus = result.reviewStatus,
             recruitmentStatus = result.recruitmentStatus,
             registeredAt = result.registeredAt,
+        )
+    }
+}
+
+/** 목록 항목과 같은 필드를 같은 높이에 펼치고 추천 문구를 더한다. 콘솔이 목록과 같은 표로 그리기 위해서다. */
+data class AdminTodayJobSummaryResponse(
+    @get:JsonUnwrapped
+    val job: AdminJobSummaryResponse,
+    @field:Schema(description = "사용자 화면 카드에 굵게 보여 주는 추천 문구 제목")
+    val recommendationTitle: String,
+    @field:Schema(description = "추천 문구 제목 아래 설명")
+    val recommendationDescription: String,
+) {
+    companion object {
+        internal fun from(result: AdminTodayJobSummary): AdminTodayJobSummaryResponse = AdminTodayJobSummaryResponse(
+            job = AdminJobSummaryResponse.from(result.job),
+            recommendationTitle = result.recommendationTitle,
+            recommendationDescription = result.recommendationDescription,
         )
     }
 }
