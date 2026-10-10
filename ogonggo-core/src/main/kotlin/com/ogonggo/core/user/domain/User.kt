@@ -60,6 +60,22 @@ internal class User private constructor(
     var withdrawnAt: LocalDateTime? = null /* 탈퇴 일시 */
         protected set
 
+    @Column(name = "fcm_token", length = 4096)
+    var fcmToken: String? = null /* 현재 사용자의 FCM 알림 수신 토큰 */
+        protected set
+
+    fun changeFcmToken(fcmToken: String) {
+        require(fcmToken.isNotBlank()) { "FCM 토큰은 비어 있을 수 없습니다." }
+        this.fcmToken = fcmToken
+    }
+
+    /** 발송 중 토큰이 새 토큰으로 교체된 경우 기존 토큰을 지우지 않는다. */
+    fun clearFcmToken(expectedToken: String) {
+        if (fcmToken == expectedToken) {
+            fcmToken = null
+        }
+    }
+
     /**
      * 오공고가 비밀번호를 소유하는 기업 회원만 바꿀 수 있다.
      * 일반 회원의 비밀번호는 렛츠커리어에 있다.

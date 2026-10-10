@@ -88,6 +88,8 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/post").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1bootcamp-bookmarks~1{bootcampId}/delete").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me/get").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1users~1me~1fcm-token/get").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1users~1me~1fcm-token/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1profile/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1recruitment-posts/post").isObject)
         val saveRecruitmentPostProperties = document.at(

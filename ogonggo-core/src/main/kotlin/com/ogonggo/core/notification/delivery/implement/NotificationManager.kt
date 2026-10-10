@@ -83,5 +83,6 @@ class NotificationManager internal constructor(
         recipientAddress = checkNotNull(recipientAddress),
         payloadJson = checkNotNull(payloadJson),
         deduplicationKey = deduplicationKey,
+        recipientUserId = recipientUserId,
     )
 }

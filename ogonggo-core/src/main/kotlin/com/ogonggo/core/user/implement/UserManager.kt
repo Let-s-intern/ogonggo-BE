@@ -5,6 +5,7 @@ import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 
 @Component
 class UserManager internal constructor(
@@ -17,6 +18,24 @@ class UserManager internal constructor(
             ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
 
         user.changePassword(encodedPassword)
+        userRepository.save(user)
+    }
+
+    @Transactional
+    fun changeFcmToken(userId: Long, fcmToken: String) {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
+
+        user.changeFcmToken(fcmToken)
+        userRepository.save(user)
+    }
+
+    @Transactional
+    fun clearFcmToken(userId: Long, expectedToken: String) {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: return
+
+        user.clearFcmToken(expectedToken)
         userRepository.save(user)
     }
 }

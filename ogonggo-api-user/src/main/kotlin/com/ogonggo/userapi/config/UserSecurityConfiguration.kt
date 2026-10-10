@@ -81,6 +81,14 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.POST, "/api/v1/service-feedbacks").permitAll()
                 // 역할은 토큰에 없으므로 클라이언트는 이 경로로 자기 역할과 프로필을 읽는다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
+                it.requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/users/me/fcm-token",
+                ).authenticated()
+                it.requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/v1/users/me/fcm-token",
+                ).authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
                 it.requestMatchers(
                     HttpMethod.PUT,
