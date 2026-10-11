@@ -231,8 +231,8 @@ class NotificationDispatcher internal constructor(
     }
 
     companion object {
-        /** DB 작업 키는 기존 설정을 유지해 운영 cron 변경을 보존한다. */
-        const val SCHEDULER_NAME = "jobBookmarkAlimTalkDelivery"
+        /** 모든 채널의 알림을 발송하는 공용 DB 작업 키다. */
+        const val SCHEDULER_NAME = "notificationDelivery"
         private const val BATCH_SIZE = 4
         private const val NANOS_PER_MILLISECOND = 1_000_000
         private const val LONG_RUN_WARNING_MILLIS = 60_000L

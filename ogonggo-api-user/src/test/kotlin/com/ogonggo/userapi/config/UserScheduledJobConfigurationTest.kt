@@ -18,11 +18,11 @@ class UserScheduledJobConfigurationTest {
         val dispatcher = Mockito.mock(NotificationDispatcher::class.java)
 
         // when
-        val definition = UserScheduledJobConfiguration().jobBookmarkAlimTalkDeliveryJob(dispatcher)
+        val definition = UserScheduledJobConfiguration().notificationDeliveryJob(dispatcher)
         val lock = NotificationDispatcher::class.java.getMethod("dispatch").getAnnotation(SchedulerLock::class.java)
 
         // then
-        assertEquals("jobBookmarkAlimTalkDelivery", definition.name)
+        assertEquals("notificationDelivery", definition.name)
         assertEquals("* * * * * *", definition.defaultCron)
         assertNotNull(lock)
         assertEquals(definition.name, lock.name)
