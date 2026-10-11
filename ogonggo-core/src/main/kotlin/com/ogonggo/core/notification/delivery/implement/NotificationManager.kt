@@ -57,10 +57,12 @@ class NotificationManager internal constructor(
             is NotificationDeliveryResult.Unknown -> notification.markUnknown(
                 resultCode = result.resultCode,
                 failureCategory = result.failureCategory,
+                detail = result.detail,
             )
             is NotificationDeliveryResult.Failed -> notification.markFailed(
                 resultCode = result.resultCode,
                 failureCategory = result.failureCategory,
+                detail = result.detail,
             )
         }
         return true

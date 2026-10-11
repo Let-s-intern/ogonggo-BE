@@ -9,10 +9,12 @@ sealed interface NotificationDeliveryResult {
     data class Unknown(
         val resultCode: String,
         val failureCategory: NotificationFailureCategory,
+        val detail: String? = null,
     ) : NotificationDeliveryResult
 
     data class Failed(
         val resultCode: String,
         val failureCategory: NotificationFailureCategory = NotificationFailureCategory.UNKNOWN_PROVIDER_ERROR,
+        val detail: String? = null,
     ) : NotificationDeliveryResult
 }

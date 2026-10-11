@@ -32,6 +32,7 @@ internal class FcmNotificationSender(
             return NotificationDeliveryResult.Failed(
                 resultCode = "INVALID_FCM_PAYLOAD",
                 failureCategory = NotificationFailureCategory.INVALID_REQUEST,
+                detail = "FCM payload를 해석할 수 없습니다.",
             )
         }
 
@@ -53,9 +54,22 @@ internal class FcmNotificationSender(
             if (exception.messagingErrorCode == com.google.firebase.messaging.MessagingErrorCode.UNREGISTERED) {
                 notification.recipientUserId?.let { userManager.clearFcmToken(it, notification.recipientAddress) }
             }
-            NotificationDeliveryResult.Failed(errorCode, errorCode.toFailureCategory())
+            NotificationDeliveryResult.Failed(
+                resultCode = errorCode,
+                failureCategory = errorCode.toFailureCategory(),
+                detail = exception.message.toSafeDetail(),
+            )
         }
     }
+
+    private fun String?.toSafeDetail(): String? = this
+        ?.replace(EMAIL_PATTERN, "[REDACTED]")
+        ?.replace(PHONE_PATTERN, "[REDACTED]")
+        ?.replace(FCM_TOKEN_PATTERN, "[REDACTED]")
+        ?.replace(WHITESPACE_PATTERN, " ")
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?.take(RESULT_DETAIL_MAX_LENGTH)
 
     private fun String.toFailureCategory(): NotificationFailureCategory = when (this) {
         "UNREGISTERED", "INVALID_ARGUMENT" -> NotificationFailureCategory.CLIENT_ERROR
@@ -63,6 +77,14 @@ internal class FcmNotificationSender(
         "QUOTA_EXCEEDED" -> NotificationFailureCategory.RATE_LIMITED
         "UNAVAILABLE" -> NotificationFailureCategory.PROVIDER_UNAVAILABLE
         else -> NotificationFailureCategory.HTTP_ERROR
+    }
+
+    private companion object {
+        private const val RESULT_DETAIL_MAX_LENGTH = 500
+        private val EMAIL_PATTERN = Regex("(?i)\\b[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}\\b")
+        private val PHONE_PATTERN = Regex("\\b\\d{9,15}\\b")
+        private val FCM_TOKEN_PATTERN = Regex("\\b[A-Za-z0-9_-]{20,}:[A-Za-z0-9_:-]{10,}\\b")
+        private val WHITESPACE_PATTERN = Regex("\\s+")
     }
 }
 
