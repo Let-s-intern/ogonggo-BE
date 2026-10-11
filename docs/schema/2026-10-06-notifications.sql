@@ -56,7 +56,7 @@ values
         now(6)
     ),
     (
-        'jobBookmarkAlimTalkDelivery',
+        'notificationDelivery',
         '* * * * * *',
         b'0',
         'due notification 발송 (매초, 다중 인스턴스는 ShedLock으로 직렬화)',

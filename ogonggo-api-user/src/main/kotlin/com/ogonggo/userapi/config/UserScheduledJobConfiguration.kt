@@ -64,7 +64,7 @@ class UserScheduledJobConfiguration {
 
     /** 단일 DB 작업 잠금으로 발송 실행 전체를 직렬화한다. */
     @Bean
-    fun jobBookmarkAlimTalkDeliveryJob(dispatcher: NotificationDispatcher) = ScheduledJobDefinition(
+    fun notificationDeliveryJob(dispatcher: NotificationDispatcher) = ScheduledJobDefinition(
         name = NotificationDispatcher.SCHEDULER_NAME,
         defaultCron = "* * * * * *",
         description = "due notification 발송 (매초, 다중 인스턴스는 ShedLock으로 직렬화)",
