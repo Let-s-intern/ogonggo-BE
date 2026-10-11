@@ -90,6 +90,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1users~1me/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1fcm-token/get").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1fcm-token/put").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1users~1me~1notifications~1fcm~1test/post").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1users~1me~1profile/put").isObject)
         assertTrue(document.at("/paths/~1api~1v1~1recruitment-posts/post").isObject)
         val saveRecruitmentPostProperties = document.at(

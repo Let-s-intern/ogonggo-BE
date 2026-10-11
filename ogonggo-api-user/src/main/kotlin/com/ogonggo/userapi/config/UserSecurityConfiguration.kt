@@ -89,6 +89,10 @@ class UserSecurityConfiguration {
                     HttpMethod.PUT,
                     "/api/v1/users/me/fcm-token",
                 ).authenticated()
+                it.requestMatchers(
+                    HttpMethod.POST,
+                    "/api/v1/users/me/notifications/fcm/test",
+                ).authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
                 it.requestMatchers(
                     HttpMethod.PUT,
