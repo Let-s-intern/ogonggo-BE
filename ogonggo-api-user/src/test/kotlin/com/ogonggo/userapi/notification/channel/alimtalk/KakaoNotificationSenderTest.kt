@@ -29,7 +29,11 @@ class KakaoNotificationSenderTest {
         val result = sender.send(notification())
 
         assertEquals(
-            NotificationDeliveryResult.Unknown("400101", NotificationFailureCategory.UNKNOWN_PROVIDER_ERROR),
+            NotificationDeliveryResult.Unknown(
+                "400101",
+                NotificationFailureCategory.UNKNOWN_PROVIDER_ERROR,
+                "매핑되지 않은 NHN API 오류 코드",
+            ),
             result,
         )
     }
@@ -50,7 +54,11 @@ class KakaoNotificationSenderTest {
         val result = sender.send(notification())
 
         assertEquals(
-            NotificationDeliveryResult.Failed("-3005", NotificationFailureCategory.TEMPLATE_CONFIGURATION),
+            NotificationDeliveryResult.Failed(
+                "-3005",
+                NotificationFailureCategory.TEMPLATE_CONFIGURATION,
+                "템플릿 승인 상태 오류",
+            ),
             result,
         )
     }
@@ -71,7 +79,11 @@ class KakaoNotificationSenderTest {
         val result = sender.send(notification())
 
         assertEquals(
-            NotificationDeliveryResult.Unknown("NHN_HTTP_500", NotificationFailureCategory.PROVIDER_UNAVAILABLE),
+            NotificationDeliveryResult.Unknown(
+                "NHN_HTTP_500",
+                NotificationFailureCategory.PROVIDER_UNAVAILABLE,
+                "NHN HTTP 응답 오류 (500)",
+            ),
             result,
         )
     }
@@ -92,7 +104,14 @@ class KakaoNotificationSenderTest {
 
         val result = sender.send(notification())
 
-        assertEquals(NotificationDeliveryResult.Unknown("NHN_TRANSPORT_ERROR", NotificationFailureCategory.TRANSPORT_ERROR), result)
+        assertEquals(
+            NotificationDeliveryResult.Unknown(
+                "NHN_TRANSPORT_ERROR",
+                NotificationFailureCategory.TRANSPORT_ERROR,
+                "NHN 응답을 받기 전 통신 오류",
+            ),
+            result,
+        )
     }
 
     @Test
@@ -110,7 +129,14 @@ class KakaoNotificationSenderTest {
 
         val result = sender.send(notification())
 
-        assertEquals(NotificationDeliveryResult.Unknown("-1005", NotificationFailureCategory.DUPLICATE_REQUEST), result)
+        assertEquals(
+            NotificationDeliveryResult.Unknown(
+                "-1005",
+                NotificationFailureCategory.DUPLICATE_REQUEST,
+                "동일한 멱등성 키로 10분 이내 요청됨. 이전 요청의 최종 전달 여부는 별도 확인 필요",
+            ),
+            result,
+        )
     }
 
     @Test

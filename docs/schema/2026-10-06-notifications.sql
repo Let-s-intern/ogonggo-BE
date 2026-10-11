@@ -28,6 +28,7 @@ create table notifications (
     sent_at datetime(6) null,
     result_code varchar(100) null,
     result_category varchar(50) null,
+    result_detail varchar(500) null,
     created_at datetime(6) not null,
     updated_at datetime(6) not null,
     primary key (id),

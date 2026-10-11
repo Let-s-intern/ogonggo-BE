@@ -105,6 +105,11 @@ internal class Notification(
     var resultCategory: NotificationFailureCategory? = null
         protected set
 
+    /** provider가 제공한 민감정보 없는 오류 상세. 운영 추적을 위해 최대 500자만 보존한다. */
+    @Column(name = "result_detail", length = 500)
+    var resultDetail: String? = null
+        protected set
+
     fun markSent(now: LocalDateTime, providerMessageId: String?) {
         check(status == NotificationStatus.PENDING)
         status = NotificationStatus.SENT
@@ -112,19 +117,26 @@ internal class Notification(
         this.providerMessageId = providerMessageId
         resultCode = null
         resultCategory = null
+        resultDetail = null
     }
 
-    fun markFailed(resultCode: String, failureCategory: NotificationFailureCategory) {
+    fun markFailed(resultCode: String, failureCategory: NotificationFailureCategory, detail: String?) {
         check(status == NotificationStatus.PENDING)
         status = NotificationStatus.FAILED
         this.resultCode = resultCode
         resultCategory = failureCategory
+        resultDetail = detail?.trim()?.take(RESULT_DETAIL_MAX_LENGTH)
     }
 
-    fun markUnknown(resultCode: String, failureCategory: NotificationFailureCategory) {
+    fun markUnknown(resultCode: String, failureCategory: NotificationFailureCategory, detail: String?) {
         check(status == NotificationStatus.PENDING)
         status = NotificationStatus.UNKNOWN
         this.resultCode = resultCode
         resultCategory = failureCategory
+        resultDetail = detail?.trim()?.take(RESULT_DETAIL_MAX_LENGTH)
+    }
+
+    private companion object {
+        const val RESULT_DETAIL_MAX_LENGTH = 500
     }
 }

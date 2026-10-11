@@ -176,20 +176,22 @@ class NotificationDispatcher internal constructor(
                 notification.channel,
             )
             is NotificationDeliveryResult.Failed -> log.warn(
-                "알림 발송 실패. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}",
+                "알림 발송 실패. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}, resultDetail={}",
                 runId,
                 notification.notificationId,
                 notification.channel,
                 result.failureCategory,
                 result.resultCode,
+                result.detail,
             )
             is NotificationDeliveryResult.Unknown -> log.warn(
-                "알림 provider 접수 여부 미확정. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}",
+                "알림 provider 접수 여부 미확정. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}, resultDetail={}",
                 runId,
                 notification.notificationId,
                 notification.channel,
                 result.failureCategory,
                 result.resultCode,
+                result.detail,
             )
         }
     }

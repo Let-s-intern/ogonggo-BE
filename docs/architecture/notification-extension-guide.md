@@ -105,7 +105,7 @@ Authorization: Bearer {ogonggo-access-token}
 - NHN 템플릿 본문은 provider에 둔다. 애플리케이션은 template code와 변수만 전달한다.
 - 새 채널은 `NotificationChannel`과 해당 채널의 `NotificationSender`·provider adapter·설정·오류 변환을 추가한다. dispatcher 수정은 필요하지 않도록 유지한다.
 - sender 미등록 채널은 `CHANNEL_NOT_CONFIGURED`로 실패한다. enum 값만 추가해도 발송되지는 않는다.
-- provider 결과는 원본 `result_code`와 공통 의미 `result_category`를 함께 저장한다. 의미가 확인된 명시적 거절은 `FAILED`, 접수 여부가 불명확한 응답은 `UNKNOWN`으로 기록하며 둘 다 자동 재발송하지 않는다. provider 응답 메시지 원문은 저장·로그하지 않는다.
+- provider 결과는 원본 `result_code`, 공통 의미 `result_category`, 민감정보를 제거한 `result_detail`을 함께 저장한다. 의미가 확인된 명시적 거절은 `FAILED`, 접수 여부가 불명확한 응답은 `UNKNOWN`으로 기록하며 둘 다 자동 재발송하지 않는다. provider 응답 원문은 저장하지 않고, 채널 sender가 정규화한 안전한 상세만 최대 500자로 보존한다.
 - NHN의 현재 코드표는 API 요청 응답 코드만 분류한다. `SENT`는 NHN 접수이며, NHN→카카오 실제 전달 결과 코드는 조회하지 않는다.
 - 채널의 멱등성·재시도 정책은 해당 provider 특성으로 검토한다. 현재 공통 자동 재시도는 없다.
 

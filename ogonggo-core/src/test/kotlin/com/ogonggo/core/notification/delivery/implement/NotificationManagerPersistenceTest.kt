@@ -131,6 +131,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
             result = NotificationDeliveryResult.Failed(
                 "-3005",
                 NotificationFailureCategory.TEMPLATE_CONFIGURATION,
+                "템플릿 승인 상태 오류",
             ),
             now = now.plusSeconds(1),
         )
@@ -141,6 +142,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertEquals(NotificationStatus.FAILED, saved.status)
         assertEquals("-3005", saved.resultCode)
         assertEquals(NotificationFailureCategory.TEMPLATE_CONFIGURATION, saved.resultCategory)
+        assertEquals("템플릿 승인 상태 오류", saved.resultDetail)
         assertEquals(null, saved.sentAt)
         val nextDay = now.plusDays(1)
         assertTrue(
@@ -166,6 +168,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
             result = NotificationDeliveryResult.Unknown(
                 "-1005",
                 NotificationFailureCategory.DUPLICATE_REQUEST,
+                "동일한 멱등성 키로 10분 이내 요청됨",
             ),
             now = now.plusSeconds(1),
         )
@@ -176,6 +179,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertEquals(NotificationStatus.UNKNOWN, saved.status)
         assertEquals("-1005", saved.resultCode)
         assertEquals(NotificationFailureCategory.DUPLICATE_REQUEST, saved.resultCategory)
+        assertEquals("동일한 멱등성 키로 10분 이내 요청됨", saved.resultDetail)
         assertTrue(
             notificationManager.findDue(
                 now = now.plusDays(1),
