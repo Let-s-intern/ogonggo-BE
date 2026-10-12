@@ -5,13 +5,16 @@ import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.error.ConcernErrorCode
 import com.ogonggo.core.concern.implement.ConcernAppender
 import com.ogonggo.core.concern.implement.ConcernCommentReader
+import com.ogonggo.core.concern.implement.ConcernImageManager
+import com.ogonggo.core.concern.implement.ConcernImageReader
 import com.ogonggo.core.concern.implement.ConcernManager
 import com.ogonggo.core.concern.implement.ConcernMetricReader
 import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
+import com.ogonggo.core.concern.implement.dto.ConcernImageDto
 import com.ogonggo.core.concern.implement.dto.ConcernUpdateDto
-import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
@@ -33,7 +36,8 @@ class ConcernService(
     private val concernManager: ConcernManager,
     private val concernMetricReader: ConcernMetricReader,
     private val commentReader: ConcernCommentReader,
-    private val contentValidator: LexicalEditorStateValidator,
+    private val concernImageReader: ConcernImageReader,
+    private val concernImageManager: ConcernImageManager,
     private val imageAssetManager: ImageAssetManager,
     private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
@@ -67,6 +71,7 @@ class ConcernService(
             category = concern.category,
             title = concern.title,
             content = concern.content,
+            images = concernImageReader.read(concernId).map(ConcernImageDto::toResult),
             author = userProfileReader.read(concern.authorUserId).toAuthor(),
             createdAt = concern.createdAt,
             updatedAt = concern.updatedAt,
@@ -80,39 +85,31 @@ class ConcernService(
     @Transactional
     fun create(userId: Long, command: SaveConcernCommand): Long {
         userReader.read(userId).status.requireActive()
-        val content = validContent(command.content)
+        verifyDistinct(command.imageIds)
         val concern = concernAppender.append(
             ConcernAppendDto(
                 authorUserId = userId,
                 category = command.category,
                 title = command.title,
-                content = content,
+                content = command.content,
             ),
         )
-        imageAssetManager.syncContentImages(
-            ownerUserId = userId,
-            previousContent = null,
-            currentContent = content,
-            now = LocalDateTime.now(clock),
-        )
+        replaceImages(userId, concern.requiredId(), emptyList(), command.imageIds)
         return concern.requiredId()
     }
 
+    /** 첨부 사진도 요청의 [SaveConcernCommand.imageIds]로 통째로 바꾼다. 빼면 사진을 모두 뗀다. */
     @Transactional
     fun update(userId: Long, concernId: Long, command: SaveConcernCommand) {
         userReader.read(userId).status.requireActive()
         val concern = concernReader.readForUpdate(concernId)
         verifyAuthor(concern, userId)
-        val content = validContent(command.content)
-        imageAssetManager.syncContentImages(
-            ownerUserId = userId,
-            previousContent = concern.content,
-            currentContent = content,
-            now = LocalDateTime.now(clock),
-        )
+        verifyDistinct(command.imageIds)
+        val previousImageIds = concernImageReader.read(concernId).map(ConcernImageDto::imageId)
+        replaceImages(userId, concernId, previousImageIds, command.imageIds)
         concernManager.update(
             concern,
-            ConcernUpdateDto(category = command.category, title = command.title, content = content),
+            ConcernUpdateDto(category = command.category, title = command.title, content = command.content),
         )
     }
 
@@ -124,7 +121,7 @@ class ConcernService(
         if (concern.isDeleted()) return
         val now = LocalDateTime.now(clock)
         concernManager.delete(concern, now)
-        imageAssetManager.unreferenceContentImages(userId, concern.content, now)
+        imageAssetManager.unreferenceImages(userId, concernImageReader.read(concernId).map(ConcernImageDto::imageId), now)
     }
 
     private fun toSummaries(concerns: List<Concern>): List<ConcernSummaryResult> {
@@ -132,6 +129,7 @@ class ConcernService(
         val profiles = userProfileReader.readAll(concerns.map { it.authorUserId }.toSet())
         val metrics = concernMetricReader.readAll(concernIds)
         val officialCommentedIds = commentReader.readConcernIdsWithOfficialComment(concernIds)
+        val images = concernImageReader.readAll(concernIds)
 
         return concerns.map { concern ->
             val concernId = concern.requiredId()
@@ -141,6 +139,7 @@ class ConcernService(
                 category = concern.category,
                 title = concern.title,
                 content = concern.content,
+                images = images[concernId].orEmpty().map(ConcernImageDto::toResult),
                 author = profiles[concern.authorUserId].toAuthor(),
                 createdAt = concern.createdAt,
                 viewCount = metric.viewCount,
@@ -156,8 +155,17 @@ class ConcernService(
         }
     }
 
-    private fun validContent(content: String): String =
-        contentValidator.validateAndSerialize(content) { reason -> throw InvalidRequestFieldException("content", reason) }
+    private fun replaceImages(userId: Long, concernId: Long, previousImageIds: List<String>, imageIds: List<String>) {
+        val now = LocalDateTime.now(clock)
+        val images = imageAssetManager.syncImages(userId, previousImageIds, imageIds, ImageAssetUsage.CONCERN, now)
+        concernImageManager.replace(concernId, images.map { ConcernImageDto(imageId = it.id, url = it.url) }, now)
+    }
+
+    private fun verifyDistinct(imageIds: List<String>) {
+        if (imageIds.toSet().size != imageIds.size) {
+            throw InvalidRequestFieldException("imageIds", "같은 사진을 두 번 첨부할 수 없습니다.")
+        }
+    }
 
     private fun Concern.requiredId(): Long = checkNotNull(id) { "고민글 식별자가 없습니다." }
 
@@ -166,6 +174,8 @@ class ConcernService(
         private const val POPULAR_CONCERN_LIMIT = 3
     }
 }
+
+internal fun ConcernImageDto.toResult(): ConcernImageResult = ConcernImageResult(id = imageId, url = url)
 
 internal fun UserProfileDto?.toAuthor(): ConcernAuthorResult = ConcernAuthorResult(
     nickname = this?.nickname,

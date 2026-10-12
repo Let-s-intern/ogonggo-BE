@@ -99,6 +99,15 @@ class ImageUploaderTest {
     }
 
     @Test
+    fun `취준고민 사진은 WEBP를 받지 않는다`() {
+        val exception = assertThrows(InvalidValueException::class.java) {
+            uploader.issueUploadUrl(17L, ImagePresignDto(ImageAssetUsage.CONCERN, "image/webp", 100L))
+        }
+
+        assertEquals(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED, exception.errorCode)
+    }
+
+    @Test
     fun `지원하지 않는 형식이나 10 MiB를 넘는 파일은 URL을 발급하지 않는다`() {
         listOf(
             ImagePresignDto(ImageAssetUsage.PROFILE, "image/gif", 100L) to ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED,

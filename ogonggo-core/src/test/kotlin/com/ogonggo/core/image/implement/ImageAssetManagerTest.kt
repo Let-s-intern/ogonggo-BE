@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
 import com.ogonggo.core.storage.s3.S3ObjectClient
@@ -81,6 +82,56 @@ class ImageAssetManagerTest {
             assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
         }
         assertEquals(ImageAssetStatus.TEMPORARY, asset.status)
+    }
+
+    @Test
+    fun `첨부 목록을 바꾸면 새 이미지는 첨부하고 빠진 이미지는 참조를 풀고 순서대로 URL을 준다`() {
+        // given
+        val kept = uploadedAsset("kept").also { it.attach() }
+        val removed = uploadedAsset("removed").also { it.attach() }
+        val added = uploadedAsset("added")
+        givenAssets(kept, removed, added)
+
+        // when
+        val result = manager.syncImages(17L, listOf("kept", "removed"), listOf("added", "kept"), ImageAssetUsage.CONCERN, now)
+
+        // then
+        assertEquals(listOf("added" to added.url, "kept" to kept.url), result.map { it.id to it.url })
+        assertEquals(ImageAssetStatus.ATTACHED, added.status)
+        assertEquals(ImageAssetStatus.ATTACHED, kept.status)
+        assertEquals(ImageAssetStatus.UNREFERENCED, removed.status)
+    }
+
+    @Test
+    fun `다른 곳에서 쓰는 이미지는 첨부 목록에 새로 넣을 수 없다`() {
+        // given
+        val usedElsewhere = uploadedAsset().also { it.attach() }
+        givenAssets(usedElsewhere)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            manager.syncImages(17L, emptyList(), listOf(usedElsewhere.id), ImageAssetUsage.CONCERN, now)
+        }
+
+        // then
+        assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
+    }
+
+    @Test
+    fun `용도가 받지 않는 형식의 이미지는 첨부할 수 없다`() {
+        // given
+        val webp = ImageAsset.uploading("webp-id", 17L, "ogonggo/profile/webp-id.webp", "https://cdn.example.com/w.webp", "image/webp", 3L)
+            .also { it.markUploaded() }
+        givenAssets(webp)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            manager.syncImages(17L, emptyList(), listOf(webp.id), ImageAssetUsage.CONCERN, now)
+        }
+
+        // then
+        assertEquals(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED, exception.errorCode)
+        assertEquals(ImageAssetStatus.TEMPORARY, webp.status)
     }
 
     @Test

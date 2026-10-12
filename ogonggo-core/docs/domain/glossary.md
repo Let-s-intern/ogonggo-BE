@@ -50,7 +50,8 @@
 | 연락 수단 | `RecruitmentPostContactMethod` | 카카오톡 오픈채팅, 이메일 |
 | 모집글 지원 기록 | `RecruitmentPostApplication` | 회원이 모집글의 연락처를 열었거나 스크랩을 지원 준비로 옮긴 기록. **실제 지원서 제출이 아닙니다.** |
 | 댓글 신고 | `RecruitmentPostCommentReport` | 모집글 댓글에 대한 신고 |
-| 취준고민, 고민글 | `Concern` | 취업 준비 고민을 묻는 게시판 글. 본문은 모집글처럼 Lexical EditorState JSON이고 사진을 넣을 수 있습니다. |
+| 취준고민, 고민글 | `Concern` | 취업 준비 고민을 묻는 게시판 글. 본문은 일반 텍스트입니다. |
+| 고민글 사진 | `ConcernImage` | 고민글에 첨부한 사진. 본문 밖에 최대 3장, 순서대로 보입니다. |
 | 답변 / 답글 | `ConcernComment` | 고민글의 부모 댓글이 답변, 답변에 단 1단계 대댓글이 답글입니다. |
 | 공식 답변 | `ConcernComment.official` | 작성 당시 관리자가 쓴 답변. 나중에 역할이 바뀌어도 그대로 둡니다. |
 | 고민 카테고리 | `ConcernCategory` | 공고 질문, 직무·커리어, 서류·면접, 사이드·경험, 기타 |

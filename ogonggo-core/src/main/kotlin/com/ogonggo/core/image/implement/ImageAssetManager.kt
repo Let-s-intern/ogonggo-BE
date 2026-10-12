@@ -7,7 +7,9 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.implement.dto.AttachedImageDto
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.data.domain.PageRequest
@@ -69,6 +71,34 @@ class ImageAssetManager internal constructor(
         val attached = currentAssets.filter { it.isAttachable() }.onEach { it.attach() }
         imageAssetRepository.saveAll(attached)
         unreference(ownerUserId, previousIds - currentReferences.keys, now)
+    }
+
+    /**
+     * 본문 밖에 첨부하는 이미지 목록(고민글 사진 등)을 이전 목록과 비교해 맞추고, [imageIds] 순서대로 URL을 돌려준다.
+     * 새로 넣은 이미지는 첨부하고 빠진 이미지는 참조를 푼다. 이전 목록에 있던 이미지만 이미 첨부된 상태여도 받는다.
+     * [usage]가 받지 않는 형식이면 IMAGE_FILE_TYPE_NOT_SUPPORTED다.
+     */
+    fun syncImages(
+        ownerUserId: Long,
+        previousImageIds: Collection<String>,
+        imageIds: List<String>,
+        usage: ImageAssetUsage,
+        now: LocalDateTime,
+    ): List<AttachedImageDto> {
+        val currentIds = imageIds.toSet()
+        val addedIds = currentIds - previousImageIds.toSet()
+        val assets = readOwnedAssets(ownerUserId, currentIds).associateBy(ImageAsset::id)
+        if (assets.size != currentIds.size || assets.values.any { it.id in addedIds && !it.isAttachable() }) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+        if (assets.values.any { it.mimeType !in usage.supportedMimeTypes }) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED)
+        }
+
+        val attached = assets.values.filter { it.isAttachable() }.onEach { it.attach() }
+        imageAssetRepository.saveAll(attached)
+        unreference(ownerUserId, previousImageIds.toSet() - currentIds, now)
+        return imageIds.map { id -> AttachedImageDto(id = id, url = checkNotNull(assets[id]).url) }
     }
 
     /** 지운 글의 본문 이미지 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
@@ -146,6 +176,11 @@ class ImageAssetManager internal constructor(
     /** 더 쓰지 않는 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
     fun unreferenceImage(ownerUserId: Long, imageId: String, now: LocalDateTime) {
         unreference(ownerUserId, setOf(imageId), now)
+    }
+
+    /** 지운 글에 첨부했던 이미지들의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
+    fun unreferenceImages(ownerUserId: Long, imageIds: Collection<String>, now: LocalDateTime) {
+        unreference(ownerUserId, imageIds.toSet(), now)
     }
 
     fun cleanup(now: LocalDateTime, retention: java.time.Duration, batchSize: Int = 100): Int {

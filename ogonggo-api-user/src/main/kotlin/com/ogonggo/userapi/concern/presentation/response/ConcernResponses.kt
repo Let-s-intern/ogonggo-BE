@@ -3,6 +3,7 @@ package com.ogonggo.userapi.concern.presentation.response
 import com.ogonggo.core.concern.domain.ConcernCategory
 import com.ogonggo.userapi.concern.business.ConcernAuthorResult
 import com.ogonggo.userapi.concern.business.ConcernDetailResult
+import com.ogonggo.userapi.concern.business.ConcernImageResult
 import com.ogonggo.userapi.concern.business.ConcernPageResult
 import com.ogonggo.userapi.concern.business.ConcernSummaryResult
 import com.ogonggo.userapi.response.PageResponse
@@ -26,12 +27,24 @@ data class ConcernAuthorResponse(
     }
 }
 
+data class ConcernImageResponse(
+    @field:Schema(description = "이미지 식별자. 수정할 때 imageIds에 다시 보냅니다.")
+    val id: String,
+    val url: String,
+) {
+    companion object {
+        fun from(result: ConcernImageResult) = ConcernImageResponse(id = result.id, url = result.url)
+    }
+}
+
 data class ConcernSummaryResponse(
     val id: Long,
     val category: ConcernCategory,
     val title: String,
     @field:Schema(description = "본문 전체. 미리보기 줄임은 클라이언트가 합니다.")
     val content: String,
+    @field:Schema(description = "첨부 사진. 첨부한 순서대로이며 없으면 빈 배열입니다.")
+    val images: List<ConcernImageResponse>,
     val author: ConcernAuthorResponse,
     val createdAt: LocalDateTime,
     val viewCount: Long,
@@ -46,6 +59,7 @@ data class ConcernSummaryResponse(
             category = result.category,
             title = result.title,
             content = result.content,
+            images = result.images.map(ConcernImageResponse::from),
             author = ConcernAuthorResponse.from(result.author),
             createdAt = result.createdAt,
             viewCount = result.viewCount,
@@ -60,6 +74,8 @@ data class ConcernDetailResponse(
     val category: ConcernCategory,
     val title: String,
     val content: String,
+    @field:Schema(description = "첨부 사진. 첨부한 순서대로이며 없으면 빈 배열입니다.")
+    val images: List<ConcernImageResponse>,
     val author: ConcernAuthorResponse,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
@@ -76,6 +92,7 @@ data class ConcernDetailResponse(
             category = result.category,
             title = result.title,
             content = result.content,
+            images = result.images.map(ConcernImageResponse::from),
             author = ConcernAuthorResponse.from(result.author),
             createdAt = result.createdAt,
             updatedAt = result.updatedAt,
