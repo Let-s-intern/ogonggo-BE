@@ -46,7 +46,10 @@ class AdminServiceFeedbackControllerTest @Autowired constructor(
         // given
         val summary = AdminServiceFeedbackSummary(
             id = 5L,
-            userId = null,
+            userId = 3L,
+            userName = "홍길동",
+            userNickname = "길동이",
+            userEmail = "gildong@example.com",
             satisfaction = null,
             improvement = "알림이 필요해요",
             registeredAt = LocalDateTime.of(2026, 9, 28, 10, 0),
@@ -58,7 +61,10 @@ class AdminServiceFeedbackControllerTest @Autowired constructor(
         mockMvc.perform(get(PATH).with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY))))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].id").value(5))
-            .andExpect(jsonPath("$.data.items[0].userId").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].userId").value(3))
+            .andExpect(jsonPath("$.data.items[0].userName").value("홍길동"))
+            .andExpect(jsonPath("$.data.items[0].userNickname").value("길동이"))
+            .andExpect(jsonPath("$.data.items[0].userEmail").value("gildong@example.com"))
             .andExpect(jsonPath("$.data.items[0].improvement").value("알림이 필요해요"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(20))
