@@ -54,7 +54,7 @@ interface RecruitmentPostManagementApi {
             ApiResponse(responseCode = "201", description = "생성 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "제목 또는 입력된 필드 검증 실패",
+                description = "제목 또는 입력된 필드 검증 실패. 본문에 사진(이미지 노드)이 있으면 BAD_REQUEST(content), 사진 3장 초과·중복 BAD_REQUEST, IMAGE_ASSET_NOT_AVAILABLE: 쓸 수 없는 사진, IMAGE_FILE_TYPE_NOT_SUPPORTED: JPG·PNG가 아닌 사진",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

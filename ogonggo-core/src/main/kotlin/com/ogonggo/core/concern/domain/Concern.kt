@@ -1,6 +1,5 @@
 package com.ogonggo.core.concern.domain
 
-import com.ogonggo.core.editor.lexical.LexicalEditorStateJson
 import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -13,7 +12,7 @@ import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
-/** 취준고민 게시판의 고민글이다. 본문은 모집글처럼 Lexical EditorState JSON이다. */
+/** 취준고민 게시판의 고민글이다. 본문은 에디터 JSON이 아닌 일반 텍스트이고, 사진은 본문 밖 첨부(`ConcernImage`)로 둔다. */
 @Entity
 @Table(
     name = "concerns",
@@ -52,7 +51,7 @@ class Concern internal constructor(
         protected set
 
     @Column(nullable = false, columnDefinition = "LONGTEXT")
-    var content: String = content /* Lexical EditorState JSON */
+    var content: String = content
         protected set
 
     /** 운영자가 숨긴 고민글은 사용자에게 없는 글과 같다. 다시 내놓는 것도 운영자만 한다. */
@@ -94,11 +93,14 @@ class Concern internal constructor(
 
     companion object {
         const val TITLE_MAX_LENGTH = 100
+        const val CONTENT_MAX_LENGTH = 2000
+        const val IMAGE_MAX_COUNT = 3
 
         private fun validate(title: String, content: String) {
             require(title.isNotBlank()) { "고민글 제목은 공백일 수 없습니다." }
             require(title.length <= TITLE_MAX_LENGTH) { "고민글 제목은 ${TITLE_MAX_LENGTH}자 이하여야 합니다." }
-            require(LexicalEditorStateJson.isValid(content)) { "고민글 본문은 올바른 에디터 JSON이어야 합니다." }
+            require(content.isNotBlank()) { "고민글 본문은 공백일 수 없습니다." }
+            require(content.length <= CONTENT_MAX_LENGTH) { "고민글 본문은 ${CONTENT_MAX_LENGTH}자 이하여야 합니다." }
         }
     }
 }

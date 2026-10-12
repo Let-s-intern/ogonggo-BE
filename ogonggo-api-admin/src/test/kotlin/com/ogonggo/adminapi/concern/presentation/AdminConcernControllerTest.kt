@@ -10,6 +10,7 @@ import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.implement.dto.ConcernImageDto
 import com.ogonggo.core.concern.domain.ConcernConsoleSearchCondition
 import com.ogonggo.core.concern.domain.ConcernSortType
 import org.junit.jupiter.api.Test
@@ -78,6 +79,7 @@ class AdminConcernControllerTest @Autowired constructor(
                 category = ConcernCategory.ETC,
                 title = "제목",
                 content = "본문",
+                images = listOf(ConcernImageDto(imageId = "image-id", url = "https://cdn.example.com/ogonggo/concern/image-id.png")),
                 viewCount = 3,
                 commentCount = 1,
                 hasOfficialComment = false,
@@ -93,6 +95,7 @@ class AdminConcernControllerTest @Autowired constructor(
         mockMvc.perform(admin(get("/api/v1/admin/concerns/7")))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.content").value("본문"))
+            .andExpect(jsonPath("$.data.images[0].id").value("image-id"))
             .andExpect(jsonPath("$.data.visibility").value("HIDDEN"))
             .andExpect(jsonPath("$.data.authorUserId").value(17))
     }

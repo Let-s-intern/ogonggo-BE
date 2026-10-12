@@ -42,14 +42,21 @@ data class SaveConcernRequest(
     @field:NotBlank
     @field:Size(max = Concern.TITLE_MAX_LENGTH)
     val title: String,
-    @field:Schema(description = "Lexical EditorState JSON 문자열. 이미지 노드는 `POST /api/v1/images`로 받은 `imageId`와 `src`(url)를 넣습니다.")
     @field:NotBlank
+    @field:Size(max = Concern.CONTENT_MAX_LENGTH)
     val content: String,
+    @field:Schema(
+        description = "첨부할 사진의 이미지 식별자를 보일 순서대로. `usage=CONCERN`으로 올리고 완료한 JPG·PNG만 됩니다. " +
+            "수정할 때도 남길 사진을 모두 보내며, 보내지 않으면 사진이 없는 글이 됩니다.",
+    )
+    @field:Size(max = Concern.IMAGE_MAX_COUNT)
+    val imageIds: List<String> = emptyList(),
 ) {
     fun toCommand(): SaveConcernCommand = SaveConcernCommand(
         category = category,
         title = title,
         content = content,
+        imageIds = imageIds,
     )
 }
 

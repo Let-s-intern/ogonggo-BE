@@ -1,6 +1,7 @@
 package com.ogonggo.core.image.implement
 
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.implement.dto.ImageUploadDto
 import org.springframework.stereotype.Component
@@ -23,6 +24,7 @@ internal class ImageFileValidator {
         }
 
         val format = detectFormat(command.content)
+            ?.takeIf { command.usage == null || it.mimeType in command.usage.supportedMimeTypes }
             ?: throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED)
 
         return ValidatedImage(
@@ -36,7 +38,7 @@ internal class ImageFileValidator {
      * presigned URL로 올리기 전에 클라이언트가 알린 형식과 크기를 검증한다.
      * 실제 파일은 서버를 거치지 않으므로 업로드 완료 때 [verifyUploaded]로 다시 확인한다.
      */
-    fun validateDeclared(mimeType: String, size: Long): DeclaredImage {
+    fun validateDeclared(usage: ImageAssetUsage, mimeType: String, size: Long): DeclaredImage {
         if (size <= 0) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_REQUIRED)
         }
@@ -44,6 +46,7 @@ internal class ImageFileValidator {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_TOO_LARGE)
         }
         val format = ImageFormat.entries.firstOrNull { it.mimeType == mimeType.lowercase() }
+            ?.takeIf { it.mimeType in usage.supportedMimeTypes }
             ?: throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED)
         return DeclaredImage(mimeType = format.mimeType, extension = format.extension)
     }

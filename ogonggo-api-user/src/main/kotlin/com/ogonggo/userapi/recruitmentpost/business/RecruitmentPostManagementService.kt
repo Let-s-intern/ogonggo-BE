@@ -12,15 +12,19 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManagementReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostImageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostManagementPageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.user.implement.requireActive
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.springframework.stereotype.Service
@@ -36,6 +40,9 @@ class RecruitmentPostManagementService(
     private val postManager: RecruitmentPostManager,
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
     private val imageAssetManager: ImageAssetManager,
+    private val postImageReader: RecruitmentPostImageReader,
+    private val postImageManager: RecruitmentPostImageManager,
+    private val clock: Clock,
 ) {
 
     @Transactional(readOnly = true)
@@ -71,7 +78,7 @@ class RecruitmentPostManagementService(
     @Transactional(readOnly = true)
     fun getPostForm(userId: Long, postId: Long): RecruitmentPostFormResult {
         verifyActiveUser(userId)
-        return RecruitmentPostFormResult.from(postReader.readOwned(userId, postId))
+        return RecruitmentPostFormResult.from(postReader.readOwned(userId, postId), postImageReader.read(postId))
     }
 
     @Transactional
@@ -79,8 +86,12 @@ class RecruitmentPostManagementService(
         verifyActiveUser(userId)
         val source = postReader.readOwnedForUpdate(userId, postId)
         val copied = postManager.copyAsDraft(source)
+        val copiedId = checkNotNull(copied.id) { "복사된 모집글 식별자가 없습니다." }
         copied.replaceDraftContent(imageAssetManager.copyContentImages(ownerUserId = userId, content = copied.content))
-        return RecruitmentPostFormResult.from(copied)
+        val images = imageAssetManager.copyImages(userId, postImageReader.read(postId).map(RecruitmentPostImageDto::imageId))
+            .map { RecruitmentPostImageDto(imageId = it.id, url = it.url) }
+        postImageManager.replace(copiedId, images, LocalDateTime.now(clock))
+        return RecruitmentPostFormResult.from(copied, images)
     }
 
     @Transactional
@@ -108,6 +119,7 @@ data class RecruitmentPostFormResult(
     val technologyStacks: List<String>,
     val summary: String?,
     val content: String?,
+    val images: List<RecruitmentPostImageResult>,
     val eligibilityAndSelectionProcess: String?,
     val recruitmentStartDate: LocalDate?,
     val recruitmentEndDate: LocalDate?,
@@ -117,7 +129,7 @@ data class RecruitmentPostFormResult(
     val agreedToPolicy: Boolean,
 ) {
     companion object {
-        internal fun from(post: RecruitmentPost): RecruitmentPostFormResult = RecruitmentPostFormResult(
+        internal fun from(post: RecruitmentPost, images: List<RecruitmentPostImageDto>): RecruitmentPostFormResult = RecruitmentPostFormResult(
             postId = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             status = when (post.publicationStatus) {
                 RecruitmentPostPublicationStatus.DRAFT -> RecruitmentPostManagementStatus.DRAFT
@@ -133,6 +145,7 @@ data class RecruitmentPostFormResult(
             technologyStacks = post.technologyStacks,
             summary = post.summary,
             content = post.content,
+            images = images.map(RecruitmentPostImageResult::from),
             eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
             recruitmentStartDate = post.recruitmentStartDate,
             recruitmentEndDate = post.recruitmentEndDate,

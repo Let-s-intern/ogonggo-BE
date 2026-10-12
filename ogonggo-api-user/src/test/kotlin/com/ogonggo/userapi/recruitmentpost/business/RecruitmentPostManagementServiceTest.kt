@@ -15,6 +15,10 @@ import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManagementReade
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.core.image.implement.dto.AttachedImageDto
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageReader
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostImageDto
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserReader
@@ -25,6 +29,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.Instant
+import java.time.Clock
 import java.time.LocalDateTime
 
 class RecruitmentPostManagementServiceTest {
@@ -37,6 +44,9 @@ class RecruitmentPostManagementServiceTest {
     private val postManager = Mockito.mock(RecruitmentPostManager::class.java)
     private val recruitmentPostMetricManager = Mockito.mock(RecruitmentPostMetricManager::class.java)
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+    private val postImageReader = Mockito.mock(RecruitmentPostImageReader::class.java)
+    private val postImageManager = Mockito.mock(RecruitmentPostImageManager::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-10-12T00:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = RecruitmentPostManagementService(
         userReader,
         managementReader,
@@ -46,6 +56,9 @@ class RecruitmentPostManagementServiceTest {
         postManager,
         recruitmentPostMetricManager,
         imageAssetManager,
+        postImageReader,
+        postImageManager,
+        clock,
     )
 
     @Test
@@ -165,6 +178,26 @@ class RecruitmentPostManagementServiceTest {
         Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).copyAsDraft(source)
         Mockito.verify(imageAssetManager).copyContentImages(USER_ID, copied.content)
+    }
+
+    @Test
+    fun `모집글을 복사하면 첨부 사진도 새 이미지로 복제해 붙인다`() {
+        // given
+        val source = publishedPost(12L)
+        val copied = formPost(101L, RecruitmentPostPublicationStatus.DRAFT)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readOwnedForUpdate(USER_ID, 12L)).thenReturn(source)
+        Mockito.`when`(postManager.copyAsDraft(source)).thenReturn(copied)
+        Mockito.`when`(postImageReader.read(12L)).thenReturn(listOf(RecruitmentPostImageDto("source", "https://cdn/source.png")))
+        Mockito.`when`(imageAssetManager.copyImages(USER_ID, listOf("source")))
+            .thenReturn(listOf(AttachedImageDto("copy", "https://cdn/copy.png")))
+
+        // when
+        val result = service.copy(USER_ID, 12L)
+
+        // then
+        Mockito.verify(postImageManager).replace(101L, listOf(RecruitmentPostImageDto("copy", "https://cdn/copy.png")), LocalDateTime.now(clock))
+        assertEquals(listOf("copy"), result.images.map { it.id })
     }
 
     @Test

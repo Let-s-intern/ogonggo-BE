@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.concern.business
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.concern.implement.dto.ConcernImageDto
 import com.ogonggo.core.concern.implement.dto.ConcernMetricDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDateTime
@@ -53,6 +54,7 @@ data class AdminConcernDetail(
     val category: ConcernCategory,
     val title: String,
     val content: String,
+    val images: List<ConcernImageDto>,
     val viewCount: Long,
     val commentCount: Long,
     val hasOfficialComment: Boolean,
@@ -65,6 +67,7 @@ data class AdminConcernDetail(
     companion object {
         internal fun from(
             concern: Concern,
+            images: List<ConcernImageDto>,
             metric: ConcernMetricDto,
             hasOfficialComment: Boolean,
             authorProfile: UserProfileDto?,
@@ -73,6 +76,7 @@ data class AdminConcernDetail(
             category = concern.category,
             title = concern.title,
             content = concern.content,
+            images = images,
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
             hasOfficialComment = hasOfficialComment,

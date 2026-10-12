@@ -2,6 +2,7 @@ package com.ogonggo.userapi.recruitmentpost.business
 
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPublicationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
@@ -9,12 +10,15 @@ import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostAppender
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostAppendDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostDraftAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostImageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
@@ -38,6 +42,8 @@ class RecruitmentPostService(
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
     private val contentValidator: LexicalEditorStateValidator,
     private val imageAssetManager: ImageAssetManager,
+    private val postImageReader: RecruitmentPostImageReader,
+    private val postImageManager: RecruitmentPostImageManager,
     private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
     private val userProfileReader: UserProfileReader,
@@ -59,6 +65,7 @@ class RecruitmentPostService(
                 profile = userProfileReader.read(post.authorUserId),
             ),
             bookmarked = userId != null && postBookmarkReader.readBookmarkedPostIds(userId, listOf(postId)).contains(postId),
+            images = postImageReader.read(postId),
         )
         return result.copy(
             bookmarkCount = if (userId != null) metric.bookmarkCount else 0L,
@@ -88,43 +95,35 @@ class RecruitmentPostService(
     }
 
     @Transactional
-    fun create(userId: Long, command: RecruitmentPostAppendDto): Long {
+    fun create(userId: Long, command: RecruitmentPostAppendDto, imageIds: List<String> = emptyList()): Long {
         verifyActiveUser(userId)
+        verifyDistinct(imageIds)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
             content = validContent(command.content),
         )
         val post = postAppender.append(sanitizedCommand)
         recruitmentPostMetricManager.initialize(checkNotNull(post.id))
-        imageAssetManager.syncContentImages(
-            ownerUserId = userId,
-            previousContent = null,
-            currentContent = sanitizedCommand.content,
-            now = LocalDateTime.now(clock),
-        )
+        replaceImages(userId, checkNotNull(post.id), emptyList(), imageIds)
         return checkNotNull(post.id) { "저장된 모집글 식별자가 없습니다." }
     }
 
     @Transactional
-    fun save(userId: Long, command: RecruitmentPostSaveCommand): Long = when (command) {
-        is RecruitmentPostSaveCommand.Draft -> createDraft(userId, command.command)
-        is RecruitmentPostSaveCommand.Published -> create(userId, command.command)
+    fun save(userId: Long, command: RecruitmentPostSaveCommand, imageIds: List<String> = emptyList()): Long = when (command) {
+        is RecruitmentPostSaveCommand.Draft -> createDraft(userId, command.command, imageIds)
+        is RecruitmentPostSaveCommand.Published -> create(userId, command.command, imageIds)
     }
 
     @Transactional
-    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendDto): Long {
+    fun createDraft(userId: Long, command: RecruitmentPostDraftAppendDto, imageIds: List<String> = emptyList()): Long {
         verifyActiveUser(userId)
+        verifyDistinct(imageIds)
         val sanitizedCommand = command.copy(
             authorUserId = userId,
             content = command.content?.let(::validContent),
         )
         val post = postAppender.appendDraft(sanitizedCommand)
-        imageAssetManager.syncContentImages(
-            ownerUserId = userId,
-            previousContent = null,
-            currentContent = sanitizedCommand.content,
-            now = LocalDateTime.now(clock),
-        )
+        replaceImages(userId, checkNotNull(post.id), emptyList(), imageIds)
         return checkNotNull(post.id) { "저장된 모집글 식별자가 없습니다." }
     }
 
@@ -134,20 +133,24 @@ class RecruitmentPostService(
         postId: Long,
         command: RecruitmentPostUpdateDto,
         saveMode: RecruitmentPostSaveMode? = null,
+        imageIds: List<String> = emptyList(),
     ) {
         verifyActiveUser(userId)
+        verifyDistinct(imageIds)
         val post = postReader.readOwnedForUpdate(userId, postId)
         val previousContent = post.content.orEmpty()
         val sanitizedCommand = command.copy(
             content = command.content?.let(::validContent),
         )
         val now = LocalDateTime.now(clock)
+        // 사진을 본문에 넣던 때의 글을 고치면 본문에서 빠진 이미지의 참조를 푼다.
         imageAssetManager.syncContentImages(
             ownerUserId = userId,
             previousContent = previousContent,
             currentContent = sanitizedCommand.content,
             now = now,
         )
+        replaceImages(userId, postId, postImageReader.read(postId).map(RecruitmentPostImageDto::imageId), imageIds)
         if (post.publicationStatus == RecruitmentPostPublicationStatus.DRAFT) {
             postManager.updateDraft(post, sanitizedCommand)
             if (saveMode == RecruitmentPostSaveMode.PUBLISH) {
@@ -166,6 +169,7 @@ class RecruitmentPostService(
         val post = postReader.readOwnedForDelete(userId, postId)
         postManager.delete(post, now)
         imageAssetManager.unreferenceContentImages(userId, post.content, now)
+        imageAssetManager.unreferenceImages(userId, postImageReader.read(postId).map(RecruitmentPostImageDto::imageId), now)
     }
 
     @Transactional
@@ -189,9 +193,28 @@ class RecruitmentPostService(
         postManager.reopen(post)
     }
 
-    /** 본문 형식 오류는 요청 필드 검증 오류로 알린다. */
-    private fun validContent(content: String): String =
-        contentValidator.validateAndSerialize(content) { reason -> throw InvalidRequestFieldException("content", reason) }
+    /** 본문 형식 오류는 요청 필드 검증 오류로 알린다. 사진은 본문 밖 `imageIds`로 첨부하므로 본문 이미지는 받지 않는다. */
+    private fun validContent(content: String): String {
+        val serialized = contentValidator.validateAndSerialize(content) { reason ->
+            throw InvalidRequestFieldException("content", reason)
+        }
+        if (imageAssetManager.containsImages(serialized)) {
+            throw InvalidRequestFieldException("content", "본문에는 사진을 넣을 수 없습니다. 사진은 imageIds로 첨부해 주세요.")
+        }
+        return serialized
+    }
+
+    private fun replaceImages(userId: Long, postId: Long, previousImageIds: List<String>, imageIds: List<String>) {
+        val now = LocalDateTime.now(clock)
+        val images = imageAssetManager.syncImages(userId, previousImageIds, imageIds, ImageAssetUsage.RECRUITMENT_POST, now)
+        postImageManager.replace(postId, images.map { RecruitmentPostImageDto(imageId = it.id, url = it.url) }, now)
+    }
+
+    private fun verifyDistinct(imageIds: List<String>) {
+        if (imageIds.toSet().size != imageIds.size) {
+            throw InvalidRequestFieldException("imageIds", "같은 사진을 두 번 첨부할 수 없습니다.")
+        }
+    }
 
     private fun verifyActiveUser(userId: Long) {
         userReader.read(userId).status.requireActive()

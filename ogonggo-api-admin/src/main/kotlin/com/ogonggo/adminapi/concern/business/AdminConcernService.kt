@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.concern.domain.ConcernConsoleSearchCondition
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.concern.implement.ConcernCommentReader
+import com.ogonggo.core.concern.implement.ConcernImageReader
 import com.ogonggo.core.concern.implement.ConcernManager
 import com.ogonggo.core.concern.implement.ConcernMetricReader
 import com.ogonggo.core.concern.implement.ConcernReader
@@ -18,6 +19,7 @@ class AdminConcernService(
     private val concernManager: ConcernManager,
     private val concernMetricReader: ConcernMetricReader,
     private val commentReader: ConcernCommentReader,
+    private val concernImageReader: ConcernImageReader,
     private val userProfileReader: UserProfileReader,
 ) {
 
@@ -55,6 +57,7 @@ class AdminConcernService(
         val concern = concernReader.readIncludingHidden(concernId)
         return AdminConcernDetail.from(
             concern = concern,
+            images = concernImageReader.read(concernId),
             metric = concernMetricReader.read(concernId),
             hasOfficialComment = concernId in commentReader.readConcernIdsWithOfficialComment(listOf(concernId)),
             authorProfile = userProfileReader.read(concern.authorUserId),
