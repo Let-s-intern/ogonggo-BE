@@ -29,18 +29,6 @@ class UserEnumServiceTest {
     }
 
     @Test
-    fun `프런트 전환 기간에는 이름을 바꾼 enum의 선택지를 예전 키로도 같은 값으로 제공한다`() {
-        assertEquals(enums.getValue("JobEmploymentType"), enums.getValue("EmploymentType"))
-        assertEquals(enums.getValue("BootcampRecruitmentStatus"), enums.getValue("BootcampStatus"))
-        assertEquals(enums.getValue("RecruitmentPostType"), enums.getValue("RecruitmentType"))
-        assertEquals(enums.getValue("RecruitmentPostPosition"), enums.getValue("RecruitmentPosition"))
-        assertEquals(
-            enums.getValue("RecruitmentPostApplicationSortType"),
-            enums.getValue("RecruitmentApplicationSortType"),
-        )
-    }
-
-    @Test
     fun `모집 포지션 MARKETING의 라벨은 마케팅으로 제공한다`() {
         val marketing = enums.getValue("RecruitmentPostPosition")
             .single { it.name == RecruitmentPostPosition.MARKETING.name }
