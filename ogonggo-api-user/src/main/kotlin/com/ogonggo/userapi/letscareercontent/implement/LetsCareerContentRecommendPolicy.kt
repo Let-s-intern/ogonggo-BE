@@ -6,6 +6,7 @@ import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContent
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentKind
+import com.ogonggo.core.letscareercontent.domain.LetsCareerContentRecommendWeights
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTags
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTopic
 import org.springframework.stereotype.Component
@@ -14,11 +15,15 @@ import java.time.LocalDateTime
 /**
  * 채용공고 하나에 맞는 렛츠커리어 콘텐츠를 고른다.
  *
+ * 점수 값은 운영자가 관리자 API로 바꾼다([LetsCareerContentRecommendWeights]). 괄호 안은 기본값이다.
+ *
  * 1. 태그가 없거나 모집 기간이 아닌 콘텐츠는 빼고, 다른 직군 전용 콘텐츠도 뺀다.
- * 2. 직무가 같으면 +5, 직군이 같으면 +3, 공고가 요구하는 준비 단계(제출 서류·전형 등)와 겹치면 하나에 +2(최대 두 개).
- * 3. 점수가 같으면 공고 식별자로 정한 순서로 고른다. 같은 공고는 언제 열어도 같은 추천이 나오고,
+ * 2. 직무가 같으면(+5), 직군이 같으면(+3), 공고가 요구하는 준비 단계(제출 서류·전형 등)와 겹치면 하나에(+2, 최대 두 개).
+ * 3. 2의 점수가 0보다 크면 갈래 가산점을 더한다: 프로그램(+2), 자료집(+1), 블로그(0).
+ *    블로그가 가장 많아 가산점이 없으면 블로그가 자리를 차지한다.
+ * 4. 점수가 같으면 공고 식별자로 정한 순서로 고른다. 같은 공고는 언제 열어도 같은 추천이 나오고,
  *    같은 직무의 다른 공고끼리는 조금씩 다른 콘텐츠가 나온다.
- * 4. 한 갈래(프로그램·자료집·블로그)가 [MAX_PER_GROUP]개를 넘지 않게 섞는다. 그래도 모자라면 남은 것으로 채운다.
+ * 5. 한 갈래(프로그램·자료집·블로그)가 정한 개수(2)를 넘지 않게 섞는다. 그래도 모자라면 남은 것으로 채운다.
  */
 @Component
 class LetsCareerContentRecommendPolicy {
@@ -27,13 +32,14 @@ class LetsCareerContentRecommendPolicy {
         job: Job,
         analysis: JobAnalysisContent?,
         contents: List<LetsCareerContent>,
+        weights: LetsCareerContentRecommendWeights,
         now: LocalDateTime,
         size: Int,
     ): List<LetsCareerContent> {
         val jobId = checkNotNull(job.id) { "채용공고 식별자가 없습니다." }
         val jobTopics = topicsOf(job, analysis)
         val ranked = contents
-            .mapNotNull { content -> score(job, jobTopics, content, now)?.let { content to it } }
+            .mapNotNull { content -> score(job, jobTopics, content, weights, now)?.let { content to it } }
             .sortedWith(
                 compareByDescending<Pair<LetsCareerContent, Int>> { it.second }
                     .thenBy { tieBreaker(jobId, it.first) },
@@ -42,7 +48,7 @@ class LetsCareerContentRecommendPolicy {
 
         val picked = mutableListOf<LetsCareerContent>()
         ranked.forEach { content ->
-            if (picked.size < size && picked.count { groupOf(it) == groupOf(content) } < MAX_PER_GROUP) {
+            if (picked.size < size && picked.count { groupOf(it) == groupOf(content) } < weights.maxPerGroup) {
                 picked += content
             }
         }
@@ -55,7 +61,13 @@ class LetsCareerContentRecommendPolicy {
     }
 
     /** 추천하지 않을 콘텐츠면 `null`이다. */
-    private fun score(job: Job, jobTopics: Set<LetsCareerContentTopic>, content: LetsCareerContent, now: LocalDateTime): Int? {
+    private fun score(
+        job: Job,
+        jobTopics: Set<LetsCareerContentTopic>,
+        content: LetsCareerContent,
+        weights: LetsCareerContentRecommendWeights,
+        now: LocalDateTime,
+    ): Int? {
         val tags = content.currentTags() ?: return null
         if (!isRecruiting(content, now)) {
             return null
@@ -65,8 +77,16 @@ class LetsCareerContentRecommendPolicy {
         if (!tags.isForAllJobs && !roleMatched && !fieldMatched) {
             return null
         }
-        val topicScore = minOf(tags.topics.count { it in jobTopics }, MAX_TOPIC_MATCHES) * TOPIC_SCORE
-        return (if (roleMatched) ROLE_SCORE else 0) + (if (fieldMatched) FIELD_SCORE else 0) + topicScore
+        val topicScore = minOf(tags.topics.count { it in jobTopics }, weights.maxTopicMatches) * weights.topicScore
+        val matchScore = (if (roleMatched) weights.roleScore else 0) + (if (fieldMatched) weights.fieldScore else 0) + topicScore
+        if (matchScore == 0) {
+            return 0
+        }
+        return matchScore + when (groupOf(content)) {
+            LetsCareerContentKind.MATERIAL -> weights.materialBonus
+            LetsCareerContentKind.BLOG -> weights.blogBonus
+            else -> weights.programBonus
+        }
     }
 
     /** 직무만 붙은 콘텐츠도 그 직무의 직군 공고에는 맞는다. */
@@ -132,14 +152,6 @@ class LetsCareerContentRecommendPolicy {
     }
 
     companion object {
-        /** 같은 갈래(프로그램·자료집·블로그)에서 고르는 최대 개수다. 모자라면 넘어서 채운다. */
-        const val MAX_PER_GROUP = 2
-
-        private const val ROLE_SCORE = 5
-        private const val FIELD_SCORE = 3
-        private const val TOPIC_SCORE = 2
-        private const val MAX_TOPIC_MATCHES = 2
-
         private val TOPIC_KEYWORDS: Map<LetsCareerContentTopic, List<String>> = mapOf(
             LetsCareerContentTopic.RESUME to listOf("이력서"),
             LetsCareerContentTopic.PERSONAL_STATEMENT to listOf("자기소개서", "자소서"),

@@ -7,6 +7,7 @@ import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContent
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentKind
+import com.ogonggo.core.letscareercontent.domain.LetsCareerContentRecommendWeights
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTags
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTopic
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -29,7 +30,7 @@ class LetsCareerContentRecommendPolicyTest {
         val otherField = content(4, tags(fields = setOf(JobField.IT_DEVELOPMENT)))
 
         // when
-        val result = policy.recommend(job, null, listOf(otherField, forAll, sameField, sameRole), NOW, 3)
+        val result = policy.recommend(job, null, listOf(otherField, forAll, sameField, sameRole), WEIGHTS, NOW, 3)
 
         // then
         assertEquals(listOf(1L, 2L, 3L), result.map { it.externalId })
@@ -43,7 +44,7 @@ class LetsCareerContentRecommendPolicyTest {
         val portfolio = content(2, tags(topics = setOf(LetsCareerContentTopic.PORTFOLIO)))
 
         // when
-        val result = policy.recommend(job, null, listOf(portfolio, essay), NOW, 1)
+        val result = policy.recommend(job, null, listOf(portfolio, essay), WEIGHTS, NOW, 1)
 
         // then
         assertEquals(listOf(1L), result.map { it.externalId })
@@ -56,7 +57,7 @@ class LetsCareerContentRecommendPolicyTest {
         val closed = content(2, tags(), recruitmentEndAt = NOW.minusDays(1))
         val upcoming = content(3, tags(), recruitmentStartAt = NOW.plusDays(1))
 
-        assertEquals(emptyList<LetsCareerContent>(), policy.recommend(job, null, listOf(untagged, closed, upcoming), NOW, 3))
+        assertEquals(emptyList<LetsCareerContent>(), policy.recommend(job, null, listOf(untagged, closed, upcoming), WEIGHTS, NOW, 3))
     }
 
     @Test
@@ -67,7 +68,7 @@ class LetsCareerContentRecommendPolicyTest {
         val material = content(10, tags(), kind = LetsCareerContentKind.MATERIAL)
 
         // when
-        val result = policy.recommend(job, null, blogs + material, NOW, 3)
+        val result = policy.recommend(job, null, blogs + material, WEIGHTS, NOW, 3)
 
         // then
         assertEquals(2, result.count { it.kind == LetsCareerContentKind.BLOG })
@@ -80,13 +81,52 @@ class LetsCareerContentRecommendPolicyTest {
         val contents = (1L..20L).map { content(it, tags()) }
 
         // when
-        val first = policy.recommend(job(id = 1L, jobRole = MARKETING_ROLE), null, contents, NOW, 3).map { it.externalId }
-        val again = policy.recommend(job(id = 1L, jobRole = MARKETING_ROLE), null, contents.reversed(), NOW, 3).map { it.externalId }
-        val other = policy.recommend(job(id = 2L, jobRole = MARKETING_ROLE), null, contents, NOW, 3).map { it.externalId }
+        val first = policy.recommend(job(id = 1L, jobRole = MARKETING_ROLE), null, contents, WEIGHTS, NOW, 3).map { it.externalId }
+        val again = policy.recommend(job(id = 1L, jobRole = MARKETING_ROLE), null, contents.reversed(), WEIGHTS, NOW, 3).map { it.externalId }
+        val other = policy.recommend(job(id = 2L, jobRole = MARKETING_ROLE), null, contents, WEIGHTS, NOW, 3).map { it.externalId }
 
         // then
         assertEquals(first, again)
         assertNotEquals(first, other)
+    }
+
+    @Test
+    fun `공고와 맞는 프로그램은 같은 만큼 맞는 블로그보다 먼저 고른다`() {
+        // given
+        val job = job(jobRole = MARKETING_ROLE, hiringProcess = "자기소개서 제출")
+        val blog = content(1, tags(topics = setOf(LetsCareerContentTopic.PERSONAL_STATEMENT)), kind = LetsCareerContentKind.BLOG)
+        val program = content(2, tags(topics = setOf(LetsCareerContentTopic.PERSONAL_STATEMENT)))
+
+        // when
+        val result = policy.recommend(job, null, listOf(blog, program), WEIGHTS, NOW, 1)
+
+        // then
+        assertEquals(listOf(2L), result.map { it.externalId })
+    }
+
+    @Test
+    fun `공고와 하나도 맞지 않는 프로그램은 가산점을 받지 않는다`() {
+        // given
+        val job = job(jobRole = MARKETING_ROLE, hiringProcess = "자기소개서 제출")
+        val unrelatedProgram = content(1, tags(topics = setOf(LetsCareerContentTopic.WRITTEN_TEST)))
+        val matchingBlog = content(2, tags(topics = setOf(LetsCareerContentTopic.PERSONAL_STATEMENT)), kind = LetsCareerContentKind.BLOG)
+
+        // when
+        val result = policy.recommend(job, null, listOf(unrelatedProgram, matchingBlog), WEIGHTS, NOW, 1)
+
+        // then
+        assertEquals(listOf(2L), result.map { it.externalId })
+    }
+
+    @Test
+    fun `운영자가 바꾼 갈래별 최대 개수를 따른다`() {
+        val job = job(jobRole = MARKETING_ROLE)
+        val blogs = (1L..3L).map { content(it, tags(roles = setOf(MARKETING_ROLE)), kind = LetsCareerContentKind.BLOG) }
+        val material = content(10, tags(), kind = LetsCareerContentKind.MATERIAL)
+
+        val result = policy.recommend(job, null, blogs + material, WEIGHTS.copy(maxPerGroup = 3), NOW, 3)
+
+        assertEquals(3, result.count { it.kind == LetsCareerContentKind.BLOG })
     }
 
     private fun job(
@@ -125,5 +165,6 @@ class LetsCareerContentRecommendPolicyTest {
     companion object {
         private val NOW = LocalDateTime.of(2026, 10, 9, 12, 0)
         private val MARKETING_ROLE = JobRole.entries.first { it.jobField == JobField.MARKETING_ADVERTISING }
+        private val WEIGHTS = LetsCareerContentRecommendWeights.DEFAULT
     }
 }

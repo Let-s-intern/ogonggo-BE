@@ -273,6 +273,18 @@ PUT /api/v1/internal/jobs/{jobId}/analysis
   - 없거나 지워진 공고는 404 `JOB_NOT_FOUND`입니다. 게시 상태는 보지 않습니다.
 - 크롤러는 매일 고용24 수집(04:00)과 크롤러 매일 수집 뒤에 이 두 API로 분석합니다. 실행 시각은 크롤러 설정이 정합니다.
 
+### 렛츠커리어 콘텐츠 추천 점수
+
+```text
+GET /api/v1/admin/lets-career-content-recommend-weights
+PUT /api/v1/admin/lets-career-content-recommend-weights
+```
+
+- 결정일: 2026-10-10 / 리뷰 상태: 팀 리뷰 필요
+- 공고별 콘텐츠 추천([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천))의 점수 설정은 하나뿐이라 단수 리소스로 두고 통째로 바꾸는 PUT을 씁니다. 바뀐 값을 `data`로 돌려줍니다.
+- 칸은 `roleScore`, `fieldScore`, `topicScore`, `maxTopicMatches`, `programBonus`, `materialBonus`, `blogBonus`, `maxPerGroup`이고 모두 필수입니다. 점수는 0~100, `maxTopicMatches`는 0~10, `maxPerGroup`은 1~10이며 벗어나면 400 `BAD_REQUEST`입니다.
+- 바꾼 값은 다음 추천 요청부터 씁니다. 사용자 API가 요청마다 한 행을 읽습니다.
+
 ### 크롤러 렛츠커리어 콘텐츠 태그
 
 ```text
