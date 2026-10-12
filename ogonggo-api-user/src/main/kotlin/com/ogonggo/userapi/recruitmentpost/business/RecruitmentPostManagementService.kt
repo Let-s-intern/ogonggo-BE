@@ -79,15 +79,7 @@ class RecruitmentPostManagementService(
         verifyActiveUser(userId)
         val source = postReader.readOwnedForUpdate(userId, postId)
         val copied = postManager.copyAsDraft(source)
-        val copiedId = checkNotNull(copied.id) { "복사된 모집글 식별자가 없습니다." }
-        copied.replaceDraftContent(
-            imageAssetManager.copyPostImages(
-                ownerUserId = userId,
-                sourcePostId = postId,
-                targetPostId = copiedId,
-                content = copied.content,
-            ),
-        )
+        copied.replaceDraftContent(imageAssetManager.copyContentImages(ownerUserId = userId, content = copied.content))
         return RecruitmentPostFormResult.from(copied)
     }
 

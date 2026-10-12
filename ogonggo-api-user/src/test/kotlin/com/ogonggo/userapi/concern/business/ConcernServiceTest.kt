@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.concern.business
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernCategory
 import com.ogonggo.core.concern.domain.ConcernPopularSortType
@@ -9,12 +10,15 @@ import com.ogonggo.core.concern.implement.ConcernManager
 import com.ogonggo.core.concern.implement.ConcernMetricReader
 import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.concern.implement.dto.ConcernMetricDto
+import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.BusinessException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.userapi.error.InvalidRequestFieldException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -35,6 +39,7 @@ class ConcernServiceTest {
     private val concernManager = Mockito.mock(ConcernManager::class.java)
     private val concernMetricReader = Mockito.mock(ConcernMetricReader::class.java)
     private val commentReader = Mockito.mock(ConcernCommentReader::class.java)
+    private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-10-08T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = ConcernService(
@@ -45,6 +50,8 @@ class ConcernServiceTest {
         concernManager,
         concernMetricReader,
         commentReader,
+        LexicalEditorStateValidator(ObjectMapper()),
+        imageAssetManager,
         eventPublisher,
         clock,
     )
@@ -90,12 +97,40 @@ class ConcernServiceTest {
 
         // when
         val exception = assertThrows(BusinessException::class.java) {
-            service.update(USER_ID, CONCERN_ID, SaveConcernCommand(ConcernCategory.ETC, "제목", "본문"))
+            service.update(USER_ID, CONCERN_ID, SaveConcernCommand(ConcernCategory.ETC, "제목", CONTENT))
         }
 
         // then
         assertEquals("CONCERN_PERMISSION_DENIED", exception.errorCode.code)
-        Mockito.verifyNoInteractions(concernManager)
+        Mockito.verifyNoInteractions(concernManager, imageAssetManager)
+    }
+
+    @Test
+    fun `본문이 에디터 JSON이 아니면 고민글을 저장하지 않고 content 필드 오류를 낸다`() {
+        // given
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+
+        // when
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            service.create(USER_ID, SaveConcernCommand(ConcernCategory.ETC, "제목", "일반 텍스트 본문"))
+        }
+
+        // then
+        assertEquals("content", exception.fieldName)
+        Mockito.verifyNoInteractions(concernAppender, imageAssetManager)
+    }
+
+    @Test
+    fun `내 고민글을 지우면 본문 이미지 참조를 푼다`() {
+        // given
+        val concern = concern(authorUserId = USER_ID)
+        Mockito.`when`(concernReader.readIncludingDeletedForUpdate(CONCERN_ID)).thenReturn(concern)
+
+        // when
+        service.delete(USER_ID, CONCERN_ID)
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceContentImages(USER_ID, CONTENT, LocalDateTime.now(clock))
     }
 
     @Test
@@ -108,7 +143,7 @@ class ConcernServiceTest {
         service.delete(USER_ID, CONCERN_ID)
 
         // then
-        Mockito.verifyNoInteractions(concernManager)
+        Mockito.verifyNoInteractions(concernManager, imageAssetManager)
     }
 
     @Test
@@ -132,7 +167,7 @@ class ConcernServiceTest {
         Mockito.`when`(concern.isDeleted()).thenReturn(deleted)
         Mockito.`when`(concern.category).thenReturn(ConcernCategory.CAREER)
         Mockito.`when`(concern.title).thenReturn("제목")
-        Mockito.`when`(concern.content).thenReturn("본문")
+        Mockito.`when`(concern.content).thenReturn(CONTENT)
         Mockito.`when`(concern.createdAt).thenReturn(NOW)
         Mockito.`when`(concern.updatedAt).thenReturn(NOW)
         return concern
@@ -151,6 +186,7 @@ class ConcernServiceTest {
         private const val USER_ID = 17L
         private const val OTHER_USER_ID = 18L
         private const val CONCERN_ID = 5L
+        private const val CONTENT = """{"root":{"children":[]}}"""
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 10, 8, 12, 0)
     }
 }

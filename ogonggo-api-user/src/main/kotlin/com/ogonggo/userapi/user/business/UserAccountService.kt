@@ -96,11 +96,9 @@ class UserAccountService(
     fun replaceMyProfileImage(userId: Long, imageId: String) {
         verifyGeneralMember(userId)
         val now = LocalDateTime.now(clock)
-        val url = imageAssetManager.attachProfileImage(userId, imageId)
-        val previousImageId = userProfileManager.changeOgonggoProfileImage(userId, imageId, url, now)
-        if (previousImageId != null && previousImageId != imageId) {
-            imageAssetManager.unreferenceProfileImage(userId, previousImageId, now)
-        }
+        val previousImageId = userProfileReader.read(userId)?.ogonggoProfileImageId
+        val url = imageAssetManager.replaceImage(userId, previousImageId, imageId, now)
+        userProfileManager.changeOgonggoProfileImage(userId, imageId, url, now)
     }
 
     /** 오공고에서 올린 프로필 이미지를 지워 렛츠커리어 이미지로 되돌린다. 지울 것이 없어도 성공으로 본다. */
@@ -108,7 +106,7 @@ class UserAccountService(
     fun deleteMyProfileImage(userId: Long) {
         verifyGeneralMember(userId)
         val removedImageId = userProfileManager.removeOgonggoProfileImage(userId) ?: return
-        imageAssetManager.unreferenceProfileImage(userId, removedImageId, LocalDateTime.now(clock))
+        imageAssetManager.unreferenceImage(userId, removedImageId, LocalDateTime.now(clock))
     }
 
     /**
@@ -119,16 +117,18 @@ class UserAccountService(
     @Transactional
     fun replaceMyCompanyBasicInfo(userId: Long, command: CompanyBasicInfoCommand) {
         verifyCompany(userId)
+        val now = LocalDateTime.now(clock)
+        val previousLogoImageId = companyProfileReader.read(userId)?.logoImageId
         val logo = command.logoImageId?.let { imageId ->
-            CompanyLogoDto(imageId = imageId, url = imageAssetManager.attachProfileImage(userId, imageId))
+            CompanyLogoDto(imageId = imageId, url = imageAssetManager.replaceImage(userId, previousLogoImageId, imageId, now))
         }
-        val previousLogoImageId = companyProfileManager.replaceBasicInfo(
+        if (logo == null && previousLogoImageId != null) {
+            imageAssetManager.unreferenceImage(userId, previousLogoImageId, now)
+        }
+        companyProfileManager.replaceBasicInfo(
             userId,
             CompanyBasicInfoUpdateDto(organizationName = command.organizationName, logo = logo),
         )
-        if (previousLogoImageId != null && previousLogoImageId != command.logoImageId) {
-            imageAssetManager.unreferenceProfileImage(userId, previousLogoImageId, LocalDateTime.now(clock))
-        }
     }
 
     /** 담당자 이름·연락처·수신 이메일을 함께 교체한다. 선택 값을 빼면 비운다. */

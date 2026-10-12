@@ -42,8 +42,8 @@ data class SaveConcernRequest(
     @field:NotBlank
     @field:Size(max = Concern.TITLE_MAX_LENGTH)
     val title: String,
+    @field:Schema(description = "Lexical EditorState JSON 문자열. 이미지 노드는 `POST /api/v1/images`로 받은 `imageId`와 `src`(url)를 넣습니다.")
     @field:NotBlank
-    @field:Size(max = Concern.CONTENT_MAX_LENGTH)
     val content: String,
 ) {
     fun toCommand(): SaveConcernCommand = SaveConcernCommand(

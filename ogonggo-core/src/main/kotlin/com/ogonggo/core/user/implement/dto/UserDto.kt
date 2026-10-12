@@ -92,6 +92,8 @@ data class UserProfileDto(
     val wishCompany: String?,
     val jobInfoUpdatedAt: LocalDateTime? = null,
     val nicknameUpdatedAt: LocalDateTime? = null,
+    /** 오공고에서 올린 프로필 이미지 식별자. 렛츠커리어 이미지를 쓰면 null이다. */
+    val ogonggoProfileImageId: String? = null,
 ) {
     companion object {
         internal fun from(profile: UserProfile): UserProfileDto = UserProfileDto(
@@ -113,6 +115,7 @@ data class UserProfileDto(
             wishCompany = profile.wishCompany,
             jobInfoUpdatedAt = profile.jobInfoUpdatedAt,
             nicknameUpdatedAt = profile.nicknameUpdatedAt,
+            ogonggoProfileImageId = profile.ogonggoProfileImageId,
         )
     }
 }

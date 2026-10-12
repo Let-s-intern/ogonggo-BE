@@ -6,10 +6,15 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.stubbing.Answer
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse
+import java.time.Duration
 
 class S3ObjectClientTest {
 
@@ -29,6 +34,7 @@ class S3ObjectClientTest {
         )
         val storage = S3ObjectClient(
             s3Client = s3Client,
+            s3Presigner = Mockito.mock(S3Presigner::class.java),
             properties = S3Properties(
                 bucket = "ogonggo-images",
                 region = "ap-northeast-2",
@@ -51,6 +57,7 @@ class S3ObjectClientTest {
         val s3Client = Mockito.mock(S3Client::class.java)
         val storage = S3ObjectClient(
             s3Client = s3Client,
+            s3Presigner = Mockito.mock(S3Presigner::class.java),
             properties = S3Properties(),
         )
 
@@ -77,6 +84,7 @@ class S3ObjectClientTest {
         )
         val storage = S3ObjectClient(
             s3Client = s3Client,
+            s3Presigner = Mockito.mock(S3Presigner::class.java),
             properties = S3Properties(bucket = "ogonggo-images"),
         )
 
@@ -101,11 +109,37 @@ class S3ObjectClientTest {
         )
         val storage = S3ObjectClient(
             s3Client = s3Client,
+            s3Presigner = Mockito.mock(S3Presigner::class.java),
             properties = S3Properties(bucket = "ogonggo-images"),
         )
 
         storage.copy("images/source.png", "images/target.png", "image/png")
 
         assertTrue(copyObjectCalled)
+    }
+
+    @Test
+    fun `presigned PUT URL은 형식과 크기와 캐시 헤더를 서명에 묶는다`() {
+        // given
+        val presigner = S3Presigner.builder()
+            .region(Region.AP_NORTHEAST_2)
+            .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test-access", "test-secret")))
+            .build()
+        val storage = S3ObjectClient(
+            s3Client = Mockito.mock(S3Client::class.java),
+            s3Presigner = presigner,
+            properties = S3Properties(bucket = "ogonggo-images", region = "ap-northeast-2"),
+        )
+
+        // when
+        val upload = storage.presignPut("images/image-id.png", "image/png", 1_100_000L, Duration.ofMinutes(5))
+
+        // then
+        assertTrue(upload.url.startsWith("https://ogonggo-images.s3.ap-northeast-2.amazonaws.com/images/image-id.png?"))
+        val signedHeaders = Regex("X-Amz-SignedHeaders=([^&]+)").find(upload.url)!!.groupValues[1]
+        listOf("cache-control", "content-length", "content-type").forEach { assertTrue(signedHeaders.contains(it), it) }
+        assertTrue(upload.url.contains("X-Amz-Expires=300"))
+        assertEquals("image/png", upload.headers["Content-Type"])
+        assertEquals("public, max-age=31536000, immutable", upload.headers["Cache-Control"])
     }
 }

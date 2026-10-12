@@ -42,7 +42,7 @@ data class AdminConcernDetailResponse(
     val id: Long,
     val category: ConcernCategory,
     val title: String,
-    @Schema(description = "일반 텍스트 본문입니다.")
+    @Schema(description = "Lexical EditorState JSON 본문입니다.")
     val content: String,
     val viewCount: Long,
     @Schema(description = "남아 있는 답변 수입니다. 답글은 세지 않습니다.")

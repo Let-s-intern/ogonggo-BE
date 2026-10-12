@@ -5,7 +5,14 @@ import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.S3Exception
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest
+import java.time.Duration
 
 /**
  * 오공고 S3 버킷에 객체를 올리고 복사하고 지우며, 객체를 화면에 보여 줄 URL을 만든다.
@@ -19,10 +26,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest
 @Component
 class S3ObjectClient(
     private val s3Client: S3Client,
+    private val s3Presigner: S3Presigner,
     private val properties: S3Properties,
 ) {
 
-    /** bucket이 비어 있으면 false다. 이때 [put]·[copy]·[delete]·[urlOf]는 실패한다. */
+    /** bucket이 비어 있으면 false다. 이때 객체를 다루는 모든 메서드와 [urlOf]는 실패한다. */
     fun isConfigured(): Boolean = properties.bucket.isNotBlank()
 
     fun put(
@@ -68,6 +76,56 @@ class S3ObjectClient(
         )
     }
 
+    /**
+     * 클라이언트가 [key]에 파일을 직접 올릴 PUT URL을 만든다.
+     * 형식·크기·캐시 헤더를 서명에 묶으므로 클라이언트는 [PresignedUpload.headers]를 그대로 보내고 [contentLength]만큼 올려야 한다.
+     */
+    fun presignPut(key: String, contentType: String, contentLength: Long, expiresIn: Duration): PresignedUpload {
+        checkConfigured()
+        val presigned = s3Presigner.presignPutObject(
+            PutObjectPresignRequest.builder()
+                .signatureDuration(expiresIn)
+                .putObjectRequest(
+                    PutObjectRequest.builder()
+                        .bucket(properties.bucket)
+                        .key(key)
+                        .contentType(contentType)
+                        .contentLength(contentLength)
+                        .cacheControl(CACHE_CONTROL)
+                        .build(),
+                )
+                .build(),
+        )
+        return PresignedUpload(
+            url = presigned.url().toString(),
+            headers = mapOf("Content-Type" to contentType, "Cache-Control" to CACHE_CONTROL),
+        )
+    }
+
+    /** 객체의 크기를 돌려준다. 객체가 없으면 null이다. */
+    fun sizeOf(key: String): Long? {
+        checkConfigured()
+        return try {
+            s3Client.headObject(HeadObjectRequest.builder().bucket(properties.bucket).key(key).build()).contentLength()
+        } catch (_: NoSuchKeyException) {
+            null
+        } catch (exception: S3Exception) {
+            if (exception.statusCode() == 404) null else throw exception
+        }
+    }
+
+    /** 객체의 앞 [length]바이트를 읽는다. 파일이 더 짧으면 있는 만큼 돌려준다. */
+    fun readHead(key: String, length: Int): ByteArray {
+        checkConfigured()
+        return s3Client.getObjectAsBytes(
+            GetObjectRequest.builder()
+                .bucket(properties.bucket)
+                .key(key)
+                .range("bytes=0-${length - 1}")
+                .build(),
+        ).asByteArray()
+    }
+
     /** CDN 주소(`publicBaseUrl`)가 있으면 CDN 주소로, 없으면 S3 기본 주소로 [key]의 표시용 URL을 만든다. */
     fun urlOf(key: String): String {
         checkConfigured()
@@ -86,3 +144,9 @@ class S3ObjectClient(
         const val CACHE_CONTROL = "public, max-age=31536000, immutable"
     }
 }
+
+/** 클라이언트가 S3에 직접 올릴 PUT URL과 함께 보내야 하는 헤더다. */
+data class PresignedUpload(
+    val url: String,
+    val headers: Map<String, String>,
+)

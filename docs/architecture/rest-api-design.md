@@ -118,6 +118,21 @@ PATCH  /api/v1/users/me/password
 
 일반 회원의 프로필 이미지도 값 하나짜리 단일 리소스로 보고 `PUT /users/me/profile-image`가 `{ "imageId": "..." }`로 교체하며, `DELETE`는 지워 렛츠커리어 이미지로 되돌립니다(2026-09-30, 팀 리뷰 필요). 파일은 게시글 이미지와 같은 `POST /api/v1/images`로 먼저 올리고 받은 식별자로 연결합니다. 같은 식별자를 다시 보내거나 지운 뒤 다시 지워도 200입니다. 소유권과 이미지 정리는 [사용자 인증 문서](authentication.md#프로필-이미지)를 따릅니다. 식별자를 경로에 넣어 남의 정보를 조회하는 `/users/{userId}`는 필요가 생길 때 정의합니다. 응답 계약은 [사용자 인증 문서](authentication.md#역할을-토큰에-담지-않는-이유)를 따릅니다.
 
+### 이미지 업로드
+
+```text
+POST /api/v1/images                          multipart로 파일을 서버에 올린다
+POST /api/v1/images/presigned-urls           { usage, contentType, size }로 S3 직접 업로드 URL을 받는다
+POST /api/v1/images/{imageId}/complete       S3에 올린 파일을 확인하고 쓸 수 있게 한다
+```
+
+- 결정일: 2026-10-12 / 리뷰 상태: 팀 리뷰 필요
+- presigned 방식은 파일이 서버를 거치지 않습니다. 발급 응답의 `uploadUrl`에 `uploadHeaders`(`Content-Type`, `Cache-Control`)를 그대로 넣어 5분 안에 PUT하고, 완료 API를 불러야 본문·프로필에 쓸 수 있습니다. 형식(`image/jpeg`·`image/png`·`image/webp`)과 크기(10 MiB 이하)는 발급할 때 검사하고, 크기·형식·캐시 헤더는 서명에 묶여 다르게 올리면 S3가 거절합니다.
+- 완료는 서버가 S3 객체 크기와 앞 12바이트로 실제 형식을 다시 확인합니다. 아직 올리지 않았으면 409 `IMAGE_FILE_NOT_UPLOADED`, 알린 형식이 아니면 400 `IMAGE_FILE_TYPE_NOT_SUPPORTED`입니다. 이미 완료한 이미지를 다시 완료해도 200입니다. 완료하지 않은 이미지는 업로드 중으로 남아 정리 작업이 지웁니다.
+- 완료 API를 따로 둔 이유: 글 저장 때 확인하면 호출은 줄지만 저장 요청이 S3 확인만큼 느려지고, 잘못 올린 파일을 글을 저장할 때에야 알게 됩니다.
+- S3 키는 `ogonggo/{폴더}/{imageId}.{확장자}`입니다. 렛츠커리어와 같이 쓰는 버킷이라 `ogonggo/` 아래에 두고, 폴더는 `usage`(`ImageAssetUsage`)로 정합니다: `PROFILE` → `profile`(프로필 이미지·기업 로고), `RECRUITMENT_POST` → `side`, `CONCERN` → `concern`. presigned 발급은 `usage`가 필수이고, multipart는 선택이라 보내지 않으면 `etc`에 둡니다. 모집글 복사로 만든 이미지는 원본과 같은 폴더에 둡니다. 고용24 기관 이미지(관리자 API)도 `ogonggo/work24/`에 둡니다. 이 변경 전에 올린 이미지는 `images/` 아래에 그대로 둡니다.
+- multipart 방식은 화면이 모두 presigned로 옮겨 갈 때까지 유지하고 그 뒤 없앱니다(확인 필요: 제거 시점). multipart 한도는 `spring.servlet.multipart.max-file-size`를 10MB로 맞춥니다.
+
 ### 부트캠프 북마크
 
 ```text
@@ -266,7 +281,7 @@ PUT /api/v1/internal/jobs/{jobId}/analysis
 - 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
 - 채용공고 상세의 공고 분석([API 성공 응답의 채용공고 공고 분석](api-response.md#채용공고-공고-분석))을 크롤러가 AI로 만듭니다. 서버에는 AI 클라이언트를 두지 않습니다. 크롤러에 분석 방법 편집·시험 화면과 비용 기록이 이미 있어서입니다.
 - 크롤러 채용공고 API와 달리 **등록 경로를 가리지 않습니다.** 고용24·기업회원 공고도 같은 분석을 보여 줘야 하기 때문입니다. 인증은 같은 내부 API 키입니다.
-- 대상 조회는 게시 중인 모집 중 공고 가운데 분석이 없거나 분석한 뒤 본문 해시가 바뀐 공고를 최근 것부터 `size`건(기본 50, 1 이상 200 이하) 줍니다. 항목은 크롤러 등록 요청과 같은 칸 이름의 본문과 `jobId`, `source`, `contentHash`입니다.
+- 대상 조회는 게시 중인 모집 중 공고 가운데 분석이 없거나 분석한 뒤 본문 해시가 바뀐 공고를 최근 것부터 `size`건(기본 50, 1 이상 500 이하) 줍니다. 항목은 크롤러 등록 요청과 같은 칸 이름의 본문과 `jobId`, `source`, `contentHash`입니다.
   - 매번 모든 공고의 해시를 세지 않도록, 분석하거나 본문을 확인했을 때의 공고 수정 일시를 `job_analyses.job_updated_at`에 남기고 공고 수정 일시가 그와 다른 공고만 다시 비교합니다. 본문 아닌 칸만 바뀐 공고(크롤러가 같은 내용으로 교체한 공고 등)는 확인한 것으로 남기고 대상에서 뺍니다. 그래서 이 GET은 확인 일시를 쓰는 부작용이 있습니다. 같은 요청을 반복해도 돌려주는 대상은 같습니다.
 - 저장은 공고마다 하나인 분석을 통째로 바꾸므로 PUT이며 200과 `data: null`로 응답합니다. 같은 값을 다시 보내도 결과가 같습니다.
   - 요청의 `contentHash`가 지금 본문 해시와 다르면 409 `JOB_ANALYSIS_OUTDATED`입니다. 대상을 받은 뒤 본문이 바뀐 경우이며, 그 공고는 다음 대상 조회에 다시 나옵니다.

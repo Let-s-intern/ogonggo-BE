@@ -96,9 +96,8 @@ class RecruitmentPostService(
         )
         val post = postAppender.append(sanitizedCommand)
         recruitmentPostMetricManager.initialize(checkNotNull(post.id))
-        imageAssetManager.syncPostImages(
+        imageAssetManager.syncContentImages(
             ownerUserId = userId,
-            postId = checkNotNull(post.id),
             previousContent = null,
             currentContent = sanitizedCommand.content,
             now = LocalDateTime.now(clock),
@@ -120,9 +119,8 @@ class RecruitmentPostService(
             content = command.content?.let(::validContent),
         )
         val post = postAppender.appendDraft(sanitizedCommand)
-        imageAssetManager.syncPostImages(
+        imageAssetManager.syncContentImages(
             ownerUserId = userId,
-            postId = checkNotNull(post.id),
             previousContent = null,
             currentContent = sanitizedCommand.content,
             now = LocalDateTime.now(clock),
@@ -144,9 +142,8 @@ class RecruitmentPostService(
             content = command.content?.let(::validContent),
         )
         val now = LocalDateTime.now(clock)
-        imageAssetManager.syncPostImages(
+        imageAssetManager.syncContentImages(
             ownerUserId = userId,
-            postId = postId,
             previousContent = previousContent,
             currentContent = sanitizedCommand.content,
             now = now,
@@ -166,8 +163,9 @@ class RecruitmentPostService(
     fun delete(userId: Long, postId: Long) {
         verifyActiveUser(userId)
         val now = LocalDateTime.now(clock)
-        postManager.delete(postReader.readOwnedForDelete(userId, postId), now)
-        imageAssetManager.unreferencePostImages(postId, now)
+        val post = postReader.readOwnedForDelete(userId, postId)
+        postManager.delete(post, now)
+        imageAssetManager.unreferenceContentImages(userId, post.content, now)
     }
 
     @Transactional

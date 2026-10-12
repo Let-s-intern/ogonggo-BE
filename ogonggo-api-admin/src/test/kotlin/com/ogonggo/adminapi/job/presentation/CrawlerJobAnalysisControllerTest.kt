@@ -71,7 +71,7 @@ class CrawlerJobAnalysisControllerTest @Autowired constructor(
     fun `대상 개수가 범위를 넘으면 400으로 응답한다`() {
         mockMvc.perform(
             get("/api/v1/internal/jobs/analysis-targets")
-                .param("size", "201")
+                .param("size", "501")
                 .header(INTERNAL_API_KEY_HEADER, ANALYSIS_API_KEY),
         )
             .andExpect(status().isBadRequest)

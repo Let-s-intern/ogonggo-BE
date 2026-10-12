@@ -1,34 +1,49 @@
 package com.ogonggo.core.image.domain
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 class ImageAssetTest {
 
     @Test
-    fun `이미지는 임시 상태에서 게시글에 연결된다`() {
+    fun `임시 이미지를 첨부하면 첨부 상태가 된다`() {
         val asset = asset().also { it.markUploaded() }
 
-        asset.attach(12L)
+        asset.attach()
 
         assertEquals(ImageAssetStatus.ATTACHED, asset.status)
-        assertEquals(12L, asset.postId)
     }
 
     @Test
-    fun `게시글에서 이미지가 빠지면 참조 해제 상태와 시각을 기록한다`() {
+    fun `이미 첨부된 이미지는 다른 곳에서 쓰는 중일 수 있어 다시 첨부할 수 없다`() {
         val asset = asset().also {
             it.markUploaded()
-            it.attach(12L)
+            it.attach()
+        }
+
+        assertThrows(IllegalStateException::class.java) { asset.attach() }
+    }
+
+    @Test
+    fun `쓰이지 않게 된 이미지는 참조 해제 상태와 시각을 기록하고 다시 첨부할 수 있다`() {
+        // given
+        val asset = asset().also {
+            it.markUploaded()
+            it.attach()
         }
         val now = LocalDateTime.of(2026, 9, 12, 10, 0)
 
+        // when
         asset.unreference(now)
 
+        // then
         assertEquals(ImageAssetStatus.UNREFERENCED, asset.status)
-        assertEquals(null, asset.postId)
         assertEquals(now, asset.unreferencedAt)
+        asset.attach()
+        assertEquals(ImageAssetStatus.ATTACHED, asset.status)
+        assertEquals(null, asset.unreferencedAt)
     }
 
     private fun asset() = ImageAsset.uploading(

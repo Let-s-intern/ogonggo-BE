@@ -235,7 +235,7 @@ class RecruitmentPostServiceTest {
         // then
         assertEquals(12L, postId)
         Mockito.verify(postAppender).appendDraft(command)
-        Mockito.verify(imageAssetManager).syncPostImages(USER_ID, 12L, null, null, NOW)
+        Mockito.verify(imageAssetManager).syncContentImages(USER_ID, null, null, NOW)
     }
 
     @Test
@@ -323,13 +323,14 @@ class RecruitmentPostServiceTest {
         // then
         Mockito.verify(postManager).updateDraft(post, command)
         Mockito.verifyNoMoreInteractions(postManager)
-        Mockito.verify(imageAssetManager).syncPostImages(USER_ID, 12L, "", null, NOW)
+        Mockito.verify(imageAssetManager).syncContentImages(USER_ID, "", null, NOW)
     }
 
     @Test
-    fun `작성자가 모집글을 삭제하면 삭제용 소유 조회와 삭제를 수행한다`() {
+    fun `작성자가 모집글을 삭제하면 삭제하고 본문 이미지 참조를 푼다`() {
         // given
         val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(post.content).thenReturn(EDITOR_STATE_JSON)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
         Mockito.`when`(postReader.readOwnedForDelete(USER_ID, 12L)).thenReturn(post)
 
@@ -337,8 +338,8 @@ class RecruitmentPostServiceTest {
         service.delete(USER_ID, 12L)
 
         // then
-        Mockito.verify(postReader).readOwnedForDelete(USER_ID, 12L)
         Mockito.verify(postManager).delete(post, NOW)
+        Mockito.verify(imageAssetManager).unreferenceContentImages(USER_ID, EDITOR_STATE_JSON, NOW)
     }
 
     @Test

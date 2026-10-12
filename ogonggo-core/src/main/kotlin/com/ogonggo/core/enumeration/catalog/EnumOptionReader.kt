@@ -17,6 +17,7 @@ import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.enumeration.EnumOption
 import com.ogonggo.core.enumeration.enumOptionMapOf
 import com.ogonggo.core.enumeration.enumOptionsOf
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -126,6 +127,8 @@ class EnumOptionReader {
             enumOptionsOf<ConcernCategory>(),
             enumOptionsOf<ConcernSortType>(),
             enumOptionsOf<ConcernPopularSortType>(),
+            // 이미지 업로드
+            enumOptionsOf<ImageAssetUsage>(),
             // 회원
             enumOptionsOf<UserRole>(),
             enumOptionsOf<UserStatus>(),

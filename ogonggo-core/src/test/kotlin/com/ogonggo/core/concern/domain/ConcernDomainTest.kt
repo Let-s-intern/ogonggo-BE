@@ -13,12 +13,12 @@ class ConcernDomainTest {
         val concern = concern()
 
         // when
-        concern.update(ConcernCategory.CAREER, "바뀐 제목", "바뀐 본문")
+        concern.update(ConcernCategory.CAREER, "바뀐 제목", UPDATED_CONTENT)
 
         // then
         assertEquals(ConcernCategory.CAREER, concern.category)
         assertEquals("바뀐 제목", concern.title)
-        assertEquals("바뀐 본문", concern.content)
+        assertEquals(UPDATED_CONTENT, concern.content)
     }
 
     @Test
@@ -30,7 +30,7 @@ class ConcernDomainTest {
         // when
         // then
         assertThrows(IllegalStateException::class.java) {
-            concern.update(ConcernCategory.ETC, "제목", "본문")
+            concern.update(ConcernCategory.ETC, "제목", CONTENT)
         }
     }
 
@@ -50,7 +50,14 @@ class ConcernDomainTest {
     @Test
     fun `제목이 100자를 넘으면 고민글을 만들 수 없다`() {
         assertThrows(IllegalArgumentException::class.java) {
-            Concern(authorUserId = 1L, category = ConcernCategory.ETC, title = "가".repeat(101), content = "본문")
+            Concern(authorUserId = 1L, category = ConcernCategory.ETC, title = "가".repeat(101), content = CONTENT)
+        }
+    }
+
+    @Test
+    fun `본문이 에디터 JSON이 아니면 고민글을 만들 수 없다`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Concern(authorUserId = 1L, category = ConcernCategory.ETC, title = "제목", content = "일반 텍스트 본문")
         }
     }
 
@@ -58,10 +65,12 @@ class ConcernDomainTest {
         authorUserId = 1L,
         category = ConcernCategory.JOB_POSTING,
         title = "제목",
-        content = "본문",
+        content = CONTENT,
     )
 
     companion object {
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 10, 8, 12, 0)
+        private const val CONTENT = """{"root":{"children":[]}}"""
+        private const val UPDATED_CONTENT = """{"root":{"children":[{"type":"paragraph"}]}}"""
     }
 }

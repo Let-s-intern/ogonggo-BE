@@ -12,5 +12,6 @@ enum class ImageUploadErrorCode(
     IMAGE_FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "이미지 파일은 10 MiB 이하여야 합니다."),
     IMAGE_ASSET_NOT_FOUND(HttpStatus.BAD_REQUEST, "이미지를 찾을 수 없습니다."),
     IMAGE_ASSET_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "사용할 수 없는 이미지입니다."),
+    IMAGE_FILE_NOT_UPLOADED(HttpStatus.CONFLICT, "업로드된 이미지 파일이 없습니다. 발급받은 URL로 먼저 올려 주세요."),
     IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 업로드에 실패했습니다."),
 }

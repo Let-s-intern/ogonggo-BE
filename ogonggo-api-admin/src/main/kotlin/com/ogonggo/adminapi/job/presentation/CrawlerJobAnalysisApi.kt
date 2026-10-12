@@ -88,6 +88,6 @@ interface CrawlerJobAnalysisApi {
 
     companion object {
         const val DEFAULT_TARGETS = 50
-        const val MAX_TARGETS = 200
+        const val MAX_TARGETS = 500
     }
 }
