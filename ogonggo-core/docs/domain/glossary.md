@@ -50,7 +50,7 @@
 | 연락 수단 | `RecruitmentPostContactMethod` | 카카오톡 오픈채팅, 이메일 |
 | 모집글 지원 기록 | `RecruitmentPostApplication` | 회원이 모집글의 연락처를 열었거나 스크랩을 지원 준비로 옮긴 기록. **실제 지원서 제출이 아닙니다.** |
 | 댓글 신고 | `RecruitmentPostCommentReport` | 모집글 댓글에 대한 신고 |
-| 취준고민, 고민글 | `Concern` | 취업 준비 고민을 묻는 게시판 글. 본문은 일반 텍스트입니다. |
+| 취준고민, 고민글 | `Concern` | 취업 준비 고민을 묻는 게시판 글. 본문은 모집글처럼 Lexical EditorState JSON이고 사진을 넣을 수 있습니다. |
 | 답변 / 답글 | `ConcernComment` | 고민글의 부모 댓글이 답변, 답변에 단 1단계 대댓글이 답글입니다. |
 | 공식 답변 | `ConcernComment.official` | 작성 당시 관리자가 쓴 답변. 나중에 역할이 바뀌어도 그대로 둡니다. |
 | 고민 카테고리 | `ConcernCategory` | 공고 질문, 직무·커리어, 서류·면접, 사이드·경험, 기타 |
@@ -105,7 +105,8 @@
 | 공지 | `Announcement` | 관리자가 올리는 공지. 노출 여부와 상단 고정을 따로 관리합니다. |
 | 서비스 의견 | `ServiceFeedback` | 좋은 점·아쉬운 점 의견. 비로그인으로도 남길 수 있습니다. |
 | 광고 문의 | `advertisement` 패키지 | 광고 문의를 받아 메일과 Slack으로 전달. DB에 저장하지 않습니다. |
-| 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. |
+| 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. |
+| 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |
 | 지역 | `Region`, `SubRegion` | 시·도와 시·군·구. 행정 코드를 함께 가집니다. |
 | 스케줄 작업 | `ScheduledJob` | 주기 작업의 실행 주기와 켜짐 여부. 운영자가 DB에서 바꿉니다. |
 | 관리 목록 / 콘솔 목록 | `*ManagementSearchCondition`, `*ConsoleSearchCondition` | 게시 상태와 무관하게 콘텐츠를 관리할 때 쓰는 목록 조건. 관리자 콘솔이나 작성자 본인의 관리 화면에서 씁니다. |

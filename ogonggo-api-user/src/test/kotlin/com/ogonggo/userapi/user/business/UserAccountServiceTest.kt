@@ -178,36 +178,34 @@ class UserAccountServiceTest {
     }
 
     @Test
-    fun `기업 로고를 바꾸면 새 이미지를 연결하고 전에 쓰던 로고 이미지는 참조를 푼다`() {
+    fun `기업 로고를 바꾸면 전에 쓰던 로고 이미지를 넘겨 새 이미지로 교체한다`() {
         // given
         givenAccount(UserRole.COMPANY, email = "company@example.com")
-        Mockito.`when`(imageAssetManager.attachProfileImage(USER_ID, "new-logo")).thenReturn(NEW_IMAGE_URL)
-        Mockito.`when`(
-            companyProfileManager.replaceBasicInfo(
-                USER_ID,
-                CompanyBasicInfoUpdateDto("오공고", CompanyLogoDto(imageId = "new-logo", url = NEW_IMAGE_URL)),
-            ),
-        ).thenReturn("old-logo")
+        givenCompanyLogo("old-logo")
+        Mockito.`when`(imageAssetManager.replaceImage(USER_ID, "old-logo", "new-logo", NOW)).thenReturn(NEW_IMAGE_URL)
 
         // when
         service.replaceMyCompanyBasicInfo(USER_ID, CompanyBasicInfoCommand("오공고", logoImageId = "new-logo"))
 
         // then
-        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-logo", NOW)
+        Mockito.verify(companyProfileManager).replaceBasicInfo(
+            USER_ID,
+            CompanyBasicInfoUpdateDto("오공고", CompanyLogoDto(imageId = "new-logo", url = NEW_IMAGE_URL)),
+        )
     }
 
     @Test
     fun `로고를 빼고 기본 정보를 고치면 로고를 지우고 전에 쓰던 로고 이미지는 참조를 푼다`() {
         // given
         givenAccount(UserRole.COMPANY, email = "company@example.com")
-        Mockito.`when`(companyProfileManager.replaceBasicInfo(USER_ID, CompanyBasicInfoUpdateDto("오공고", logo = null)))
-            .thenReturn("old-logo")
+        givenCompanyLogo("old-logo")
 
         // when
         service.replaceMyCompanyBasicInfo(USER_ID, CompanyBasicInfoCommand("오공고", logoImageId = null))
 
         // then
-        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-logo", NOW)
+        Mockito.verify(companyProfileManager).replaceBasicInfo(USER_ID, CompanyBasicInfoUpdateDto("오공고", logo = null))
+        Mockito.verify(imageAssetManager).unreferenceImage(USER_ID, "old-logo", NOW)
     }
 
     @Test
@@ -308,33 +306,17 @@ class UserAccountServiceTest {
     }
 
     @Test
-    fun `프로필 이미지를 바꾸면 새 이미지를 연결하고 전에 쓰던 이미지는 참조를 푼다`() {
+    fun `프로필 이미지를 바꾸면 전에 쓰던 이미지를 넘겨 새 이미지로 교체한다`() {
         // given
         givenAccount(UserRole.USER, email = null)
-        Mockito.`when`(imageAssetManager.attachProfileImage(USER_ID, "new-image")).thenReturn(NEW_IMAGE_URL)
-        Mockito.`when`(userProfileManager.changeOgonggoProfileImage(USER_ID, "new-image", NEW_IMAGE_URL, NOW))
-            .thenReturn("old-image")
+        Mockito.`when`(userProfileReader.read(USER_ID)).thenReturn(profile(ogonggoProfileImageId = "old-image"))
+        Mockito.`when`(imageAssetManager.replaceImage(USER_ID, "old-image", "new-image", NOW)).thenReturn(NEW_IMAGE_URL)
 
         // when
         service.replaceMyProfileImage(USER_ID, "new-image")
 
         // then
-        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-image", NOW)
-    }
-
-    @Test
-    fun `같은 프로필 이미지를 다시 보내면 그 이미지의 참조를 풀지 않는다`() {
-        // given
-        givenAccount(UserRole.USER, email = null)
-        Mockito.`when`(imageAssetManager.attachProfileImage(USER_ID, "new-image")).thenReturn(NEW_IMAGE_URL)
-        Mockito.`when`(userProfileManager.changeOgonggoProfileImage(USER_ID, "new-image", NEW_IMAGE_URL, NOW))
-            .thenReturn("new-image")
-
-        // when
-        service.replaceMyProfileImage(USER_ID, "new-image")
-
-        // then
-        Mockito.verify(imageAssetManager, Mockito.never()).unreferenceProfileImage(USER_ID, "new-image", NOW)
+        Mockito.verify(userProfileManager).changeOgonggoProfileImage(USER_ID, "new-image", NEW_IMAGE_URL, NOW)
     }
 
     @Test
@@ -362,8 +344,40 @@ class UserAccountServiceTest {
         service.deleteMyProfileImage(USER_ID)
 
         // then
-        Mockito.verify(imageAssetManager).unreferenceProfileImage(USER_ID, "old-image", NOW)
+        Mockito.verify(imageAssetManager).unreferenceImage(USER_ID, "old-image", NOW)
     }
+
+    private fun givenCompanyLogo(logoImageId: String) {
+        Mockito.`when`(companyProfileReader.read(USER_ID)).thenReturn(
+            CompanyProfileDto(
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+                logoUrl = "https://cdn.example.com/images/$logoImageId.png",
+                managerPhone = null,
+                notificationEmail = null,
+                logoImageId = logoImageId,
+            ),
+        )
+    }
+
+    private fun profile(ogonggoProfileImageId: String?) = UserProfileDto(
+        name = null,
+        email = null,
+        phoneNum = null,
+        letsCareerAuthProvider = null,
+        notificationEmail = null,
+        nickname = null,
+        profileImageUrl = null,
+        university = null,
+        major = null,
+        grade = null,
+        wishField = null,
+        wishJob = null,
+        wishIndustry = null,
+        wishEmploymentType = null,
+        wishCompany = null,
+        ogonggoProfileImageId = ogonggoProfileImageId,
+    )
 
     companion object {
         private const val NEW_IMAGE_URL = "https://cdn.example.com/images/new-image.png"

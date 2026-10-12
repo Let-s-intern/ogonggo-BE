@@ -23,123 +23,157 @@ class ImageAssetManagerTest {
     private val now = LocalDateTime.of(2026, 9, 12, 10, 0)
 
     @Test
-    fun `게시글 본문의 이미지 ID와 URL이 일치하면 이미지를 연결한다`() {
-        val asset = uploadedAsset()
-        Mockito.`when`(
-            repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(setOf(asset.id), 17L),
-        ).thenReturn(listOf(asset))
-
-        manager.syncPostImages(17L, 12L, null, content(asset), now)
-
-        assertEquals(ImageAssetStatus.ATTACHED, asset.status)
-        assertEquals(12L, asset.postId)
-    }
-
-    @Test
-    fun `게시글에서 이미지가 제거되면 참조 해제한다`() {
-        val asset = uploadedAsset().also { it.attach(12L) }
-        Mockito.`when`(
-            repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(setOf(asset.id), 17L),
-        ).thenReturn(listOf(asset))
-
-        manager.syncPostImages(17L, 12L, content(asset), plainContent(), now)
-
-        assertEquals(ImageAssetStatus.UNREFERENCED, asset.status)
-        assertEquals(now, asset.unreferencedAt)
-    }
-
-    @Test
-    fun `게시글 이미지를 새 저장 키와 새 자산으로 복제하고 본문 참조를 치환한다`() {
-        val asset = uploadedAsset().also { it.attach(12L) }
-        Mockito.`when`(
-            repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(setOf(asset.id), 17L),
-        ).thenReturn(listOf(asset))
-        Mockito.`when`(storage.urlOf(Mockito.anyString())).thenAnswer { invocation ->
-            "https://cdn.example.com/${invocation.arguments[0]}"
-        }
-
-        val copiedContent = manager.copyPostImages(
-            ownerUserId = 17L,
-            sourcePostId = 12L,
-            targetPostId = 101L,
-            content = content(asset),
-        )
-
-        assertTrue(copiedContent.orEmpty().contains("https://cdn.example.com/images/"))
-        assertTrue(copiedContent.orEmpty().contains("imageId"))
-        assertTrue(!copiedContent.orEmpty().contains(asset.id))
-        val copyInvocation = Mockito.mockingDetails(storage).invocations.single { it.method.name == "copy" }
-        assertEquals(asset.storageKey, copyInvocation.arguments[0])
-        assertTrue((copyInvocation.arguments[1] as String).startsWith("images/"))
-        assertEquals(asset.mimeType, copyInvocation.arguments[2])
-        val saveInvocation = Mockito.mockingDetails(repository).invocations.single { it.method.name == "save" }
-        assertEquals(101L, (saveInvocation.arguments[0] as ImageAsset).postId)
-        assertEquals(12L, asset.postId)
-    }
-
-    @Test
-    fun `업로드한 이미지를 프로필 이미지로 연결하면 정리 대상에서 빠지고 게시글에는 쓸 수 없다`() {
+    fun `본문에 새로 넣은 이미지를 첨부한다`() {
         // given
         val asset = uploadedAsset()
-        Mockito.`when`(repository.findByIdAndOwnerUserIdAndDeletedAtIsNull(asset.id, 17L)).thenReturn(asset)
-        Mockito.`when`(
-            repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(setOf(asset.id), 17L),
-        ).thenReturn(listOf(asset))
+        givenAssets(asset)
 
         // when
-        val url = manager.attachProfileImage(17L, asset.id)
+        manager.syncContentImages(17L, null, content(asset), now)
 
         // then
-        assertEquals(asset.url, url)
         assertEquals(ImageAssetStatus.ATTACHED, asset.status)
+    }
+
+    @Test
+    fun `본문에서 빠진 이미지는 참조 해제하고 남은 이미지는 그대로 둔다`() {
+        // given
+        val kept = uploadedAsset().also { it.attach() }
+        val removed = uploadedAsset("removed-image-id").also { it.attach() }
+        givenAssets(kept, removed)
+
+        // when
+        manager.syncContentImages(17L, content(kept, removed), content(kept), now)
+
+        // then
+        assertEquals(ImageAssetStatus.ATTACHED, kept.status)
+        assertEquals(ImageAssetStatus.UNREFERENCED, removed.status)
+        assertEquals(now, removed.unreferencedAt)
+    }
+
+    @Test
+    fun `다른 글이나 프로필에서 쓰는 이미지는 본문에 새로 넣을 수 없다`() {
+        // given
+        val usedElsewhere = uploadedAsset().also { it.attach() }
+        givenAssets(usedElsewhere)
+
+        // when
         val exception = assertThrows(InvalidValueException::class.java) {
-            manager.syncPostImages(17L, 12L, null, content(asset), now)
+            manager.syncContentImages(17L, plainContent(), content(usedElsewhere), now)
         }
+
+        // then
         assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
     }
 
     @Test
-    fun `게시글에 쓰는 이미지나 남의 이미지는 프로필 이미지로 연결할 수 없다`() {
+    fun `남의 이미지나 URL이 다른 이미지는 본문에 넣을 수 없다`() {
         // given
-        val postImage = uploadedAsset().also { it.attach(12L) }
-        Mockito.`when`(repository.findByIdAndOwnerUserIdAndDeletedAtIsNull(postImage.id, 17L)).thenReturn(postImage)
+        val asset = uploadedAsset()
+        givenAssets(asset)
+        val wrongUrl = """{"root":{"children":[{"type":"image","imageId":"${asset.id}","src":"https://evil.example.com/a.png"}]}}"""
 
         // when & then
-        listOf(17L to postImage.id, 18L to postImage.id).forEach { (ownerUserId, imageId) ->
+        listOf(18L to content(asset), 17L to wrongUrl).forEach { (ownerUserId, content) ->
             val exception = assertThrows(InvalidValueException::class.java) {
-                manager.attachProfileImage(ownerUserId, imageId)
+                manager.syncContentImages(ownerUserId, null, content, now)
             }
             assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
         }
-        assertEquals(12L, postImage.postId)
+        assertEquals(ImageAssetStatus.TEMPORARY, asset.status)
     }
 
     @Test
-    fun `프로필 이미지 참조를 풀어도 게시글에 쓰는 이미지는 그대로 둔다`() {
+    fun `글을 지우면 본문 이미지의 참조를 푼다`() {
         // given
-        val profileImage = uploadedAsset().also { it.attachToProfile() }
-        val postImage = ImageAsset.uploading(
-            id = "post-image-id",
+        val asset = uploadedAsset().also { it.attach() }
+        givenAssets(asset)
+
+        // when
+        manager.unreferenceContentImages(17L, content(asset), now)
+
+        // then
+        assertEquals(ImageAssetStatus.UNREFERENCED, asset.status)
+    }
+
+    @Test
+    fun `본문 이미지를 원본과 같은 폴더의 새 저장 키와 새 자산으로 복제하고 본문 참조를 치환한다`() {
+        // given
+        val asset = ImageAsset.uploading(
+            id = "image-id",
             ownerUserId = 17L,
-            storageKey = "images/post-image-id.png",
-            url = "https://cdn.example.com/images/post-image-id.png",
+            storageKey = "ogonggo/side/image-id.png",
+            url = "https://cdn.example.com/ogonggo/side/image-id.png",
             mimeType = "image/png",
             size = 3L,
         ).also {
             it.markUploaded()
-            it.attach(12L)
+            it.attach()
         }
-        Mockito.`when`(repository.findByIdAndOwnerUserIdAndDeletedAtIsNull(profileImage.id, 17L)).thenReturn(profileImage)
-        Mockito.`when`(repository.findByIdAndOwnerUserIdAndDeletedAtIsNull(postImage.id, 17L)).thenReturn(postImage)
+        givenAssets(asset)
+        Mockito.`when`(storage.urlOf(Mockito.anyString())).thenAnswer { invocation ->
+            "https://cdn.example.com/${invocation.arguments[0]}"
+        }
 
         // when
-        manager.unreferenceProfileImage(17L, profileImage.id, now)
-        manager.unreferenceProfileImage(17L, postImage.id, now)
+        val copiedContent = manager.copyContentImages(ownerUserId = 17L, content = content(asset))
 
         // then
-        assertEquals(ImageAssetStatus.UNREFERENCED, profileImage.status)
-        assertEquals(now, profileImage.unreferencedAt)
-        assertEquals(ImageAssetStatus.ATTACHED, postImage.status)
+        assertTrue(copiedContent.orEmpty().contains("https://cdn.example.com/ogonggo/side/"))
+        assertTrue(!copiedContent.orEmpty().contains(asset.id))
+        val copyInvocation = Mockito.mockingDetails(storage).invocations.single { it.method.name == "copy" }
+        assertEquals(asset.storageKey, copyInvocation.arguments[0])
+        assertTrue((copyInvocation.arguments[1] as String).matches(Regex("ogonggo/side/[0-9a-f-]{36}\\.png")))
+        val saveInvocation = Mockito.mockingDetails(repository).invocations.single { it.method.name == "save" }
+        assertEquals(ImageAssetStatus.ATTACHED, (saveInvocation.arguments[0] as ImageAsset).status)
+        assertEquals(ImageAssetStatus.ATTACHED, asset.status)
+    }
+
+    @Test
+    fun `프로필 이미지를 바꾸면 새 이미지를 첨부하고 전에 쓰던 이미지는 참조를 푼다`() {
+        // given
+        val previous = uploadedAsset("old-image").also { it.attach() }
+        val next = uploadedAsset("new-image")
+        givenAssets(previous, next)
+
+        // when
+        val url = manager.replaceImage(17L, previous.id, next.id, now)
+
+        // then
+        assertEquals(next.url, url)
+        assertEquals(ImageAssetStatus.ATTACHED, next.status)
+        assertEquals(ImageAssetStatus.UNREFERENCED, previous.status)
+    }
+
+    @Test
+    fun `같은 프로필 이미지를 다시 보내면 그대로 둔다`() {
+        // given
+        val current = uploadedAsset().also { it.attach() }
+        givenAssets(current)
+
+        // when
+        val url = manager.replaceImage(17L, current.id, current.id, now)
+
+        // then
+        assertEquals(current.url, url)
+        assertEquals(ImageAssetStatus.ATTACHED, current.status)
+    }
+
+    @Test
+    fun `다른 곳에서 쓰는 이미지나 남의 이미지는 프로필 이미지로 쓸 수 없다`() {
+        // given
+        val usedElsewhere = uploadedAsset().also { it.attach() }
+        val previous = uploadedAsset("old-image").also { it.attach() }
+        givenAssets(usedElsewhere, previous)
+
+        // when & then
+        listOf(17L, 18L).forEach { ownerUserId ->
+            val exception = assertThrows(InvalidValueException::class.java) {
+                manager.replaceImage(ownerUserId, previous.id, usedElsewhere.id, now)
+            }
+            assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
+        }
+        assertEquals(ImageAssetStatus.ATTACHED, previous.status)
     }
 
     @Test
@@ -160,17 +194,35 @@ class ImageAssetManagerTest {
         Mockito.verify(storage).delete(asset.storageKey)
     }
 
-    private fun uploadedAsset(): ImageAsset = ImageAsset.uploading(
-        id = "image-id",
+    /** 소유자와 식별자로 거른 이미지를 돌려주는 저장소 대역이다. */
+    private fun givenAssets(vararg assets: ImageAsset) {
+        Mockito.`when`(repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(Mockito.anyCollection(), Mockito.anyLong()))
+            .thenAnswer { invocation ->
+                val ids = invocation.getArgument<Collection<String>>(0)
+                val ownerUserId = invocation.getArgument<Long>(1)
+                assets.filter { it.id in ids && it.ownerUserId == ownerUserId }
+            }
+        Mockito.`when`(repository.findByIdAndOwnerUserIdAndDeletedAtIsNull(Mockito.anyString(), Mockito.anyLong()))
+            .thenAnswer { invocation ->
+                val id = invocation.getArgument<String>(0)
+                val ownerUserId = invocation.getArgument<Long>(1)
+                assets.firstOrNull { it.id == id && it.ownerUserId == ownerUserId }
+            }
+    }
+
+    private fun uploadedAsset(id: String = "image-id"): ImageAsset = ImageAsset.uploading(
+        id = id,
         ownerUserId = 17L,
-        storageKey = "images/image-id.png",
-        url = "https://cdn.example.com/images/image-id.png",
+        storageKey = "images/$id.png",
+        url = "https://cdn.example.com/images/$id.png",
         mimeType = "image/png",
         size = 3L,
     ).also { it.markUploaded() }
 
-    private fun content(asset: ImageAsset): String =
-        """{"root":{"children":[{"type":"image","imageId":"${asset.id}","src":"${asset.url}"}]}}"""
+    private fun content(vararg assets: ImageAsset): String =
+        assets.joinToString(prefix = """{"root":{"children":[""", postfix = "]}}") {
+            """{"type":"image","imageId":"${it.id}","src":"${it.url}"}"""
+        }
 
     private fun plainContent(): String = """{"root":{"children":[]}}"""
 }

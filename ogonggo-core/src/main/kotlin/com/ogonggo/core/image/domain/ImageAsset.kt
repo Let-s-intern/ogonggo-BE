@@ -51,10 +51,6 @@ class ImageAsset internal constructor(
     var status: ImageAssetStatus = status
         protected set
 
-    @Column(name = "post_id")
-    var postId: Long? = null
-        protected set
-
     @Column(name = "unreferenced_at")
     var unreferencedAt: LocalDateTime? = null
         protected set
@@ -77,44 +73,22 @@ class ImageAsset internal constructor(
         status = ImageAssetStatus.TEMPORARY
     }
 
-    fun attach(postId: Long) {
-        check(deletedAt == null) { "삭제된 이미지는 연결할 수 없습니다." }
-        require(postId > 0) { "게시글 식별자는 양수여야 합니다." }
-        check(
-            status == ImageAssetStatus.TEMPORARY ||
-                status == ImageAssetStatus.UNREFERENCED ||
-                (status == ImageAssetStatus.ATTACHED && this.postId == postId),
-        ) {
-            "임시 또는 참조 해제된 이미지만 게시글에 연결할 수 있습니다."
-        }
-        check(this.postId == null || this.postId == postId) { "이미지가 다른 게시글에 연결되어 있습니다." }
-        this.postId = postId
-        this.unreferencedAt = null
-        this.status = ImageAssetStatus.ATTACHED
-    }
-
     /**
-     * 프로필 이미지로 연결한다. 게시글 식별자 없이 ATTACHED로 두므로 정리 대상에서 빠지고 게시글에는 연결할 수 없다.
-     * 이미 프로필 이미지로 연결된 이미지를 다시 연결해도 그대로다.
+     * 본문이나 프로필에 쓰이게 된 이미지를 첨부 상태로 둔다. 어디에 쓰이는지는 쓰는 쪽이 이미지 식별자와 URL로 기억한다.
+     * 이미 첨부된 이미지는 다른 곳에서 쓰는 중일 수 있으므로 다시 첨부할 수 없다.
      */
-    fun attachToProfile() {
+    fun attach() {
         check(deletedAt == null) { "삭제된 이미지는 연결할 수 없습니다." }
-        check(isAttachableToProfile()) { "임시 또는 참조 해제된 이미지만 프로필에 연결할 수 있습니다." }
-        this.postId = null
+        check(isAttachable()) { "임시 또는 참조 해제된 이미지만 연결할 수 있습니다." }
         this.unreferencedAt = null
         this.status = ImageAssetStatus.ATTACHED
     }
 
-    fun isAttachableToProfile(): Boolean =
-        status == ImageAssetStatus.TEMPORARY ||
-            status == ImageAssetStatus.UNREFERENCED ||
-            isAttachedToProfile()
-
-    fun isAttachedToProfile(): Boolean = status == ImageAssetStatus.ATTACHED && postId == null
+    fun isAttachable(): Boolean =
+        status == ImageAssetStatus.TEMPORARY || status == ImageAssetStatus.UNREFERENCED
 
     fun unreference(now: LocalDateTime) {
         if (status == ImageAssetStatus.ATTACHED) {
-            postId = null
             unreferencedAt = now
             status = ImageAssetStatus.UNREFERENCED
         }
@@ -122,7 +96,6 @@ class ImageAsset internal constructor(
 
     fun markDeletePending() {
         if (deletedAt == null && status != ImageAssetStatus.ATTACHED) {
-            postId = null
             status = ImageAssetStatus.DELETE_PENDING
         }
     }

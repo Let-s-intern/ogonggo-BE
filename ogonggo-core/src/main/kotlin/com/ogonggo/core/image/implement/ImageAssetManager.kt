@@ -43,51 +43,48 @@ class ImageAssetManager internal constructor(
         imageAssetRepository.save(asset)
     }
 
-    fun syncPostImages(
+    /**
+     * 본문(Lexical JSON)의 이미지 노드(`imageId`·`src`)를 기준으로 이미지 상태를 맞춘다.
+     * 이번에 새로 들어온 이미지는 첨부하고, 본문에서 빠진 이미지는 참조를 풀어 보존 기간이 지나면 정리되게 한다.
+     * 이전 본문에 있던 이미지만 이미 첨부된 상태여도 받으므로, 다른 글이나 프로필에서 쓰는 이미지는 넣을 수 없다.
+     */
+    fun syncContentImages(
         ownerUserId: Long,
-        postId: Long,
         previousContent: String?,
         currentContent: String?,
         now: LocalDateTime,
     ) {
         val previousIds = extractImageReferences(previousContent).keys
         val currentReferences = extractImageReferences(currentContent)
-        val currentIds = currentReferences.keys
-        val currentAssets = loadAndValidate(ownerUserId, postId, currentIds)
-        if (currentAssets.any { currentReferences[it.id] != it.url }) {
+        val addedIds = currentReferences.keys - previousIds
+        val currentAssets = readOwnedAssets(ownerUserId, currentReferences.keys)
+        if (
+            currentAssets.size != currentReferences.size ||
+            currentAssets.any { currentReferences[it.id] != it.url } ||
+            currentAssets.any { it.id in addedIds && !it.isAttachable() }
+        ) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
         }
 
-        currentAssets.forEach { it.attach(postId) }
-        val removedIds = previousIds - currentIds
-        if (removedIds.isNotEmpty()) {
-            imageAssetRepository
-                .findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(removedIds, ownerUserId)
-                .filter { it.postId == postId }
-                .forEach { it.unreference(now) }
-        }
-        imageAssetRepository.saveAll(currentAssets)
+        val attached = currentAssets.filter { it.isAttachable() }.onEach { it.attach() }
+        imageAssetRepository.saveAll(attached)
+        unreference(ownerUserId, previousIds - currentReferences.keys, now)
     }
 
-    fun copyPostImages(
-        ownerUserId: Long,
-        sourcePostId: Long,
-        targetPostId: Long,
-        content: String?,
-    ): String? {
+    /** 지운 글의 본문 이미지 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
+    fun unreferenceContentImages(ownerUserId: Long, content: String?, now: LocalDateTime) {
+        unreference(ownerUserId, extractImageReferences(content).keys, now)
+    }
+
+    /** 본문 이미지를 새 저장 키와 새 이미지로 복제하고, 본문의 이미지 참조를 복제본으로 바꿔 돌려준다. */
+    fun copyContentImages(ownerUserId: Long, content: String?): String? {
         val references = extractImageReferences(content)
         if (references.isEmpty()) return content
 
-        val sourceAssets = imageAssetRepository
-            .findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(references.keys, ownerUserId)
-            .associateBy(ImageAsset::id)
+        val sourceAssets = readOwnedAssets(ownerUserId, references.keys).associateBy(ImageAsset::id)
         if (
             sourceAssets.size != references.size ||
-            sourceAssets.values.any {
-                it.status != ImageAssetStatus.ATTACHED ||
-                    it.postId != sourcePostId ||
-                    references[it.id] != it.url
-            }
+            sourceAssets.values.any { it.status != ImageAssetStatus.ATTACHED || references[it.id] != it.url }
         ) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
         }
@@ -99,7 +96,8 @@ class ImageAssetManager internal constructor(
                 val source = checkNotNull(sourceAssets[sourceId])
                 val targetId = UUID.randomUUID().toString()
                 val extension = source.storageKey.substringAfterLast('.', "bin")
-                val targetKey = "images/$targetId.$extension"
+                // 원본과 같은 폴더(용도)에 둔다.
+                val targetKey = "${source.storageKey.substringBeforeLast('/')}/$targetId.$extension"
                 val targetUrl = s3ObjectClient.urlOf(targetKey)
 
                 s3ObjectClient.copy(source.storageKey, targetKey, source.mimeType)
@@ -114,7 +112,7 @@ class ImageAssetManager internal constructor(
                     size = source.size,
                 ).also {
                     it.markUploaded()
-                    it.attach(targetPostId)
+                    it.attach()
                 }
                 imageAssetRepository.save(targetAsset)
                 replacements[sourceId] = ImageReference(targetId, targetUrl)
@@ -126,36 +124,28 @@ class ImageAssetManager internal constructor(
         }
     }
 
-    fun unreferencePostImages(postId: Long, now: LocalDateTime) {
-        val assets = imageAssetRepository.findAllByPostIdAndStatusAndDeletedAtIsNull(
-            postId = postId,
-            status = ImageAssetStatus.ATTACHED,
-        )
-        assets.forEach { it.unreference(now) }
-        imageAssetRepository.saveAll(assets)
-    }
-
     /**
-     * 사용자가 올린 이미지를 프로필 이미지(일반 회원 프로필 이미지, 기업 로고)로 연결하고 URL을 돌려준다.
-     * 남의 이미지, 게시글에 쓰는 이미지, 아직 올리는 중이거나 정리된 이미지는 쓸 수 없다.
+     * 이미지 한 장을 쓰는 자리(회원 프로필 이미지, 기업 로고)의 이미지를 바꾸고 새 이미지 URL을 돌려준다.
+     * 새 이미지는 첨부하고 이전 이미지는 참조를 푼다. 같은 이미지를 다시 보내면 그대로 둔다.
+     * 남의 이미지, 다른 곳에서 쓰는 이미지, 지워진 이미지는 쓸 수 없다.
      */
-    fun attachProfileImage(ownerUserId: Long, imageId: String): String {
+    fun replaceImage(ownerUserId: Long, previousImageId: String?, imageId: String, now: LocalDateTime): String {
         val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId)
-        if (asset == null || !asset.isAttachableToProfile()) {
+            ?: throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        if (imageId == previousImageId) return asset.url
+        if (!asset.isAttachable()) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
         }
-        asset.attachToProfile()
+
+        asset.attach()
         imageAssetRepository.save(asset)
+        previousImageId?.let { unreference(ownerUserId, setOf(it), now) }
         return asset.url
     }
 
-    /** 더 쓰지 않는 프로필 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
-    fun unreferenceProfileImage(ownerUserId: Long, imageId: String, now: LocalDateTime) {
-        val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId) ?: return
-        if (asset.isAttachedToProfile()) {
-            asset.unreference(now)
-            imageAssetRepository.save(asset)
-        }
+    /** 더 쓰지 않는 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
+    fun unreferenceImage(ownerUserId: Long, imageId: String, now: LocalDateTime) {
+        unreference(ownerUserId, setOf(imageId), now)
     }
 
     fun cleanup(now: LocalDateTime, retention: java.time.Duration, batchSize: Int = 100): Int {
@@ -199,22 +189,16 @@ class ImageAssetManager internal constructor(
         return deletedCount
     }
 
-    private fun loadAndValidate(ownerUserId: Long, postId: Long, ids: Set<String>): List<ImageAsset> {
-        if (ids.isEmpty()) return emptyList()
-
-        val assets = imageAssetRepository
-            .findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(ids, ownerUserId)
-            .associateBy(ImageAsset::id)
-        if (
-            assets.size != ids.size ||
-            assets.values.any {
-                it.status !in setOf(ImageAssetStatus.TEMPORARY, ImageAssetStatus.UNREFERENCED) &&
-                    !(it.status == ImageAssetStatus.ATTACHED && it.postId == postId)
-            }
-        ) {
-            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+    private fun readOwnedAssets(ownerUserId: Long, ids: Set<String>): List<ImageAsset> =
+        if (ids.isEmpty()) {
+            emptyList()
+        } else {
+            imageAssetRepository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(ids, ownerUserId)
         }
-        return ids.map { id -> checkNotNull(assets[id]) }
+
+    private fun unreference(ownerUserId: Long, ids: Set<String>, now: LocalDateTime) {
+        val assets = readOwnedAssets(ownerUserId, ids).onEach { it.unreference(now) }
+        imageAssetRepository.saveAll(assets)
     }
 
     private fun extractImageReferences(content: String?): Map<String, String> {

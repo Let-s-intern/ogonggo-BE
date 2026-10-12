@@ -258,11 +258,11 @@ class Work24CollectorTest {
         assertEquals(NOW, bootcamp.recruitmentStartAt)
         assertEquals(LocalDateTime.of(2026, 10, 5, 23, 59, 59), bootcamp.recruitmentEndAt)
         // 고용24는 과정 이미지를 주지 않고 훈련기관 로고는 이미지로 열리지 않는 다운로드 주소라 비운다.
-        assertTrue(requireNotNull(bootcamp.logoUrl).matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.png""")))
+        assertTrue(requireNotNull(bootcamp.logoUrl).matches(Regex("""$CDN/ogonggo/work24/[0-9a-f]{40}\.png""")))
         // 훈련기관 사진은 목록의 대표 이미지로 쓰지 않고 상세에서만 보여 주는 사진으로 넣는다.
         assertNull(bootcamp.representativeImageUrl)
         assertEquals(listOf("안내데스크" to 0, "강의실" to 1), bootcamp.images.map { it.caption to it.displayOrder })
-        assertTrue(bootcamp.images.all { it.url.matches(Regex("""$CDN/images/work24/[0-9a-f]{40}\.jpg""")) })
+        assertTrue(bootcamp.images.all { it.url.matches(Regex("""$CDN/ogonggo/work24/[0-9a-f]{40}\.jpg""")) })
         // 고용24는 K-디지털 트레이닝 조건에 다른 훈련유형도 함께 주므로 목록의 훈련유형 이름을 쓴다.
         assertEquals("국가기간전략산업직종", bootcamp.programType)
         assertEquals(BootcampOperationType.ONLINE, bootcamp.operationType)

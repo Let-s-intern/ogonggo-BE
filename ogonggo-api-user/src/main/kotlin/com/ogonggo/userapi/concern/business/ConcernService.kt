@@ -10,10 +10,13 @@ import com.ogonggo.core.concern.implement.ConcernMetricReader
 import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
 import com.ogonggo.core.concern.implement.dto.ConcernUpdateDto
+import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
+import com.ogonggo.userapi.error.InvalidRequestFieldException
 import com.ogonggo.userapi.user.implement.requireActive
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -30,6 +33,8 @@ class ConcernService(
     private val concernManager: ConcernManager,
     private val concernMetricReader: ConcernMetricReader,
     private val commentReader: ConcernCommentReader,
+    private val contentValidator: LexicalEditorStateValidator,
+    private val imageAssetManager: ImageAssetManager,
     private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
 ) {
@@ -75,13 +80,20 @@ class ConcernService(
     @Transactional
     fun create(userId: Long, command: SaveConcernCommand): Long {
         userReader.read(userId).status.requireActive()
+        val content = validContent(command.content)
         val concern = concernAppender.append(
             ConcernAppendDto(
                 authorUserId = userId,
                 category = command.category,
                 title = command.title,
-                content = command.content,
+                content = content,
             ),
+        )
+        imageAssetManager.syncContentImages(
+            ownerUserId = userId,
+            previousContent = null,
+            currentContent = content,
+            now = LocalDateTime.now(clock),
         )
         return concern.requiredId()
     }
@@ -91,9 +103,16 @@ class ConcernService(
         userReader.read(userId).status.requireActive()
         val concern = concernReader.readForUpdate(concernId)
         verifyAuthor(concern, userId)
+        val content = validContent(command.content)
+        imageAssetManager.syncContentImages(
+            ownerUserId = userId,
+            previousContent = concern.content,
+            currentContent = content,
+            now = LocalDateTime.now(clock),
+        )
         concernManager.update(
             concern,
-            ConcernUpdateDto(category = command.category, title = command.title, content = command.content),
+            ConcernUpdateDto(category = command.category, title = command.title, content = content),
         )
     }
 
@@ -103,7 +122,9 @@ class ConcernService(
         val concern = concernReader.readIncludingDeletedForUpdate(concernId)
         verifyAuthor(concern, userId)
         if (concern.isDeleted()) return
-        concernManager.delete(concern, LocalDateTime.now(clock))
+        val now = LocalDateTime.now(clock)
+        concernManager.delete(concern, now)
+        imageAssetManager.unreferenceContentImages(userId, concern.content, now)
     }
 
     private fun toSummaries(concerns: List<Concern>): List<ConcernSummaryResult> {
@@ -134,6 +155,9 @@ class ConcernService(
             throw ForbiddenException(ConcernErrorCode.CONCERN_PERMISSION_DENIED)
         }
     }
+
+    private fun validContent(content: String): String =
+        contentValidator.validateAndSerialize(content) { reason -> throw InvalidRequestFieldException("content", reason) }
 
     private fun Concern.requiredId(): Long = checkNotNull(id) { "고민글 식별자가 없습니다." }
 

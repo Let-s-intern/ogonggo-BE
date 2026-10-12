@@ -153,7 +153,7 @@ class RecruitmentPostManagementServiceTest {
         Mockito.`when`(postManager.copyAsDraft(source)).thenReturn(copied)
         Mockito.`when`(copied.title).thenReturn("공개 모집글")
         val copiedContent = copied.content
-        Mockito.`when`(imageAssetManager.copyPostImages(USER_ID, 12L, 101L, copiedContent))
+        Mockito.`when`(imageAssetManager.copyContentImages(USER_ID, copiedContent))
             .thenReturn(copiedContent)
 
         val result = service.copy(USER_ID, 12L)
@@ -164,7 +164,7 @@ class RecruitmentPostManagementServiceTest {
         assertEquals(false, result.agreedToPolicy)
         Mockito.verify(postReader).readOwnedForUpdate(USER_ID, 12L)
         Mockito.verify(postManager).copyAsDraft(source)
-        Mockito.verify(imageAssetManager).copyPostImages(USER_ID, 12L, 101L, copied.content)
+        Mockito.verify(imageAssetManager).copyContentImages(USER_ID, copied.content)
     }
 
     @Test

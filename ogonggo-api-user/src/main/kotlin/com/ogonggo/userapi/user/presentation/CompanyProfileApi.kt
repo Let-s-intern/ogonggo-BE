@@ -39,7 +39,7 @@ interface CompanyProfileApi {
                 responseCode = "400",
                 description = """
                     BAD_REQUEST: 기관명은 비어 있거나 150자를 넘을 수 없고, logoImageId는 공백이거나 36자를 넘을 수 없습니다.
-                    IMAGE_ASSET_NOT_AVAILABLE: 내가 올린 이미지가 아니거나, 게시글에 쓰는 중이거나, 이미 지워진 이미지입니다.
+                    IMAGE_ASSET_NOT_AVAILABLE: 내가 올린 이미지가 아니거나, 다른 곳(본문·다른 프로필)에 쓰는 중이거나, 이미 지워진 이미지입니다.
                 """,
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),

@@ -41,8 +41,8 @@ class Work24InstitutionImageImporterTest {
         server.verify()
         assertEquals(images, again)
         assertEquals(3, uploadedKeys.size)
-        assertTrue(uploadedKeys[0].matches(Regex("""images/work24/[0-9a-f]{40}\.png""")), uploadedKeys[0])
-        assertTrue(uploadedKeys[1].matches(Regex("""images/work24/[0-9a-f]{40}\.jpg""")), uploadedKeys[1])
+        assertTrue(uploadedKeys[0].matches(Regex("""ogonggo/work24/[0-9a-f]{40}\.png""")), uploadedKeys[0])
+        assertTrue(uploadedKeys[1].matches(Regex("""ogonggo/work24/[0-9a-f]{40}\.jpg""")), uploadedKeys[1])
         assertEquals(
             Work24InstitutionImagesDto(
                 logoUrl = "https://cdn.ogonggo.test/${uploadedKeys[0]}",

@@ -106,7 +106,7 @@ interface ConcernApi {
     @Operation(
         operationId = "createConcern",
         summary = "고민글 작성",
-        description = "로그인한 활성 사용자가 고민글을 작성합니다. 본문은 일반 텍스트입니다.",
+        description = "로그인한 활성 사용자가 고민글을 작성합니다. 본문은 Lexical EditorState JSON이며, 본문 이미지 노드의 `imageId`·`src`는 `POST /api/v1/images` 응답 값을 씁니다.",
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -114,7 +114,7 @@ interface ConcernApi {
             ApiResponse(responseCode = "201", description = "작성 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 요청 필드가 올바르지 않음",
+                description = "BAD_REQUEST: 요청 필드가 올바르지 않음. IMAGE_ASSET_NOT_AVAILABLE: 본문 이미지가 내가 올린 이미지가 아니거나 다른 글·프로필에 쓰는 중이거나 이미 지워짐",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -145,7 +145,7 @@ interface ConcernApi {
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 요청 필드가 올바르지 않음",
+                description = "BAD_REQUEST: 요청 필드가 올바르지 않음. IMAGE_ASSET_NOT_AVAILABLE: 본문 이미지가 내가 올린 이미지가 아니거나 다른 글·프로필에 쓰는 중이거나 이미 지워짐",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

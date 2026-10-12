@@ -293,7 +293,7 @@ PUT /api/v1/users/me/notification-email   { "notificationEmail": "me@example.com
 > 오공고에서 바꾼 이미지는 오공고가 소유하고 렛츠커리어에 보내지 않는다. (2026-09-30 결정, 팀 리뷰 필요)
 
 ```text
-POST   /api/v1/images                     파일을 올리고 imageId를 받는다
+POST   /api/v1/images                     파일을 올리고 imageId를 받는다 (presigned 방식은 REST API 설계의 이미지 업로드 참고)
 PUT    /api/v1/users/me/profile-image     { "imageId": "..." }로 바꾼다
 DELETE /api/v1/users/me/profile-image     지워 렛츠커리어 이미지로 되돌린다
 ```
@@ -301,8 +301,8 @@ DELETE /api/v1/users/me/profile-image     지워 렛츠커리어 이미지로 �
 렛츠커리어에도 프로필 이미지가 있고 `verify` 응답의 `profileImageUrl`을 로그인마다 `user_profiles.profile_image_url`에 복제합니다. 이 칸을 오공고에서 고치면 렛츠커리어 프로필이 바뀐 뒤 다시 로그인할 때 덮어써지므로, 오공고에서 바꾼 이미지는 `ogonggo_profile_image_id`·`ogonggo_profile_image_url`에 따로 둡니다. 조회(`GET /users/me`의 `profile.profileImageUrl`, 모집글·댓글 작성자, 관리자 회원 목록)는 오공고 이미지가 있으면 그것을, 없으면 렛츠커리어 이미지를 보입니다. 렛츠커리어 쪽 이미지를 바꾸는 내부 API는 없어 렛츠커리어 화면에는 반영되지 않습니다.
 
 - 일반 회원만 씁니다. 기업 회원은 403 `GENERAL_MEMBER_REQUIRED`입니다. 기업 회원의 프로필 이미지는 기업 로고이며, 기본 정보 수정(`PUT /users/me/company-profile/basic-info`)의 `logoImageId`로 같은 방식으로 연결합니다(`company_profiles.logo_image_id`·`logo_url`).
-- 연결한 이미지(기업 로고 포함)는 `image_assets`에서 게시글 없이 `ATTACHED`로 두어 24시간 정리 대상에서 빠집니다. 바꾸거나 지우면 이전 이미지를 `UNREFERENCED`로 돌려 보존 기간(24시간) 뒤 S3에서 지웁니다.
-- 내가 올린 임시 또는 참조 해제된 이미지만 연결할 수 있습니다. 남의 이미지, 게시글에 쓰는 이미지, 이미 정리된 이미지는 400 `IMAGE_ASSET_NOT_AVAILABLE`입니다. 반대로 프로필 이미지는 게시글에 연결할 수 없습니다.
+- 연결한 이미지(기업 로고 포함)는 `image_assets`에서 `ATTACHED`로 두어 24시간 정리 대상에서 빠집니다. 어디에 쓰는지는 프로필이 이미지 식별자로 기억합니다. 바꾸거나 지우면 이전 이미지를 `UNREFERENCED`로 돌려 보존 기간(24시간) 뒤 S3에서 지웁니다.
+- 내가 올린 임시 또는 참조 해제된 이미지만 연결할 수 있습니다. 남의 이미지, 다른 곳(본문·다른 프로필)에 쓰는 이미지, 이미 정리된 이미지는 400 `IMAGE_ASSET_NOT_AVAILABLE`입니다. 반대로 프로필 이미지는 본문에 넣을 수 없습니다. 같은 이미지를 다시 보내면 그대로 둡니다.
 - 같은 사용자가 동시에 두 번 바꾸면 먼저 끝난 쪽의 이미지가 정리되지 않고 남을 수 있습니다. 드문 경우라 잠금을 두지 않았습니다.
 
 ### 비밀번호 변경

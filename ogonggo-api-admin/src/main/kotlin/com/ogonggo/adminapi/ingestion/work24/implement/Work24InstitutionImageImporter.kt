@@ -95,8 +95,8 @@ class Work24InstitutionImageImporter(
         private const val IMAGE_PATH = "/hr/z/z/0000/hrdFileDownLoad.do"
         private const val LOGO_ALT = "훈련기관사진"
 
-        /** 사용자가 올린 이미지와 같은 `images/` 아래에 두어 같은 공개 경로로 읽힌다. */
-        private const val KEY_PREFIX = "images/work24/"
+        /** 렛츠커리어와 같이 쓰는 버킷이라 사용자가 올린 이미지처럼 `ogonggo/` 아래에 둔다. */
+        private const val KEY_PREFIX = "ogonggo/work24/"
         private const val MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024
 
         /** 확인한 훈련기관은 모두 사진이 5장이었다. 화면이 달라져 많이 오더라도 이만큼만 옮긴다. */

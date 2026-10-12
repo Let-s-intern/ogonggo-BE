@@ -7,6 +7,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(CloudAwsProperties::class)
@@ -24,14 +25,24 @@ class S3Configuration {
     fun s3Client(aws: CloudAwsProperties, properties: S3Properties): S3Client =
         S3Client.builder()
             .region(Region.of(properties.region))
-            .apply {
-                if (aws.credentials.configured) {
-                    credentialsProvider(
-                        StaticCredentialsProvider.create(
-                            AwsBasicCredentials.create(aws.credentials.accessKey, aws.credentials.secretKey),
-                        ),
-                    )
-                }
-            }
+            .apply { credentials(aws)?.let(::credentialsProvider) }
             .build()
+
+    /** 클라이언트가 S3에 직접 올릴 presigned URL을 만든다. [s3Client]와 같은 인증을 쓴다. */
+    @Bean
+    fun s3Presigner(aws: CloudAwsProperties, properties: S3Properties): S3Presigner =
+        S3Presigner.builder()
+            .region(Region.of(properties.region))
+            .apply { credentials(aws)?.let(::credentialsProvider) }
+            .build()
+
+    /** 접근 키가 없으면 null을 돌려 AWS 기본 인증(환경변수, ECS 태스크 역할 등)을 쓰게 한다. */
+    private fun credentials(aws: CloudAwsProperties): StaticCredentialsProvider? =
+        if (aws.credentials.configured) {
+            StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(aws.credentials.accessKey, aws.credentials.secretKey),
+            )
+        } else {
+            null
+        }
 }
