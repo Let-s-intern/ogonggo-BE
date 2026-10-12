@@ -1,0 +1,97 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "채용공고·부트캠프 라이프사이클",
+    "output": "ogonggo-core/docs/domain/lifecycles/content.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Let-s-intern/ogonggo-BE.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "ceac604927d8edfbb5cf51a638a0a33a786fea07"
+    }
+  },
+  "lanes": [
+    { "id": "main", "label": "게시 상태" },
+    { "id": "review", "label": "검수 (기업 등록만)" },
+    { "id": "recruit", "label": "모집 상태 (따로 움직임)" }
+  ],
+  "states": [
+    {
+      "id": "registered", "type": "start", "label": "등록", "sublabel": "등록 경로 결정", "lane": "main", "col": 0, "step": "01", "tag": "ContentSource",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/contentreview/domain/ContentSource.kt", "line": 11, "end_line": 38, "label": "등록 경로 규칙" }
+      ]
+    },
+    {
+      "id": "published", "type": "success", "label": "게시", "sublabel": "회원에게 노출", "lane": "main", "col": 2, "step": "02", "tag": "PUBLISHED",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 528, "end_line": 536, "label": "Job.publish" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/job/business/CrawlerJobService.kt", "line": 103, "label": "크롤러 등록 시 게시" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/ingestion/work24/implement/Work24JobMapper.kt", "line": 112, "label": "고용24 수집 시 게시" }
+      ]
+    },
+    {
+      "id": "hidden", "type": "neutral", "label": "숨김", "sublabel": "노출 중단", "lane": "main", "col": 4, "step": "03", "tag": "HIDDEN",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 538, "end_line": 541, "label": "Job.hide" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/job/business/AdminJobService.kt", "line": 105, "end_line": 106, "label": "관리자 노출 전환" }
+      ]
+    },
+    {
+      "id": "pending", "type": "waiting", "label": "검수 대기", "sublabel": "초안·숨김 유지", "lane": "review", "col": 1, "tag": "PENDING",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 356, "label": "기업 등록은 PENDING" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 570, "end_line": 575, "label": "Job.requestReview" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/job/business/CompanyJobService.kt", "line": 50, "end_line": 58, "label": "수정하면 재검수" }
+      ]
+    },
+    {
+      "id": "rejected", "type": "failure", "label": "반려", "sublabel": "비노출 + 사유", "lane": "review", "col": 3, "tag": "REJECTED",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 564, "end_line": 568, "label": "Job.rejectReview" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/contentreview/business/AdminContentReviewService.kt", "line": 60, "end_line": 77, "label": "반려 사유 저장" }
+      ]
+    },
+    {
+      "id": "draft_recruit", "type": "start", "label": "임시저장", "sublabel": "부트캠프만", "lane": "recruit", "col": 0, "tag": "DRAFT",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/bootcamp/domain/BootcampRecruitmentStatus.kt", "line": 9, "end_line": 11, "label": "부트캠프 모집 상태" }
+      ]
+    },
+    {
+      "id": "recruiting", "type": "active", "label": "모집 중", "sublabel": "마감일 전", "lane": "recruit", "col": 2, "tag": "RECRUITING",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 522, "end_line": 526, "label": "마감일로 계산" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/bootcamp/domain/Bootcamp.kt", "line": 379, "end_line": 386, "label": "Bootcamp.startRecruitment" }
+      ]
+    },
+    {
+      "id": "closed", "type": "neutral", "label": "마감", "sublabel": "모집 종료", "lane": "recruit", "col": 4, "tag": "CLOSED",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 543, "end_line": 549, "label": "Job.close" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/job/presentation/JobAutoCloseScheduler.kt", "line": 22, "end_line": 27, "label": "자동 마감 작업" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/bootcamp/domain/Bootcamp.kt", "line": 388, "end_line": 398, "label": "Bootcamp.close" }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "registered", "to": "published", "label": "크롤링·고용24" },
+    { "from": "published", "to": "hidden", "label": "숨기기" },
+    { "from": "hidden", "to": "published", "label": "다시 게시", "note": "검수가 없거나 승인된 콘텐츠만" },
+    { "from": "registered", "to": "pending", "label": "기업 등록" },
+    { "from": "pending", "to": "published", "label": "승인", "variant": "emphasis", "note": "승인하면 바로 게시" },
+    { "from": "pending", "to": "rejected", "label": "반려", "variant": "security" },
+    { "from": "rejected", "to": "pending", "label": "수정·되돌리기" },
+    { "from": "published", "to": "pending", "label": "기업이 수정", "variant": "dashed", "note": "다시 검수, 그동안 숨김" },
+    { "from": "draft_recruit", "to": "recruiting", "label": "모집 시작" },
+    { "from": "recruiting", "to": "closed", "label": "마감일 경과·직접 마감" },
+    { "from": "closed", "to": "recruiting", "label": "모집 재개", "note": "부트캠프만" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "게시와 검수", "items": ["크롤링·고용24 콘텐츠는 검수 없이 바로 게시", "기업 등록 콘텐츠는 승인 전까지 게시할 수 없음", "승인하면 바로 게시, 반려하면 숨기고 사유를 남김", "기업이 내용을 고치면 다시 검수 대기로 돌아감"] },
+    { "dot": "cyan", "title": "모집 상태", "items": ["게시 상태와 별개로 움직임", "공고는 마감일로 계산하고 스케줄 작업이 마감", "부트캠프만 임시저장과 모집 재개가 있음"] },
+    { "dot": "slate", "title": "공통 규칙", "items": ["채용공고와 부트캠프가 같은 규칙을 따름", "어느 상태에서든 소프트 삭제할 수 있고 삭제 후에는 바꿀 수 없음"] }
+  ]
+}
