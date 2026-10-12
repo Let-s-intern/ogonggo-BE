@@ -124,21 +124,20 @@ class LetsCareerUserClient(
     }
 
     /**
-     * 닉네임은 렛츠커리어가 소유하므로 변경을 그대로 전달한다.
-     * 사용자가 직접 요청한 변경이라 실패를 삼키지 않고 알리며, 사용자가 다시 시도하면 되므로 재시도하지 않는다.
+     * 오공고에서 고친 닉네임과 고친 일시를 렛츠커리어로 보낸다. 렛츠커리어는 더 나중에 고친 쪽의 값만 남긴다.
+     * 실패하면 RestClientException을 그대로 던진다. 아웃박스가 다음 주기에 다시 보낸다.
+     * 렛츠커리어에 사용자가 없으면(탈퇴) 보낼 곳이 없으므로 성공으로 본다.
      */
-    fun changeNickname(letsCareerUserId: Long, nickname: String) {
-        try {
-            letsCareerRestClient.put()
-                .uri(NICKNAME_PATH, letsCareerUserId)
-                .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
-                .body(NicknameChangeRequest(nickname = nickname))
-                .retrieve()
-                .toBodilessEntity()
-        } catch (exception: RestClientException) {
-            log.error("렛츠커리어 닉네임 변경 호출에 실패했습니다. letsCareerUserId={}", letsCareerUserId, exception)
-            throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
-        }
+    fun replaceNickname(letsCareerUserId: Long, command: LetsCareerNicknameReplaceCommand) {
+        letsCareerRestClient.put()
+            .uri(NICKNAME_PATH, letsCareerUserId)
+            .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
+            .body(command)
+            .retrieve()
+            .onStatus({ it == HttpStatus.NOT_FOUND }) { _, _ ->
+                log.warn("렛츠커리어에 없는 사용자라 닉네임을 보내지 않습니다. letsCareerUserId={}", letsCareerUserId)
+            }
+            .toBodilessEntity()
     }
 
     private fun requestPasswordChange(letsCareerUserId: Long, request: PasswordChangeRequest) {
@@ -206,8 +205,12 @@ internal data class PasswordChangeRequest(
     val newPassword: String,
 )
 
-internal data class NicknameChangeRequest(
+/** 렛츠커리어 내부 API의 닉네임 교체 요청이다. */
+data class LetsCareerNicknameReplaceCommand(
     val nickname: String,
+    // 학력·희망 조건 요청과 같이 두 서버가 같은 ISO 문자열로 주고받도록 못 박는다.
+    @get:JsonFormat(shape = JsonFormat.Shape.STRING)
+    val updatedAt: LocalDateTime,
 )
 
 internal data class LetsCareerErrorResponse(

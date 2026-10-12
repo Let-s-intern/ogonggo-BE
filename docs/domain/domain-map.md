@@ -40,6 +40,7 @@
 - 일반 회원은 렛츠커리어 계정과 1:1로 대응하고 **회원 프로필**(`UserProfile`)에 렛츠커리어 프로필의 사본과 오공고에서 입력한 정보를 둡니다.
 - 기업 회원은 **기업 프로필**(`CompanyProfile`)을 가집니다.
 - 학력·희망 조건이 바뀌면 **렛츠커리어 전송 대기**(`LetsCareerJobProfileOutbox`)에 한 행을 남기고, 스케줄 작업이 최신 값을 렛츠커리어로 보냅니다.
+- 오공고에서 닉네임을 고치면 **닉네임 전송 대기**(`LetsCareerNicknameOutbox`)에 한 행을 남기고, 스케줄 작업이 최신 닉네임을 렛츠커리어로 보냅니다.
 
 ### 운영·기반: `announcement`, `servicefeedback`, `image`, `region`, `schedule`
 

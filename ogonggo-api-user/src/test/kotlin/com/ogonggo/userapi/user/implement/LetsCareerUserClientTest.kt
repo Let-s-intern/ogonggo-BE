@@ -166,34 +166,35 @@ class LetsCareerUserClientTest {
     }
 
     @Test
-    fun `내부 API 키와 새 닉네임을 실어 렛츠커리어에 PUT으로 전달한다`() {
+    fun `닉네임과 고친 일시를 PUT으로 보낸다`() {
         // given
-        server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/nickname"))
+        server.expect(requestTo(NICKNAME_URL))
             .andExpect(method(HttpMethod.PUT))
             .andExpect(header("X-Internal-Api-Key", API_KEY))
-            .andExpect(content().json("""{"nickname":"오공고"}"""))
-            .andRespond(withSuccess("""{"status":200,"message":"ok","data":null}""", MediaType.APPLICATION_JSON))
+            .andExpect(content().json("""{"nickname":"오공고","updatedAt":"2026-10-12T10:00:00"}"""))
+            .andRespond(withSuccess("""{"status":200,"message":"ok","data":{"applied":true}}""", MediaType.APPLICATION_JSON))
 
         // when
-        client.changeNickname(4821L, "오공고")
+        client.replaceNickname(4821L, NICKNAME_COMMAND)
 
         // then
         server.verify()
     }
 
     @Test
-    fun `닉네임 변경이 실패하면 렛츠커리어 연동 실패로 알린다`() {
-        listOf(
-            errorBody(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"),
-            withStatus(HttpStatus.INTERNAL_SERVER_ERROR),
-        ).forEach { response ->
-            server.reset()
-            server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/nickname")).andRespond(response)
+    fun `닉네임을 보낼 렛츠커리어 사용자가 없으면 성공으로 본다`() {
+        server.expect(requestTo(NICKNAME_URL)).andRespond(errorBody(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"))
 
-            val exception = assertThrows(BusinessException::class.java) { client.changeNickname(4821L, "오공고") }
+        client.replaceNickname(4821L, NICKNAME_COMMAND)
 
-            assertEquals(AuthErrorCode.LETSCAREER_UNAVAILABLE, exception.errorCode)
-        }
+        server.verify()
+    }
+
+    @Test
+    fun `닉네임 전송이 실패하면 예외를 그대로 던져 아웃박스가 다시 보내게 한다`() {
+        server.expect(requestTo(NICKNAME_URL)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+
+        assertThrows(RestClientException::class.java) { client.replaceNickname(4821L, NICKNAME_COMMAND) }
     }
 
     private fun errorBody(status: HttpStatus, code: String) = withStatus(status)
@@ -215,5 +216,10 @@ class LetsCareerUserClientTest {
             updatedAt = LocalDateTime.of(2026, 9, 29, 10, 0),
         )
         private const val PASSWORD_URL = "$BASE_URL/api/v1/internal/users/4821/password"
+        private const val NICKNAME_URL = "$BASE_URL/api/v1/internal/users/4821/nickname"
+        private val NICKNAME_COMMAND = LetsCareerNicknameReplaceCommand(
+            nickname = "오공고",
+            updatedAt = LocalDateTime.of(2026, 10, 12, 10, 0),
+        )
     }
 }

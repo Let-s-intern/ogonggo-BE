@@ -97,6 +97,7 @@ class UserDomainTest {
             phoneNum = "010-1234-5678",
             letsCareerAuthProvider = LetsCareerAuthProvider.KAKAO,
             nickname = "오공고",
+            letsCareerNicknameUpdatedAt = null,
             profileImageUrl = "https://example.com/profile.png",
             letsCareerUpdatedAt = updatedAt,
             syncedAt = syncedAt,
@@ -112,14 +113,59 @@ class UserDomainTest {
     }
 
     @Test
-    fun `닉네임은 공백일 수 없다`() {
+    fun `닉네임은 공백일 수 없고 고친 일시를 남긴다`() {
         val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
 
-        profile.changeNickname("오공고")
+        profile.changeNickname("오공고", joinedAt)
+        assertEquals("오공고", profile.nickname)
+        assertEquals(joinedAt, profile.nicknameUpdatedAt)
+
+        assertThrows(IllegalArgumentException::class.java) { profile.changeNickname(" ", joinedAt) }
+    }
+
+    @Test
+    fun `로그인 동기화는 렛츠커리어 닉네임이 오공고에서 고친 것보다 나중일 때만 받는다`() {
+        // given
+        val changedAt = joinedAt.plusDays(1)
+        val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
+        profile.changeNickname("오공고", changedAt)
+
+        // when: 아직 보내지 못한 오공고 변경보다 앞선 렛츠커리어 값
+        syncNickname(profile, "렛츠", letsCareerNicknameUpdatedAt = changedAt.minusHours(1))
+        syncNickname(profile, "렛츠", letsCareerNicknameUpdatedAt = null)
+
+        // then
         assertEquals("오공고", profile.nickname)
 
-        assertThrows(IllegalArgumentException::class.java) { profile.changeNickname(" ") }
+        // when: 렛츠커리어에서 더 나중에 고친 값
+        syncNickname(profile, "렛츠", letsCareerNicknameUpdatedAt = changedAt.plusHours(1))
+
+        // then
+        assertEquals("렛츠", profile.nickname)
+        assertEquals(changedAt.plusHours(1), profile.nicknameUpdatedAt)
     }
+
+    @Test
+    fun `오공고에서 닉네임을 고친 적 없으면 로그인 동기화가 렛츠커리어 닉네임을 그대로 받는다`() {
+        val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
+
+        syncNickname(profile, "렛츠", letsCareerNicknameUpdatedAt = null)
+
+        assertEquals("렛츠", profile.nickname)
+    }
+
+    private fun syncNickname(profile: UserProfile, nickname: String, letsCareerNicknameUpdatedAt: LocalDateTime?) =
+        profile.sync(
+            name = null,
+            email = null,
+            phoneNum = null,
+            letsCareerAuthProvider = null,
+            nickname = nickname,
+            letsCareerNicknameUpdatedAt = letsCareerNicknameUpdatedAt,
+            profileImageUrl = null,
+            letsCareerUpdatedAt = null,
+            syncedAt = joinedAt,
+        )
 
     @Test
     fun `수신 이메일은 공백일 수 없고 null이면 비운다`() {
@@ -147,6 +193,7 @@ class UserDomainTest {
             phoneNum = null,
             letsCareerAuthProvider = null,
             nickname = null,
+            letsCareerNicknameUpdatedAt = null,
             profileImageUrl = "https://letscareer.example.com/profile.png",
             letsCareerUpdatedAt = joinedAt.plusDays(1),
             syncedAt = joinedAt.plusDays(1),

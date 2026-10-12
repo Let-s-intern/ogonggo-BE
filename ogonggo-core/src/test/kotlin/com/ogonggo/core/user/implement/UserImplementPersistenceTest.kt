@@ -36,6 +36,7 @@ import org.springframework.test.context.ContextConfiguration
     UserAppender::class,
     UserManager::class,
     LetsCareerJobProfileOutboxManager::class,
+    LetsCareerNicknameOutboxManager::class,
     UserProfileManager::class,
     UserProfileReader::class,
     CompanyProfileAppender::class,
@@ -47,6 +48,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     private val userAppender: UserAppender,
     private val userManager: UserManager,
     private val outboxManager: LetsCareerJobProfileOutboxManager,
+    private val nicknameOutboxManager: LetsCareerNicknameOutboxManager,
     private val userProfileManager: UserProfileManager,
     private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -514,6 +516,21 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `닉네임 아웃박스는 사용자당 한 행이고 보내는 사이 다시 적재됐으면 보낸 것으로 표시하지 않는다`() {
+        nicknameOutboxManager.enqueue(USER_ID_FOR_NICKNAME, NOW)
+        val sending = nicknameOutboxManager.readPending().single()
+
+        nicknameOutboxManager.enqueue(USER_ID_FOR_NICKNAME, NOW.plusSeconds(1))
+        nicknameOutboxManager.markSent(sending, NOW.plusSeconds(2))
+
+        val pending = nicknameOutboxManager.readPending().single()
+        assertEquals(NOW.plusSeconds(1), pending.requestedAt)
+
+        nicknameOutboxManager.markSent(pending, NOW.plusSeconds(3))
+        assertEquals(emptyList<Any>(), nicknameOutboxManager.readPending())
+    }
+
+    @Test
     fun `실패가 적은 행부터 보낸다`() {
         outboxManager.enqueue(17L, NOW)
         outboxManager.enqueue(18L, NOW.plusMinutes(1))
@@ -547,5 +564,6 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     companion object {
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 27, 10, 0)
+        private const val USER_ID_FOR_NICKNAME = 77L
     }
 }

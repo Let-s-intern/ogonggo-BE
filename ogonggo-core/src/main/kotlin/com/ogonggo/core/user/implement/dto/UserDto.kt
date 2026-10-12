@@ -30,6 +30,8 @@ data class UserProfileSyncDto(
     val profileImageUrl: String?,
     val letsCareerUpdatedAt: LocalDateTime?,
     val syncedAt: LocalDateTime,
+    /** 렛츠커리어 닉네임만의 최종 수정 일시다. 렛츠커리어가 주지 않으면 null이다. */
+    val letsCareerNicknameUpdatedAt: LocalDateTime? = null,
 )
 
 data class CompanyProfileAppendDto(
@@ -89,6 +91,7 @@ data class UserProfileDto(
     val wishEmploymentType: String?,
     val wishCompany: String?,
     val jobInfoUpdatedAt: LocalDateTime? = null,
+    val nicknameUpdatedAt: LocalDateTime? = null,
 ) {
     companion object {
         internal fun from(profile: UserProfile): UserProfileDto = UserProfileDto(
@@ -109,12 +112,19 @@ data class UserProfileDto(
             wishEmploymentType = profile.wishEmploymentType,
             wishCompany = profile.wishCompany,
             jobInfoUpdatedAt = profile.jobInfoUpdatedAt,
+            nicknameUpdatedAt = profile.nicknameUpdatedAt,
         )
     }
 }
 
 /** 렛츠커리어로 보낼 학력·희망 조건 변경 한 건이다. */
 data class LetsCareerJobProfileOutboxDto(
+    val userId: Long,
+    val requestedAt: LocalDateTime,
+    val attemptCount: Int,
+)
+
+data class LetsCareerNicknameOutboxDto(
     val userId: Long,
     val requestedAt: LocalDateTime,
     val attemptCount: Int,

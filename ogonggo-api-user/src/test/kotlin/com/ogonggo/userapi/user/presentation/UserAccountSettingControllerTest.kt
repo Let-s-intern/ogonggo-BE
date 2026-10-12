@@ -8,7 +8,6 @@ import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.user.business.PasswordChangeCommand
 import com.ogonggo.userapi.user.business.UserAccountService
-import com.ogonggo.userapi.user.business.UserNicknameService
 import com.ogonggo.userapi.user.business.UserPasswordService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -37,9 +36,6 @@ class UserAccountSettingControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var userPasswordService: UserPasswordService
-
-    @MockBean
-    private lateinit var userNicknameService: UserNicknameService
 
     @MockBean
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
@@ -90,7 +86,7 @@ class UserAccountSettingControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data").isEmpty)
 
-        Mockito.verify(userNicknameService).changeMyNickname(USER_ID, "오공고")
+        Mockito.verify(userAccountService).changeMyNickname(USER_ID, "오공고")
     }
 
     @Test
@@ -105,7 +101,7 @@ class UserAccountSettingControllerTest @Autowired constructor(
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
         }
 
-        Mockito.verifyNoInteractions(userNicknameService)
+        Mockito.verifyNoInteractions(userAccountService)
     }
 
     @Test

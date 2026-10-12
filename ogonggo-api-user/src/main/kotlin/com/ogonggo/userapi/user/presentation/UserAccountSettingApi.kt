@@ -70,9 +70,9 @@ interface UserAccountSettingApi {
             일반 회원의 닉네임을 바꿉니다. 앞뒤 공백은 빼고 저장합니다.
             바뀐 닉네임은 내 정보 조회(GET /api/v1/users/me)의 profile.nickname에 담깁니다.
 
-            닉네임은 렛츠커리어가 소유하므로 렛츠커리어로 전달해 바꿉니다. 렛츠커리어 닉네임이 함께 바뀝니다.
-            렛츠커리어에서 실패하면 오공고 닉네임도 바뀌지 않습니다.
-            같은 닉네임을 다시 보내도 결과가 같습니다.
+            닉네임은 렛츠커리어와 함께 쓰며, 나중에 고친 쪽의 값으로 맞춥니다.
+            여기서 고친 값은 응답 뒤 수십 초 안에 렛츠커리어에 반영되며, 렛츠커리어 장애가 있어도 이 요청은 성공합니다.
+            렛츠커리어에서 고친 닉네임은 다음 로그인 때 오공고에 들어옵니다.
         """,
     )
     @ApiResponses(
@@ -91,11 +91,6 @@ interface UserAccountSettingApi {
             ApiResponse(
                 responseCode = "409",
                 description = "USER_PROFILE_CONFLICT: 같은 사용자의 저장이 동시에 들어와 실패했습니다. 재시도하면 성공합니다.",
-                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-            ),
-            ApiResponse(
-                responseCode = "503",
-                description = "LETSCAREER_UNAVAILABLE: 렛츠커리어 서버와 통신할 수 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

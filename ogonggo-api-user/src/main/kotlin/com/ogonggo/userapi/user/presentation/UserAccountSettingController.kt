@@ -2,7 +2,6 @@ package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.userapi.response.SuccessResponse
 import com.ogonggo.userapi.user.business.UserAccountService
-import com.ogonggo.userapi.user.business.UserNicknameService
 import com.ogonggo.userapi.user.business.UserPasswordService
 import com.ogonggo.userapi.user.presentation.request.ChangeMyNicknameRequest
 import com.ogonggo.userapi.user.presentation.request.ChangeMyPasswordRequest
@@ -24,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController
 class UserAccountSettingController(
     private val userAccountService: UserAccountService,
     private val userPasswordService: UserPasswordService,
-    private val userNicknameService: UserNicknameService,
 ) : UserAccountSettingApi {
 
     @PutMapping("/notification-email")
@@ -41,7 +39,7 @@ class UserAccountSettingController(
         @AuthenticationPrincipal userId: Long,
         @RequestBody request: ChangeMyNicknameRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        userNicknameService.changeMyNickname(userId, request.toNickname())
+        userAccountService.changeMyNickname(userId, request.toNickname())
         return SuccessResponse.ok()
     }
 
