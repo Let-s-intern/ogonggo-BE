@@ -250,7 +250,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val matched = appendInRange()
         appendInRange(employmentType = JobEmploymentType.FULL_TIME)
         appendInRange(experienceType = JobExperienceType.EXPERIENCED)
-        appendInRange(jobField = JobField.DESIGN, jobRole = JobRole.DESIGN_WEB)
+        appendInRange(jobField = JobField.PLANNING_STRATEGY, jobRole = JobRole.DESIGN_WEB)
         appendInRange(jobRole = JobRole.IT_FRONTEND)
         appendInRange(title = "데이터 인턴")
 

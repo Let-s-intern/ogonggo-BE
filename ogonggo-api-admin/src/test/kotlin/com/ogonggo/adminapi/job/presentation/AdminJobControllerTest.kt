@@ -64,7 +64,7 @@ class AdminJobControllerTest @Autowired constructor(
             source = ContentSource.COMPANY,
             reviewStatus = ContentReviewStatus.PENDING,
             recruitmentStatus = JobRecruitmentStatus.RECRUITING,
-            jobField = JobField.DESIGN,
+            jobField = JobField.PLANNING_STRATEGY,
             jobRoles = setOf(JobRole.DESIGN_SPACE_INTERIOR_VMD, JobRole.DESIGN_GRAPHIC_VISUAL),
             keyword = "후지",
         )
@@ -80,7 +80,7 @@ class AdminJobControllerTest @Autowired constructor(
                     .param("source", "COMPANY")
                     .param("reviewStatus", "PENDING")
                     .param("recruitmentStatus", "RECRUITING")
-                    .param("jobField", "DESIGN")
+                    .param("jobField", "PLANNING_STRATEGY")
                     .param("jobRole", "DESIGN_SPACE_INTERIOR_VMD", "DESIGN_GRAPHIC_VISUAL")
                     .param("sort", "VIEW_COUNT"),
             ),
@@ -89,7 +89,7 @@ class AdminJobControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(693))
             .andExpect(jsonPath("$.data.items[0].visibility").value("HIDDEN"))
             .andExpect(jsonPath("$.data.items[0].source").value("COMPANY"))
-            .andExpect(jsonPath("$.data.items[0].jobField").value("DESIGN"))
+            .andExpect(jsonPath("$.data.items[0].jobField").value("PLANNING_STRATEGY"))
             .andExpect(jsonPath("$.data.items[0].jobRole").value("DESIGN_SPACE_INTERIOR_VMD"))
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
             .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-09-10T10:48:00"))
@@ -127,7 +127,7 @@ class AdminJobControllerTest @Autowired constructor(
         mockMvc.perform(admin(get("/api/v1/admin/jobs/693")))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.id").value(693))
-            .andExpect(jsonPath("$.data.jobField").value("DESIGN"))
+            .andExpect(jsonPath("$.data.jobField").value("PLANNING_STRATEGY"))
             .andExpect(jsonPath("$.data.jobRole").value("DESIGN_SPACE_INTERIOR_VMD"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
     }

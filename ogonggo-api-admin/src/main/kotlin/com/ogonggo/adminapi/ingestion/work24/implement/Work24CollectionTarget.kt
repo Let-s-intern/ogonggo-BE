@@ -91,16 +91,15 @@ enum class Work24CollectionTarget(
 
 /**
  * 임시로 받는 채용공고 직군이다(2026-10-06, LC-3444). 마케팅·인사·기획·영업·개발 직무만 받는다.
- * 상품기획·MD는 마케팅, AI·데이터는 개발로 본다. 풀 때는 이 목록과 [TEMPORARY_MAX_CAREER_YEARS] 검사를 지운다.
+ * 2026-10-12 직군을 다섯 묶음으로 합쳐([JobField]) AI·데이터, 상품기획·MD에 더해 디자인, 회계·세무·재무,
+ * 고객상담·TM, 미디어·엔터 직무도 받는다. 풀 때는 이 목록과 [TEMPORARY_MAX_CAREER_YEARS] 검사를 지운다.
  */
 internal val TEMPORARY_JOB_FIELDS: Set<JobField> = setOf(
     JobField.MARKETING_ADVERTISING,
-    JobField.MERCHANDISING,
     JobField.HR_GENERAL_AFFAIRS,
     JobField.PLANNING_STRATEGY,
     JobField.SALES,
     JobField.IT_DEVELOPMENT,
-    JobField.AI_DATA,
 )
 
 /** 임시로 받는 최대 경력 연수다. 인턴부터 3년차까지 받는다. 최소 경력이 이보다 긴 공고는 뺀다. */

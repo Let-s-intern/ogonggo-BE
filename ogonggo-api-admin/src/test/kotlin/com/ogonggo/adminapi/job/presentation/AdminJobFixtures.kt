@@ -23,7 +23,7 @@ internal object AdminJobFixtures {
         companyName = "한국후지필름",
         employmentType = JobEmploymentType.CONTRACT,
         experienceType = JobExperienceType.EXPERIENCED,
-        jobField = JobField.DESIGN,
+        jobField = JobField.PLANNING_STRATEGY,
         jobRole = JobRole.DESIGN_SPACE_INTERIOR_VMD,
         educationLevel = JobEducationLevel.ANY,
         recruitmentType = JobRecruitmentType.PERIOD,

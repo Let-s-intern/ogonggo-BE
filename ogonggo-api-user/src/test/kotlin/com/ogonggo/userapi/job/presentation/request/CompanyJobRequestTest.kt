@@ -79,7 +79,7 @@ class CompanyJobRequestTest {
     fun `직무가 보낸 직군에 속하지 않으면 직무 칸이 틀렸다고 알린다`() {
         // when
         val exception = assertThrows<InvalidRequestFieldException> {
-            request(jobField = JobField.DESIGN, jobRole = JobRole.IT_BACKEND).toCommand()
+            request(jobField = JobField.SALES, jobRole = JobRole.IT_BACKEND).toCommand()
         }
 
         // then

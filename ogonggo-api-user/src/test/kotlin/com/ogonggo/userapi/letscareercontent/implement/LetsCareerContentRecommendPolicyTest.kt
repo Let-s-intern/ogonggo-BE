@@ -130,20 +130,19 @@ class LetsCareerContentRecommendPolicyTest {
     }
 
     @Test
-    fun `공고 직군은 다섯 묶음으로 옮겨 비교한다`() {
+    fun `합친 직군의 직무 공고는 묶음 직군 콘텐츠를 받고 다섯 직군 밖 공고는 공통 콘텐츠만 받는다`() {
         // given
         val itContent = content(1, tags(fields = setOf(JobField.IT_DEVELOPMENT)))
         val marketingContent = content(2, tags(fields = setOf(JobField.MARKETING_ADVERTISING)))
         val forAll = content(3, tags())
+        val contents = listOf(itContent, marketingContent, forAll)
 
         // when
-        val aiData = policy.recommend(job(jobField = JobField.AI_DATA), null, listOf(itContent, marketingContent, forAll), WEIGHTS, NOW, 3)
-        val media = policy.recommend(job(jobField = JobField.MEDIA_ENTERTAINMENT), null, listOf(itContent, marketingContent, forAll), WEIGHTS, NOW, 3)
-        val game = policy.recommend(job(jobField = JobField.GAME), null, listOf(itContent, marketingContent, forAll), WEIGHTS, NOW, 3)
+        val dataAnalyst = policy.recommend(job(jobRole = JobRole.AI_DATA_ANALYST), null, contents, WEIGHTS, NOW, 3)
+        val game = policy.recommend(job(jobField = JobField.GAME), null, contents, WEIGHTS, NOW, 3)
 
         // then
-        assertEquals(listOf(1L, 3L), aiData.map { it.externalId })
-        assertEquals(listOf(2L, 3L), media.map { it.externalId })
+        assertEquals(listOf(1L, 3L), dataAnalyst.map { it.externalId })
         assertEquals(listOf(3L), game.map { it.externalId })
     }
 

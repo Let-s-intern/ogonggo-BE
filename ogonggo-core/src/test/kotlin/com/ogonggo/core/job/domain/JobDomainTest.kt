@@ -98,7 +98,7 @@ class JobDomainTest {
             createJob(region = Region.BUSAN, subRegion = SubRegion.SEOUL_GANGNAM_GU)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            createJob(jobField = JobField.DESIGN, jobRole = JobRole.IT_BACKEND)
+            createJob(jobField = JobField.SALES, jobRole = JobRole.IT_BACKEND)
         }
         assertThrows(IllegalArgumentException::class.java) { createJob(industry = " ") }
         assertThrows(IllegalArgumentException::class.java) { createJob(coverImageUrl = " ") }
