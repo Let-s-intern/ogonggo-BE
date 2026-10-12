@@ -129,14 +129,33 @@ class LetsCareerContentRecommendPolicyTest {
         assertEquals(3, result.count { it.kind == LetsCareerContentKind.BLOG })
     }
 
+    @Test
+    fun `공고 직군은 다섯 묶음으로 옮겨 비교한다`() {
+        // given
+        val itContent = content(1, tags(fields = setOf(JobField.IT_DEVELOPMENT)))
+        val marketingContent = content(2, tags(fields = setOf(JobField.MARKETING_ADVERTISING)))
+        val forAll = content(3, tags())
+
+        // when
+        val aiData = policy.recommend(job(jobField = JobField.AI_DATA), null, listOf(itContent, marketingContent, forAll), WEIGHTS, NOW, 3)
+        val media = policy.recommend(job(jobField = JobField.MEDIA_ENTERTAINMENT), null, listOf(itContent, marketingContent, forAll), WEIGHTS, NOW, 3)
+        val game = policy.recommend(job(jobField = JobField.GAME), null, listOf(itContent, marketingContent, forAll), WEIGHTS, NOW, 3)
+
+        // then
+        assertEquals(listOf(1L, 3L), aiData.map { it.externalId })
+        assertEquals(listOf(2L, 3L), media.map { it.externalId })
+        assertEquals(listOf(3L), game.map { it.externalId })
+    }
+
     private fun job(
         id: Long = 1L,
         jobRole: JobRole? = null,
         hiringProcess: String? = null,
+        jobField: JobField? = jobRole?.jobField,
     ): Job = Mockito.mock(Job::class.java).also { job ->
         Mockito.`when`(job.id).thenReturn(id)
         Mockito.`when`(job.jobRole).thenReturn(jobRole)
-        Mockito.`when`(job.jobField).thenReturn(jobRole?.jobField)
+        Mockito.`when`(job.jobField).thenReturn(jobField)
         Mockito.`when`(job.hiringProcess).thenReturn(hiringProcess)
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)

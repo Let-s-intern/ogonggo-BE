@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContent
+import com.ogonggo.core.letscareercontent.domain.LetsCareerContentFieldGroup
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentKind
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentRecommendWeights
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTags
@@ -17,7 +18,7 @@ import java.time.LocalDateTime
  *
  * 점수 값은 운영자가 관리자 API로 바꾼다([LetsCareerContentRecommendWeights]). 괄호 안은 기본값이다.
  *
- * 1. 태그가 없거나 모집 기간이 아닌 콘텐츠는 빼고, 다른 직군 전용 콘텐츠도 뺀다.
+ * 1. 태그가 없거나 모집 기간이 아닌 콘텐츠는 빼고, 다른 직군 전용 콘텐츠도 뺀다. 직군은 다섯 묶음([LetsCareerContentFieldGroup])으로 비교한다.
  * 2. 직무가 같으면(+5), 직군이 같으면(+3), 공고가 요구하는 준비 단계(제출 서류·전형 등)와 겹치면 하나에(+2, 최대 두 개).
  * 3. 2의 점수가 0보다 크면 갈래 가산점을 더한다: 프로그램(+2), 자료집(+1), 블로그(0).
  *    블로그가 가장 많아 가산점이 없으면 블로그가 자리를 차지한다.
@@ -73,7 +74,8 @@ class LetsCareerContentRecommendPolicy {
             return null
         }
         val roleMatched = job.jobRole != null && job.jobRole in tags.jobRoles
-        val fieldMatched = job.jobField != null && job.jobField in fieldsOf(tags)
+        val jobGroup = job.jobField?.let(LetsCareerContentFieldGroup::of)
+        val fieldMatched = jobGroup != null && jobGroup in groupsOf(tags)
         if (!tags.isForAllJobs && !roleMatched && !fieldMatched) {
             return null
         }
@@ -89,8 +91,13 @@ class LetsCareerContentRecommendPolicy {
         }
     }
 
-    /** 직무만 붙은 콘텐츠도 그 직무의 직군 공고에는 맞는다. */
-    private fun fieldsOf(tags: LetsCareerContentTags) = tags.jobFields + tags.jobRoles.map { it.jobField }
+    /**
+     * 콘텐츠의 직군 묶음이다([LetsCareerContentFieldGroup]). 공고 직군도 같은 묶음으로 옮겨 비교하므로
+     * AI·데이터 공고는 IT·개발 콘텐츠를, 미디어·엔터 공고는 마케팅·광고 콘텐츠를 받는다.
+     * 직무만 붙은 콘텐츠도 그 직무의 직군 묶음에 맞는다.
+     */
+    private fun groupsOf(tags: LetsCareerContentTags) =
+        (tags.jobFields + tags.jobRoles.map { it.jobField }).mapNotNull(LetsCareerContentFieldGroup::of).toSet()
 
     private fun isRecruiting(content: LetsCareerContent, now: LocalDateTime): Boolean {
         val startAt = content.recruitmentStartAt
