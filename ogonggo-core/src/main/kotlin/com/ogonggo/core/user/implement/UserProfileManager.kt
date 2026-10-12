@@ -49,6 +49,7 @@ class UserProfileManager internal constructor(
             phoneNum = command.phoneNum,
             letsCareerAuthProvider = command.letsCareerAuthProvider,
             nickname = command.nickname,
+            letsCareerNicknameUpdatedAt = command.letsCareerNicknameUpdatedAt,
             profileImageUrl = command.profileImageUrl,
             letsCareerUpdatedAt = command.letsCareerUpdatedAt,
             syncedAt = command.syncedAt,
@@ -96,6 +97,18 @@ class UserProfileManager internal constructor(
         profile.replaceJobInfo(command, updatedAt = letsCareerUpdatedAt)
         userProfileRepository.save(profile)
         return true
+    }
+
+    /**
+     * 오공고에서 닉네임을 고치고 고친 일시를 남긴다. 렛츠커리어로 보낼 변경은 호출한 쪽이 같은 트랜잭션에서 적재한다.
+     * 프로필 행이 없으면 만들며, 동시에 만들어진 경우는 `replaceJobInfo`와 같이 재시도할 수 있는 충돌로 알린다.
+     */
+    fun changeNickname(userId: Long, nickname: String, now: LocalDateTime) {
+        val profile = userProfileRepository.findByUserId(userId)
+            ?: return createWith(UserProfile(userId = userId, lastSyncedAt = now)) { changeNickname(nickname, now) }
+
+        profile.changeNickname(nickname, now)
+        userProfileRepository.save(profile)
     }
 
     /**

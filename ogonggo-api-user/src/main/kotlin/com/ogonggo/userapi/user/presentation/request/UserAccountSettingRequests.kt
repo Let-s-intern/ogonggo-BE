@@ -30,6 +30,15 @@ data class ReplaceMyProfileImageRequest(
     val imageId: String,
 )
 
+data class ChangeMyNicknameRequest(
+    @field:NotBlank
+    @field:Size(max = 20)
+    @Schema(description = "새 닉네임. 앞뒤 공백을 빼고 저장한다.", example = "오공고")
+    val nickname: String,
+) {
+    fun toNickname(): String = nickname.trim()
+}
+
 /**
  * 새 비밀번호의 형식은 비밀번호를 가진 쪽이 검사한다.
  * 일반 회원은 렛츠커리어 규칙(8자 이상, 특수문자 포함)을, 기업 회원은 가입 때와 같은 길이 규칙을 따른다.

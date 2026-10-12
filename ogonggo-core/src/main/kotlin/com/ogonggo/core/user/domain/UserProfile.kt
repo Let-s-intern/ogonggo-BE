@@ -57,6 +57,10 @@ internal class UserProfile(
     var nickname: String? = nickname /* 사용자 닉네임 */
         protected set
 
+    @Column(name = "nickname_updated_at")
+    var nicknameUpdatedAt: LocalDateTime? = null /* 닉네임 최종 수정 일시. 렛츠커리어와 동기화할 때 나중에 고친 쪽을 가리는 기준이다 */
+        protected set
+
     @Column(name = "profile_image_url", length = 2048)
     var profileImageUrl: String? = profileImageUrl /* 프로필 이미지 URL */
         protected set
@@ -121,6 +125,7 @@ internal class UserProfile(
     /**
      * 렛츠커리어에서 복제하는 값만 갱신한다.
      * 학력과 희망 조건, 수신 이메일, 오공고에서 올린 프로필 이미지는 오공고가 소유하므로 여기서 건드리지 않는다.
+     * 닉네임은 오공고에서도 고칠 수 있어, 렛츠커리어가 더 나중에 고친 값일 때만 받는다.
      */
     fun sync(
         name: String?,
@@ -128,6 +133,7 @@ internal class UserProfile(
         phoneNum: String?,
         letsCareerAuthProvider: LetsCareerAuthProvider?,
         nickname: String?,
+        letsCareerNicknameUpdatedAt: LocalDateTime?,
         profileImageUrl: String?,
         letsCareerUpdatedAt: LocalDateTime?,
         syncedAt: LocalDateTime,
@@ -136,7 +142,10 @@ internal class UserProfile(
         this.email = email
         this.phoneNum = phoneNum
         this.letsCareerAuthProvider = letsCareerAuthProvider
-        this.nickname = nickname
+        if (acceptsLetsCareerNickname(letsCareerNicknameUpdatedAt)) {
+            this.nickname = nickname
+            this.nicknameUpdatedAt = letsCareerNicknameUpdatedAt
+        }
         this.profileImageUrl = profileImageUrl
         this.letsCareerUpdatedAt = letsCareerUpdatedAt
         this.lastSyncedAt = syncedAt
@@ -169,6 +178,16 @@ internal class UserProfile(
     }
 
     /**
+     * 오공고에서 닉네임을 고치고 고친 일시를 남긴다. 렛츠커리어로는 아웃박스가 나중에 보낸다.
+     * 보내기 전에 다시 로그인해도 `sync`가 이 일시보다 앞선 렛츠커리어 값으로 덮어쓰지 않는다.
+     */
+    fun changeNickname(nickname: String, updatedAt: LocalDateTime) {
+        require(nickname.isNotBlank()) { "닉네임은 공백일 수 없습니다." }
+        this.nickname = nickname
+        this.nicknameUpdatedAt = updatedAt
+    }
+
+    /**
      * 오늘의 공고를 받을 이메일을 바꾼다. 렛츠커리어 가입 이메일과 따로 두며 오공고가 소유한다.
      * null이면 비운다.
      */
@@ -192,6 +211,12 @@ internal class UserProfile(
     fun removeOgonggoProfileImage() {
         this.ogonggoProfileImageId = null
         this.ogonggoProfileImageUrl = null
+    }
+
+    /** 학력·희망 조건과 같은 기준으로, 렛츠커리어 닉네임이 더 나중에 고친 것일 때만 받아들인다. */
+    private fun acceptsLetsCareerNickname(letsCareerUpdatedAt: LocalDateTime?): Boolean {
+        val current = nicknameUpdatedAt ?: return true
+        return letsCareerUpdatedAt != null && letsCareerUpdatedAt.isAfter(current)
     }
 
     /**

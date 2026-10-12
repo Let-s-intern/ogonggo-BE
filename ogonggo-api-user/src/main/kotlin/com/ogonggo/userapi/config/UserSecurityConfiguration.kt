@@ -100,6 +100,7 @@ class UserSecurityConfiguration {
                     "/api/v1/users/me/company-profile/manager-info",
                 ).authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/notification-email").authenticated()
+                it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/nickname").authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile-image").authenticated()
                 it.requestMatchers(HttpMethod.DELETE, "/api/v1/users/me/profile-image").authenticated()
                 it.requestMatchers(HttpMethod.PATCH, "/api/v1/users/me/password").authenticated()

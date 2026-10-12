@@ -68,6 +68,7 @@
     <line x1="660" y1="618" x2="520" y2="618"/>
     <path d="M660,640 H600 V690 H520"/>
     <line x1="940" y1="618" x2="1080" y2="618"/>
+    <path d="M940,640 H1000 V690 H1080"/>
     <!-- 회원 → 커뮤니티 -->
     <path d="M740,650 V770 H580 V850"/>
     <path d="M860,650 V770 H1020 V850"/>
@@ -98,6 +99,7 @@
     <rect x="320" y="590" width="200" height="56" rx="8"/>
     <rect x="320" y="662" width="200" height="56" rx="8"/>
     <rect x="1080" y="590" width="220" height="56" rx="8"/>
+    <rect x="1080" y="662" width="220" height="56" rx="8"/>
     <rect x="470" y="980" width="220" height="56" rx="8"/>
     <rect x="60" y="844" width="200" height="64" rx="8"/>
     <rect x="60" y="920" width="200" height="64" rx="8"/>
@@ -131,6 +133,7 @@
     <text x="336" y="613">회원 프로필</text>
     <text x="336" y="685">기업 프로필</text>
     <text x="1096" y="613">렛츠커리어 전송 대기</text>
+    <text x="1096" y="685">닉네임 전송 대기</text>
     <text x="490" y="884" font-size="17">모집글</text>
     <text x="486" y="1003">댓글 · 대댓글</text>
     <text x="76" y="864">지원 기록</text>
@@ -159,6 +162,7 @@
     <text x="336" y="632">UserProfile</text>
     <text x="336" y="704">CompanyProfile</text>
     <text x="1096" y="632">LetsCareerJobProfileOutbox</text>
+    <text x="1096" y="704">LetsCareerNicknameOutbox</text>
     <text x="490" y="908" font-size="12">RecruitmentPost</text>
     <text x="486" y="1022">RecruitmentPostComment</text>
     <text x="76" y="880">RecruitmentPostApplication</text>
@@ -237,6 +241,8 @@
     <text x="528" y="684">0..1</text>
     <text x="948" y="612">1</text>
     <text x="1072" y="612" text-anchor="end">0..1</text>
+    <text x="948" y="660">1</text>
+    <text x="1072" y="684" text-anchor="end">0..1</text>
     <text x="748" y="668">1</text>
     <text x="588" y="844">N</text>
     <text x="868" y="668">1</text>

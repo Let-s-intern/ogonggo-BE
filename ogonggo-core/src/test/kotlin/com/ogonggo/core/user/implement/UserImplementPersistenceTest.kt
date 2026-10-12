@@ -36,6 +36,7 @@ import org.springframework.test.context.ContextConfiguration
     UserAppender::class,
     UserManager::class,
     LetsCareerJobProfileOutboxManager::class,
+    LetsCareerNicknameOutboxManager::class,
     UserProfileManager::class,
     UserProfileReader::class,
     CompanyProfileAppender::class,
@@ -47,6 +48,7 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     private val userAppender: UserAppender,
     private val userManager: UserManager,
     private val outboxManager: LetsCareerJobProfileOutboxManager,
+    private val nicknameOutboxManager: LetsCareerNicknameOutboxManager,
     private val userProfileManager: UserProfileManager,
     private val userProfileReader: UserProfileReader,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -415,6 +417,21 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `프로필 행이 없어도 닉네임을 저장하면 행이 생기고 있으면 닉네임만 바꾼다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userProfileManager.changeNickname(account.userId, "오공고", NOW)
+        assertEquals("오공고", userProfileReader.read(account.userId)?.nickname)
+
+        userProfileManager.changeNotificationEmail(account.userId, "today@example.com", NOW)
+        userProfileManager.changeNickname(account.userId, "렛츠커리어", NOW)
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("렛츠커리어", profile?.nickname)
+        assertEquals("today@example.com", profile?.notificationEmail)
+    }
+
+    @Test
     fun `기업 회원의 비밀번호를 바꾸면 새 값으로 로그인 자격증명이 바뀐다`() {
         val account = userAppender.appendCompany(
             CompanyAccountAppendDto("mock@example.com", "encoded-password", NOW),
@@ -499,6 +516,21 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `닉네임 아웃박스는 사용자당 한 행이고 보내는 사이 다시 적재됐으면 보낸 것으로 표시하지 않는다`() {
+        nicknameOutboxManager.enqueue(USER_ID_FOR_NICKNAME, NOW)
+        val sending = nicknameOutboxManager.readPending().single()
+
+        nicknameOutboxManager.enqueue(USER_ID_FOR_NICKNAME, NOW.plusSeconds(1))
+        nicknameOutboxManager.markSent(sending, NOW.plusSeconds(2))
+
+        val pending = nicknameOutboxManager.readPending().single()
+        assertEquals(NOW.plusSeconds(1), pending.requestedAt)
+
+        nicknameOutboxManager.markSent(pending, NOW.plusSeconds(3))
+        assertEquals(emptyList<Any>(), nicknameOutboxManager.readPending())
+    }
+
+    @Test
     fun `실패가 적은 행부터 보낸다`() {
         outboxManager.enqueue(17L, NOW)
         outboxManager.enqueue(18L, NOW.plusMinutes(1))
@@ -532,5 +564,6 @@ internal class UserImplementPersistenceTest @Autowired constructor(
 
     companion object {
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 27, 10, 0)
+        private const val USER_ID_FOR_NICKNAME = 77L
     }
 }

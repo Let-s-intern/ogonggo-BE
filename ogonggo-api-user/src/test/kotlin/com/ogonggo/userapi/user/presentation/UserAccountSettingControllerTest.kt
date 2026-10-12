@@ -77,6 +77,34 @@ class UserAccountSettingControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `닉네임을 받아 앞뒤 공백을 빼고 바꾼다`() {
+        mockMvc.perform(
+            put(NICKNAME_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"nickname":" 오공고 "}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isEmpty)
+
+        Mockito.verify(userAccountService).changeMyNickname(USER_ID, "오공고")
+    }
+
+    @Test
+    fun `닉네임이 없거나 비었거나 20자를 넘으면 400으로 막는다`() {
+        listOf("{}", """{"nickname":" "}""", """{"nickname":"${"가".repeat(21)}"}""").forEach { body ->
+            mockMvc.perform(
+                put(NICKNAME_PATH).with(authenticatedUser())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(userAccountService)
+    }
+
+    @Test
     fun `업로드한 이미지 식별자를 받아 프로필 이미지를 바꾼다`() {
         mockMvc.perform(
             put(PROFILE_IMAGE_PATH).with(authenticatedUser())
@@ -205,6 +233,7 @@ class UserAccountSettingControllerTest @Autowired constructor(
     )
 
     companion object {
+        private const val NICKNAME_PATH = "/api/v1/users/me/nickname"
         private const val NOTIFICATION_EMAIL_PATH = "/api/v1/users/me/notification-email"
         private const val PASSWORD_PATH = "/api/v1/users/me/password"
         private const val PROFILE_IMAGE_PATH = "/api/v1/users/me/profile-image"
