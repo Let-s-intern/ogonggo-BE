@@ -27,6 +27,15 @@ ogonggo-api-user  ---> ogonggo-core <--- ogonggo-api-admin
 
 `ogonggo-api-user` and `ogonggo-api-admin` are independent Spring Boot applications and cannot depend on each other.
 
+## Domain
+
+Domain documents live next to the domain code in [`ogonggo-core/docs/domain/`](ogonggo-core/docs/domain/). New to Ogonggo? Read them in this order:
+
+1. [서비스 개요](ogonggo-core/docs/domain/overview.md): what the service does, who uses it, where content comes from
+2. [도메인 개념도](ogonggo-core/docs/domain/domain-map.md): core concepts and how they relate
+3. [용어 사전](ogonggo-core/docs/domain/glossary.md): product terms mapped to code names
+4. [라이프사이클](ogonggo-core/docs/domain/lifecycles.md): state transition rules and diagrams
+
 ## Architecture
 
 The API modules own their actor-specific Presentation and Business layers. `ogonggo-core` provides the shared Domain, Implement, and Data Access layers.
