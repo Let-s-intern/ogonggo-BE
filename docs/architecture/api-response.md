@@ -261,7 +261,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 두 문항 `satisfaction`, `improvement`는 모두 선택이지만 하나 이상은 채워야 합니다. 공백만 있는 문항은 비운 것으로 보고 `null`로 저장합니다. 두 문항이 모두 비면 400 `BAD_REQUEST`이며 메시지는 `[satisfaction]`으로 시작합니다.
 - 각 문항은 1000자 이하이며 넘으면 해당 필드명으로 400 `BAD_REQUEST`입니다.
 - 제출한 의견은 고치거나 지우는 기능이 없어 소프트 삭제 칼럼을 두지 않습니다.
-- 관리자 목록 `GET /api/v1/admin/service-feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름 등 사용자 정보를 함께 보여줄지는 **확인 필요**입니다.
+- 관리자 목록 `GET /api/v1/admin/service-feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `userName`, `userNickname`, `userEmail`, `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름·닉네임·이메일은 사용자 프로필(`UserProfile`)에서 가져오며, 비로그인 작성이거나 프로필이 없으면 `null`입니다.
 
 ### 관리자 콘솔 목록
 
