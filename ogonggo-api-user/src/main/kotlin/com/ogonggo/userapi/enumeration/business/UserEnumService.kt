@@ -18,11 +18,7 @@ class UserEnumService(
     enumOptionReader: EnumOptionReader,
 ) {
 
-    private val enums: Map<String, List<EnumOption>> =
-        enumOptionMapOf(enumOptionReader.readAll(), USER_API_ENUMS).let { enums ->
-            check(LEGACY_KEYS.keys.none(enums::containsKey)) { "예전 키가 현재 enum 이름과 겹칩니다." }
-            enums + LEGACY_KEYS.mapValues { (_, key) -> enums.getValue(key) }
-        }
+    private val enums: Map<String, List<EnumOption>> = enumOptionMapOf(enumOptionReader.readAll(), USER_API_ENUMS)
 
     fun getEnums(): Map<String, List<EnumOption>> = enums
 
@@ -31,30 +27,6 @@ class UserEnumService(
             // 광고 문의
             enumOptionsOf<AdvertisementInquiryType>(),
             enumOptionsOf<AdvertisementInquiryPromotionChannel>(),
-        )
-
-        /**
-         * enum 이름에 루트 접두어를 붙이기 전의 키다. 예전 키 → 새 키.
-         * 프런트가 새 키로 옮기는 동안 같은 선택지를 예전 키로도 내려 준다. 프런트 배포 후 서버 2차 배포에서 제거한다.
-         */
-        val LEGACY_KEYS: Map<String, String> = mapOf(
-            "EmploymentType" to "JobEmploymentType",
-            "ExperienceType" to "JobExperienceType",
-            "EducationLevel" to "JobEducationLevel",
-            "OperationType" to "BootcampOperationType",
-            "TuitionType" to "BootcampTuitionType",
-            "ApplicationMethod" to "BootcampApplicationMethod",
-            "BootcampStatus" to "BootcampRecruitmentStatus",
-            "ReviewStatus" to "ContentReviewStatus",
-            "AdvertisementPromotionChannel" to "AdvertisementInquiryPromotionChannel",
-            "RecruitmentPostApplicationStatus" to "RecruitmentPostApplicantPresence",
-            "RecruitmentType" to "RecruitmentPostType",
-            "RecruitmentPosition" to "RecruitmentPostPosition",
-            "ProgressMethod" to "RecruitmentPostProgressMethod",
-            "ContactMethod" to "RecruitmentPostContactMethod",
-            "RecruitmentStatus" to "RecruitmentPostRecruitmentStatus",
-            "RecruitmentApplicationProgressStatus" to "RecruitmentPostApplicationProgressStatus",
-            "RecruitmentApplicationSortType" to "RecruitmentPostApplicationSortType",
         )
     }
 }
