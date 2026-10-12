@@ -1,0 +1,74 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "렛츠커리어 콘텐츠 라이프사이클",
+    "output": "ogonggo-core/docs/domain/lifecycles/letscareer-content.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Let-s-intern/ogonggo-BE.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "67cafa30501ff3e2b85a3706cf2012d59eb1fb88"
+    }
+  },
+  "lanes": [
+    { "id": "main", "label": "목록 (동기화)" },
+    { "id": "tag", "label": "태그 (크롤러)" }
+  ],
+  "states": [
+    {
+      "id": "received", "type": "start", "label": "처음 받음", "sublabel": "목록에 새로 나옴", "lane": "main", "col": 0, "step": "01",
+      "sources": [
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/letscareercontent/business/LetsCareerContentSyncService.kt", "line": 30, "end_line": 40, "label": "빈 목록이면 덮어쓰지 않음" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/letscareercontent/presentation/LetsCareerContentSyncScheduler.kt", "line": 18, "label": "동기화 작업" }
+      ]
+    },
+    {
+      "id": "listed", "type": "active", "label": "목록에 있음", "sublabel": "동기화마다 덮어씀", "lane": "main", "col": 1, "step": "02",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/implement/LetsCareerContentManager.kt", "line": 15, "end_line": 40, "label": "replaceAll" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/domain/LetsCareerContent.kt", "line": 120, "end_line": 124, "label": "replace · 되살림" }
+      ]
+    },
+    {
+      "id": "removed", "type": "neutral", "label": "목록에서 빠짐", "sublabel": "지운 것으로 표시", "lane": "main", "col": 3, "step": "03", "tag": "deletedAt",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/domain/LetsCareerContent.kt", "line": 126, "end_line": 131, "label": "delete" }
+      ]
+    },
+    {
+      "id": "untagged", "type": "waiting", "label": "태그 없음", "sublabel": "추천하지 않음", "lane": "tag", "col": 1, "tag": "태그 대상",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/persistence/LetsCareerContentRepositories.kt", "line": 13, "end_line": 22, "label": "태그 대상 조회" }
+      ]
+    },
+    {
+      "id": "tagged", "type": "success", "label": "태그 최신", "sublabel": "추천 후보", "lane": "tag", "col": 2, "tag": "해시 일치",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/domain/LetsCareerContent.kt", "line": 133, "end_line": 154, "label": "tag · currentTags" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/letscareercontent/business/CrawlerLetsCareerContentTagService.kt", "line": 29, "end_line": 33, "label": "해시가 다르면 거절" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/letscareercontent/implement/LetsCareerContentRecommendPolicy.kt", "line": 59, "end_line": 61, "label": "추천 조건" }
+      ]
+    },
+    {
+      "id": "stale", "type": "waiting", "label": "태그 낡음", "sublabel": "추천하지 않음", "lane": "tag", "col": 3, "tag": "해시 불일치",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/domain/LetsCareerContent.kt", "line": 144, "end_line": 148, "label": "바뀌면 태그 무효" }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "received", "to": "listed", "label": "사본 저장" },
+    { "from": "listed", "to": "removed", "label": "목록에서 빠짐", "variant": "dashed" },
+    { "from": "removed", "to": "listed", "label": "다시 나오면 되살림" },
+    { "from": "untagged", "to": "tagged", "label": "크롤러가 AI로 태그", "variant": "emphasis" },
+    { "from": "tagged", "to": "stale", "label": "제목·설명이 바뀜", "variant": "dashed" },
+    { "from": "stale", "to": "tagged", "label": "다시 태그" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "추천되는 조건", "items": ["목록에 있고, 태그가 최신이고, 모집 기간인 콘텐츠만 추천함", "태그가 없거나 낡은 콘텐츠는 추천에서 빠짐", "되살린 콘텐츠도 태그는 그대로 두고, 내용이 바뀌었으면 태그 낡음이 됨"] },
+    { "dot": "cyan", "title": "동기화", "items": ["스케줄 작업이 렛츠커리어 목록 전체로 사본을 덮어씀", "받은 목록이 비어 있으면 일시 오류로 보고 덮어쓰지 않음"] },
+    { "dot": "amber", "title": "태그", "items": ["크롤러가 태그 없음·태그 낡음 콘텐츠를 오래된 것부터 가져가 태그함", "크롤러가 보낸 내용 해시가 지금과 다르면 저장을 거절해, 낡은 내용에 태그가 붙지 않게 함"] }
+  ]
+}
