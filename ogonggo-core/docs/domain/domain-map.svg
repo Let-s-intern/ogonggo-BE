@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1190" width="1600" height="1190" role="img" aria-label="오공고 도메인 개념도: 회원을 중심으로 채용공고·부트캠프, 모집글·취준고민 개념과 그 사이의 관계와 개수를 보여 준다." font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">
-  <rect width="1600" height="1190" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1430" width="1600" height="1430" role="img" aria-label="오공고 도메인 개념도: 회원을 중심으로 채용공고·부트캠프, 모집글·취준고민, 렛츠커리어 추천 개념과 그 사이의 관계와 개수를 보여 준다." font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <rect width="1600" height="1430" fill="#ffffff"/>
 
   <!-- 제목 -->
   <text x="40" y="56" font-size="28" font-weight="800" fill="#101828">오공고 도메인 개념도</text>
@@ -15,6 +15,8 @@
     <text x="1218" y="82">중심 개념</text>
     <text x="1330" y="82" font-weight="700" fill="#344054">회원 × 공고</text>
     <text x="1410" y="82">쌍마다 한 행</text>
+    <rect x="1130" y="96" width="60" height="18" rx="6" fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="1218" y="110">저장하지 않는 개념 (조회할 때 계산하거나 외부에서 받음)</text>
   </g>
 
   <!-- ================= 그룹 (패키지) ================= -->
@@ -145,7 +147,7 @@
   <g font-family="'SF Mono', Menlo, Consolas, monospace" font-size="10.5" fill="#667085">
     <text x="380" y="268" font-size="12">Job</text>
     <text x="80" y="204">JobAnalysis</text>
-    <text x="80" y="274">TodayJob</text>
+    <text x="80" y="274">TodayJob <tspan font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif" font-size="11" fill="#475467">· 추천 문구</tspan></text>
     <text x="80" y="344">Tag · JobTag</text>
     <text x="1050" y="268" font-size="12">Bootcamp</text>
     <text x="1372" y="204">BootcampCurriculum</text>
@@ -255,14 +257,54 @@
     <text x="1292" y="1006" text-anchor="end">N</text>
   </g>
 
+  <!-- ================= 렛츠커리어 추천 ================= -->
+  <rect x="40" y="1110" width="1520" height="210" rx="18" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+  <text x="60" y="1138" font-size="14" font-weight="800" fill="#c2410c">렛츠커리어 추천</text>
+  <text x="1540" y="1138" font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#98a2b3" text-anchor="end">letscareercontent · challenge</text>
+  <g fill="none" stroke="#667085" stroke-width="1.5">
+    <line x1="384" y1="1206" x2="480" y2="1206"/>
+    <line x1="720" y1="1206" x2="816" y2="1206" stroke-dasharray="5 4"/>
+  </g>
+  <rect x="64" y="1158" width="320" height="96" rx="10" fill="#ffffff" stroke="#101828" stroke-width="2"/>
+  <rect x="480" y="1158" width="240" height="96" rx="8" fill="#ffffff" stroke="#d0d5dd" stroke-width="1.5"/>
+  <rect x="816" y="1158" width="320" height="96" rx="8" fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <rect x="1232" y="1158" width="304" height="96" rx="8" fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <g font-size="14" font-weight="700" fill="#101828">
+    <text x="84" y="1192" font-size="17">렛츠커리어 콘텐츠</text>
+    <text x="496" y="1184">추천 태그</text>
+    <text x="832" y="1184">공고별 추천</text>
+    <text x="1248" y="1184">추천 챌린지</text>
+  </g>
+  <g font-family="'SF Mono', Menlo, Consolas, monospace" font-size="10.5" fill="#667085">
+    <text x="84" y="1214" font-size="12">LetsCareerContent</text>
+    <text x="496" y="1202">LetsCareerContentTags</text>
+  </g>
+  <g font-size="11.5" fill="#475467">
+    <text x="84" y="1240">챌린지·VOD·자료집·블로그 등의 사본</text>
+    <text x="496" y="1224">직군 · 직무 · 준비 단계</text>
+    <text x="496" y="1242" fill="#667085">크롤러가 AI로 붙임</text>
+    <text x="832" y="1204">채용공고·공고 분석과 맞춰 3개</text>
+    <text x="832" y="1224">직무 +5 · 직군 +3 · 준비 단계 +2</text>
+    <text x="832" y="1242" fill="#667085">공고를 열 때 계산, 저장 안 함</text>
+    <text x="1248" y="1204">렛츠커리어가 회원에 맞춰 고름</text>
+    <text x="1248" y="1224">화면을 열 때마다 받아 옴, 저장 안 함</text>
+    <text x="1248" y="1242" fill="#667085">실패하면 빈 목록</text>
+    <text x="64" y="1294" fill="#667085">콘텐츠 사본은 스케줄 작업이 렛츠커리어 목록으로 덮어쓰고, 목록에서 빠진 콘텐츠는 지운 것으로 표시합니다. 태그가 없는 콘텐츠는 추천하지 않습니다.</text>
+  </g>
+  <g font-size="12" font-weight="800" fill="#344054" paint-order="stroke" stroke="#ffffff" stroke-width="4" stroke-linejoin="round">
+    <text x="392" y="1200">1</text>
+    <text x="472" y="1200" text-anchor="end">0..1</text>
+  </g>
+  <text x="768" y="1198" font-size="12" font-weight="600" fill="#344054" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">점수 계산</text>
+
   <!-- ================= 그 밖의 개념 ================= -->
-  <line x1="40" y1="1116" x2="1560" y2="1116" stroke="#eaecf0" stroke-width="1.5"/>
-  <text x="40" y="1154" font-size="12" font-weight="700" fill="#98a2b3" letter-spacing="1">그 밖의 개념</text>
+  <line x1="40" y1="1356" x2="1560" y2="1356" stroke="#eaecf0" stroke-width="1.5"/>
+  <text x="40" y="1394" font-size="12" font-weight="700" fill="#98a2b3" letter-spacing="1">그 밖의 개념</text>
   <g font-size="13" fill="#344054">
-    <text x="160" y="1154"><tspan font-weight="700">공지</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">Announcement</tspan></text>
-    <text x="360" y="1154"><tspan font-weight="700">서비스 의견</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ServiceFeedback</tspan> <tspan fill="#667085" font-size="12">· 회원 0..1</tspan></text>
-    <text x="680" y="1154"><tspan font-weight="700">이미지</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ImageAsset</tspan> <tspan fill="#667085" font-size="12">· 올린 회원</tspan></text>
-    <text x="940" y="1154"><tspan font-weight="700">지역</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">Region</tspan> <tspan fill="#667085" font-size="12">· 공고의 근무지 값</tspan></text>
-    <text x="1180" y="1154"><tspan font-weight="700">스케줄 작업</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ScheduledJob</tspan></text>
+    <text x="160" y="1394"><tspan font-weight="700">공지</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">Announcement</tspan></text>
+    <text x="360" y="1394"><tspan font-weight="700">서비스 의견</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ServiceFeedback</tspan> <tspan fill="#667085" font-size="12">· 회원 0..1</tspan></text>
+    <text x="680" y="1394"><tspan font-weight="700">이미지</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ImageAsset</tspan> <tspan fill="#667085" font-size="12">· 올린 회원</tspan></text>
+    <text x="940" y="1394"><tspan font-weight="700">지역</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">Region</tspan> <tspan fill="#667085" font-size="12">· 공고의 근무지 값</tspan></text>
+    <text x="1180" y="1394"><tspan font-weight="700">스케줄 작업</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ScheduledJob</tspan></text>
   </g>
 </svg>

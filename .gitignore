@@ -16,3 +16,11 @@ application-dev.yml
 
 # 로컬 실행 경로와 포트가 사람마다 달라 저장소에 두지 않는다.
 .claude/launch.json
+
+# Archify 검증 기록은 다시 만들 수 있어 저장소에 두지 않는다. 원본 JSON과 HTML만 둔다.
+.archify/
+*.finalize.json
+*.finalize-summary.json
+*.browser-check.json
+*.delivery.json
+*.visual-check.*

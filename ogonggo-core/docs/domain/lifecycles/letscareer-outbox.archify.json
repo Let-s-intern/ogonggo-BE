@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "렛츠커리어 전송 대기 라이프사이클",
+    "output": "ogonggo-core/docs/domain/lifecycles/letscareer-outbox.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Let-s-intern/ogonggo-BE.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "ceac604927d8edfbb5cf51a638a0a33a786fea07"
+    }
+  },
+  "lanes": [
+    { "id": "main", "label": "회원별 전송 대기 행" },
+    { "id": "failure", "label": "전송 실패" }
+  ],
+  "states": [
+    {
+      "id": "changed", "type": "start", "label": "조건 수정", "sublabel": "학력·희망 조건", "lane": "main", "col": 0, "step": "01",
+      "sources": [
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/user/business/UserAccountService.kt", "line": 61, "label": "수정과 함께 적재" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/user/implement/LetsCareerJobProfileOutboxManager.kt", "line": 14, "end_line": 26, "label": "enqueue" }
+      ]
+    },
+    {
+      "id": "pending", "type": "waiting", "label": "전송 대기", "sublabel": "sentAt 없음", "lane": "main", "col": 1, "step": "02", "tag": "sentAt = null",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/user/domain/LetsCareerJobProfileOutbox.kt", "line": 11, "end_line": 46, "label": "회원당 한 행" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/user/persistence/UserRepositories.kt", "line": 30, "label": "실패 적은 순 100건" }
+      ]
+    },
+    {
+      "id": "sending", "type": "active", "label": "전송", "sublabel": "최신 값 읽어 보냄", "lane": "main", "col": 2, "step": "03", "tag": "저장 안 되는 단계",
+      "sources": [
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/user/business/LetsCareerJobProfileSendService.kt", "line": 35, "end_line": 61, "label": "sendPending" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/user/presentation/LetsCareerJobProfileSyncScheduler.kt", "line": 18, "label": "전송 작업" }
+      ]
+    },
+    {
+      "id": "sent", "type": "success", "label": "전송 완료", "sublabel": "보낸 일시 기록", "lane": "main", "col": 4, "step": "04", "tag": "sentAt 기록",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/user/persistence/UserRepositories.kt", "line": 32, "end_line": 46, "label": "markSent" }
+      ]
+    },
+    {
+      "id": "failed", "type": "failure", "label": "실패", "sublabel": "실패 횟수 + 1", "lane": "failure", "col": 2, "tag": "attemptCount",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/user/persistence/UserRepositories.kt", "line": 48, "end_line": 50, "label": "increaseAttemptCount" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/user/business/LetsCareerJobProfileSendService.kt", "line": 53, "end_line": 61, "label": "실패 처리" }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "changed", "to": "pending", "label": "적재" },
+    { "from": "pending", "to": "sending", "label": "스케줄 작업" },
+    { "from": "sending", "to": "sent", "label": "렛츠커리어 반영", "variant": "emphasis", "note": "보낼 값이 없어도 완료로 표시" },
+    { "from": "sending", "to": "failed", "label": "요청 실패", "variant": "security" },
+    { "from": "failed", "to": "pending", "label": "다음 실행에서 재시도" },
+    { "from": "sent", "to": "pending", "label": "다시 수정", "variant": "dashed", "note": "같은 행을 다시 대기로 되돌림" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "한 회원 한 행", "items": ["여러 번 고쳐도 행을 새로 만들지 않고 적재 일시만 갱신", "보낼 때 그 시점의 최신 값을 읽으므로 마지막 상태만 한 번 보냄", "보낸 행은 지우지 않고 보낸 일시를 남김"] },
+    { "dot": "rose", "title": "실패와 경합", "items": ["실패하면 실패 횟수만 올리고 대기로 남아 다음 실행에서 다시 보냄", "실패가 적은 행부터 보내 계속 실패하는 행이 다른 행을 막지 않음", "보내는 사이 다시 수정되면 완료로 표시하지 않고 다음에 다시 보냄"] }
+  ]
+}

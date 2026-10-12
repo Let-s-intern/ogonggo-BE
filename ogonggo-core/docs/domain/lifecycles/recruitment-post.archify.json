@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "모집글 라이프사이클",
+    "output": "ogonggo-core/docs/domain/lifecycles/recruitment-post.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Let-s-intern/ogonggo-BE.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "ceac604927d8edfbb5cf51a638a0a33a786fea07"
+    }
+  },
+  "lanes": [
+    { "id": "main", "label": "게시 상태" },
+    { "id": "recruit", "label": "모집 상태 (게시된 글만)" }
+  ],
+  "states": [
+    {
+      "id": "writing", "type": "start", "label": "작성", "sublabel": "작성자가 저장", "lane": "main", "col": 0, "step": "01",
+      "sources": [
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/recruitmentpost/business/RecruitmentPostService.kt", "line": 91, "label": "바로 게시" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/recruitmentpost/business/RecruitmentPostService.kt", "line": 116, "label": "임시저장" }
+      ]
+    },
+    {
+      "id": "draft", "type": "waiting", "label": "임시저장", "sublabel": "작성자만 봄", "lane": "main", "col": 1, "tag": "DRAFT",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/implement/dto/RecruitmentPostDto.kt", "line": 86, "label": "임시저장 생성" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 250, "end_line": 268, "label": "복사하면 새 임시저장" }
+      ]
+    },
+    {
+      "id": "published", "type": "success", "label": "공개", "sublabel": "목록에 노출", "lane": "main", "col": 2, "step": "02", "tag": "PUBLISHED",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 201, "end_line": 229, "label": "publish · 필수 값 검사" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 45, "label": "기본값 PUBLISHED" }
+      ]
+    },
+    {
+      "id": "hidden", "type": "neutral", "label": "비공개", "sublabel": "운영자가 내림", "lane": "main", "col": 4, "step": "03", "tag": "HIDDEN",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 231, "end_line": 243, "label": "hide · unhide" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/recruitmentpost/business/AdminRecruitmentPostService.kt", "line": 49, "end_line": 50, "label": "관리자 노출 전환" }
+      ]
+    },
+    {
+      "id": "recruiting", "type": "active", "label": "모집 중", "sublabel": "마감일 전", "lane": "recruit", "col": 2, "tag": "RECRUITING",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 192, "end_line": 199, "label": "reopen" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 386, "end_line": 390, "label": "임시저장은 불가" }
+      ]
+    },
+    {
+      "id": "closed", "type": "neutral", "label": "마감", "sublabel": "모집 종료", "lane": "recruit", "col": 4, "tag": "CLOSED",
+      "sources": [
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/domain/RecruitmentPost.kt", "line": 183, "end_line": 190, "label": "close" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/recruitmentpost/persistence/RecruitmentPostRepositories.kt", "line": 24, "end_line": 42, "label": "공개 글 자동 마감" },
+        { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/recruitmentpost/presentation/RecruitmentPostAutoCloseScheduler.kt", "line": 21, "end_line": 24, "label": "자동 마감 작업" }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "writing", "to": "draft", "label": "임시저장" },
+    { "from": "writing", "to": "published", "label": "바로 게시" },
+    { "from": "draft", "to": "published", "label": "게시", "variant": "emphasis", "note": "필수 값이 모두 있어야 함" },
+    { "from": "published", "to": "hidden", "label": "운영자가 숨김", "variant": "security" },
+    { "from": "hidden", "to": "published", "label": "운영자가 다시 공개", "note": "작성자는 되돌릴 수 없음" },
+    { "from": "recruiting", "to": "closed", "label": "마감일 경과·직접 마감" },
+    { "from": "closed", "to": "recruiting", "label": "모집 재개" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "게시 상태", "items": ["임시저장 글은 필수 값을 모두 채워야 게시할 수 있음", "숨김과 다시 공개는 운영자만 할 수 있음", "글을 복사하면 같은 내용의 새 임시저장 글이 생김"] },
+    { "dot": "cyan", "title": "모집 상태", "items": ["임시저장 글은 마감하거나 재개할 수 없음", "자동 마감은 공개 중이고 마감일이 지난 글만 대상", "작성자는 직접 마감하고 다시 모집할 수 있음"] },
+    { "dot": "slate", "title": "삭제", "items": ["작성자가 언제든 소프트 삭제할 수 있고 삭제 후에는 바꿀 수 없음"] }
+  ]
+}
