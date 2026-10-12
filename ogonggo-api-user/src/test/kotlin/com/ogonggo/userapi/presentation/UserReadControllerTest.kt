@@ -77,7 +77,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `인증 사용자는 공고 목록과 상세를 조회한다`() {
-        Mockito.`when`(userJobService.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
+        Mockito.`when`(userJobService.getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userJobService.getJob(USER_ID, 1L)).thenReturn(jobResult())
 
         mockMvc.perform(get("/api/v1/jobs").with(authenticatedUser()))
@@ -266,7 +266,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `외부 페이지 번호는 서비스 호출 전에 0 기반으로 변환한다`() {
-        Mockito.`when`(userJobService.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 1, 15)).thenReturn(
+        Mockito.`when`(userJobService.getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 1, 15)).thenReturn(
             jobPageResult(page = 1, size = 15),
         )
 
@@ -280,13 +280,13 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(15))
 
-        Mockito.verify(userJobService).getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 1, 15)
+        Mockito.verify(userJobService).getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 1, 15)
     }
 
     @Test
     fun `정렬을 지정하지 않으면 최신순으로 조회하고 조회수순도 고를 수 있다`() {
-        Mockito.`when`(userJobService.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
-        Mockito.`when`(userJobService.getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.VIEW_COUNT, 0, 10)).thenReturn(jobPageResult())
+        Mockito.`when`(userJobService.getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
+        Mockito.`when`(userJobService.getJobs(USER_ID, RECRUITING_JOBS, JobSortType.VIEW_COUNT, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userBootcampService.getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.VIEW_COUNT, 0, 10))
             .thenReturn(bootcampPageResult())
 
@@ -297,8 +297,8 @@ class UserReadControllerTest @Autowired constructor(
         mockMvc.perform(get("/api/v1/bootcamps").param("sort", "VIEW_COUNT").with(authenticatedUser()))
             .andExpect(status().isOk)
 
-        Mockito.verify(userJobService).getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)
-        Mockito.verify(userJobService).getJobs(USER_ID, JobSearchCondition.NONE, JobSortType.VIEW_COUNT, 0, 10)
+        Mockito.verify(userJobService).getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 0, 10)
+        Mockito.verify(userJobService).getJobs(USER_ID, RECRUITING_JOBS, JobSortType.VIEW_COUNT, 0, 10)
         Mockito.verify(userBootcampService).getBootcamps(USER_ID, BootcampSearchCondition.NONE, BootcampSortType.VIEW_COUNT, 0, 10)
     }
 
@@ -309,6 +309,7 @@ class UserReadControllerTest @Autowired constructor(
             experienceTypes = setOf(JobExperienceType.NEWCOMER, JobExperienceType.IRRELEVANT),
             jobField = JobField.IT_DEVELOPMENT,
             jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND),
+            recruitmentStatus = JobRecruitmentStatus.RECRUITING,
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
             .thenReturn(jobPageResult())
@@ -331,6 +332,7 @@ class UserReadControllerTest @Autowired constructor(
         val condition = JobSearchCondition(
             employmentTypes = setOf(JobEmploymentType.INTERN),
             keyword = "백엔드",
+            recruitmentStatus = JobRecruitmentStatus.RECRUITING,
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
             .thenReturn(jobPageResult())
@@ -382,15 +384,20 @@ class UserReadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `모집 상태는 조회 조건으로 전달된다`() {
-        val condition = JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING)
-        Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.LATEST, 0, 10))
+    fun `모집 상태는 조회 조건으로 전달되고 보내지 않으면 모집 중 공고만 조회한다`() {
+        val closed = JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.CLOSED)
+        Mockito.`when`(userJobService.getJobs(USER_ID, closed, JobSortType.LATEST, 0, 10))
+            .thenReturn(jobPageResult())
+        Mockito.`when`(userJobService.getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 0, 10))
             .thenReturn(jobPageResult())
 
-        mockMvc.perform(get("/api/v1/jobs").param("recruitmentStatus", "RECRUITING").with(authenticatedUser()))
+        mockMvc.perform(get("/api/v1/jobs").param("recruitmentStatus", "CLOSED").with(authenticatedUser()))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/v1/jobs").with(authenticatedUser()))
             .andExpect(status().isOk)
 
-        Mockito.verify(userJobService).getJobs(USER_ID, condition, JobSortType.LATEST, 0, 10)
+        Mockito.verify(userJobService).getJobs(USER_ID, closed, JobSortType.LATEST, 0, 10)
+        Mockito.verify(userJobService).getJobs(USER_ID, RECRUITING_JOBS, JobSortType.LATEST, 0, 10)
     }
 
     @Test
@@ -674,7 +681,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `익명 사용자도 공고와 부트캠프 조회 API를 호출할 수 있다`() {
-        Mockito.`when`(userJobService.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
+        Mockito.`when`(userJobService.getJobs(null, RECRUITING_JOBS, JobSortType.LATEST, 0, 10)).thenReturn(jobPageResult())
         Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult())
         Mockito.`when`(userJobService.getPopularJobs(null, null)).thenReturn(listOf(jobSummary(bookmarked = false)))
         Mockito.`when`(userJobService.getJobCalendar(null, JobSearchCondition.NONE, JobCalendarSearchCondition.NONE, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
@@ -700,7 +707,7 @@ class UserReadControllerTest @Autowired constructor(
 
     @Test
     fun `익명 조회는 사용자 식별자 없이 서비스를 호출한다`() {
-        Mockito.`when`(userJobService.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10))
+        Mockito.`when`(userJobService.getJobs(null, RECRUITING_JOBS, JobSortType.LATEST, 0, 10))
             .thenReturn(jobPageResult(bookmarked = false))
         Mockito.`when`(userJobService.getJob(null, 1L)).thenReturn(jobResult(bookmarked = false))
 
@@ -712,7 +719,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.bookmarked").value(false))
 
-        Mockito.verify(userJobService).getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10)
+        Mockito.verify(userJobService).getJobs(null, RECRUITING_JOBS, JobSortType.LATEST, 0, 10)
         Mockito.verify(userJobService).getJob(null, 1L)
     }
 
@@ -720,7 +727,7 @@ class UserReadControllerTest @Autowired constructor(
     fun `유효하지 않은 토큰으로 조회하면 401 대신 비로그인 응답을 준다`() {
         Mockito.`when`(ogonggoTokenProvider.parseAccessToken("not-a-real-token"))
             .thenThrow(UnauthorizedException(AuthErrorCode.INVALID_TOKEN))
-        Mockito.`when`(userJobService.getJobs(null, JobSearchCondition.NONE, JobSortType.LATEST, 0, 10))
+        Mockito.`when`(userJobService.getJobs(null, RECRUITING_JOBS, JobSortType.LATEST, 0, 10))
             .thenReturn(jobPageResult(bookmarked = false))
 
         mockMvc.perform(get("/api/v1/jobs").header("Authorization", "Bearer not-a-real-token"))
@@ -934,5 +941,6 @@ class UserReadControllerTest @Autowired constructor(
 
     companion object {
         private const val USER_ID = 17L
+        private val RECRUITING_JOBS = JobSearchCondition(recruitmentStatus = JobRecruitmentStatus.RECRUITING)
     }
 }
