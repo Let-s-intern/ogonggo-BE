@@ -135,6 +135,7 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)를 고친다 |
 | `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)를 고친다 |
 | `PUT /api/v1/users/me/notification-email` | 필수 | 일반 회원이 오늘의 공고 수신 이메일을 고친다 |
+| `PUT /api/v1/users/me/nickname` | 필수 | 일반 회원이 닉네임을 고친다. 렛츠커리어로 전달한다 |
 | `PATCH /api/v1/users/me/password` | 필수 | 자기 비밀번호를 바꾼다 |
 
 `anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다. 브라우저 preflight(`OPTIONS`)만 예외로, 인가 규칙 첫 줄의 `CorsUtils::isPreFlightRequest`가 먼저 허용합니다([브라우저 CORS 허용 오리진](#7-2-브라우저-cors-허용-오리진) 참고).
@@ -198,13 +199,14 @@ PUT /api/v1/users/me/profile    사용자가 고칠 수 있는 값만 교체한�
 
 | 항목 | 값 | 소유 |
 | --- | --- | --- |
-| 이름·가입 이메일·휴대폰 번호·가입 경로·닉네임 | `name`, `email`, `phoneNum`, `authProvider`, `nickname` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
+| 이름·가입 이메일·휴대폰 번호·가입 경로 | `name`, `email`, `phoneNum`, `authProvider` | 렛츠커리어. 로그인마다 `sync`가 갱신하고 오공고에서는 바꾸지 않는다 |
+| 닉네임 | `nickname` | 렛츠커리어. 로그인마다 `sync`가 갱신한다. 오공고에서 바꾸면 렛츠커리어로 전달한 뒤 같은 값을 바로 반영한다. [닉네임](#닉네임) 참고 |
 | 프로필 이미지 | `profileImageUrl` | 렛츠커리어 이미지를 로그인마다 복제하고, 오공고에서 바꾼 이미지가 있으면 그것을 먼저 보인다. [프로필 이미지](#프로필-이미지) 참고 |
 | 학력 | `university`, `major`, `grade` | 양쪽. 나중에 고친 쪽이 이긴다 |
 | 희망 조건 | `wishField`, `wishJob`, `wishIndustry`, `wishEmploymentType`, `wishCompany` | 양쪽. 나중에 고친 쪽이 이긴다 |
 | 오늘의 공고 수신 이메일 | `notificationEmail` | 오공고. 사용자가 고친다 |
 
-**같은 `user_profiles` 테이블에 두되 무엇이 무엇을 덮어쓰는지는 코드로 못 박아 둡니다.** `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값과 그 수정 일시만, `UserProfile.changeNotificationEmail`은 수신 이메일만, `UserProfile.changeOgonggoProfileImage`·`removeOgonggoProfileImage`는 오공고 프로필 이미지 두 칸만 건드립니다. 한쪽 메서드에 다른 쪽 필드를 추가하지 않습니다.
+**같은 `user_profiles` 테이블에 두되 무엇이 무엇을 덮어쓰는지는 코드로 못 박아 둡니다.** `UserProfile.sync`는 렛츠커리어에서 복제하는 여섯 값만 건드리고, `UserProfile.replaceJobInfo`는 학력과 희망 조건 여덟 값과 그 수정 일시만, `UserProfile.changeNotificationEmail`은 수신 이메일만, `UserProfile.changeNickname`은 렛츠커리어에 바꾼 닉네임만, `UserProfile.changeOgonggoProfileImage`·`removeOgonggoProfileImage`는 오공고 프로필 이미지 두 칸만 건드립니다. 한쪽 메서드에 다른 쪽 필드를 추가하지 않습니다.
 
 `grade`는 렛츠커리어의 `UserGrade`와 값과 `code`를 맞춰 두었습니다. 희망 조건 다섯 값은 렛츠커리어가 자유 문자열로 다루므로 오공고도 형식을 해석하지 않고 그대로 보관합니다.
 
@@ -255,6 +257,22 @@ GET  /api/v1/internal/users/{userId}/job-profile     최초 가입 시 1회 (upd
 렛츠커리어 호출은 로그인 트랜잭션 밖에서 합니다. 그 호출이 실패해도 가입은 성공으로 둡니다. 학력과 희망 조건은 로그인의 성공 조건이 아니고, 비어 있으면 사용자가 오공고에서 직접 입력하면 됩니다. 오공고가 모르는 `grade` 값이 오면 그 값만 비우고 나머지는 저장합니다.
 
 PUT은 여덟 값을 함께 교체하며 보내지 않은 값은 비웁니다. 아직 입력한 적이 없어도 조회는 404가 아니라 값이 `null`인 200으로 응답합니다.
+
+### 닉네임
+
+> 렛츠커리어가 소유하며, 오공고에서 바꾸면 렛츠커리어로 전달해 바꾼다. (2026-10-12, 팀 리뷰 필요)
+
+```text
+PUT /api/v1/users/me/nickname                          { "nickname": "..." }
+  → 렛츠커리어 PUT /api/v1/internal/users/{userId}/nickname   { "nickname": "..." }
+  → 성공하면 user_profiles.nickname 반영
+```
+
+- 일반 회원만 바꿉니다. 기업 회원은 403 `GENERAL_MEMBER_REQUIRED`입니다.
+- 앞뒤 공백을 빼고 저장하며, 비었거나 20자를 넘으면 400 `BAD_REQUEST`입니다. 중복은 허용합니다.
+- 렛츠커리어 호출은 트랜잭션 밖에서 동기로 합니다. 사용자가 직접 요청한 변경이라 실패하면 503 `LETSCAREER_UNAVAILABLE`로 알리고 오공고 값도 바꾸지 않습니다. 재시도는 사용자에게 맡깁니다.
+- 렛츠커리어가 성공한 뒤 오공고 반영이 실패하면 두 값이 잠시 어긋나지만, 렛츠커리어의 수정 일시가 바뀌었으므로 다음 로그인의 `sync`가 맞춥니다.
+- 렛츠커리어 내부 API(`PUT /api/v1/internal/users/{userId}/nickname`)는 이 저장소가 정한 계약이며 렛츠커리어 쪽 구현이 필요합니다. **확인 필요.**
 
 ### 오늘의 공고 수신 이메일
 
@@ -446,7 +464,7 @@ GET /api/v1/users/me
 | 탈퇴 사용자의 재로그인 | 확인 필요 | 403으로 막는다. 현재 도메인은 탈퇴를 되돌릴 수 없다고 선언하고 있다 |
 | 렛츠커리어 로그아웃 시 오공고 동시 로그아웃 | 미정 | 오공고 세션은 유지된다 |
 | `ADMIN` 역할 부여 경로 | DB 직접 부여로 결정(2026-09-14) | 부여 API와 화면은 없다. 부여 이력·감사 기록은 미정이다. 렛츠커리어의 `isAdmin`은 반영하지 않는다 |
-| 프로필 수정 | 일부 결정(2026-09-29) | 구직 프로필과 수신 이메일은 오공고에서 고친다. 렛츠커리어에서 복제한 이름·가입 이메일·휴대폰 번호·닉네임은 조회만 하고 로그인 시 갱신된다. 프로필 이미지는 오공고 전용 이미지로 바꿀 수 있다(2026-09-30). 기업 정보는 `PUT /api/v1/users/me/company-profile/basic-info`·`manager-info`로 고친다 |
+| 프로필 수정 | 일부 결정(2026-09-29) | 구직 프로필과 수신 이메일은 오공고에서 고친다. 렛츠커리어에서 복제한 이름·가입 이메일·휴대폰 번호는 조회만 하고 로그인 시 갱신된다. 닉네임은 렛츠커리어로 전달해 바꾼다(2026-10-12). 프로필 이미지는 오공고 전용 이미지로 바꿀 수 있다(2026-09-30). 기업 정보는 `PUT /api/v1/users/me/company-profile/basic-info`·`manager-info`로 고친다 |
 
 앞의 세 가지는 서로 얽혀 있으므로 함께 결정합니다. 재발급 시점에 렛츠커리어를 재검증하는 방식(`last_synced_at`이 일정 기간을 넘겼을 때만 호출)이 전파 지연을 좁히는 후보이며, 탈퇴 정책이 정해진 뒤 함께 검토합니다.
 

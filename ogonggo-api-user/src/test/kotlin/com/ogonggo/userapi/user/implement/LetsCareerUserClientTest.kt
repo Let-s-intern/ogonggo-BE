@@ -165,6 +165,37 @@ class LetsCareerUserClientTest {
         assertThrows(RestClientException::class.java) { client.replaceJobProfile(4821L, REPLACE_COMMAND) }
     }
 
+    @Test
+    fun `내부 API 키와 새 닉네임을 실어 렛츠커리어에 PUT으로 전달한다`() {
+        // given
+        server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/nickname"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(header("X-Internal-Api-Key", API_KEY))
+            .andExpect(content().json("""{"nickname":"오공고"}"""))
+            .andRespond(withSuccess("""{"status":200,"message":"ok","data":null}""", MediaType.APPLICATION_JSON))
+
+        // when
+        client.changeNickname(4821L, "오공고")
+
+        // then
+        server.verify()
+    }
+
+    @Test
+    fun `닉네임 변경이 실패하면 렛츠커리어 연동 실패로 알린다`() {
+        listOf(
+            errorBody(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"),
+            withStatus(HttpStatus.INTERNAL_SERVER_ERROR),
+        ).forEach { response ->
+            server.reset()
+            server.expect(requestTo("$BASE_URL/api/v1/internal/users/4821/nickname")).andRespond(response)
+
+            val exception = assertThrows(BusinessException::class.java) { client.changeNickname(4821L, "오공고") }
+
+            assertEquals(AuthErrorCode.LETSCAREER_UNAVAILABLE, exception.errorCode)
+        }
+    }
+
     private fun errorBody(status: HttpStatus, code: String) = withStatus(status)
         .contentType(MediaType.APPLICATION_JSON)
         .body("""{"status":${status.value()},"code":"$code","message":"렛츠커리어 메시지"}""")

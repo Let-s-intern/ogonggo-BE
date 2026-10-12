@@ -112,6 +112,16 @@ class UserDomainTest {
     }
 
     @Test
+    fun `닉네임은 공백일 수 없다`() {
+        val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
+
+        profile.changeNickname("오공고")
+        assertEquals("오공고", profile.nickname)
+
+        assertThrows(IllegalArgumentException::class.java) { profile.changeNickname(" ") }
+    }
+
+    @Test
     fun `수신 이메일은 공백일 수 없고 null이면 비운다`() {
         val profile = UserProfile(userId = 1L, lastSyncedAt = joinedAt)
 

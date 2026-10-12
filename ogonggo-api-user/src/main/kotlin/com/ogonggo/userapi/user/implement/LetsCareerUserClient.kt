@@ -123,6 +123,24 @@ class LetsCareerUserClient(
         throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
     }
 
+    /**
+     * 닉네임은 렛츠커리어가 소유하므로 변경을 그대로 전달한다.
+     * 사용자가 직접 요청한 변경이라 실패를 삼키지 않고 알리며, 사용자가 다시 시도하면 되므로 재시도하지 않는다.
+     */
+    fun changeNickname(letsCareerUserId: Long, nickname: String) {
+        try {
+            letsCareerRestClient.put()
+                .uri(NICKNAME_PATH, letsCareerUserId)
+                .header(INTERNAL_API_KEY_HEADER, properties.internalApiKey)
+                .body(NicknameChangeRequest(nickname = nickname))
+                .retrieve()
+                .toBodilessEntity()
+        } catch (exception: RestClientException) {
+            log.error("렛츠커리어 닉네임 변경 호출에 실패했습니다. letsCareerUserId={}", letsCareerUserId, exception)
+            throw InternalServerException(AuthErrorCode.LETSCAREER_UNAVAILABLE)
+        }
+    }
+
     private fun requestPasswordChange(letsCareerUserId: Long, request: PasswordChangeRequest) {
         letsCareerPasswordRestClient.patch()
             .uri(PASSWORD_PATH, letsCareerUserId)
@@ -155,6 +173,7 @@ class LetsCareerUserClient(
     companion object {
         private const val JOB_PROFILE_PATH = "/api/v1/internal/users/{userId}/job-profile"
         private const val PASSWORD_PATH = "/api/v1/internal/users/{userId}/password"
+        private const val NICKNAME_PATH = "/api/v1/internal/users/{userId}/nickname"
         private const val PASSWORD_CHANGE_MAX_ATTEMPTS = 3
         private const val INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key"
         private val log = LoggerFactory.getLogger(LetsCareerUserClient::class.java)
@@ -185,6 +204,10 @@ data class LetsCareerJobProfileReplaceCommand(
 internal data class PasswordChangeRequest(
     val password: String,
     val newPassword: String,
+)
+
+internal data class NicknameChangeRequest(
+    val nickname: String,
 )
 
 internal data class LetsCareerErrorResponse(

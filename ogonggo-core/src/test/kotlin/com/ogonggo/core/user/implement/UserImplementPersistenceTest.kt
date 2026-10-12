@@ -415,6 +415,21 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `프로필 행이 없어도 닉네임을 저장하면 행이 생기고 있으면 닉네임만 바꾼다`() {
+        val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
+
+        userProfileManager.changeNickname(account.userId, "오공고", NOW)
+        assertEquals("오공고", userProfileReader.read(account.userId)?.nickname)
+
+        userProfileManager.changeNotificationEmail(account.userId, "today@example.com", NOW)
+        userProfileManager.changeNickname(account.userId, "렛츠커리어", NOW)
+
+        val profile = userProfileReader.read(account.userId)
+        assertEquals("렛츠커리어", profile?.nickname)
+        assertEquals("today@example.com", profile?.notificationEmail)
+    }
+
+    @Test
     fun `기업 회원의 비밀번호를 바꾸면 새 값으로 로그인 자격증명이 바뀐다`() {
         val account = userAppender.appendCompany(
             CompanyAccountAppendDto("mock@example.com", "encoded-password", NOW),

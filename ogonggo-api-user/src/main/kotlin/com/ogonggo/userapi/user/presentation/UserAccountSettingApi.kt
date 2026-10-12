@@ -3,6 +3,7 @@ package com.ogonggo.userapi.user.presentation
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
 import com.ogonggo.userapi.response.SuccessResponse
+import com.ogonggo.userapi.user.presentation.request.ChangeMyNicknameRequest
 import com.ogonggo.userapi.user.presentation.request.ChangeMyPasswordRequest
 import com.ogonggo.userapi.user.presentation.request.ReplaceMyNotificationEmailRequest
 import com.ogonggo.userapi.user.presentation.request.ReplaceMyProfileImageRequest
@@ -60,6 +61,50 @@ interface UserAccountSettingApi {
         userId: Long,
         @Valid
         request: ReplaceMyNotificationEmailRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "changeMyNickname",
+        summary = "닉네임 변경",
+        description = """
+            일반 회원의 닉네임을 바꿉니다. 앞뒤 공백은 빼고 저장합니다.
+            바뀐 닉네임은 내 정보 조회(GET /api/v1/users/me)의 profile.nickname에 담깁니다.
+
+            닉네임은 렛츠커리어가 소유하므로 렛츠커리어로 전달해 바꿉니다. 렛츠커리어 닉네임이 함께 바뀝니다.
+            렛츠커리어에서 실패하면 오공고 닉네임도 바뀌지 않습니다.
+            같은 닉네임을 다시 보내도 결과가 같습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "변경 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 닉네임이 비었거나 20자를 넘습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "GENERAL_MEMBER_REQUIRED: 기업 회원은 닉네임이 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "USER_PROFILE_CONFLICT: 같은 사용자의 저장이 동시에 들어와 실패했습니다. 재시도하면 성공합니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "503",
+                description = "LETSCAREER_UNAVAILABLE: 렛츠커리어 서버와 통신할 수 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun changeMyNickname(
+        @Parameter(hidden = true)
+        userId: Long,
+        @Valid
+        request: ChangeMyNicknameRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(

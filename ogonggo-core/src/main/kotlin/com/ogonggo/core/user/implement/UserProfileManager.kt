@@ -99,6 +99,18 @@ class UserProfileManager internal constructor(
     }
 
     /**
+     * 렛츠커리어에 바꾼 닉네임을 다음 로그인을 기다리지 않고 바로 보이게 한다.
+     * 프로필 행이 없으면 만들며, 동시에 만들어진 경우는 `replaceJobInfo`와 같이 재시도할 수 있는 충돌로 알린다.
+     */
+    fun changeNickname(userId: Long, nickname: String, now: LocalDateTime) {
+        val profile = userProfileRepository.findByUserId(userId)
+            ?: return createWith(UserProfile(userId = userId, lastSyncedAt = now)) { changeNickname(nickname) }
+
+        profile.changeNickname(nickname)
+        userProfileRepository.save(profile)
+    }
+
+    /**
      * 학력·희망 조건과 같이 오공고가 소유하는 값이라 재로그인의 `sync`가 덮어쓰지 않는다.
      * 프로필 행이 없으면 만들며, 동시에 만들어진 경우는 `replaceJobInfo`와 같이 재시도할 수 있는 충돌로 알린다.
      */

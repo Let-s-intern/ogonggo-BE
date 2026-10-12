@@ -169,6 +169,15 @@ internal class UserProfile(
     }
 
     /**
+     * 렛츠커리어에 닉네임 변경을 전달한 뒤 같은 값을 바로 반영한다.
+     * 닉네임은 렛츠커리어가 소유하므로 다음 로그인의 `sync`도 같은 값을 가져온다.
+     */
+    fun changeNickname(nickname: String) {
+        require(nickname.isNotBlank()) { "닉네임은 공백일 수 없습니다." }
+        this.nickname = nickname
+    }
+
+    /**
      * 오늘의 공고를 받을 이메일을 바꾼다. 렛츠커리어 가입 이메일과 따로 두며 오공고가 소유한다.
      * null이면 비운다.
      */

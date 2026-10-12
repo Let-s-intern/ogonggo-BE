@@ -8,6 +8,7 @@ import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.user.business.PasswordChangeCommand
 import com.ogonggo.userapi.user.business.UserAccountService
+import com.ogonggo.userapi.user.business.UserNicknameService
 import com.ogonggo.userapi.user.business.UserPasswordService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -36,6 +37,9 @@ class UserAccountSettingControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var userPasswordService: UserPasswordService
+
+    @MockBean
+    private lateinit var userNicknameService: UserNicknameService
 
     @MockBean
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
@@ -74,6 +78,34 @@ class UserAccountSettingControllerTest @Autowired constructor(
         }
 
         Mockito.verifyNoInteractions(userAccountService)
+    }
+
+    @Test
+    fun `닉네임을 받아 앞뒤 공백을 빼고 바꾼다`() {
+        mockMvc.perform(
+            put(NICKNAME_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"nickname":" 오공고 "}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isEmpty)
+
+        Mockito.verify(userNicknameService).changeMyNickname(USER_ID, "오공고")
+    }
+
+    @Test
+    fun `닉네임이 없거나 비었거나 20자를 넘으면 400으로 막는다`() {
+        listOf("{}", """{"nickname":" "}""", """{"nickname":"${"가".repeat(21)}"}""").forEach { body ->
+            mockMvc.perform(
+                put(NICKNAME_PATH).with(authenticatedUser())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(userNicknameService)
     }
 
     @Test
@@ -205,6 +237,7 @@ class UserAccountSettingControllerTest @Autowired constructor(
     )
 
     companion object {
+        private const val NICKNAME_PATH = "/api/v1/users/me/nickname"
         private const val NOTIFICATION_EMAIL_PATH = "/api/v1/users/me/notification-email"
         private const val PASSWORD_PATH = "/api/v1/users/me/password"
         private const val PROFILE_IMAGE_PATH = "/api/v1/users/me/profile-image"
