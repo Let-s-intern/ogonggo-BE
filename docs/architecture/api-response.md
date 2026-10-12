@@ -176,7 +176,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 부트캠프 지원 페이지 이동
 
-`POST /api/v1/bootcamps/{bootcampId}/source-url-clicks`도 같은 계약을 사용합니다. 2026-10-06에 경로를 채용공고와 맞추면서 예전 경로 `application-url-clicks`는 프런트 전환까지만 명세에 보이지 않게 받습니다. 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
+`POST /api/v1/bootcamps/{bootcampId}/source-url-clicks`도 같은 계약을 사용합니다. 2026-10-06에 경로를 채용공고와 맞췄습니다(예전 경로 `application-url-clicks`). 이동할 주소는 상세 응답의 `applicationUrl`이며 이 API는 주소를 반환하지 않습니다.
 
 채용공고는 원문(`sourceUrl`) 이동을 기록하지만 부트캠프는 외부 지원 페이지(`applicationUrl`) 이동을 기록합니다. 부트캠프에서 세어야 하는 것이 지원 전환이기 때문입니다. `applicationMethod`가 `EMAIL`이라 `applicationUrl`이 없는 부트캠프는 클라이언트가 이동 버튼을 띄우지 않으므로, 서버는 링크 유무를 따로 검사하지 않습니다. 원문(`sourceUrl`) 이동을 함께 세야 하면 그때 링크 종류를 구분하는 컬럼을 추가할지 검토합니다.
 
@@ -353,7 +353,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
 - 목록은 core의 `EnumOptionReader`가 한 곳에서 관리합니다. core에 업무 enum을 새로 만들면 이 목록에 추가하며, 빠뜨리면 core 테스트가 실패합니다.
 - core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(사용자: 광고 문의 유형·홍보 채널, 관리자: 관리 목록 정렬·노출). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
-- enum 이름에 루트 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`, `EmploymentType` → `JobEmploymentType`). 프런트가 새 키로 옮기는 동안 `UserEnumService.LEGACY_KEYS`가 같은 선택지를 예전 키 17개로도 내려 주며, 프런트 배포 후 제거합니다.
+- 2026-10-06에 enum 이름에 루트 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`, `EmploymentType` → `JobEmploymentType`). 프런트 전환 기간에 내려 주던 예전 키는 2026-10-12에 제거했습니다.
 
 #### 목록을 한 곳에서 관리하는 이유
 
