@@ -22,6 +22,8 @@ data class LetsCareerUser(
     val profileImageUrl: String?,
     val isAdmin: Boolean,
     val updatedAt: LocalDateTime?,
+    /** 닉네임만의 최종 수정 일시다. 렛츠커리어가 아직 주지 않거나 한 번도 고친 적 없으면 null이다. */
+    val nicknameUpdatedAt: LocalDateTime? = null,
 )
 
 @Component
@@ -82,6 +84,7 @@ internal data class VerifyResponse(
     /** 렛츠커리어가 가입 경로를 추가해도 로그인이 깨지지 않도록 문자열로 받는다. */
     val authProvider: String?,
     val nickname: String?,
+    val nicknameUpdatedAt: LocalDateTime? = null,
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
     val updatedAt: LocalDateTime?,
@@ -99,5 +102,6 @@ internal data class VerifyResponse(
         // 렛츠커리어가 값을 주지 않으면 관리자가 아닌 것으로 본다.
         isAdmin = isAdmin ?: false,
         updatedAt = updatedAt,
+        nicknameUpdatedAt = nicknameUpdatedAt,
     )
 }

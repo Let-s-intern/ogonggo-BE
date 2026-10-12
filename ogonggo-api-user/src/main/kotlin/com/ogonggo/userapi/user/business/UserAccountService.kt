@@ -7,6 +7,7 @@ import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.CompanyProfileManager
 import com.ogonggo.core.user.implement.CompanyProfileReader
 import com.ogonggo.core.user.implement.LetsCareerJobProfileOutboxManager
+import com.ogonggo.core.user.implement.LetsCareerNicknameOutboxManager
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
@@ -28,6 +29,7 @@ class UserAccountService(
     private val userProfileManager: UserProfileManager,
     private val companyProfileManager: CompanyProfileManager,
     private val letsCareerJobProfileOutboxManager: LetsCareerJobProfileOutboxManager,
+    private val letsCareerNicknameOutboxManager: LetsCareerNicknameOutboxManager,
     private val imageAssetManager: ImageAssetManager,
     private val clock: Clock,
 ) {
@@ -48,7 +50,7 @@ class UserAccountService(
 
     /**
      * 사용자가 직접 입력하는 학력과 희망 조건만 교체한다.
-     * 이름·닉네임은 렛츠커리어가 소유해 로그인마다 갱신되므로 여기서 바꾸지 않는다.
+     * 이름은 렛츠커리어가 소유해 로그인마다 갱신되므로 여기서 바꾸지 않는다. 닉네임은 `changeMyNickname`으로 바꾼다.
      *
      * 학력과 희망 조건은 렛츠커리어와 양쪽에서 고칠 수 있어 렛츠커리어 계정이면 같은 트랜잭션에서 보낼 변경을 적재한다.
      * 렛츠커리어 호출은 아웃박스가 나중에 하므로 렛츠커리어 장애가 이 요청을 실패시키지 않는다.
@@ -60,6 +62,19 @@ class UserAccountService(
         if (userReader.read(userId).letsCareerUserId != null) {
             letsCareerJobProfileOutboxManager.enqueue(userId, now)
         }
+    }
+
+    /**
+     * 닉네임은 렛츠커리어와 오공고 양쪽에서 고칠 수 있어, 오공고 값을 고치고 같은 트랜잭션에서 렛츠커리어로 보낼 변경을 적재한다.
+     * 렛츠커리어 호출은 아웃박스가 나중에 하므로 렛츠커리어 장애가 이 요청을 실패시키지 않는다.
+     * 기업 회원은 렛츠커리어 계정이 없어 닉네임을 쓰지 않으므로 막는다.
+     */
+    @Transactional
+    fun changeMyNickname(userId: Long, nickname: String) {
+        verifyGeneralMember(userId)
+        val now = LocalDateTime.now(clock)
+        userProfileManager.changeNickname(userId, nickname, now)
+        letsCareerNicknameOutboxManager.enqueue(userId, now)
     }
 
     /**
@@ -123,7 +138,7 @@ class UserAccountService(
         companyProfileManager.replaceManagerInfo(userId, command)
     }
 
-    /** 오늘의 공고 수신 이메일과 프로필 이미지는 일반 회원의 값이다. 기업 회원은 담당자 정보의 수신 이메일과 기업 로고를 쓴다. */
+    /** 닉네임, 오늘의 공고 수신 이메일, 프로필 이미지는 일반 회원의 값이다. 기업 회원은 담당자 정보의 수신 이메일과 기업 로고를 쓴다. */
     private fun verifyGeneralMember(userId: Long) {
         if (userReader.read(userId).letsCareerUserId == null) {
             throw ForbiddenException(UserErrorCode.GENERAL_MEMBER_REQUIRED)

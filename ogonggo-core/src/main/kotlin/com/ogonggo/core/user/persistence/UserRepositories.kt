@@ -2,6 +2,7 @@ package com.ogonggo.core.user.persistence
 
 import com.ogonggo.core.user.domain.CompanyProfile
 import com.ogonggo.core.user.domain.LetsCareerJobProfileOutbox
+import com.ogonggo.core.user.domain.LetsCareerNicknameOutbox
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserProfile
 import org.springframework.data.jpa.repository.JpaRepository
@@ -47,5 +48,31 @@ internal interface LetsCareerJobProfileOutboxJpaRepository : JpaRepository<LetsC
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update LetsCareerJobProfileOutbox o set o.attemptCount = o.attemptCount + 1 where o.userId = :userId")
+    fun increaseAttemptCount(@Param("userId") userId: Long): Int
+}
+
+internal interface LetsCareerNicknameOutboxJpaRepository : JpaRepository<LetsCareerNicknameOutbox, Long> {
+    fun findByUserId(userId: Long): LetsCareerNicknameOutbox?
+
+    fun findTop100BySentAtIsNullOrderByAttemptCountAscRequestedAtAsc(): List<LetsCareerNicknameOutbox>
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update LetsCareerNicknameOutbox o
+        set o.sentAt = :sentAt
+        where o.userId = :userId
+          and o.requestedAt = :requestedAt
+          and o.sentAt is null
+        """,
+    )
+    fun markSent(
+        @Param("userId") userId: Long,
+        @Param("requestedAt") requestedAt: LocalDateTime,
+        @Param("sentAt") sentAt: LocalDateTime,
+    ): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update LetsCareerNicknameOutbox o set o.attemptCount = o.attemptCount + 1 where o.userId = :userId")
     fun increaseAttemptCount(@Param("userId") userId: Long): Int
 }

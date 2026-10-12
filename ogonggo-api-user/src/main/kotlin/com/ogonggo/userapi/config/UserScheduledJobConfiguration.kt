@@ -9,6 +9,7 @@ import com.ogonggo.userapi.letscareercontent.presentation.LetsCareerContentSyncS
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
 import com.ogonggo.userapi.user.presentation.LetsCareerJobProfileSyncScheduler
+import com.ogonggo.userapi.user.presentation.LetsCareerNicknameSyncScheduler
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -59,6 +60,14 @@ class UserScheduledJobConfiguration {
         name = LetsCareerJobProfileSyncScheduler.SCHEDULER_NAME,
         defaultCron = "*/30 * * * * *",
         description = "오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송 (30초마다)",
+        action = scheduler::sendPending,
+    )
+
+    @Bean
+    fun letsCareerNicknameSyncJob(scheduler: LetsCareerNicknameSyncScheduler) = ScheduledJobDefinition(
+        name = LetsCareerNicknameSyncScheduler.SCHEDULER_NAME,
+        defaultCron = "*/30 * * * * *",
+        description = "오공고에서 고친 닉네임을 렛츠커리어로 전송 (30초마다)",
         action = scheduler::sendPending,
     )
 

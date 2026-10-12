@@ -14,6 +14,7 @@ import com.ogonggo.core.user.implement.dto.CompanyLogoDto
 import com.ogonggo.core.user.implement.dto.CompanyManagerInfoUpdateDto
 import com.ogonggo.core.user.implement.CompanyProfileReader
 import com.ogonggo.core.user.implement.LetsCareerJobProfileOutboxManager
+import com.ogonggo.core.user.implement.LetsCareerNicknameOutboxManager
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
@@ -38,6 +39,7 @@ class UserAccountServiceTest {
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val companyProfileManager = Mockito.mock(CompanyProfileManager::class.java)
     private val letsCareerJobProfileOutboxManager = Mockito.mock(LetsCareerJobProfileOutboxManager::class.java)
+    private val letsCareerNicknameOutboxManager = Mockito.mock(LetsCareerNicknameOutboxManager::class.java)
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = UserAccountService(
@@ -47,6 +49,7 @@ class UserAccountServiceTest {
         userProfileManager,
         companyProfileManager,
         letsCareerJobProfileOutboxManager,
+        letsCareerNicknameOutboxManager,
         imageAssetManager,
         clock,
     )
@@ -247,6 +250,34 @@ class UserAccountServiceTest {
         // then
         assertEquals(UserErrorCode.USER_SUSPENDED, exception.errorCode)
         Mockito.verifyNoInteractions(companyProfileManager)
+    }
+
+    @Test
+    fun `일반 회원은 닉네임을 고치고 렛츠커리어로 보낼 변경을 같은 트랜잭션에서 적재한다`() {
+        // given
+        givenAccount(UserRole.USER, email = null)
+
+        // when
+        service.changeMyNickname(USER_ID, "오공고")
+
+        // then
+        Mockito.verify(userProfileManager).changeNickname(USER_ID, "오공고", NOW)
+        Mockito.verify(letsCareerNicknameOutboxManager).enqueue(USER_ID, NOW)
+    }
+
+    @Test
+    fun `기업 회원이 닉네임을 고치면 GENERAL_MEMBER_REQUIRED로 막고 적재하지 않는다`() {
+        // given
+        givenAccount(UserRole.COMPANY, email = "company@example.com")
+
+        // when
+        val exception = assertThrows(ForbiddenException::class.java) {
+            service.changeMyNickname(USER_ID, "오공고")
+        }
+
+        // then
+        assertEquals(UserErrorCode.GENERAL_MEMBER_REQUIRED, exception.errorCode)
+        Mockito.verifyNoInteractions(userProfileManager, letsCareerNicknameOutboxManager)
     }
 
     @Test

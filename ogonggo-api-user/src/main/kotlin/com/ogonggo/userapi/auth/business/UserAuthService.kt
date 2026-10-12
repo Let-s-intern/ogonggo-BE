@@ -155,6 +155,7 @@ private fun LetsCareerUser.toSyncCommand(userId: Long, now: LocalDateTime): User
         profileImageUrl = profileImageUrl,
         letsCareerUpdatedAt = updatedAt,
         syncedAt = now,
+        letsCareerNicknameUpdatedAt = nicknameUpdatedAt,
     )
 
 private data class SynchronizedAccount(val userId: Long, val isNewUser: Boolean)
