@@ -53,7 +53,7 @@ class UserJobController(
         @RequestParam(name = "region", required = false) region: Region?,
         @RequestParam(name = "subRegion", required = false) subRegion: SubRegion?,
         @RequestParam(name = "keyword", required = false) keyword: String?,
-        @RequestParam(name = "recruitmentStatus", required = false) recruitmentStatus: JobRecruitmentStatus?,
+        @RequestParam(name = "recruitmentStatus", defaultValue = "RECRUITING") recruitmentStatus: JobRecruitmentStatus,
     ): ResponseEntity<SuccessResponse<PageResponse<UserJobSummaryResponse>>> {
         val result = userJobService.getJobs(
             userId = userId,
