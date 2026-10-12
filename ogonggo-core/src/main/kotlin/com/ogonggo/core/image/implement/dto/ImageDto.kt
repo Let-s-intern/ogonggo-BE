@@ -27,3 +27,9 @@ data class ImagePresignedUploadDto(
     val uploadHeaders: Map<String, String>,
     val url: String,
 )
+
+/** 첨부한 이미지의 식별자와 화면에 보여 줄 URL이다. */
+data class AttachedImageDto(
+    val id: String,
+    val url: String,
+)

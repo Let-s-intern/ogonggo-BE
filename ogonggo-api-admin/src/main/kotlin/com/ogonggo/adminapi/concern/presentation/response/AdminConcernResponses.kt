@@ -38,12 +38,19 @@ data class AdminConcernSummaryResponse(
     }
 }
 
+data class AdminConcernImageResponse(
+    val id: String,
+    val url: String,
+)
+
 data class AdminConcernDetailResponse(
     val id: Long,
     val category: ConcernCategory,
     val title: String,
-    @Schema(description = "Lexical EditorState JSON 본문입니다.")
+    @Schema(description = "일반 텍스트 본문입니다.")
     val content: String,
+    @Schema(description = "첨부 사진. 첨부한 순서대로이며 없으면 빈 배열입니다.")
+    val images: List<AdminConcernImageResponse>,
     val viewCount: Long,
     @Schema(description = "남아 있는 답변 수입니다. 답글은 세지 않습니다.")
     val commentCount: Long,
@@ -62,6 +69,7 @@ data class AdminConcernDetailResponse(
             category = result.category,
             title = result.title,
             content = result.content,
+            images = result.images.map { AdminConcernImageResponse(id = it.imageId, url = it.url) },
             viewCount = result.viewCount,
             commentCount = result.commentCount,
             hasOfficialComment = result.hasOfficialComment,

@@ -11,7 +11,9 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostAuthorResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostContactResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostDetailResult
+import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostImageResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostSummary
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 
 data class CreateRecruitmentPostResponse(
@@ -34,6 +36,8 @@ data class RecruitmentPostDetailResponse(
     val contact: RecruitmentPostContactResponse,
     val summary: String,
     val content: JsonNode,
+    @field:Schema(description = "첨부 사진. 첨부한 순서대로이며 없으면 빈 배열입니다.")
+    val images: List<RecruitmentPostImageResponse>,
     val eligibilityAndSelectionProcess: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
@@ -61,12 +65,23 @@ data class RecruitmentPostDetailResponse(
                 contact = RecruitmentPostContactResponse.from(result.contact),
                 summary = result.summary,
                 content = objectMapper.readTree(result.content),
+                images = result.images.map(RecruitmentPostImageResponse::from),
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
                 viewCount = result.viewCount,
                 commentCount = result.commentCount,
                 bookmarkCount = result.bookmarkCount,
                 bookmarked = result.bookmarked,
             )
+    }
+}
+
+data class RecruitmentPostImageResponse(
+    @field:Schema(description = "이미지 식별자. 수정할 때 imageIds에 다시 보냅니다.")
+    val id: String,
+    val url: String,
+) {
+    companion object {
+        fun from(result: RecruitmentPostImageResult) = RecruitmentPostImageResponse(id = result.id, url = result.url)
     }
 }
 

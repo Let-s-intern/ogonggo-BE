@@ -14,6 +14,7 @@ data class SaveConcernCommand(
     val category: ConcernCategory,
     val title: String,
     val content: String,
+    val imageIds: List<String> = emptyList(),
 )
 
 data class CreateConcernCommentCommand(

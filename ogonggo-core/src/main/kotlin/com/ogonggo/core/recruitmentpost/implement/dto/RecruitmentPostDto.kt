@@ -104,6 +104,12 @@ data class RecruitmentPostUpdateDto(
     val contactValue: String?,
 )
 
+/** 모집글 첨부 사진. 이미지 식별자와 화면에 보여 줄 URL이다. */
+data class RecruitmentPostImageDto(
+    val imageId: String,
+    val url: String,
+)
+
 data class RecruitmentPostListFilterDto(
     val recruitmentTypes: Set<RecruitmentPostType> = emptySet(),
     val progressMethods: Set<RecruitmentPostProgressMethod> = emptySet(),

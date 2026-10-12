@@ -10,6 +10,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostFormResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostManagementItemResult
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -25,6 +26,8 @@ data class RecruitmentPostFormResponse(
     val technologyStacks: List<String>,
     val summary: String?,
     val content: JsonNode?,
+    @field:Schema(description = "첨부 사진. 수정할 때 남길 사진의 id를 imageIds로 다시 보냅니다.")
+    val images: List<RecruitmentPostImageResponse>,
     val eligibilityAndSelectionProcess: String?,
     val recruitmentStartDate: LocalDate?,
     val recruitmentEndDate: LocalDate?,
@@ -47,6 +50,7 @@ data class RecruitmentPostFormResponse(
                 technologyStacks = result.technologyStacks,
                 summary = result.summary,
                 content = result.content?.let(objectMapper::readTree),
+                images = result.images.map(RecruitmentPostImageResponse::from),
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
                 recruitmentStartDate = result.recruitmentStartDate,
                 recruitmentEndDate = result.recruitmentEndDate,

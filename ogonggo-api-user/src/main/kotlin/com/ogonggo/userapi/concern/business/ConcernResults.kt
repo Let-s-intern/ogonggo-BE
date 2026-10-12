@@ -8,11 +8,17 @@ data class ConcernAuthorResult(
     val profileImageUrl: String?,
 )
 
+data class ConcernImageResult(
+    val id: String,
+    val url: String,
+)
+
 data class ConcernSummaryResult(
     val id: Long,
     val category: ConcernCategory,
     val title: String,
     val content: String,
+    val images: List<ConcernImageResult>,
     val author: ConcernAuthorResult,
     val createdAt: LocalDateTime,
     val viewCount: Long,
@@ -33,6 +39,7 @@ data class ConcernDetailResult(
     val category: ConcernCategory,
     val title: String,
     val content: String,
+    val images: List<ConcernImageResult>,
     val author: ConcernAuthorResult,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,

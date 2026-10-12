@@ -5,6 +5,7 @@ import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.concern.business.ConcernAuthorResult
+import com.ogonggo.userapi.concern.business.ConcernImageResult
 import com.ogonggo.userapi.concern.business.ConcernListQuery
 import com.ogonggo.userapi.concern.business.ConcernPageResult
 import com.ogonggo.userapi.concern.business.ConcernService
@@ -60,6 +61,7 @@ class ConcernControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(CONCERN_ID))
             .andExpect(jsonPath("$.data.items[0].hasOfficialComment").value(true))
             .andExpect(jsonPath("$.data.items[0].author.nickname").value("슬픈 어피치"))
+            .andExpect(jsonPath("$.data.items[0].images[0].url").value("https://cdn.example.com/ogonggo/concern/image-id.png"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(8))
     }
@@ -132,6 +134,22 @@ class ConcernControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `사진을 3장 넘게 첨부하면 400이다`() {
+        // when
+        mockMvc.perform(
+            post("/api/v1/concerns")
+                .with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"category":"ETC","title":"제목","content":"본문","imageIds":["a","b","c","d"]}"""),
+        )
+            // then
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(concernService)
+    }
+
+    @Test
     fun `비로그인 사용자는 고민글을 작성할 수 없다`() {
         // when
         mockMvc.perform(
@@ -150,6 +168,7 @@ class ConcernControllerTest @Autowired constructor(
         category = ConcernCategory.SIDE_EXPERIENCE,
         title = "사이드 프로젝트 팀원은 주로 어디서 구하나요?",
         content = "사프 해보고 싶은데요.",
+        images = listOf(ConcernImageResult(id = "image-id", url = "https://cdn.example.com/ogonggo/concern/image-id.png")),
         author = ConcernAuthorResult(nickname = "슬픈 어피치", profileImageUrl = null),
         createdAt = LocalDateTime.of(2026, 10, 3, 10, 0),
         viewCount = 1980,

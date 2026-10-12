@@ -1,6 +1,7 @@
 package com.ogonggo.core.recruitmentpost.implement
 
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostAppendDto
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostImageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostProgressMethod
@@ -9,6 +10,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.recruitmentpost.persistence.RecruitmentPostJpaRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
@@ -21,12 +23,44 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(RecruitmentPostAppender::class, RecruitmentPostManager::class)
+@Import(
+    RecruitmentPostAppender::class,
+    RecruitmentPostManager::class,
+    RecruitmentPostImageManager::class,
+    RecruitmentPostImageReader::class,
+)
 internal class RecruitmentPostImplementPersistenceTest @Autowired constructor(
     private val postAppender: RecruitmentPostAppender,
     private val postManager: RecruitmentPostManager,
     private val postRepository: RecruitmentPostJpaRepository,
+    private val imageManager: RecruitmentPostImageManager,
+    private val imageReader: RecruitmentPostImageReader,
+    private val entityManager: EntityManager,
 ) {
+
+    @Test
+    fun `첨부 사진을 교체하면 새 순서대로 읽히고 뺀 사진은 소프트 삭제한다`() {
+        // given
+        imageManager.replace(12L, listOf(image("a"), image("b"), image("c")), IMAGE_NOW)
+        imageManager.replace(13L, listOf(image("x")), IMAGE_NOW)
+        entityManager.flush()
+
+        // when
+        imageManager.replace(12L, listOf(image("c"), image("a")), IMAGE_NOW.plusMinutes(1))
+        entityManager.flush()
+        entityManager.clear()
+
+        // then
+        assertEquals(listOf("c", "a"), imageReader.read(12L).map(RecruitmentPostImageDto::imageId))
+        assertEquals(listOf("x"), imageReader.read(13L).map(RecruitmentPostImageDto::imageId))
+        val deletedCount = entityManager.createQuery(
+            "select count(image) from RecruitmentPostImage image where image.postId = :id and image.deletedAt is not null",
+            java.lang.Long::class.java,
+        ).setParameter("id", 12L).singleResult
+        assertEquals(3L, deletedCount.toLong())
+    }
+
+    private fun image(id: String) = RecruitmentPostImageDto(imageId = id, url = "https://cdn.example.com/ogonggo/side/$id.png")
 
     @Test
     fun `모집글과 기술 스택 및 포지션을 함께 저장한다`() {
@@ -132,3 +166,5 @@ internal class RecruitmentPostImplementPersistenceTest @Autowired constructor(
         contactValue = "team@example.com",
     )
 }
+
+private val IMAGE_NOW: LocalDateTime = LocalDateTime.of(2026, 10, 12, 10, 0)

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
 import com.ogonggo.core.storage.s3.S3ObjectClient
@@ -81,6 +82,83 @@ class ImageAssetManagerTest {
             assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
         }
         assertEquals(ImageAssetStatus.TEMPORARY, asset.status)
+    }
+
+    @Test
+    fun `첨부 목록을 바꾸면 새 이미지는 첨부하고 빠진 이미지는 참조를 풀고 순서대로 URL을 준다`() {
+        // given
+        val kept = uploadedAsset("kept").also { it.attach() }
+        val removed = uploadedAsset("removed").also { it.attach() }
+        val added = uploadedAsset("added")
+        givenAssets(kept, removed, added)
+
+        // when
+        val result = manager.syncImages(17L, listOf("kept", "removed"), listOf("added", "kept"), ImageAssetUsage.CONCERN, now)
+
+        // then
+        assertEquals(listOf("added" to added.url, "kept" to kept.url), result.map { it.id to it.url })
+        assertEquals(ImageAssetStatus.ATTACHED, added.status)
+        assertEquals(ImageAssetStatus.ATTACHED, kept.status)
+        assertEquals(ImageAssetStatus.UNREFERENCED, removed.status)
+    }
+
+    @Test
+    fun `다른 곳에서 쓰는 이미지는 첨부 목록에 새로 넣을 수 없다`() {
+        // given
+        val usedElsewhere = uploadedAsset().also { it.attach() }
+        givenAssets(usedElsewhere)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            manager.syncImages(17L, emptyList(), listOf(usedElsewhere.id), ImageAssetUsage.CONCERN, now)
+        }
+
+        // then
+        assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
+    }
+
+    @Test
+    fun `용도가 받지 않는 형식의 이미지는 첨부할 수 없다`() {
+        // given
+        val webp = ImageAsset.uploading("webp-id", 17L, "ogonggo/profile/webp-id.webp", "https://cdn.example.com/w.webp", "image/webp", 3L)
+            .also { it.markUploaded() }
+        givenAssets(webp)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            manager.syncImages(17L, emptyList(), listOf(webp.id), ImageAssetUsage.CONCERN, now)
+        }
+
+        // then
+        assertEquals(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED, exception.errorCode)
+        assertEquals(ImageAssetStatus.TEMPORARY, webp.status)
+    }
+
+    @Test
+    fun `첨부 이미지를 원본과 같은 폴더의 새 이미지로 순서대로 복제한다`() {
+        // given
+        val first = ImageAsset.uploading("first", 17L, "ogonggo/side/first.png", "https://cdn.example.com/ogonggo/side/first.png", "image/png", 3L)
+            .also { it.markUploaded(); it.attach() }
+        val second = ImageAsset.uploading("second", 17L, "ogonggo/side/second.jpg", "https://cdn.example.com/ogonggo/side/second.jpg", "image/jpeg", 3L)
+            .also { it.markUploaded(); it.attach() }
+        givenAssets(first, second)
+        Mockito.`when`(storage.urlOf(Mockito.anyString())).thenAnswer { invocation -> "https://cdn.example.com/${invocation.arguments[0]}" }
+
+        // when
+        val copies = manager.copyImages(17L, listOf("second", "first"))
+
+        // then
+        assertEquals(2, copies.size)
+        assertTrue(copies[0].url.matches(Regex("https://cdn.example.com/ogonggo/side/[0-9a-f-]{36}\\.jpg")))
+        assertTrue(copies[1].url.matches(Regex("https://cdn.example.com/ogonggo/side/[0-9a-f-]{36}\\.png")))
+        assertTrue(copies.none { it.id in setOf("first", "second") })
+    }
+
+    @Test
+    fun `본문에 이미지 노드가 있는지 알려 준다`() {
+        assertTrue(manager.containsImages(content(uploadedAsset())))
+        assertTrue(!manager.containsImages(plainContent()))
+        assertTrue(!manager.containsImages(null))
     }
 
     @Test

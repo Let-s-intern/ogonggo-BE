@@ -60,7 +60,7 @@ class ImageUploader internal constructor(
      * 클라이언트가 올린 뒤 [completeUpload]를 불러야 본문·프로필에 쓸 수 있다. 완료하지 않으면 정리 작업이 지운다.
      */
     fun issueUploadUrl(ownerUserId: Long, command: ImagePresignDto): ImagePresignedUploadDto {
-        val image = imageFileValidator.validateDeclared(command.mimeType, command.size)
+        val image = imageFileValidator.validateDeclared(command.usage, command.mimeType, command.size)
         val imageId = UUID.randomUUID().toString()
         val key = storageKey(command.usage, imageId, image.extension)
         val url = s3ObjectClient.urlOf(key)

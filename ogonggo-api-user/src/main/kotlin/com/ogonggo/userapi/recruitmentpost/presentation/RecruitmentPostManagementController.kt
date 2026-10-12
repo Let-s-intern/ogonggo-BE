@@ -38,7 +38,7 @@ class RecruitmentPostManagementController(
     ): ResponseEntity<SuccessResponse<CreateRecruitmentPostResponse>> =
         SuccessResponse.created(
             CreateRecruitmentPostResponse(
-                recruitmentPostService.createDraft(userId, request.toCommand(userId)),
+                recruitmentPostService.createDraft(userId, request.toCommand(userId), request.imageIds),
             ),
         )
 

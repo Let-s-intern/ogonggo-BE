@@ -7,6 +7,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostSortType
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostRecruitmentStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostImageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
@@ -92,6 +93,7 @@ data class RecruitmentPostDetailResult(
     val contact: RecruitmentPostContactResult,
     val summary: String,
     val content: String,
+    val images: List<RecruitmentPostImageResult> = emptyList(),
     val eligibilityAndSelectionProcess: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
@@ -104,6 +106,7 @@ data class RecruitmentPostDetailResult(
             metric: RecruitmentPostMetricDto,
             author: RecruitmentPostAuthorResult,
             bookmarked: Boolean = false,
+            images: List<RecruitmentPostImageDto> = emptyList(),
         ): RecruitmentPostDetailResult = RecruitmentPostDetailResult(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             author = author,
@@ -123,12 +126,22 @@ data class RecruitmentPostDetailResult(
             ),
             summary = checkNotNull(post.summary),
             content = checkNotNull(post.content),
+            images = images.map(RecruitmentPostImageResult::from),
             eligibilityAndSelectionProcess = post.eligibilityAndSelectionProcess,
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
             bookmarkCount = metric.bookmarkCount,
             bookmarked = bookmarked,
         )
+    }
+}
+
+data class RecruitmentPostImageResult(
+    val id: String,
+    val url: String,
+) {
+    companion object {
+        internal fun from(image: RecruitmentPostImageDto) = RecruitmentPostImageResult(id = image.imageId, url = image.url)
     }
 }
 

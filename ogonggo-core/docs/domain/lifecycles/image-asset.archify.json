@@ -9,7 +9,7 @@
       "url": "https://github.com/Let-s-intern/ogonggo-BE.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "9333af63629f0a3d6054149e38544dd1bf07765a"
+      "revision": "e68336174b99a715e7d0bf814cc7f3cdfa7ca983"
     }
   },
   "lanes": [
@@ -36,22 +36,22 @@
       "id": "attached", "type": "success", "label": "첨부", "sublabel": "글·프로필에 연결", "lane": "main", "col": 2, "step": "03", "tag": "ATTACHED",
       "sources": [
         { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/domain/ImageAsset.kt", "line": 80, "end_line": 85, "label": "attach" },
-        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 51, "end_line": 72, "label": "본문 이미지 동기화" },
-        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 132, "end_line": 144, "label": "프로필 이미지 교체" }
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 81, "end_line": 102, "label": "첨부 목록 동기화" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 143, "end_line": 155, "label": "프로필 이미지 교체" }
       ]
     },
     {
       "id": "unreferenced", "type": "waiting", "label": "참조 해제", "sublabel": "본문·프로필에서 빠짐", "lane": "main", "col": 3, "step": "04", "tag": "UNREFERENCED",
       "sources": [
         { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/domain/ImageAsset.kt", "line": 90, "end_line": 95, "label": "unreference" },
-        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 71, "label": "본문에서 빠진 이미지" }
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 73, "label": "본문에서 빠진 이미지" }
       ]
     },
     {
       "id": "delete_pending", "type": "active", "label": "삭제 대기", "sublabel": "S3 삭제 시도", "lane": "cleanup", "col": 2, "tag": "DELETE_PENDING",
       "sources": [
         { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/domain/ImageAsset.kt", "line": 97, "end_line": 101, "label": "markDeletePending" },
-        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 151, "end_line": 187, "label": "정리 대상과 재시도" },
+        { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/image/implement/ImageAssetManager.kt", "line": 167, "end_line": 203, "label": "정리 대상과 재시도" },
         { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/image/presentation/ImageAssetCleanupScheduler.kt", "line": 21, "label": "정리 작업" }
       ]
     },
@@ -73,7 +73,7 @@
     { "from": "delete_pending", "to": "deleted", "label": "S3 삭제 성공", "variant": "emphasis", "note": "실패하면 삭제 대기로 남아 다음 실행에서 재시도" }
   ],
   "cards": [
-    { "dot": "emerald", "title": "연결", "items": ["모집글·고민글 본문이나 프로필에 쓰이면 첨부 상태가 됨", "어디에 쓰이는지는 쓰는 쪽이 이미지 식별자·URL로 기억함", "이미 첨부된 이미지는 다른 곳에 새로 쓸 수 없음", "본문에서 빠져도 바로 지우지 않고 참조 해제로 둠"] },
+    { "dot": "emerald", "title": "연결", "items": ["모집글 본문, 고민글 첨부 사진, 프로필에 쓰이면 첨부 상태가 됨", "어디에 쓰이는지는 쓰는 쪽이 이미지 식별자·URL로 기억함", "이미 첨부된 이미지는 다른 곳에 새로 쓸 수 없음", "본문에서 빠져도 바로 지우지 않고 참조 해제로 둠"] },
     { "dot": "amber", "title": "정리 작업", "items": ["업로드 중·임시는 만든 지, 참조 해제는 빠진 지 보존 기간이 지나면 정리 대상", "첨부된 이미지는 정리하지 않음", "S3 삭제에 실패하면 삭제 대기로 남아 다음 실행에서 다시 시도"] }
   ]
 }

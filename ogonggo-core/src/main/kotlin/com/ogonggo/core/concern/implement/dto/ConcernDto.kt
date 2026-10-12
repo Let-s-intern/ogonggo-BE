@@ -25,6 +25,12 @@ data class ConcernUpdateDto(
     val content: String,
 )
 
+/** 고민글 첨부 사진. 이미지 식별자와 화면에 보여 줄 URL이다. */
+data class ConcernImageDto(
+    val imageId: String,
+    val url: String,
+)
+
 data class ConcernPageDto(
     val concerns: List<Concern>,
     val page: Int,

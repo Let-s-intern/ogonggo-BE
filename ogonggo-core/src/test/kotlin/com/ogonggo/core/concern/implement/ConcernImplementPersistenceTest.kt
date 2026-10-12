@@ -7,6 +7,7 @@ import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
 import com.ogonggo.core.concern.implement.dto.ConcernCommentAppendDto
+import com.ogonggo.core.concern.implement.dto.ConcernImageDto
 import com.ogonggo.core.concern.persistence.ConcernQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
@@ -35,6 +36,8 @@ import java.time.LocalDateTime
     ConcernCommentLikeAppender::class,
     ConcernCommentLikeManager::class,
     ConcernCommentLikeReader::class,
+    ConcernImageManager::class,
+    ConcernImageReader::class,
 )
 internal class ConcernImplementPersistenceTest @Autowired constructor(
     private val concernAppender: ConcernAppender,
@@ -47,6 +50,8 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
     private val commentRemover: ConcernCommentRemover,
     private val likeManager: ConcernCommentLikeManager,
     private val likeReader: ConcernCommentLikeReader,
+    private val imageManager: ConcernImageManager,
+    private val imageReader: ConcernImageReader,
     private val entityManager: EntityManager,
 ) {
 
@@ -244,9 +249,35 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
         assertEquals(emptySet<Long>(), likeReader.readLikedCommentIds(OTHER_USER_ID, listOf(commentId)))
     }
 
+    @Test
+    fun `첨부 사진을 교체하면 새 순서대로 읽히고 뺀 사진은 소프트 삭제한다`() {
+        // given
+        val concernId = appendConcern(ConcernCategory.ETC)
+        val other = appendConcern(ConcernCategory.ETC)
+        imageManager.replace(concernId, listOf(image("a"), image("b"), image("c")), NOW)
+        imageManager.replace(other, listOf(image("x")), NOW)
+        entityManager.flush()
+
+        // when
+        imageManager.replace(concernId, listOf(image("a"), image("c")), NOW.plusMinutes(1))
+        entityManager.flush()
+        entityManager.clear()
+
+        // then
+        assertEquals(listOf("a", "c"), imageReader.read(concernId).map(ConcernImageDto::imageId))
+        assertEquals(mapOf(concernId to listOf("a", "c"), other to listOf("x")), imageReader.readAll(listOf(concernId, other)).mapValues { (_, images) -> images.map(ConcernImageDto::imageId) })
+        val deletedCount = entityManager.createQuery(
+            "select count(image) from ConcernImage image where image.concernId = :id and image.deletedAt is not null",
+            java.lang.Long::class.java,
+        ).setParameter("id", concernId).singleResult
+        assertEquals(2L, deletedCount.toLong())
+    }
+
+    private fun image(id: String) = ConcernImageDto(imageId = id, url = "https://cdn.example.com/ogonggo/concern/$id.png")
+
     private fun appendConcern(category: ConcernCategory, title: String = "제목"): Long = checkNotNull(
         concernAppender.append(
-            ConcernAppendDto(authorUserId = USER_ID, category = category, title = title, content = """{"root":{"children":[]}}"""),
+            ConcernAppendDto(authorUserId = USER_ID, category = category, title = title, content = "본문"),
         ).id,
     )
 

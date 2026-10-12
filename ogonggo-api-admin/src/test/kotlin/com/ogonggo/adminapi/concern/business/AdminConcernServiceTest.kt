@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.concern.business
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.implement.ConcernCommentReader
+import com.ogonggo.core.concern.implement.ConcernImageReader
 import com.ogonggo.core.concern.implement.ConcernManager
 import com.ogonggo.core.concern.implement.ConcernMetricReader
 import com.ogonggo.core.concern.implement.ConcernReader
@@ -19,6 +20,7 @@ class AdminConcernServiceTest {
         concernManager,
         Mockito.mock(ConcernMetricReader::class.java),
         Mockito.mock(ConcernCommentReader::class.java),
+        Mockito.mock(ConcernImageReader::class.java),
         Mockito.mock(UserProfileReader::class.java),
     )
 

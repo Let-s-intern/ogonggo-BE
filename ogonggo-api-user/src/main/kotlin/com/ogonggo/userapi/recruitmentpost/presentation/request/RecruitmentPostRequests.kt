@@ -2,6 +2,7 @@ package com.ogonggo.userapi.recruitmentpost.presentation.request
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostContactMethod
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostImage
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostProgressMethod
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostPosition
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
@@ -11,6 +12,7 @@ import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostSaveCommand
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostSaveMode
 import com.ogonggo.userapi.error.InvalidRequestFieldException
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
@@ -35,6 +37,12 @@ data class CreateRecruitmentPostRequest(
     @field:Size(max = 2048) val contactValue: String? = null,
     val agreedToPolicy: Boolean = false,
     val saveMode: RecruitmentPostSaveMode = RecruitmentPostSaveMode.PUBLISH,
+    @field:Schema(
+        description = "첨부할 사진의 이미지 식별자를 보일 순서대로. `usage=RECRUITMENT_POST`로 올리고 완료한 JPG·PNG만 됩니다. " +
+            "본문에는 사진을 넣지 않습니다. 수정할 때도 남길 사진을 모두 보내며, 보내지 않으면 사진이 없는 글이 됩니다.",
+    )
+    @field:Size(max = RecruitmentPostImage.MAX_COUNT_PER_POST)
+    val imageIds: List<String> = emptyList(),
 ) {
     fun toSaveCommand(authorUserId: Long): RecruitmentPostSaveCommand = when (saveMode) {
         RecruitmentPostSaveMode.DRAFT -> RecruitmentPostSaveCommand.Draft(toDraftCommand(authorUserId))
@@ -155,6 +163,12 @@ data class UpdateRecruitmentPostRequest(
     @field:Size(max = 2048) val contactValue: String? = null,
     val agreedToPolicy: Boolean = false,
     val saveMode: RecruitmentPostSaveMode? = null,
+    @field:Schema(
+        description = "첨부할 사진의 이미지 식별자를 보일 순서대로. `usage=RECRUITMENT_POST`로 올리고 완료한 JPG·PNG만 됩니다. " +
+            "본문에는 사진을 넣지 않습니다. 수정할 때도 남길 사진을 모두 보내며, 보내지 않으면 사진이 없는 글이 됩니다.",
+    )
+    @field:Size(max = RecruitmentPostImage.MAX_COUNT_PER_POST)
+    val imageIds: List<String> = emptyList(),
 ) {
     fun toCommand(): RecruitmentPostUpdateDto {
         validateRelations()
@@ -243,6 +257,12 @@ data class CreateRecruitmentPostDraftRequest(
     @field:Size(max = 20) val positions: List<RecruitmentPostPosition>? = null,
     val contactMethod: RecruitmentPostContactMethod? = null,
     @field:Size(max = 2048) val contactValue: String? = null,
+    @field:Schema(
+        description = "첨부할 사진의 이미지 식별자를 보일 순서대로. `usage=RECRUITMENT_POST`로 올리고 완료한 JPG·PNG만 됩니다. " +
+            "본문에는 사진을 넣지 않습니다. 수정할 때도 남길 사진을 모두 보내며, 보내지 않으면 사진이 없는 글이 됩니다.",
+    )
+    @field:Size(max = RecruitmentPostImage.MAX_COUNT_PER_POST)
+    val imageIds: List<String> = emptyList(),
 ) {
     fun toCommand(authorUserId: Long): RecruitmentPostDraftAppendDto {
         validateRelations()

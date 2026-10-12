@@ -7,7 +7,9 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
+import com.ogonggo.core.image.implement.dto.AttachedImageDto
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.data.domain.PageRequest
@@ -71,6 +73,34 @@ class ImageAssetManager internal constructor(
         unreference(ownerUserId, previousIds - currentReferences.keys, now)
     }
 
+    /**
+     * 본문 밖에 첨부하는 이미지 목록(고민글 사진 등)을 이전 목록과 비교해 맞추고, [imageIds] 순서대로 URL을 돌려준다.
+     * 새로 넣은 이미지는 첨부하고 빠진 이미지는 참조를 푼다. 이전 목록에 있던 이미지만 이미 첨부된 상태여도 받는다.
+     * [usage]가 받지 않는 형식이면 IMAGE_FILE_TYPE_NOT_SUPPORTED다.
+     */
+    fun syncImages(
+        ownerUserId: Long,
+        previousImageIds: Collection<String>,
+        imageIds: List<String>,
+        usage: ImageAssetUsage,
+        now: LocalDateTime,
+    ): List<AttachedImageDto> {
+        val currentIds = imageIds.toSet()
+        val addedIds = currentIds - previousImageIds.toSet()
+        val assets = readOwnedAssets(ownerUserId, currentIds).associateBy(ImageAsset::id)
+        if (assets.size != currentIds.size || assets.values.any { it.id in addedIds && !it.isAttachable() }) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+        if (assets.values.any { it.mimeType !in usage.supportedMimeTypes }) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED)
+        }
+
+        val attached = assets.values.filter { it.isAttachable() }.onEach { it.attach() }
+        imageAssetRepository.saveAll(attached)
+        unreference(ownerUserId, previousImageIds.toSet() - currentIds, now)
+        return imageIds.map { id -> AttachedImageDto(id = id, url = checkNotNull(assets[id]).url) }
+    }
+
     /** 지운 글의 본문 이미지 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
     fun unreferenceContentImages(ownerUserId: Long, content: String?, now: LocalDateTime) {
         unreference(ownerUserId, extractImageReferences(content).keys, now)
@@ -82,47 +112,28 @@ class ImageAssetManager internal constructor(
         if (references.isEmpty()) return content
 
         val sourceAssets = readOwnedAssets(ownerUserId, references.keys).associateBy(ImageAsset::id)
-        if (
-            sourceAssets.size != references.size ||
-            sourceAssets.values.any { it.status != ImageAssetStatus.ATTACHED || references[it.id] != it.url }
-        ) {
+        if (sourceAssets.size != references.size || sourceAssets.values.any { references[it.id] != it.url }) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
         }
-
-        val copiedKeys = mutableListOf<String>()
-        val replacements = mutableMapOf<String, ImageReference>()
-        try {
-            references.keys.forEach { sourceId ->
-                val source = checkNotNull(sourceAssets[sourceId])
-                val targetId = UUID.randomUUID().toString()
-                val extension = source.storageKey.substringAfterLast('.', "bin")
-                // 원본과 같은 폴더(용도)에 둔다.
-                val targetKey = "${source.storageKey.substringBeforeLast('/')}/$targetId.$extension"
-                val targetUrl = s3ObjectClient.urlOf(targetKey)
-
-                s3ObjectClient.copy(source.storageKey, targetKey, source.mimeType)
-                copiedKeys += targetKey
-
-                val targetAsset = ImageAsset.uploading(
-                    id = targetId,
-                    ownerUserId = ownerUserId,
-                    storageKey = targetKey,
-                    url = targetUrl,
-                    mimeType = source.mimeType,
-                    size = source.size,
-                ).also {
-                    it.markUploaded()
-                    it.attach()
-                }
-                imageAssetRepository.save(targetAsset)
-                replacements[sourceId] = ImageReference(targetId, targetUrl)
-            }
-            return replaceImageReferences(content, replacements)
-        } catch (exception: Exception) {
-            copiedKeys.asReversed().forEach { key -> runCatching { s3ObjectClient.delete(key) } }
-            throw exception
-        }
+        val copies = copyAttached(ownerUserId, references.keys.map { checkNotNull(sourceAssets[it]) })
+        return replaceImageReferences(
+            content,
+            references.keys.zip(copies).associate { (sourceId, copy) -> sourceId to ImageReference(copy.id, copy.url) },
+        )
     }
+
+    /** 첨부 이미지를 새 저장 키와 새 이미지로 복제하고, [imageIds] 순서대로 복제본을 돌려준다. 글을 복사할 때 쓴다. */
+    fun copyImages(ownerUserId: Long, imageIds: List<String>): List<AttachedImageDto> {
+        if (imageIds.isEmpty()) return emptyList()
+        val sourceAssets = readOwnedAssets(ownerUserId, imageIds.toSet()).associateBy(ImageAsset::id)
+        if (sourceAssets.size != imageIds.toSet().size) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+        return copyAttached(ownerUserId, imageIds.map { checkNotNull(sourceAssets[it]) })
+    }
+
+    /** 본문에 이미지 노드가 있는지 본다. 사진을 본문 밖에 첨부하는 글이 본문 이미지를 막을 때 쓴다. */
+    fun containsImages(content: String?): Boolean = extractImageReferences(content).isNotEmpty()
 
     /**
      * 이미지 한 장을 쓰는 자리(회원 프로필 이미지, 기업 로고)의 이미지를 바꾸고 새 이미지 URL을 돌려준다.
@@ -146,6 +157,11 @@ class ImageAssetManager internal constructor(
     /** 더 쓰지 않는 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
     fun unreferenceImage(ownerUserId: Long, imageId: String, now: LocalDateTime) {
         unreference(ownerUserId, setOf(imageId), now)
+    }
+
+    /** 지운 글에 첨부했던 이미지들의 참조를 풀어 보존 기간이 지나면 정리되게 한다. */
+    fun unreferenceImages(ownerUserId: Long, imageIds: Collection<String>, now: LocalDateTime) {
+        unreference(ownerUserId, imageIds.toSet(), now)
     }
 
     fun cleanup(now: LocalDateTime, retention: java.time.Duration, batchSize: Int = 100): Int {
@@ -187,6 +203,43 @@ class ImageAssetManager internal constructor(
             }
         }
         return deletedCount
+    }
+
+    /** 첨부된 이미지를 원본과 같은 폴더(용도)의 새 저장 키로 복제한다. 하나라도 실패하면 이미 복사한 객체를 지우고 다시 던진다. */
+    private fun copyAttached(ownerUserId: Long, sources: List<ImageAsset>): List<AttachedImageDto> {
+        if (sources.any { it.status != ImageAssetStatus.ATTACHED }) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+        val copiedKeys = mutableListOf<String>()
+        try {
+            return sources.map { source ->
+                val targetId = UUID.randomUUID().toString()
+                val extension = source.storageKey.substringAfterLast('.', "bin")
+                val targetKey = "${source.storageKey.substringBeforeLast('/')}/$targetId.$extension"
+                val targetUrl = s3ObjectClient.urlOf(targetKey)
+
+                s3ObjectClient.copy(source.storageKey, targetKey, source.mimeType)
+                copiedKeys += targetKey
+
+                imageAssetRepository.save(
+                    ImageAsset.uploading(
+                        id = targetId,
+                        ownerUserId = ownerUserId,
+                        storageKey = targetKey,
+                        url = targetUrl,
+                        mimeType = source.mimeType,
+                        size = source.size,
+                    ).also {
+                        it.markUploaded()
+                        it.attach()
+                    },
+                )
+                AttachedImageDto(id = targetId, url = targetUrl)
+            }
+        } catch (exception: Exception) {
+            copiedKeys.asReversed().forEach { key -> runCatching { s3ObjectClient.delete(key) } }
+            throw exception
+        }
     }
 
     private fun readOwnedAssets(ownerUserId: Long, ids: Set<String>): List<ImageAsset> =

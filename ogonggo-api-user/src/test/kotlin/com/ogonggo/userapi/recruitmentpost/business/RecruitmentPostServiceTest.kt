@@ -24,7 +24,12 @@ import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostPageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostListFilterDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostUpdateDto
 import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.core.image.implement.dto.AttachedImageDto
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageManager
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageReader
+import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostImageDto
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -32,6 +37,7 @@ import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
+import com.ogonggo.userapi.error.InvalidRequestFieldException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -58,6 +64,8 @@ class RecruitmentPostServiceTest {
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+    private val postImageReader = Mockito.mock(RecruitmentPostImageReader::class.java)
+    private val postImageManager = Mockito.mock(RecruitmentPostImageManager::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
     private val service = RecruitmentPostService(
@@ -70,6 +78,8 @@ class RecruitmentPostServiceTest {
         recruitmentPostMetricManager,
         contentValidator,
         imageAssetManager,
+        postImageReader,
+        postImageManager,
         eventPublisher,
         clock,
         userProfileReader,
@@ -235,7 +245,7 @@ class RecruitmentPostServiceTest {
         // then
         assertEquals(12L, postId)
         Mockito.verify(postAppender).appendDraft(command)
-        Mockito.verify(imageAssetManager).syncContentImages(USER_ID, null, null, NOW)
+        Mockito.verify(postImageManager).replace(12L, emptyList(), NOW)
     }
 
     @Test
@@ -327,6 +337,60 @@ class RecruitmentPostServiceTest {
     }
 
     @Test
+    fun `모집글을 쓰면 첨부한 사진을 순서대로 붙인다`() {
+        // given
+        val command = createCommand(authorUserId = USER_ID)
+        val savedPost = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        val anyCommand = Mockito.any(RecruitmentPostAppendDto::class.java) ?: command
+        Mockito.`when`(postAppender.append(anyCommand)).thenReturn(savedPost)
+        Mockito.`when`(savedPost.id).thenReturn(12L)
+        Mockito.`when`(
+            imageAssetManager.syncImages(USER_ID, emptyList(), listOf("b", "a"), ImageAssetUsage.RECRUITMENT_POST, NOW),
+        ).thenReturn(listOf(AttachedImageDto("b", "https://cdn/b.png"), AttachedImageDto("a", "https://cdn/a.png")))
+
+        // when
+        service.create(USER_ID, command, listOf("b", "a"))
+
+        // then
+        Mockito.verify(postImageManager).replace(
+            12L,
+            listOf(RecruitmentPostImageDto("b", "https://cdn/b.png"), RecruitmentPostImageDto("a", "https://cdn/a.png")),
+            NOW,
+        )
+    }
+
+    @Test
+    fun `본문에 사진을 넣으면 content 필드 오류이고 저장하지 않는다`() {
+        // given
+        val command = createCommand(authorUserId = USER_ID)
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(imageAssetManager.containsImages(EDITOR_STATE_JSON)).thenReturn(true)
+
+        // when
+        val exception = assertThrows(InvalidRequestFieldException::class.java) { service.create(USER_ID, command) }
+
+        // then
+        assertEquals("content", exception.fieldName)
+        Mockito.verifyNoInteractions(postAppender, postImageManager)
+    }
+
+    @Test
+    fun `같은 사진을 두 번 첨부하면 imageIds 필드 오류다`() {
+        // given
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+
+        // when
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            service.create(USER_ID, createCommand(authorUserId = USER_ID), listOf("a", "a"))
+        }
+
+        // then
+        assertEquals("imageIds", exception.fieldName)
+        Mockito.verifyNoInteractions(postAppender)
+    }
+
+    @Test
     fun `작성자가 모집글을 삭제하면 삭제하고 본문 이미지 참조를 푼다`() {
         // given
         val post = Mockito.mock(RecruitmentPost::class.java)
@@ -340,6 +404,7 @@ class RecruitmentPostServiceTest {
         // then
         Mockito.verify(postManager).delete(post, NOW)
         Mockito.verify(imageAssetManager).unreferenceContentImages(USER_ID, EDITOR_STATE_JSON, NOW)
+        Mockito.verify(imageAssetManager).unreferenceImages(USER_ID, emptyList(), NOW)
     }
 
     @Test

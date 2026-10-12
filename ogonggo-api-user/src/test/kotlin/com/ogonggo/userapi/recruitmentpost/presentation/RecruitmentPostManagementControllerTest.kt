@@ -283,6 +283,7 @@ class RecruitmentPostManagementControllerTest @Autowired constructor(
         technologyStacks = listOf("Kotlin"),
         summary = "복사된 요약",
         content = "{\"root\":{\"children\":[]}}",
+        images = emptyList(),
         eligibilityAndSelectionProcess = null,
         recruitmentStartDate = LocalDate.of(2026, 9, 1),
         recruitmentEndDate = LocalDate.of(2026, 9, 30),
