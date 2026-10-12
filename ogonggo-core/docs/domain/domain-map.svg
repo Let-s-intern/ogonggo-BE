@@ -1,310 +1,236 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1430" width="1600" height="1430" role="img" aria-label="오공고 도메인 개념도: 회원을 중심으로 채용공고·부트캠프, 모집글·취준고민, 렛츠커리어 추천 개념과 그 사이의 관계와 개수를 보여 준다." font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">
-  <rect width="1600" height="1430" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 990" width="1700" height="990" role="img" aria-label="오공고 도메인 개념도: 기업 회원은 채용공고·부트캠프를 등록하고, 관리자는 기업 콘텐츠를 검수하고 오늘의 공고를 고르며, 일반 회원은 콘텐츠를 북마크하고 지원 단계를 관리하고 모집글·취준고민을 쓴다. 렛츠커리어 콘텐츠는 공고마다 맞춰 추천된다." font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475467"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#98a2b3"/>
+    </marker>
+  </defs>
+  <rect width="1700" height="990" fill="#ffffff"/>
 
   <!-- 제목 -->
   <text x="40" y="56" font-size="28" font-weight="800" fill="#101828">오공고 도메인 개념도</text>
-  <text x="40" y="86" font-size="14" fill="#667085">핵심 개념과 개념 사이의 관계를 개수와 함께 보여 줍니다. 엔티티끼리는 JPA 연관관계 없이 식별자로만 참조합니다.</text>
+  <text x="40" y="86" font-size="14" fill="#667085">핵심 개념과 개념 사이의 관계를 보여 줍니다. 화살표는 "누가 → 무엇을 한다 → 무엇을"로 읽습니다.</text>
 
   <!-- 범례 -->
   <g font-size="12" fill="#475467">
-    <line x1="1130" y1="48" x2="1190" y2="48" stroke="#667085" stroke-width="1.5"/>
-    <text x="1124" y="44" font-weight="800" fill="#344054" text-anchor="end">1</text>
-    <text x="1196" y="44" font-weight="800" fill="#344054">N</text>
-    <text x="1218" y="52">한쪽 하나에 다른 쪽 여럿</text>
-    <rect x="1130" y="66" width="60" height="22" rx="6" fill="#ffffff" stroke="#101828" stroke-width="2"/>
-    <text x="1218" y="82">중심 개념</text>
-    <text x="1330" y="82" font-weight="700" fill="#344054">회원 × 공고</text>
-    <text x="1410" y="82">쌍마다 한 행</text>
-    <rect x="1130" y="96" width="60" height="18" rx="6" fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4"/>
-    <text x="1218" y="110">저장하지 않는 개념 (조회할 때 계산하거나 외부에서 받음)</text>
+    <line x1="1190" y1="34" x2="1240" y2="34" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="1252" y="38">관계 (주어 → 목적어), 회색 글씨는 개수와 조건</text>
+    <line x1="1190" y1="56" x2="1240" y2="56" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-muted)"/>
+    <text x="1252" y="60">저장하지 않는 관계, 점선 상자는 외부 시스템</text>
+    <rect x="1190" y="70" width="50" height="18" rx="5" fill="#fffaeb" stroke="#fdb022" stroke-width="1.2"/>
+    <text x="1252" y="84">관계에 딸린 값 (북마크·지원마다 하나씩 가짐)</text>
+    <rect x="1190" y="94" width="50" height="16" rx="5" fill="#ffffff" stroke="#101828" stroke-width="2"/>
+    <text x="1252" y="107">중심 개념 · 영역 테두리로 가는 화살표는 영역 안 개념 모두에 해당</text>
   </g>
 
-  <!-- ================= 그룹 (패키지) ================= -->
-  <g stroke-width="1.5">
-    <rect x="40" y="120" width="560" height="270" rx="18" fill="#f5f8ff" stroke="#c7d7fe"/>
-    <rect x="1000" y="120" width="560" height="270" rx="18" fill="#f5f8ff" stroke="#c7d7fe"/>
-    <rect x="280" y="540" width="1040" height="200" rx="18" fill="#f5f3ff" stroke="#ddd6fe"/>
-    <rect x="40" y="800" width="720" height="290" rx="18" fill="#f0fdf4" stroke="#bbf7d0"/>
-    <rect x="840" y="800" width="720" height="290" rx="18" fill="#f0fdf4" stroke="#bbf7d0"/>
-  </g>
-  <g font-size="14" font-weight="800">
-    <text x="60" y="148" fill="#1d4ed8">채용공고</text>
-    <text x="1020" y="148" fill="#1d4ed8">부트캠프</text>
-    <text x="300" y="568" fill="#6d28d9">회원</text>
-    <text x="60" y="828" fill="#15803d">모집글</text>
-    <text x="860" y="828" fill="#15803d">취준고민</text>
-  </g>
-  <g font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#98a2b3" text-anchor="end">
-    <text x="580" y="148">job</text>
-    <text x="1540" y="148">bootcamp</text>
-    <text x="1300" y="568">user</text>
-    <text x="740" y="828">recruitmentpost</text>
-    <text x="1540" y="828">concern</text>
-  </g>
+  <!-- ================= 영역 ================= -->
+  <rect x="40" y="120" width="560" height="490" rx="18" fill="#f5f8ff" stroke="#c7d7fe" stroke-width="1.5"/>
+  <text x="60" y="150" font-size="15" font-weight="800" fill="#1d4ed8">채용 콘텐츠</text>
+  <text x="160" y="150" font-size="12" fill="#667085">회원은 읽고 저장하며, 지원은 원문에서 한다</text>
+
+  <rect x="720" y="120" width="500" height="610" rx="18" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.5"/>
+  <text x="740" y="150" font-size="15" font-weight="800" fill="#6d28d9">회원</text>
+  <text x="784" y="150" font-size="12" fill="#667085">한 계정(<tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11">User</tspan>)을 역할로 나눈다</text>
+
 
   <!-- ================= 관계선 ================= -->
-  <g fill="none" stroke="#667085" stroke-width="1.5">
-    <!-- 채용공고 내부 -->
-    <line x1="360" y1="232" x2="244" y2="190"/>
-    <line x1="360" y1="250" x2="244" y2="260"/>
-    <line x1="360" y1="268" x2="244" y2="330"/>
-    <!-- 부트캠프 내부 -->
-    <line x1="1240" y1="232" x2="1356" y2="190"/>
-    <line x1="1240" y1="250" x2="1356" y2="260"/>
-    <line x1="1240" y1="268" x2="1356" y2="330"/>
-    <!-- 반려 사유 · 원문 이동 (공고·부트캠프 공통) -->
-    <path d="M570,226 H630 V178 H690"/>
-    <path d="M1030,226 H970 V178 H910"/>
-    <line x1="570" y1="272" x2="690" y2="272"/>
-    <line x1="1030" y1="272" x2="910" y2="272"/>
-    <line x1="800" y1="300" x2="800" y2="570"/>
-    <!-- 북마크 -->
-    <line x1="440" y1="290" x2="440" y2="430"/>
-    <line x1="1160" y1="290" x2="1160" y2="430"/>
-    <line x1="440" y1="502" x2="690" y2="570"/>
-    <line x1="1160" y1="502" x2="910" y2="570"/>
-    <!-- 등록 (기업 회원) -->
-    <line x1="750" y1="570" x2="540" y2="290"/>
-    <line x1="850" y1="570" x2="1060" y2="290"/>
+  <g fill="none" stroke="#475467" stroke-width="1.5">
+    <!-- 채용 콘텐츠 내부 -->
+    <line x1="330" y1="230" x2="252" y2="230" marker-end="url(#arrow)"/>
+    <line x1="450" y1="270" x2="450" y2="318" marker-end="url(#arrow)"/>
+    <!-- 회원 → 채용 콘텐츠 -->
+    <line x1="760" y1="205" x2="602" y2="205" marker-end="url(#arrow)"/>
+    <line x1="760" y1="335" x2="572" y2="335" marker-end="url(#arrow)"/>
+    <line x1="760" y1="385" x2="602" y2="385" marker-end="url(#arrow)"/>
+    <line x1="760" y1="510" x2="602" y2="510" marker-end="url(#arrow)"/>
     <!-- 회원 내부 -->
-    <line x1="660" y1="618" x2="520" y2="618"/>
-    <path d="M660,640 H600 V690 H520"/>
-    <line x1="940" y1="618" x2="1080" y2="618"/>
-    <!-- 회원 → 커뮤니티 -->
-    <path d="M740,650 V770 H580 V850"/>
-    <path d="M860,650 V770 H1020 V850"/>
-    <!-- 모집글 내부 -->
-    <line x1="580" y1="930" x2="580" y2="980"/>
-    <line x1="470" y1="876" x2="260" y2="876"/>
-    <line x1="470" y1="910" x2="260" y2="952"/>
-    <line x1="470" y1="1008" x2="260" y2="1032"/>
-    <path d="M560,1036 C560,1068 600,1068 600,1036"/>
-    <!-- 취준고민 내부 -->
-    <line x1="1020" y1="930" x2="1020" y2="980"/>
-    <line x1="1130" y1="1008" x2="1300" y2="1012"/>
-    <path d="M1000,1036 C1000,1068 1040,1068 1040,1036"/>
+    <line x1="960" y1="205" x2="1008" y2="205" marker-end="url(#arrow)"/>
+    <line x1="845" y1="560" x2="845" y2="608" marker-end="url(#arrow)"/>
+    <!-- 일반 회원 → 모집글·취준고민 -->
+    <line x1="960" y1="470" x2="1308" y2="470" marker-end="url(#arrow)"/>
+    <line x1="960" y1="512" x2="1308" y2="512" marker-end="url(#arrow)"/>
+    <path d="M960,552 H1240 V655 H1308" marker-end="url(#arrow)"/>
+    <!-- 댓글·답변 -->
+    <line x1="1520" y1="485" x2="1482" y2="485" marker-end="url(#arrow)"/>
+    <line x1="1520" y1="655" x2="1482" y2="655" marker-end="url(#arrow)"/>
+    <!-- 외부 수집 → 채용 콘텐츠 -->
+    <line x1="170" y1="820" x2="170" y2="612" marker-end="url(#arrow)"/>
+    <!-- 일반 회원 → 렛츠커리어 -->
+    <path d="M760,548 H740 V840 H778" marker-end="url(#arrow)"/>
+  </g>
+  <g fill="none" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4">
+    <line x1="380" y1="820" x2="380" y2="612" marker-end="url(#arrow-muted)"/>
+    <path d="M1000,800 V585 H945 V562" marker-end="url(#arrow-muted)"/>
+    <line x1="780" y1="868" x2="572" y2="868" marker-end="url(#arrow-muted)"/>
+  </g>
+  <!-- 관계에 딸린 값 연결선 -->
+  <g fill="none" stroke="#fdb022" stroke-width="1.2" stroke-dasharray="3 3">
+    <line x1="680" y1="512" x2="680" y2="640"/>
+    <path d="M1260,514 V570 H1300"/>
   </g>
 
   <!-- ================= 개념 ================= -->
   <g fill="#ffffff" stroke="#d0d5dd" stroke-width="1.5">
-    <rect x="64" y="166" width="180" height="48" rx="8"/>
-    <rect x="64" y="236" width="180" height="48" rx="8"/>
-    <rect x="64" y="306" width="180" height="48" rx="8"/>
-    <rect x="1356" y="166" width="180" height="48" rx="8"/>
-    <rect x="1356" y="236" width="180" height="48" rx="8"/>
-    <rect x="1356" y="306" width="180" height="48" rx="8"/>
-    <rect x="690" y="150" width="220" height="56" rx="8"/>
-    <rect x="690" y="244" width="220" height="56" rx="8"/>
-    <rect x="340" y="430" width="200" height="72" rx="8"/>
-    <rect x="1060" y="430" width="200" height="72" rx="8"/>
-    <rect x="320" y="590" width="200" height="56" rx="8"/>
-    <rect x="320" y="662" width="200" height="56" rx="8"/>
-    <rect x="1080" y="590" width="220" height="56" rx="8"/>
-    <rect x="470" y="980" width="220" height="56" rx="8"/>
-    <rect x="60" y="844" width="200" height="64" rx="8"/>
-    <rect x="60" y="920" width="200" height="64" rx="8"/>
-    <rect x="60" y="1000" width="200" height="64" rx="8"/>
-    <rect x="910" y="980" width="220" height="56" rx="8"/>
-    <rect x="1300" y="980" width="220" height="64" rx="8"/>
+    <rect x="70" y="200" width="180" height="62" rx="8"/>
+    <rect x="330" y="320" width="240" height="60" rx="8"/>
+    <rect x="1010" y="175" width="180" height="60" rx="8"/>
+    <rect x="760" y="610" width="180" height="60" rx="8"/>
+    <rect x="1520" y="455" width="150" height="60" rx="8"/>
+    <rect x="1520" y="625" width="150" height="60" rx="8"/>
   </g>
   <g fill="#ffffff" stroke="#101828" stroke-width="2">
-    <rect x="360" y="210" width="210" height="80" rx="10"/>
-    <rect x="1030" y="210" width="210" height="80" rx="10"/>
-    <rect x="660" y="570" width="280" height="80" rx="10"/>
-    <rect x="470" y="850" width="220" height="80" rx="10"/>
-    <rect x="910" y="850" width="220" height="80" rx="10"/>
+    <rect x="330" y="190" width="240" height="80" rx="10"/>
+    <rect x="330" y="450" width="240" height="80" rx="10"/>
+    <rect x="760" y="170" width="200" height="70" rx="10"/>
+    <rect x="760" y="310" width="200" height="90" rx="10"/>
+    <rect x="760" y="460" width="200" height="100" rx="10"/>
+    <rect x="1310" y="445" width="170" height="80" rx="10"/>
+    <rect x="1310" y="615" width="170" height="80" rx="10"/>
+    <rect x="330" y="820" width="240" height="80" rx="10"/>
+  </g>
+  <g fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="6 5">
+    <rect x="70" y="820" width="200" height="70" rx="10"/>
+    <rect x="780" y="800" width="240" height="90" rx="10"/>
+  </g>
+  <!-- 관계에 딸린 값 -->
+  <g fill="#fffaeb" stroke="#fdb022" stroke-width="1.2">
+    <rect x="400" y="640" width="300" height="150" rx="10"/>
+    <rect x="1300" y="535" width="200" height="72" rx="8"/>
   </g>
 
   <!-- 개념 이름 -->
-  <g font-size="14" font-weight="700" fill="#101828">
-    <text x="380" y="244" font-size="17">채용공고</text>
-    <text x="80" y="187">공고 분석</text>
-    <text x="80" y="257">오늘의 공고</text>
-    <text x="80" y="327">태그</text>
-    <text x="1050" y="244" font-size="17">부트캠프</text>
-    <text x="1372" y="187">커리큘럼</text>
-    <text x="1372" y="257">파트너사</text>
-    <text x="1372" y="327">사진</text>
-    <text x="800" y="174" text-anchor="middle">반려 사유</text>
-    <text x="800" y="268" text-anchor="middle">원문 이동</text>
-    <text x="440" y="454" text-anchor="middle">공고 북마크</text>
-    <text x="1160" y="454" text-anchor="middle">부트캠프 북마크</text>
-    <text x="680" y="604" font-size="17">회원</text>
-    <text x="336" y="613">회원 프로필</text>
-    <text x="336" y="685">기업 프로필</text>
-    <text x="1096" y="613">렛츠커리어 전송 대기</text>
-    <text x="490" y="884" font-size="17">모집글</text>
-    <text x="486" y="1003">댓글 · 대댓글</text>
-    <text x="76" y="864">지원 기록</text>
-    <text x="76" y="940">모집글 북마크</text>
-    <text x="76" y="1020">댓글 신고</text>
-    <text x="930" y="884" font-size="17">취준고민</text>
-    <text x="926" y="1003">답변 · 답글</text>
-    <text x="1316" y="1000">답변 좋아요</text>
+  <g font-weight="700" fill="#101828">
+    <text x="350" y="226" font-size="18">채용공고</text>
+    <text x="350" y="486" font-size="18">부트캠프</text>
+    <text x="780" y="200" font-size="16">기업 회원</text>
+    <text x="780" y="342" font-size="16">관리자</text>
+    <text x="780" y="494" font-size="16">일반 회원</text>
+    <text x="1326" y="476" font-size="16">모집글</text>
+    <text x="1326" y="646" font-size="16">취준고민</text>
+    <text x="350" y="850" font-size="16">렛츠커리어 콘텐츠</text>
+    <g font-size="14">
+      <text x="86" y="222">공고 분석</text>
+      <text x="350" y="345">오늘의 공고</text>
+      <text x="1026" y="200">기업 프로필</text>
+      <text x="776" y="634">회원 프로필</text>
+      <text x="1536" y="480">댓글 · 대댓글</text>
+      <text x="1536" y="650">답변 · 답글</text>
+      <text x="86" y="848">크롤러 · 고용24</text>
+      <text x="796" y="830">렛츠커리어</text>
+    </g>
   </g>
 
   <!-- 코드 이름 -->
-  <g font-family="'SF Mono', Menlo, Consolas, monospace" font-size="10.5" fill="#667085">
-    <text x="380" y="268" font-size="12">Job</text>
-    <text x="80" y="204">JobAnalysis</text>
-    <text x="80" y="274">TodayJob <tspan font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif" font-size="11" fill="#475467">· 추천 문구</tspan></text>
-    <text x="80" y="344">Tag · JobTag</text>
-    <text x="1050" y="268" font-size="12">Bootcamp</text>
-    <text x="1372" y="204">BootcampCurriculum</text>
-    <text x="1372" y="274">BootcampPartner</text>
-    <text x="1372" y="344">BootcampImage</text>
-    <text x="800" y="193" text-anchor="middle">ContentRejection</text>
-    <text x="800" y="287" text-anchor="middle">SourceUrlClick</text>
-    <text x="440" y="472" text-anchor="middle">JobBookmark</text>
-    <text x="1160" y="472" text-anchor="middle">BootcampBookmark</text>
-    <text x="680" y="628" font-size="12">User</text>
-    <text x="336" y="632">UserProfile</text>
-    <text x="336" y="704">CompanyProfile</text>
-    <text x="1096" y="632">LetsCareerJobProfileOutbox</text>
-    <text x="490" y="908" font-size="12">RecruitmentPost</text>
-    <text x="486" y="1022">RecruitmentPostComment</text>
-    <text x="76" y="880">RecruitmentPostApplication</text>
-    <text x="76" y="956">RecruitmentPostBookmark</text>
-    <text x="76" y="1036">RecruitmentPostCommentReport</text>
-    <text x="930" y="908" font-size="12">Concern</text>
-    <text x="926" y="1022">ConcernComment</text>
-    <text x="1316" y="1016">ConcernCommentLike</text>
-    <text x="920" y="628" text-anchor="end">UserRole</text>
+  <g font-family="'SF Mono', Menlo, Consolas, monospace" font-size="10.5" fill="#98a2b3">
+    <text x="550" y="226" text-anchor="end">Job</text>
+    <text x="550" y="486" text-anchor="end">Bootcamp</text>
+    <text x="234" y="222" text-anchor="end">JobAnalysis</text>
+    <text x="550" y="345" text-anchor="end">TodayJob</text>
+    <text x="940" y="200" text-anchor="end">COMPANY</text>
+    <text x="940" y="342" text-anchor="end">ADMIN</text>
+    <text x="940" y="494" text-anchor="end">USER</text>
+    <text x="1026" y="220">CompanyProfile</text>
+    <text x="924" y="634" text-anchor="end">UserProfile</text>
+    <text x="1326" y="512">RecruitmentPost</text>
+    <text x="1326" y="682">Concern</text>
+    <text x="1536" y="500">…PostComment</text>
+    <text x="1536" y="670">ConcernComment</text>
+    <text x="350" y="890">LetsCareerContent</text>
   </g>
 
-  <!-- 보조 설명 -->
-  <g font-size="11.5" fill="#475467">
-    <text x="550" y="244" text-anchor="end">모집·게시·검수 상태</text>
-    <text x="1220" y="244" text-anchor="end">모집·게시·검수 상태</text>
-    <text x="440" y="492" text-anchor="middle">회원 × 공고 · 지원 단계</text>
-    <text x="1160" y="492" text-anchor="middle">회원 × 부트캠프 · 신청 단계</text>
-    <text x="920" y="604" text-anchor="end">일반 · 기업 · 관리자</text>
-    <text x="670" y="884" text-anchor="end">사이드 프로젝트 · 스터디</text>
-    <text x="1110" y="884" text-anchor="end">질문과 답변</text>
-    <text x="76" y="897">회원 × 모집글 · 연락처 열람</text>
-    <text x="76" y="973">회원 × 모집글</text>
-    <text x="76" y="1053">신고한 회원</text>
-    <text x="1316" y="1033">회원 × 답변</text>
-    <text x="1170" y="880">관리자가 쓴 답변은</text>
-    <text x="1170" y="898">공식 답변으로 표시</text>
+  <!-- 한 줄 설명 -->
+  <g font-size="12" fill="#475467">
+    <text x="86" y="242">채용공고를 AI로</text>
+    <text x="86" y="256">요약한 결과</text>
+    <text x="350" y="252">회사의 채용 정보</text>
+    <text x="350" y="512">취업 준비 교육 과정</text>
+    <text x="350" y="366">관리자가 고른 공고 + 소개 문구</text>
+    <text x="780" y="222">공고·부트캠프를 올리는 회사</text>
+    <text x="780" y="364">관리자 콘솔을 쓰는 운영자</text>
+    <text x="780" y="382" fill="#667085">관리자 답변은 공식 답변</text>
+    <text x="780" y="516">렛츠커리어 계정으로 가입한</text>
+    <text x="780" y="534">취업 준비생</text>
+    <text x="776" y="654">렛츠커리어 프로필 사본</text>
+    <text x="1326" y="494">사이드 프로젝트·스터디</text>
+    <text x="1326" y="664">취업 고민 질문</text>
+    <text x="350" y="870">챌린지·VOD·자료집·블로그</text>
+    <text x="86" y="868">외부 수집</text>
+    <text x="796" y="850">외부 서비스</text>
+    <text x="796" y="868">일반 회원 계정과</text>
+    <text x="796" y="884">콘텐츠의 원본</text>
   </g>
 
-  <!-- 관계 이름 -->
-  <g font-size="12" font-weight="600" fill="#344054" paint-order="stroke" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">
-    <text x="660" y="440">등록 (기업 회원)</text>
-    <text x="940" y="440" text-anchor="end">등록 (기업 회원)</text>
-    <text x="810" y="400">이동한 회원</text>
-    <text x="660" y="762" text-anchor="middle">작성</text>
-    <text x="940" y="762" text-anchor="middle">작성</text>
-    <text x="612" y="1064">대댓글</text>
-    <text x="1052" y="1064">답글</text>
+  <!-- 관계에 딸린 값: 지원 단계 -->
+  <g font-size="12" fill="#344054">
+    <text x="416" y="664" font-size="13" font-weight="800" fill="#b54708">지원 단계 <tspan font-size="11" font-weight="400" fill="#b54708">· 북마크마다 하나</tspan></text>
+    <text x="416" y="688" font-weight="700" fill="#667085">공고</text>
+    <text x="476" y="688">스크랩 · 지원 준비 중 · 지원 완료</text>
+    <text x="476" y="706">면접 · 합격 · 불합격</text>
+    <text x="416" y="732" font-weight="700" fill="#667085">부트캠프</text>
+    <text x="476" y="732">스크랩 · 신청 전 · 신청 완료</text>
+    <text x="476" y="750">활동 중 · 활동 완료</text>
+    <text x="416" y="776" font-size="11" fill="#98a2b3">순서 없이 아무 단계로나 옮김 · 다시 북마크하면 스크랩</text>
+
+    <text x="1314" y="555" font-size="13" font-weight="800" fill="#b54708">진행 단계 <tspan font-size="11" font-weight="400" fill="#b54708">· 지원마다 하나</tspan></text>
+    <text x="1314" y="576">지원 준비 중 · 지원 완료</text>
+    <text x="1314" y="594">활동 중 · 활동 완료</text>
   </g>
 
-  <!-- 개수 -->
-  <g font-size="12" font-weight="800" fill="#344054" paint-order="stroke" stroke="#ffffff" stroke-width="4" stroke-linejoin="round">
-    <text x="352" y="226" text-anchor="end">1</text>
-    <text x="252" y="186">0..1</text>
-    <text x="252" y="254">0..1</text>
-    <text x="352" y="286" text-anchor="end">N</text>
-    <text x="252" y="324">M</text>
-    <text x="1248" y="226">1</text>
-    <text x="1348" y="186" text-anchor="end">N</text>
-    <text x="1348" y="254" text-anchor="end">N</text>
-    <text x="1348" y="324" text-anchor="end">N</text>
-    <text x="578" y="220">1</text>
-    <text x="682" y="172" text-anchor="end">0..1</text>
-    <text x="1022" y="220" text-anchor="end">1</text>
-    <text x="918" y="172">0..1</text>
-    <text x="578" y="266">1</text>
-    <text x="682" y="266" text-anchor="end">N</text>
-    <text x="1022" y="266" text-anchor="end">1</text>
-    <text x="918" y="266">N</text>
-    <text x="808" y="318">N</text>
-    <text x="808" y="562">1</text>
-    <text x="448" y="308">1</text>
-    <text x="448" y="424">N</text>
-    <text x="1168" y="308">1</text>
-    <text x="1168" y="424">N</text>
-    <text x="452" y="524">N</text>
-    <text x="680" y="560" text-anchor="end">1</text>
-    <text x="1148" y="524" text-anchor="end">N</text>
-    <text x="920" y="560">1</text>
-    <text x="552" y="308">N</text>
-    <text x="742" y="560" text-anchor="end">1</text>
-    <text x="1048" y="308" text-anchor="end">N</text>
-    <text x="858" y="560">1</text>
-    <text x="652" y="612" text-anchor="end">1</text>
-    <text x="528" y="612">0..1</text>
-    <text x="652" y="660" text-anchor="end">1</text>
-    <text x="528" y="684">0..1</text>
-    <text x="948" y="612">1</text>
-    <text x="1072" y="612" text-anchor="end">0..1</text>
-    <text x="748" y="668">1</text>
-    <text x="588" y="844">N</text>
-    <text x="868" y="668">1</text>
-    <text x="1028" y="844">N</text>
-    <text x="588" y="948">1</text>
-    <text x="588" y="974">N</text>
-    <text x="462" y="870" text-anchor="end">1</text>
-    <text x="268" y="870">N</text>
-    <text x="462" y="904" text-anchor="end">1</text>
-    <text x="268" y="944">N</text>
-    <text x="462" y="1002" text-anchor="end">1</text>
-    <text x="268" y="1026">N</text>
-    <text x="1028" y="948">1</text>
-    <text x="1028" y="974">N</text>
-    <text x="1138" y="1002">1</text>
-    <text x="1292" y="1006" text-anchor="end">N</text>
+  <!-- ================= 관계 이름 ================= -->
+  <g font-size="12.5" font-weight="700" fill="#344054" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">
+    <text x="291" y="222">요약된다</text>
+    <text x="681" y="197">등록한다</text>
+    <text x="681" y="327">공고를 골라 소개 문구를 쓴다</text>
+    <text x="681" y="377">검수한다</text>
+    <text x="681" y="484">북마크한다</text>
+    <text x="984" y="197">가진다</text>
+    <text x="1110" y="462">쓴다</text>
+    <text x="1110" y="504">북마크하고 지원한다</text>
+    <text x="1100" y="572">묻고 답한다</text>
+    <text x="1501" y="477">달린다</text>
+    <text x="1501" y="647">달린다</text>
+  </g>
+  <g font-size="12.5" font-weight="700" fill="#344054" paint-order="stroke" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">
+    <text x="460" y="292">오늘의 공고로 뽑힌다</text>
+    <text x="855" y="590">가진다</text>
+    <text x="160" y="710" text-anchor="end">수집해</text>
+    <text x="160" y="726" text-anchor="end">바로 게시한다</text>
+    <text x="752" y="700">렛츠커리어 계정으로 로그인한다</text>
+    <text x="676" y="860" text-anchor="middle">사본으로 가져온다</text>
+  </g>
+  <g font-size="12.5" font-weight="700" fill="#667085" paint-order="stroke" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">
+    <text x="370" y="704" text-anchor="end">공고마다 맞춰</text>
+    <text x="370" y="720" text-anchor="end">추천된다</text>
+    <text x="1012" y="640">모집 중인 챌린지를</text>
+    <text x="1012" y="656">무작위로 보여 준다</text>
   </g>
 
-  <!-- ================= 렛츠커리어 추천 ================= -->
-  <rect x="40" y="1110" width="1520" height="210" rx="18" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
-  <text x="60" y="1138" font-size="14" font-weight="800" fill="#c2410c">렛츠커리어 추천</text>
-  <text x="1540" y="1138" font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#98a2b3" text-anchor="end">letscareercontent · challenge</text>
-  <g fill="none" stroke="#667085" stroke-width="1.5">
-    <line x1="384" y1="1206" x2="480" y2="1206"/>
-    <line x1="720" y1="1206" x2="816" y2="1206" stroke-dasharray="5 4"/>
+  <!-- 개수와 조건 -->
+  <g font-size="11" fill="#98a2b3" paint-order="stroke" stroke="#ffffff" stroke-width="4" stroke-linejoin="round">
+    <text x="291" y="246" text-anchor="middle">1 : 0..1</text>
+    <text x="460" y="308">공고마다 최대 1번</text>
+    <text x="681" y="221" text-anchor="middle">1 : N</text>
+    <text x="681" y="351" text-anchor="middle">관리자가 공고를 직접 고름</text>
+    <text x="681" y="401" text-anchor="middle">기업 콘텐츠만 · 승인해야 게시</text>
+    <text x="681" y="499" text-anchor="middle">회원 × 콘텐츠당 1개</text>
+    <text x="984" y="221" text-anchor="middle">1 : 1</text>
+    <text x="1110" y="485" text-anchor="middle">1 : N</text>
+    <text x="1110" y="528" text-anchor="middle">회원 × 모집글당 1개씩</text>
+    <text x="1100" y="588" text-anchor="middle">작성 1 : N</text>
+    <text x="1501" y="501" text-anchor="middle">1 : N</text>
+    <text x="1501" y="671" text-anchor="middle">1 : N</text>
+    <text x="855" y="604">1 : 1</text>
+    <text x="752" y="716">1 : 1</text>
+    <text x="370" y="736" text-anchor="end">오공고가 계산 · 저장하지 않음</text>
+    <text x="1012" y="672">최대 3개 · 회원과 무관</text>
+    <text x="1012" y="686">비로그인 포함 · 저장하지 않음</text>
+    <text x="160" y="742" text-anchor="end">검수 없음</text>
+    <text x="676" y="884" text-anchor="middle">주기적으로 덮어씀</text>
   </g>
-  <rect x="64" y="1158" width="320" height="96" rx="10" fill="#ffffff" stroke="#101828" stroke-width="2"/>
-  <rect x="480" y="1158" width="240" height="96" rx="8" fill="#ffffff" stroke="#d0d5dd" stroke-width="1.5"/>
-  <rect x="816" y="1158" width="320" height="96" rx="8" fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4"/>
-  <rect x="1232" y="1158" width="304" height="96" rx="8" fill="#ffffff" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="5 4"/>
-  <g font-size="14" font-weight="700" fill="#101828">
-    <text x="84" y="1192" font-size="17">렛츠커리어 콘텐츠</text>
-    <text x="496" y="1184">추천 태그</text>
-    <text x="832" y="1184">공고별 추천</text>
-    <text x="1248" y="1184">추천 챌린지</text>
-  </g>
-  <g font-family="'SF Mono', Menlo, Consolas, monospace" font-size="10.5" fill="#667085">
-    <text x="84" y="1214" font-size="12">LetsCareerContent</text>
-    <text x="496" y="1202">LetsCareerContentTags</text>
-  </g>
-  <g font-size="11.5" fill="#475467">
-    <text x="84" y="1240">챌린지·VOD·자료집·블로그 등의 사본</text>
-    <text x="496" y="1224">직군 · 직무 · 준비 단계</text>
-    <text x="496" y="1242" fill="#667085">크롤러가 AI로 붙임</text>
-    <text x="832" y="1204">채용공고·공고 분석과 맞춰 3개</text>
-    <text x="832" y="1224">직무 +5 · 직군 +3 · 준비 단계 +2</text>
-    <text x="832" y="1242" fill="#667085">공고를 열 때 계산, 저장 안 함</text>
-    <text x="1248" y="1204">렛츠커리어가 회원에 맞춰 고름</text>
-    <text x="1248" y="1224">화면을 열 때마다 받아 옴, 저장 안 함</text>
-    <text x="1248" y="1242" fill="#667085">실패하면 빈 목록</text>
-    <text x="64" y="1294" fill="#667085">콘텐츠 사본은 스케줄 작업이 렛츠커리어 목록으로 덮어쓰고, 목록에서 빠진 콘텐츠는 지운 것으로 표시합니다. 태그가 없는 콘텐츠는 추천하지 않습니다.</text>
-  </g>
-  <g font-size="12" font-weight="800" fill="#344054" paint-order="stroke" stroke="#ffffff" stroke-width="4" stroke-linejoin="round">
-    <text x="392" y="1200">1</text>
-    <text x="472" y="1200" text-anchor="end">0..1</text>
-  </g>
-  <text x="768" y="1198" font-size="12" font-weight="600" fill="#344054" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">점수 계산</text>
 
-  <!-- ================= 그 밖의 개념 ================= -->
-  <line x1="40" y1="1356" x2="1560" y2="1356" stroke="#eaecf0" stroke-width="1.5"/>
-  <text x="40" y="1394" font-size="12" font-weight="700" fill="#98a2b3" letter-spacing="1">그 밖의 개념</text>
-  <g font-size="13" fill="#344054">
-    <text x="160" y="1394"><tspan font-weight="700">공지</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">Announcement</tspan></text>
-    <text x="360" y="1394"><tspan font-weight="700">서비스 의견</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ServiceFeedback</tspan> <tspan fill="#667085" font-size="12">· 회원 0..1</tspan></text>
-    <text x="680" y="1394"><tspan font-weight="700">이미지</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ImageAsset</tspan> <tspan fill="#667085" font-size="12">· 올린 회원</tspan></text>
-    <text x="940" y="1394"><tspan font-weight="700">지역</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">Region</tspan> <tspan fill="#667085" font-size="12">· 공고의 근무지 값</tspan></text>
-    <text x="1180" y="1394"><tspan font-weight="700">스케줄 작업</tspan> <tspan font-family="'SF Mono', Menlo, Consolas, monospace" font-size="11" fill="#667085">ScheduledJob</tspan></text>
-  </g>
+  <!-- ================= 바닥글 ================= -->
+  <line x1="40" y1="930" x2="1660" y2="930" stroke="#eaecf0" stroke-width="1.5"/>
+  <text x="40" y="962" font-size="12" fill="#98a2b3">커리큘럼·파트너사, 원문 이동, 반려 사유, 추천 태그, 렛츠커리어 전송 대기, 지표, 공지, 이미지처럼 세부 정보나 운영·저장 방식에 가까운 개념은 domain-map.md의 "개념도에서 뺀 개념"에 있습니다.</text>
 </svg>
