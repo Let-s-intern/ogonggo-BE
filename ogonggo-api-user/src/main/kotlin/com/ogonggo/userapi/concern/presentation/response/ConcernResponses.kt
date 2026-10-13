@@ -41,7 +41,7 @@ data class ConcernSummaryResponse(
     val id: Long,
     val category: ConcernCategory,
     val title: String,
-    @field:Schema(description = "본문 전체. 미리보기 줄임은 클라이언트가 합니다.")
+    @field:Schema(description = "본문 Lexical EditorState JSON 문자열 전체. 미리보기 텍스트 추출과 줄임은 클라이언트가 합니다.")
     val content: String,
     @field:Schema(description = "첨부 사진. 첨부한 순서대로이며 없으면 빈 배열입니다.")
     val images: List<ConcernImageResponse>,
@@ -73,6 +73,7 @@ data class ConcernDetailResponse(
     val id: Long,
     val category: ConcernCategory,
     val title: String,
+    @field:Schema(description = "본문 Lexical EditorState JSON 문자열")
     val content: String,
     @field:Schema(description = "첨부 사진. 첨부한 순서대로이며 없으면 빈 배열입니다.")
     val images: List<ConcernImageResponse>,

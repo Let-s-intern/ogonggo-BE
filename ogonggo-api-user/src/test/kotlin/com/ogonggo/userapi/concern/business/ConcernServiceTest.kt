@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.concern.business
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.concern.domain.Concern
 import com.ogonggo.core.concern.domain.ConcernCategory
 import com.ogonggo.core.concern.domain.ConcernPopularSortType
@@ -13,6 +14,7 @@ import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
 import com.ogonggo.core.concern.implement.dto.ConcernImageDto
 import com.ogonggo.core.concern.implement.dto.ConcernMetricDto
+import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -46,6 +48,7 @@ class ConcernServiceTest {
     private val concernImageReader = Mockito.mock(ConcernImageReader::class.java)
     private val concernImageManager = Mockito.mock(ConcernImageManager::class.java)
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+    private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-10-08T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = ConcernService(
@@ -59,6 +62,7 @@ class ConcernServiceTest {
         concernImageReader,
         concernImageManager,
         imageAssetManager,
+        contentValidator,
         eventPublisher,
         clock,
     )
@@ -154,6 +158,37 @@ class ConcernServiceTest {
     }
 
     @Test
+    fun `본문이 에디터 JSON이 아니면 content 필드 오류이고 저장하지 않는다`() {
+        // given
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+
+        // when
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            service.create(USER_ID, SaveConcernCommand(ConcernCategory.ETC, "제목", "일반 텍스트 본문"))
+        }
+
+        // then
+        assertEquals("content", exception.fieldName)
+        Mockito.verifyNoInteractions(concernAppender, concernImageManager)
+    }
+
+    @Test
+    fun `본문에 사진을 넣으면 content 필드 오류이고 저장하지 않는다`() {
+        // given
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(imageAssetManager.containsImages(CONTENT)).thenReturn(true)
+
+        // when
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            service.create(USER_ID, SaveConcernCommand(ConcernCategory.ETC, "제목", CONTENT))
+        }
+
+        // then
+        assertEquals("content", exception.fieldName)
+        Mockito.verifyNoInteractions(concernAppender, concernImageManager)
+    }
+
+    @Test
     fun `같은 사진을 두 번 첨부하면 imageIds 필드 오류이고 저장하지 않는다`() {
         // given
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
@@ -235,7 +270,7 @@ class ConcernServiceTest {
         private const val USER_ID = 17L
         private const val OTHER_USER_ID = 18L
         private const val CONCERN_ID = 5L
-        private const val CONTENT = "본문"
+        private const val CONTENT = """{"root":{"children":[{"type":"paragraph"}]}}"""
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 10, 8, 12, 0)
     }
 }
