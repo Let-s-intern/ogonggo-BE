@@ -101,7 +101,7 @@ data class AdminJobSummary(
     }
 }
 
-/** 목록 항목에 본문 칸과 원문 주소를 더한 값이다. 크롤러가 못 읽어 온 본문 칸은 비어 있을 수 있다. */
+/** 목록 항목에 본문 칸과 원문 주소·원문을 더한 값이다. 크롤러가 못 읽어 온 본문 칸은 비어 있을 수 있다. */
 data class AdminJobResult(
     val summary: AdminJobSummary,
     val companyAndTeamIntroduction: String?,
@@ -112,6 +112,7 @@ data class AdminJobResult(
     val benefits: String?,
     val hiringProcess: String?,
     val sourceUrl: String?,
+    val sourceText: String?,
 ) {
     companion object {
         internal fun from(job: Job, metric: JobMetricDto): AdminJobResult = AdminJobResult(
@@ -124,6 +125,7 @@ data class AdminJobResult(
             benefits = job.benefits,
             hiringProcess = job.hiringProcess,
             sourceUrl = job.sourceUrl,
+            sourceText = job.sourceText,
         )
     }
 }

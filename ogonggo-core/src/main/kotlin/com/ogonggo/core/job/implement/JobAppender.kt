@@ -62,6 +62,7 @@ class JobAppender internal constructor(
                 applyEmail = command.applyEmail,
                 inquiryEmail = command.inquiryEmail,
                 sourceUrl = command.sourceUrl,
+                sourceText = command.sourceText?.takeIf { it.isNotBlank() },
                 publicationStatus = command.publicationStatus,
                 source = source,
                 externalId = command.externalId,

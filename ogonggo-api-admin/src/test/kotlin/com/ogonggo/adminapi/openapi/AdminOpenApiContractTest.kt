@@ -152,6 +152,19 @@ class AdminOpenApiContractTest @Autowired constructor(
         )
     }
 
+    @Test
+    fun `크롤러 공고 등록과 교체는 원문을 받고 원문만 바꾸는 API가 있다`() {
+        val document = openApiDocument()
+
+        listOf("CrawlerJobRegistrationRequest", "CrawlerJobReplaceRequest").forEach { name ->
+            assertTrue(
+                document.at("/components/schemas/$name/properties/sourceText").isObject,
+                "$name 에 sourceText 가 없습니다.",
+            )
+        }
+        assertTrue(document.at("/paths/~1api~1v1~1internal~1jobs~1{jobId}~1source-text/put").isObject)
+    }
+
     private fun openApiDocument() = objectMapper.readTree(
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)

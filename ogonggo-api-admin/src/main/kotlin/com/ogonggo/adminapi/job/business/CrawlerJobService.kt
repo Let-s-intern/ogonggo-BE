@@ -54,6 +54,13 @@ class CrawlerJobService(
         }
 
         jobManager.update(job, command.toUpdateDto(), LocalDateTime.now(clock))
+        command.sourceText?.takeIf { it.isNotBlank() }?.let { jobManager.changeSourceText(job, it) }
+    }
+
+    /** 원문만 바꾼다. 원문 저장 전에 보낸 공고를 채울 때 쓴다. 운영자가 고친 다른 칸은 건드리지 않는다. */
+    @Transactional
+    fun changeSourceText(jobId: Long, sourceText: String) {
+        jobManager.changeSourceText(jobReader.readCrawledForUpdate(jobId), sourceText)
     }
 
     /** 직무별로 나뉘어 새 공고로 등록된 원래 공고처럼 더는 쓰지 않는 공고를 지운다. 이미 지운 공고를 다시 지워도 성공한다. */
@@ -100,6 +107,7 @@ private fun CrawlerJobCommand.toAppendDto(): JobAppendDto = JobAppendDto(
     applyEmail = applyEmail,
     inquiryEmail = inquiryEmail,
     sourceUrl = sourceUrl,
+    sourceText = sourceText,
     publicationStatus = JobPublicationStatus.PUBLISHED,
 )
 

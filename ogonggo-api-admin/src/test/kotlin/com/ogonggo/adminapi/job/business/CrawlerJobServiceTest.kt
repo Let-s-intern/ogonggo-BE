@@ -96,6 +96,7 @@ class CrawlerJobServiceTest {
         assertEquals(JobApplicationMethod.EXTERNAL_PAGE, appended.applicationMethod)
         assertEquals("recruit@example.com", appended.applyEmail)
         assertEquals("hr@example.com", appended.inquiryEmail)
+        assertEquals(SOURCE_TEXT, appended.sourceText)
         assertEquals(listOf(JOB_ID to listOf("백엔드", "스프링")), appendedTags)
     }
 
@@ -116,10 +117,28 @@ class CrawlerJobServiceTest {
     fun `교체는 값만 바꾸고 검수나 게시 상태는 건드리지 않는다`() {
         stubCrawledJob()
 
-        service.replace(JOB_ID, command(title = "바뀐 제목"))
+        service.replace(JOB_ID, command(title = "바뀐 제목", sourceText = null))
 
         assertEquals("바뀐 제목", updatedCommand?.title)
         assertEquals(listOf("update"), managerCalls)
+    }
+
+    @Test
+    fun `교체에 원문을 함께 보내면 원문도 바꾼다`() {
+        stubCrawledJob()
+
+        service.replace(JOB_ID, command())
+
+        assertEquals(listOf("update", "changeSourceText"), managerCalls)
+    }
+
+    @Test
+    fun `원문만 바꾼다`() {
+        stubCrawledJob()
+
+        service.changeSourceText(JOB_ID, SOURCE_TEXT)
+
+        assertEquals(listOf("changeSourceText"), managerCalls)
     }
 
     @Test
@@ -160,6 +179,7 @@ class CrawlerJobServiceTest {
     private fun command(
         title: String = "백엔드 개발자",
         sourceUrl: String = SOURCE_URL,
+        sourceText: String? = SOURCE_TEXT,
     ): CrawlerJobCommand = CrawlerJobCommand(
         companyName = "오공고",
         parentCompanyName = "렛츠커리어",
@@ -193,10 +213,12 @@ class CrawlerJobServiceTest {
         applyEmail = "recruit@example.com",
         inquiryEmail = "hr@example.com",
         sourceUrl = sourceUrl,
+        sourceText = sourceText,
     )
 
     companion object {
         private const val JOB_ID = 7L
         private const val SOURCE_URL = "https://example.com/jobs/1"
+        private const val SOURCE_TEXT = "백엔드 개발자 채용\n주요 업무\n자격 요건"
     }
 }

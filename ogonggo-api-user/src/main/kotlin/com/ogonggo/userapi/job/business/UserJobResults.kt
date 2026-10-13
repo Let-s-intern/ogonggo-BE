@@ -161,6 +161,8 @@ data class UserJobResult(
     val hiringProcess: String?,
     val recruitmentNotice: String?,
     val sourceUrl: String?,
+    /** 크롤러가 원문 페이지에서 읽은 글이다. 원문 저장 전에 받은 공고와 기업회원 공고는 null이다. */
+    val sourceText: String?,
     /** 이메일로 지원받는 공고가 지원서를 받는 주소다. */
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
@@ -203,6 +205,7 @@ data class UserJobResult(
             hiringProcess = job.hiringProcess,
             recruitmentNotice = job.recruitmentNotice,
             sourceUrl = job.sourceUrl,
+            sourceText = job.sourceText,
             applyEmail = job.applyEmail,
             closedAt = job.closedAt,
             bookmarked = bookmarked,
