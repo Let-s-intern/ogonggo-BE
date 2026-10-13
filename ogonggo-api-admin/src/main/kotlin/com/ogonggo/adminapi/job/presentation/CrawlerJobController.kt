@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.job.business.CrawlerJobService
 import com.ogonggo.adminapi.job.presentation.request.CrawlerJobRegistrationRequest
 import com.ogonggo.adminapi.job.presentation.request.CrawlerJobReplaceRequest
+import com.ogonggo.adminapi.job.presentation.request.CrawlerJobSourceTextRequest
 import com.ogonggo.adminapi.job.presentation.response.CrawlerJobLookupResponse
 import com.ogonggo.adminapi.job.presentation.response.CrawlerJobRegistrationResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -45,6 +46,15 @@ class CrawlerJobController(
         @RequestBody request: CrawlerJobReplaceRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
         crawlerJobService.replace(jobId, request.toCommand())
+        return SuccessResponse.ok()
+    }
+
+    @PutMapping("/{jobId}/source-text")
+    override fun changeSourceText(
+        @PathVariable("jobId") jobId: Long,
+        @RequestBody request: CrawlerJobSourceTextRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        crawlerJobService.changeSourceText(jobId, request.sourceText)
         return SuccessResponse.ok()
     }
 

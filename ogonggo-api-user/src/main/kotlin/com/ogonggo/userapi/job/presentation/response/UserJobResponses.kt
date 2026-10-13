@@ -147,6 +147,8 @@ data class UserJobDetailResponse(
     @field:Schema(description = "채용 안내사항. 제출 서류·근무 조건·유의사항 등")
     val recruitmentNotice: String?,
     val sourceUrl: String?,
+    @field:Schema(description = "채용공고 원문. 원문 페이지에서 읽은 글 그대로이며 줄바꿈이 있는 일반 텍스트입니다. 이미지로 된 공고는 이미지에서 읽은 글입니다. 원문이 없는 공고는 null입니다")
+    val sourceText: String?,
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
     val bookmarked: Boolean,
@@ -183,6 +185,7 @@ data class UserJobDetailResponse(
             hiringProcess = result.hiringProcess,
             recruitmentNotice = result.recruitmentNotice,
             sourceUrl = result.sourceUrl,
+            sourceText = result.sourceText,
             applyEmail = result.applyEmail,
             closedAt = result.closedAt,
             bookmarked = result.bookmarked,

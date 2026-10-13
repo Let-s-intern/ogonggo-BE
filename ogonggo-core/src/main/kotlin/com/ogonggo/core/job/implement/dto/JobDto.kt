@@ -50,6 +50,7 @@ data class JobAppendDto(
     val applyEmail: String? = null,
     val inquiryEmail: String? = null,
     val sourceUrl: String? = null,
+    val sourceText: String? = null,
     val publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     /** 비우면 저장할 때 소유자 유무로 정한다. `copy(ownerUserId = ...)`로 만든 값도 소유자와 어긋나지 않게 하기 위해서다. */
     val source: ContentSource? = null,

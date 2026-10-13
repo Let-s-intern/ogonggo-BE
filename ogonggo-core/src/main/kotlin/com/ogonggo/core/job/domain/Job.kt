@@ -130,6 +130,7 @@ class Job internal constructor(
     applyEmail: String? = null,
     inquiryEmail: String? = null,
     sourceUrl: String? = null,
+    sourceText: String? = null,
     publicationStatus: JobPublicationStatus = JobPublicationStatus.DRAFT,
     source: ContentSource = ContentSource.of(ownerUserId),
     externalId: String? = null,
@@ -326,6 +327,14 @@ class Job internal constructor(
     var sourceUrl: String? = sourceUrl /* 채용공고 원문 URL */
         protected set
 
+    /**
+     * 크롤러가 원문 페이지에서 읽은 글 그대로다. 본문 여덟 칸은 이 글을 나눠 옮긴 것이고, 빠진 내용을 확인할 수 있게 함께 둔다.
+     * 이미지로 된 공고는 이미지에서 읽은 글이 들어 있다. 분석 해시에는 넣지 않는다.
+     */
+    @Column(name = "source_text", columnDefinition = "LONGTEXT")
+    var sourceText: String? = sourceText /* 채용공고 원문 */
+        protected set
+
     /** 등록 경로다. 등록할 때 정해지고 바뀌지 않는다. */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -463,6 +472,12 @@ class Job internal constructor(
         this.inquiryEmail = inquiryEmail
         this.sourceUrl = sourceUrl
         this.recruitmentStatus = recruitmentStatusAt(now)
+    }
+
+    /** 원문은 크롤러가 다시 읽어 왔을 때만 바꾼다. 비어 있는 글은 저장하지 않는다. */
+    fun changeSourceText(sourceText: String?) {
+        checkNotDeleted()
+        this.sourceText = sourceText?.takeIf { it.isNotBlank() }
     }
 
     /**

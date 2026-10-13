@@ -46,6 +46,8 @@ data class CrawlerJobCommand(
     val applyEmail: String?,
     val inquiryEmail: String?,
     val sourceUrl: String,
+    /** 원문 페이지에서 읽은 글이다. 교체할 때 비워 보내면 저장된 원문을 그대로 둔다. */
+    val sourceText: String?,
 )
 
 data class CrawlerJobRegistrationCommand(

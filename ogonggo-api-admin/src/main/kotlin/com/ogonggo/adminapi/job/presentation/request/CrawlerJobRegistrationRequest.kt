@@ -60,6 +60,7 @@ interface CrawlerJobWriteRequest {
     val applyEmail: String?
     val inquiryEmail: String?
     val sourceUrl: String
+    val sourceText: String?
 }
 
 /**
@@ -115,6 +116,7 @@ private fun CrawlerJobWriteRequest.toJobCommand(): CrawlerJobCommand {
         applyEmail = applyEmail,
         inquiryEmail = inquiryEmail,
         sourceUrl = sourceUrl,
+        sourceText = sourceText,
     )
 }
 
@@ -232,6 +234,9 @@ data class CrawlerJobRegistrationRequest(
     @field:URL(message = "원문 URL이 URL 형식이 아닙니다.")
     override val sourceUrl: String,
 
+    @field:Schema(description = "원문 페이지에서 읽은 글 그대로. 이미지로 된 공고는 이미지에서 읽은 글이다")
+    override val sourceText: String? = null,
+
     @field:Schema(description = "AI가 생성한 태그 목록")
     val tags: List<@NotBlank(message = "태그명은 비어 있을 수 없습니다.") String> = emptyList(),
 ) : CrawlerJobWriteRequest {
@@ -323,7 +328,17 @@ data class CrawlerJobReplaceRequest(
     @field:Size(max = 2048, message = "원문 URL은 2048자 이하여야 합니다.")
     @field:URL(message = "원문 URL이 URL 형식이 아닙니다.")
     override val sourceUrl: String,
+
+    @field:Schema(description = "원문 페이지에서 읽은 글 그대로. 생략하면 저장된 원문을 그대로 둔다")
+    override val sourceText: String? = null,
 ) : CrawlerJobWriteRequest {
 
     fun toCommand(): CrawlerJobCommand = toJobCommand()
 }
+
+@Schema(description = "크롤러 채용공고 원문 변경 요청")
+data class CrawlerJobSourceTextRequest(
+    @field:Schema(description = "원문 페이지에서 읽은 글 그대로")
+    @field:NotBlank(message = "원문은 비어 있을 수 없습니다.")
+    val sourceText: String,
+)

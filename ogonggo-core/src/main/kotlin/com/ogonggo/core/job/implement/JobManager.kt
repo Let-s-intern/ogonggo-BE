@@ -72,6 +72,8 @@ class JobManager internal constructor(
 
     fun editContent(job: Job, command: JobContentEditDto) = change(job) { editContent(command.title, command.contents) }
 
+    fun changeSourceText(job: Job, sourceText: String?) = change(job) { changeSourceText(sourceText) }
+
     fun publish(job: Job) = change(job) { publish() }
 
     fun hide(job: Job) = change(job) { hide() }
