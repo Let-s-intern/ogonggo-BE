@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.letscareercontent.presentation.request
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContent
+import com.ogonggo.core.letscareercontent.domain.LetsCareerContentFieldGroup
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTags
 import com.ogonggo.core.letscareercontent.domain.LetsCareerContentTopic
 import io.swagger.v3.oas.annotations.media.Schema
@@ -17,7 +18,10 @@ data class CrawlerLetsCareerContentTagRequest(
     @field:Size(max = LetsCareerContent.CONTENT_HASH_LENGTH)
     val contentHash: String,
 
-    @field:Schema(description = "맞는 직군. 특정 직군 전용이 아니면 빈 배열")
+    @field:Schema(
+        description = "맞는 직군. 특정 직군 전용이 아니면 빈 배열. IT_DEVELOPMENT, MARKETING_ADVERTISING, SALES, " +
+            "HR_GENERAL_AFFAIRS, PLANNING_STRATEGY 다섯 묶음으로 저장하며, 다른 직군은 묶음으로 옮기고 묶음이 없으면 버립니다",
+    )
     @field:NotNull
     @field:Size(max = MAX_JOB_FIELDS)
     val jobFields: List<JobField>?,
@@ -33,7 +37,7 @@ data class CrawlerLetsCareerContentTagRequest(
     val topics: List<LetsCareerContentTopic>?,
 ) {
     fun toTags() = LetsCareerContentTags(
-        jobFields = jobFields.orEmpty().toSet(),
+        jobFields = jobFields.orEmpty().mapNotNull(LetsCareerContentFieldGroup::of).toSet(),
         jobRoles = jobRoles.orEmpty().toSet(),
         topics = topics.orEmpty().toSet(),
     )

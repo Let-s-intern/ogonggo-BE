@@ -75,11 +75,13 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         val backend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_BACKEND))
         val frontend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND))
         val fieldOnly = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT))
-        jobAppender.append(command(jobField = JobField.DESIGN, jobRole = JobRole.DESIGN_WEB))
+        // 2026-10-12 AI·데이터 직군을 IT·개발로 합쳐 AI·데이터 직무도 IT·개발로 고르면 걸린다
+        val dataAnalyst = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.AI_DATA_ANALYST))
+        jobAppender.append(command(jobField = JobField.PLANNING_STRATEGY, jobRole = JobRole.DESIGN_WEB))
         jobAppender.append(command())
 
         assertEquals(
-            listOf(fieldOnly.id, frontend.id, backend.id),
+            listOf(dataAnalyst.id, fieldOnly.id, frontend.id, backend.id),
             ids(JobManagementSearchCondition(jobField = JobField.IT_DEVELOPMENT)),
         )
         assertEquals(
