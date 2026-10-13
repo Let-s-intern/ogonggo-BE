@@ -90,6 +90,7 @@ class RecruitmentPostService(
             authorsByUserId = authorsByUserId,
             bookmarkedPostIds = if (userId == null) emptySet() else postBookmarkReader.readBookmarkedPostIds(userId, postIds),
             applicationCounts = applicationReader.countByPostIds(postIds),
+            thumbnailUrls = postImageReader.readThumbnailUrls(postIds),
             includeBookmarkCount = userId != null,
         )
     }

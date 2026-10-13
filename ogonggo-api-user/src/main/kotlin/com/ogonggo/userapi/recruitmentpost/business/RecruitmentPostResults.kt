@@ -42,6 +42,7 @@ data class RecruitmentPostSummary(
     val positions: List<RecruitmentPostPosition>,
     val recruitmentStartDate: LocalDate,
     val recruitmentEndDate: LocalDate,
+    val thumbnailUrl: String? = null,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
     val applicationCount: Long = 0,
@@ -55,6 +56,7 @@ data class RecruitmentPostSummary(
             author: RecruitmentPostAuthorResult,
             bookmarked: Boolean = false,
             applicationCount: Long = 0,
+            thumbnailUrl: String? = null,
         ): RecruitmentPostSummary = RecruitmentPostSummary(
             id = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." },
             author = author,
@@ -68,6 +70,7 @@ data class RecruitmentPostSummary(
             positions = post.positions.toList(),
             recruitmentStartDate = checkNotNull(post.recruitmentStartDate),
             recruitmentEndDate = checkNotNull(post.recruitmentEndDate),
+            thumbnailUrl = thumbnailUrl,
             viewCount = metric.viewCount,
             commentCount = metric.commentCount,
             applicationCount = applicationCount,
@@ -170,6 +173,7 @@ internal fun RecruitmentPostPageDto.toResult(
     authorsByUserId: Map<Long, RecruitmentPostAuthorResult>,
     bookmarkedPostIds: Set<Long> = emptySet(),
     applicationCounts: Map<Long, Long> = emptyMap(),
+    thumbnailUrls: Map<Long, String> = emptyMap(),
     includeBookmarkCount: Boolean = true,
 ): RecruitmentPostPageResult = RecruitmentPostPageResult(
     items = posts.map { post ->
@@ -179,6 +183,7 @@ internal fun RecruitmentPostPageDto.toResult(
             authorsByUserId[post.authorUserId] ?: RecruitmentPostAuthorResult.from(post.authorUserId, null),
             bookmarked = checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." } in bookmarkedPostIds,
             applicationCount = applicationCounts[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }] ?: 0L,
+            thumbnailUrl = thumbnailUrls[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }],
         ).copy(
             bookmarkCount = if (includeBookmarkCount) {
                 metrics[checkNotNull(post.id) { "조회된 모집글 식별자가 없습니다." }]?.bookmarkCount ?: 0L

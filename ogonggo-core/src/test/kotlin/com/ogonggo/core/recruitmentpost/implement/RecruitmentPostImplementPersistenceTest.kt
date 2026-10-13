@@ -60,6 +60,29 @@ internal class RecruitmentPostImplementPersistenceTest @Autowired constructor(
         assertEquals(3L, deletedCount.toLong())
     }
 
+    @Test
+    fun `목록 썸네일은 남아 있는 첫 번째 첨부 사진이고 사진이 없는 모집글은 빠진다`() {
+        // given
+        imageManager.replace(12L, listOf(image("a"), image("b")), IMAGE_NOW)
+        imageManager.replace(13L, listOf(image("x")), IMAGE_NOW)
+        entityManager.flush()
+        imageManager.replace(12L, listOf(image("b"), image("a")), IMAGE_NOW.plusMinutes(1))
+        entityManager.flush()
+        entityManager.clear()
+
+        // when
+        val thumbnailUrls = imageReader.readThumbnailUrls(listOf(12L, 13L, 14L))
+
+        // then
+        assertEquals(
+            mapOf(
+                12L to "https://cdn.example.com/ogonggo/side/b.png",
+                13L to "https://cdn.example.com/ogonggo/side/x.png",
+            ),
+            thumbnailUrls,
+        )
+    }
+
     private fun image(id: String) = RecruitmentPostImageDto(imageId = id, url = "https://cdn.example.com/ogonggo/side/$id.png")
 
     @Test

@@ -129,6 +129,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
                         positions = listOf(RecruitmentPostPosition.BACKEND, RecruitmentPostPosition.DESIGN),
                         recruitmentStartDate = LocalDate.of(2026, 9, 1),
                         recruitmentEndDate = LocalDate.of(2026, 9, 30),
+                        thumbnailUrl = "https://cdn.example.com/posts/12-1.png",
                     ),
                 ),
                 page = 1,
@@ -157,6 +158,7 @@ class RecruitmentPostControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
             .andExpect(jsonPath("$.data.items[0].positions[0]").value("BACKEND"))
             .andExpect(jsonPath("$.data.items[0].positions[1]").value("DESIGN"))
+            .andExpect(jsonPath("$.data.items[0].thumbnailUrl").value("https://cdn.example.com/posts/12-1.png"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(2))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(3))

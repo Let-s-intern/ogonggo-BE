@@ -4,6 +4,7 @@ import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgres
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPost
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostApplicationErrorCode
 import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
@@ -40,6 +41,7 @@ class RecruitmentPostBookmarkServiceTest {
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val applicationReader = Mockito.mock(RecruitmentPostApplicationReader::class.java)
     private val applicationManager = Mockito.mock(RecruitmentPostApplicationManager::class.java)
+    private val postImageReader = Mockito.mock(RecruitmentPostImageReader::class.java)
     private val service = RecruitmentPostBookmarkService(
         userReader,
         postReader,
@@ -51,6 +53,7 @@ class RecruitmentPostBookmarkServiceTest {
         userProfileReader,
         applicationReader,
         applicationManager,
+        postImageReader,
     )
 
     @Test

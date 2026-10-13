@@ -154,6 +154,8 @@ class RecruitmentPostServiceTest {
             mapOf(12L to RecruitmentPostMetricDto(viewCount = 0, commentCount = 0, bookmarkCount = 4)),
         )
         Mockito.`when`(applicationReader.countByPostIds(listOf(12L, 13L))).thenReturn(mapOf(12L to 3L))
+        Mockito.`when`(postImageReader.readThumbnailUrls(listOf(12L, 13L)))
+            .thenReturn(mapOf(12L to "https://cdn.example.com/posts/12-1.png"))
         Mockito.`when`(postBookmarkReader.readBookmarkedPostIds(USER_ID, listOf(12L, 13L))).thenReturn(setOf(12L))
         Mockito.`when`(userProfileReader.readAll(listOf(USER_ID, OTHER_AUTHOR_ID))).thenReturn(
             mapOf(
@@ -170,6 +172,8 @@ class RecruitmentPostServiceTest {
         assertTrue(result.items.first().bookmarked)
         assertEquals(4L, result.items.first().bookmarkCount)
         assertEquals(3L, result.items.first().applicationCount)
+        assertEquals("https://cdn.example.com/posts/12-1.png", result.items.first().thumbnailUrl)
+        assertEquals(null, result.items.last().thumbnailUrl)
         assertFalse(result.items.last().bookmarked)
         assertEquals("홍길동", result.items.first().author.nickname)
         assertEquals("https://cdn.example.com/17.png", result.items.first().author.profileImageUrl)

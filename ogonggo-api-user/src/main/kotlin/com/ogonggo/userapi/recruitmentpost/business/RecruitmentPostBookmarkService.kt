@@ -10,6 +10,7 @@ import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationMana
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostApplicationReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkManager
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostBookmarkReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostImageReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostMetricReader
 import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostMetricDto
@@ -34,6 +35,7 @@ class RecruitmentPostBookmarkService(
     private val userProfileReader: UserProfileReader,
     private val applicationReader: RecruitmentPostApplicationReader,
     private val applicationManager: RecruitmentPostApplicationManager,
+    private val postImageReader: RecruitmentPostImageReader,
 ) {
 
     @Transactional(readOnly = true)
@@ -52,6 +54,7 @@ class RecruitmentPostBookmarkService(
         }
         val metrics = recruitmentPostMetricReader.readAll(postIds)
         val applicationCounts = applicationReader.countByPostIds(postIds)
+        val thumbnailUrls = postImageReader.readThumbnailUrls(postIds)
         return RecruitmentPostBookmarkPageResult(
             items = result.items.map { item ->
                 val post = item.post
@@ -63,6 +66,7 @@ class RecruitmentPostBookmarkService(
                         ?: RecruitmentPostAuthorResult.from(post.authorUserId, null),
                     bookmarked = true,
                     applicationCount = applicationCounts[postId] ?: 0L,
+                    thumbnailUrl = thumbnailUrls[postId],
                 )
             },
             page = result.page,
