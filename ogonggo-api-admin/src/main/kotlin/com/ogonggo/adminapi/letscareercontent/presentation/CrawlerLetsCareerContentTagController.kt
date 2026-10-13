@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.letscareercontent.presentation
 
 import com.ogonggo.adminapi.letscareercontent.business.CrawlerLetsCareerContentTagService
 import com.ogonggo.adminapi.letscareercontent.presentation.request.CrawlerLetsCareerContentTagRequest
+import com.ogonggo.adminapi.letscareercontent.presentation.response.CrawlerLetsCareerContentResponse
 import com.ogonggo.adminapi.letscareercontent.presentation.response.CrawlerLetsCareerContentTagTargetResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import org.springframework.http.ResponseEntity
@@ -20,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController
 class CrawlerLetsCareerContentTagController(
     private val crawlerLetsCareerContentTagService: CrawlerLetsCareerContentTagService,
 ) : CrawlerLetsCareerContentTagApi {
+
+    @GetMapping
+    override fun getContents(): ResponseEntity<SuccessResponse<List<CrawlerLetsCareerContentResponse>>> =
+        SuccessResponse.ok(crawlerLetsCareerContentTagService.getContents().map(CrawlerLetsCareerContentResponse::from))
 
     @GetMapping("/tag-targets")
     override fun getTagTargets(

@@ -51,13 +51,27 @@ class LetsCareerContentRecommendPolicyTest {
     }
 
     @Test
-    fun `태그가 없거나 모집 기간이 아닌 콘텐츠는 고르지 않는다`() {
+    fun `모집 기간이 아닌 콘텐츠는 고르지 않는다`() {
         val job = job(jobRole = MARKETING_ROLE)
-        val untagged = content(1, null)
-        val closed = content(2, tags(), recruitmentEndAt = NOW.minusDays(1))
-        val upcoming = content(3, tags(), recruitmentStartAt = NOW.plusDays(1))
+        val closed = content(1, tags(), recruitmentEndAt = NOW.minusDays(1))
+        val upcoming = content(2, tags(), recruitmentStartAt = NOW.plusDays(1))
 
-        assertEquals(emptyList<LetsCareerContent>(), policy.recommend(job, null, listOf(untagged, closed, upcoming), WEIGHTS, NOW, 3))
+        assertEquals(emptyList<LetsCareerContent>(), policy.recommend(job, null, listOf(closed, upcoming), WEIGHTS, NOW, 3))
+    }
+
+    @Test
+    fun `맞는 콘텐츠가 모자라면 태그 없는 것, 다른 직군 전용인 것 순으로 채워 늘 정한 개수를 준다`() {
+        // given
+        val job = job(jobRole = MARKETING_ROLE)
+        val matching = content(1, tags())
+        val otherField = content(2, tags(fields = setOf(JobField.IT_DEVELOPMENT)))
+        val untagged = content(3, null)
+
+        // when
+        val result = policy.recommend(job, null, listOf(otherField, untagged, matching), WEIGHTS, NOW, 3)
+
+        // then
+        assertEquals(listOf(1L, 3L, 2L), result.map { it.externalId })
     }
 
     @Test
@@ -138,8 +152,8 @@ class LetsCareerContentRecommendPolicyTest {
         val contents = listOf(itContent, marketingContent, forAll)
 
         // when
-        val dataAnalyst = policy.recommend(job(jobRole = JobRole.AI_DATA_ANALYST), null, contents, WEIGHTS, NOW, 3)
-        val game = policy.recommend(job(jobField = JobField.GAME), null, contents, WEIGHTS, NOW, 3)
+        val dataAnalyst = policy.recommend(job(jobRole = JobRole.AI_DATA_ANALYST), null, contents, WEIGHTS, NOW, 2)
+        val game = policy.recommend(job(jobField = JobField.GAME), null, contents, WEIGHTS, NOW, 1)
 
         // then
         assertEquals(listOf(1L, 3L), dataAnalyst.map { it.externalId })

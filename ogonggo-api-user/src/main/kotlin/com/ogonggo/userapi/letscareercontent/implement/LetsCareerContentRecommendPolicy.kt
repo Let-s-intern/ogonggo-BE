@@ -25,6 +25,7 @@ import java.time.LocalDateTime
  * 4. 점수가 같으면 공고 식별자로 정한 순서로 고른다. 같은 공고는 언제 열어도 같은 추천이 나오고,
  *    같은 직무의 다른 공고끼리는 조금씩 다른 콘텐츠가 나온다.
  * 5. 한 갈래(프로그램·자료집·블로그)가 정한 개수(2)를 넘지 않게 섞는다. 그래도 모자라면 남은 것으로 채운다.
+ * 6. 1에서 빼서 맞는 콘텐츠가 모자라도 모집 기간인 콘텐츠로 채워 늘 정한 개수를 돌려준다. 태그가 없는 것을 먼저 쓴다.
  */
 @Component
 class LetsCareerContentRecommendPolicy {
@@ -58,8 +59,25 @@ class LetsCareerContentRecommendPolicy {
                 picked += content
             }
         }
+        if (picked.size < size) {
+            picked += fallbacks(jobId, contents, picked, now).take(size - picked.size)
+        }
         return picked
     }
+
+    /**
+     * 맞는 콘텐츠가 모자랄 때 채우는 후보다. 늘 [size]개를 보여 주기 위해서다(2026-10-13 결정).
+     * 모집 기간인 콘텐츠 가운데 아직 태그가 없는 것을 먼저, 다른 직군 전용인 것을 나중에 둔다.
+     * 태그가 없는 것은 맞을 수도 있지만 다른 직군 전용인 것은 맞지 않는다고 이미 알기 때문이다.
+     */
+    private fun fallbacks(
+        jobId: Long,
+        contents: List<LetsCareerContent>,
+        picked: List<LetsCareerContent>,
+        now: LocalDateTime,
+    ): List<LetsCareerContent> = contents
+        .filter { it !in picked && isRecruiting(it, now) }
+        .sortedWith(compareBy<LetsCareerContent> { it.currentTags() != null }.thenBy { tieBreaker(jobId, it) })
 
     /** 추천하지 않을 콘텐츠면 `null`이다. */
     private fun score(
