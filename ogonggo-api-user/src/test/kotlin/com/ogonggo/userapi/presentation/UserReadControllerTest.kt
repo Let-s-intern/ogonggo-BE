@@ -852,7 +852,7 @@ class UserReadControllerTest @Autowired constructor(
         hiringProcess = "채용 절차",
         recruitmentNotice = "제출 서류: 이력서",
         sourceUrl = null,
-        sourceText = "백엔드 개발자 채용\n주요 업무",
+        sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
         applyEmail = "recruit@example.com",
         closedAt = null,
         bookmarked = bookmarked,

@@ -7,6 +7,7 @@ import com.ogonggo.core.job.domain.JobBookmark
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobSource
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
 import com.ogonggo.core.job.domain.TodayJob
@@ -188,6 +189,10 @@ internal interface JobAnalysisJpaRepository : JpaRepository<JobAnalysis, Long> {
     fun findByJobId(jobId: Long): JobAnalysis?
 
     fun findAllByJobIdIn(jobIds: Collection<Long>): List<JobAnalysis>
+}
+
+internal interface JobSourceJpaRepository : JpaRepository<JobSource, Long> {
+    fun findByJobId(jobId: Long): JobSource?
 }
 
 internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {

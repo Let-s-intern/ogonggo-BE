@@ -52,6 +52,6 @@ internal object AdminJobFixtures {
         benefits = null,
         hiringProcess = null,
         sourceUrl = "https://example.com/jobs/693",
-        sourceText = "백엔드 개발자 채용\n주요 업무",
+        sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
     )
 }

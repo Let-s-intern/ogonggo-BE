@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
@@ -24,6 +25,7 @@ class AdminJobService(
     private val jobManager: JobManager,
     private val jobMetricReader: JobMetricReader,
     private val todayJobManager: TodayJobManager,
+    private val jobSourceReader: JobSourceReader,
     private val clock: Clock,
 ) {
 
@@ -41,7 +43,7 @@ class AdminJobService(
     }
 
     fun getJob(jobId: Long): AdminJobResult =
-        AdminJobResult.from(jobReader.read(jobId), jobMetricReader.read(jobId))
+        AdminJobResult.from(jobReader.read(jobId), jobMetricReader.read(jobId), jobSourceReader.readHtml(jobId))
 
     /**
      * 검수 상태를 먼저 바꾸고 노출을 바꾼다. 승인은 곧 노출이므로 승인과 숨김을 함께 보내면 숨김이 남아야 한다.

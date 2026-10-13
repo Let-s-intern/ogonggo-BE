@@ -14,6 +14,7 @@ import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
 import com.ogonggo.core.job.implement.JobTagAppender
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
@@ -65,8 +66,14 @@ class CrawlerJobServiceTest {
         }
     })
 
+    private val savedSources = mutableListOf<Pair<Long, String>>()
+    private val jobSourceManager = Mockito.mock(JobSourceManager::class.java, Answer { invocation ->
+        savedSources += invocation.arguments[0] as Long to invocation.arguments[1] as String
+        null
+    })
+
     private val clock = Clock.fixed(Instant.parse("2026-09-14T03:00:00Z"), ZoneId.of("Asia/Seoul"))
-    private val service = CrawlerJobService(jobReader, jobAppender, jobManager, jobTagAppender, clock)
+    private val service = CrawlerJobService(jobReader, jobAppender, jobManager, jobTagAppender, jobSourceManager, clock)
 
     @Test
     fun `수집한 공고를 검수 없이 게시 상태로 저장하고 보낸 값을 그대로 옮긴다`() {
@@ -96,8 +103,8 @@ class CrawlerJobServiceTest {
         assertEquals(JobApplicationMethod.EXTERNAL_PAGE, appended.applicationMethod)
         assertEquals("recruit@example.com", appended.applyEmail)
         assertEquals("hr@example.com", appended.inquiryEmail)
-        assertEquals(SOURCE_TEXT, appended.sourceText)
         assertEquals(listOf(JOB_ID to listOf("백엔드", "스프링")), appendedTags)
+        assertEquals(listOf(JOB_ID to "<h2>주요 업무</h2><p>백엔드 개발</p>"), savedSources)
     }
 
     @Test
@@ -117,10 +124,11 @@ class CrawlerJobServiceTest {
     fun `교체는 값만 바꾸고 검수나 게시 상태는 건드리지 않는다`() {
         stubCrawledJob()
 
-        service.replace(JOB_ID, command(title = "바뀐 제목", sourceText = null))
+        service.replace(JOB_ID, command(title = "바뀐 제목", sourceHtml = null))
 
         assertEquals("바뀐 제목", updatedCommand?.title)
         assertEquals(listOf("update"), managerCalls)
+        assertEquals(emptyList<Pair<Long, String>>(), savedSources)
     }
 
     @Test
@@ -129,16 +137,30 @@ class CrawlerJobServiceTest {
 
         service.replace(JOB_ID, command())
 
-        assertEquals(listOf("update", "changeSourceText"), managerCalls)
+        assertEquals(listOf("update"), managerCalls)
+        assertEquals(listOf(JOB_ID to "<h2>주요 업무</h2><p>백엔드 개발</p>"), savedSources)
     }
 
     @Test
     fun `원문만 바꾼다`() {
         stubCrawledJob()
 
-        service.changeSourceText(JOB_ID, SOURCE_TEXT)
+        service.changeSourceHtml(JOB_ID, "<p onclick=\"steal()\">상대 <a href=\"/apply\">지원</a></p><script>x()</script>")
 
-        assertEquals(listOf("changeSourceText"), managerCalls)
+        assertEquals(
+            listOf(JOB_ID to """<p>상대 <a href="https://example.com/apply" rel="nofollow noopener noreferrer" target="_blank">지원</a></p>"""),
+            savedSources,
+        )
+        assertEquals(emptyList<String>(), managerCalls)
+    }
+
+    @Test
+    fun `걸러 낸 뒤 글도 이미지도 없는 원문은 저장하지 않는다`() {
+        stubCrawledJob()
+
+        service.changeSourceHtml(JOB_ID, "<div style=\"color:red\"> </div><script>alert(1)</script>")
+
+        assertEquals(emptyList<Pair<Long, String>>(), savedSources)
     }
 
     @Test
@@ -179,7 +201,7 @@ class CrawlerJobServiceTest {
     private fun command(
         title: String = "백엔드 개발자",
         sourceUrl: String = SOURCE_URL,
-        sourceText: String? = SOURCE_TEXT,
+        sourceHtml: String? = SOURCE_HTML,
     ): CrawlerJobCommand = CrawlerJobCommand(
         companyName = "오공고",
         parentCompanyName = "렛츠커리어",
@@ -213,12 +235,12 @@ class CrawlerJobServiceTest {
         applyEmail = "recruit@example.com",
         inquiryEmail = "hr@example.com",
         sourceUrl = sourceUrl,
-        sourceText = sourceText,
+        sourceHtml = sourceHtml,
     )
 
     companion object {
         private const val JOB_ID = 7L
         private const val SOURCE_URL = "https://example.com/jobs/1"
-        private const val SOURCE_TEXT = "백엔드 개발자 채용\n주요 업무\n자격 요건"
+        private const val SOURCE_HTML = """<h2 style="color:red">주요 업무</h2><p class="x">백엔드 개발</p><script>alert(1)</script>"""
     }
 }

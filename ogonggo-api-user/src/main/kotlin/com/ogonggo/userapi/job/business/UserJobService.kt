@@ -10,6 +10,7 @@ import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
@@ -25,6 +26,7 @@ class UserJobService(
     private val jobBookmarkReader: JobBookmarkReader,
     private val jobMetricReader: JobMetricReader,
     private val jobAnalysisReader: JobAnalysisReader,
+    private val jobSourceReader: JobSourceReader,
     private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val userProfileReader: UserProfileReader,
     private val eventPublisher: ApplicationEventPublisher,
@@ -131,6 +133,7 @@ class UserJobService(
             bookmarked = bookmarked,
             metric = jobMetricReader.read(jobId),
             analysis = jobAnalysisReader.readCurrent(job),
+            sourceHtml = jobSourceReader.readHtml(jobId),
         )
         eventPublisher.publishEvent(JobViewedEvent(jobId))
         return result
