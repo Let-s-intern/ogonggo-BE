@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.letscareercontent.presentation
 
 import com.ogonggo.adminapi.config.ADMIN_INTERNAL_API_KEY_SCHEME
 import com.ogonggo.adminapi.letscareercontent.presentation.request.CrawlerLetsCareerContentTagRequest
+import com.ogonggo.adminapi.letscareercontent.presentation.response.CrawlerLetsCareerContentResponse
 import com.ogonggo.adminapi.letscareercontent.presentation.response.CrawlerLetsCareerContentTagTargetResponse
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -23,6 +24,26 @@ private const val UNAUTHORIZED_DESCRIPTION = "UNAUTHORIZED: 내부 API 키가 �
 @Tag(name = "크롤러 렛츠커리어 콘텐츠 태그")
 @SecurityRequirement(name = ADMIN_INTERNAL_API_KEY_SCHEME)
 interface CrawlerLetsCareerContentTagApi {
+
+    @Operation(
+        operationId = "listCrawlerLetsCareerContents",
+        summary = "렛츠커리어 콘텐츠와 태그 조회",
+        description = """
+            렛츠커리어 목록에 있는 콘텐츠 전부와 지금 붙은 태그를 줍니다. 크롤러 화면에서 어떤 콘텐츠에 어떤 태그가 붙었는지 볼 때 씁니다.
+            많아야 수백 건이라 페이지 없이 한 번에 줍니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "401",
+                description = UNAUTHORIZED_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun getContents(): ResponseEntity<SuccessResponse<List<CrawlerLetsCareerContentResponse>>>
 
     @Operation(
         operationId = "listCrawlerLetsCareerContentTagTargets",

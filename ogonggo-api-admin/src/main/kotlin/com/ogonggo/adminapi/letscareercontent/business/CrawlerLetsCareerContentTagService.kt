@@ -24,6 +24,9 @@ class CrawlerLetsCareerContentTagService(
 
     fun getTargets(size: Int): List<LetsCareerContent> = letsCareerContentReader.readTaggingTargets(size)
 
+    /** 렛츠커리어 목록에 있는 콘텐츠 전부. 크롤러 화면에서 어떤 태그가 붙었는지 본다. */
+    fun getContents(): List<LetsCareerContent> = letsCareerContentReader.readAll().sortedBy { it.id }
+
     /** 태그를 저장한다. 대상을 받은 뒤 제목·설명이 바뀌었으면 저장하지 않고 충돌로 알린다. */
     @Transactional
     fun saveTags(contentId: Long, contentHash: String, tags: LetsCareerContentTags) {
