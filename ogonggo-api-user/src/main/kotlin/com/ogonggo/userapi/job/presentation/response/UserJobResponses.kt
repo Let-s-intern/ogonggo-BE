@@ -147,8 +147,8 @@ data class UserJobDetailResponse(
     @field:Schema(description = "채용 안내사항. 제출 서류·근무 조건·유의사항 등")
     val recruitmentNotice: String?,
     val sourceUrl: String?,
-    @field:Schema(description = "채용공고 원문. 원문 페이지에서 읽은 글 그대로이며 줄바꿈이 있는 일반 텍스트입니다. 이미지로 된 공고는 이미지에서 읽은 글입니다. 원문이 없는 공고는 null입니다")
-    val sourceText: String?,
+    @field:Schema(description = "채용공고 원문 HTML. 원문 페이지의 본문 영역에서 안전한 태그(제목·문단·목록·표·굵게·링크·이미지)만 남긴 것으로, 그대로 그리면 됩니다. 스타일 속성은 없습니다. 원문이 없는 공고는 null입니다")
+    val sourceHtml: String?,
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
     val bookmarked: Boolean,
@@ -185,7 +185,7 @@ data class UserJobDetailResponse(
             hiringProcess = result.hiringProcess,
             recruitmentNotice = result.recruitmentNotice,
             sourceUrl = result.sourceUrl,
-            sourceText = result.sourceText,
+            sourceHtml = result.sourceHtml,
             applyEmail = result.applyEmail,
             closedAt = result.closedAt,
             bookmarked = result.bookmarked,

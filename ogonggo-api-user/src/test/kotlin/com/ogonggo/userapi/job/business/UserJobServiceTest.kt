@@ -15,6 +15,7 @@ import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
@@ -36,6 +37,7 @@ class UserJobServiceTest {
     private val jobBookmarkReader = Mockito.mock(JobBookmarkReader::class.java)
     private val jobMetricReader = Mockito.mock(JobMetricReader::class.java)
     private val jobAnalysisReader = Mockito.mock(JobAnalysisReader::class.java)
+    private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
     private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
@@ -44,6 +46,7 @@ class UserJobServiceTest {
         jobBookmarkReader,
         jobMetricReader,
         jobAnalysisReader,
+        jobSourceReader,
         sourceUrlClickAppender,
         userProfileReader,
         eventPublisher,
@@ -71,6 +74,7 @@ class UserJobServiceTest {
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
         Mockito.`when`(jobBookmarkReader.readBookmarkedJobIds(USER_ID, listOf(1L))).thenReturn(setOf(1L))
         Mockito.`when`(jobMetricReader.read(1L)).thenReturn(JobMetricDto(viewCount = 8, bookmarkCount = 3, commentCount = 1))
+        Mockito.`when`(jobSourceReader.readHtml(1L)).thenReturn("<h2>주요 업무</h2>")
 
         val result = service.getJob(USER_ID, 1L)
 
@@ -84,6 +88,7 @@ class UserJobServiceTest {
         assertEquals(8L, result.viewCount)
         assertEquals(3L, result.bookmarkCount)
         assertEquals(1L, result.commentCount)
+        assertEquals("<h2>주요 업무</h2>", result.sourceHtml)
         Mockito.verify(jobReader).readPublished(1L)
     }
 

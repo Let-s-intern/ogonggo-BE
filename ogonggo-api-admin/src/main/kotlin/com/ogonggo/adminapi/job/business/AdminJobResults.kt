@@ -112,10 +112,11 @@ data class AdminJobResult(
     val benefits: String?,
     val hiringProcess: String?,
     val sourceUrl: String?,
-    val sourceText: String?,
+    /** 크롤러가 보낸 원문 HTML이다. 원문이 없는 공고는 null이다. */
+    val sourceHtml: String?,
 ) {
     companion object {
-        internal fun from(job: Job, metric: JobMetricDto): AdminJobResult = AdminJobResult(
+        internal fun from(job: Job, metric: JobMetricDto, sourceHtml: String?): AdminJobResult = AdminJobResult(
             summary = AdminJobSummary.from(job, metric),
             companyAndTeamIntroduction = job.companyAndTeamIntroduction,
             responsibilities = job.responsibilities,
@@ -125,7 +126,7 @@ data class AdminJobResult(
             benefits = job.benefits,
             hiringProcess = job.hiringProcess,
             sourceUrl = job.sourceUrl,
-            sourceText = job.sourceText,
+            sourceHtml = sourceHtml,
         )
     }
 }

@@ -3,7 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.config.ADMIN_INTERNAL_API_KEY_SCHEME
 import com.ogonggo.adminapi.job.presentation.request.CrawlerJobRegistrationRequest
 import com.ogonggo.adminapi.job.presentation.request.CrawlerJobReplaceRequest
-import com.ogonggo.adminapi.job.presentation.request.CrawlerJobSourceTextRequest
+import com.ogonggo.adminapi.job.presentation.request.CrawlerJobSourceHtmlRequest
 import com.ogonggo.adminapi.job.presentation.response.CrawlerJobLookupResponse
 import com.ogonggo.adminapi.job.presentation.response.CrawlerJobRegistrationResponse
 import com.ogonggo.adminapi.response.ErrorResponse
@@ -97,7 +97,7 @@ interface CrawlerJobApi {
         description = """
             다시 수집·분류한 값으로 수집 공고 전체를 바꿉니다. 태그는 바꾸지 않습니다.
             운영자가 관리자 콘솔에서 고친 내용도 이 값으로 덮어씁니다. 게시 상태는 바꾸지 않습니다.
-            원문(sourceText)을 생략하면 저장된 원문을 그대로 둡니다.
+            원문(sourceHtml)을 생략하면 저장된 원문을 그대로 둡니다.
         """,
     )
     @ApiResponses(
@@ -131,10 +131,11 @@ interface CrawlerJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
-        operationId = "changeCrawlerJobSourceText",
+        operationId = "changeCrawlerJobSourceHtml",
         summary = "크롤러 채용공고 원문 변경",
         description = """
-            수집 공고의 원문만 바꿉니다. 원문을 저장하기 전에 보낸 공고를 채울 때 씁니다.
+            수집 공고의 원문 HTML만 바꿉니다. 원문을 저장하기 전에 보낸 공고를 채울 때 씁니다.
+            안전한 태그만 남겨 저장하며, 남은 글도 이미지도 없으면 저장된 원문을 그대로 둡니다.
             운영자가 관리자 콘솔에서 고친 다른 칸은 바꾸지 않습니다.
         """,
     )
@@ -158,9 +159,9 @@ interface CrawlerJobApi {
             ),
         ],
     )
-    fun changeSourceText(
+    fun changeSourceHtml(
         @Positive jobId: Long,
-        @Valid request: CrawlerJobSourceTextRequest,
+        @Valid request: CrawlerJobSourceHtmlRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(

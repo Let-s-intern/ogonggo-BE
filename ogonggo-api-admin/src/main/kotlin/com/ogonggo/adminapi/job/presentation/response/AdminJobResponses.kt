@@ -124,8 +124,8 @@ data class AdminJobDetailResponse(
     val benefits: String?,
     val hiringProcess: String?,
     val sourceUrl: String?,
-    @Schema(description = "크롤러가 원문 페이지에서 읽은 글입니다. 원문 저장 전에 받은 공고와 기업회원 공고는 null입니다.")
-    val sourceText: String?,
+    @Schema(description = "채용공고 원문 HTML입니다. 원문 페이지의 본문 영역을 안전한 태그만 남긴 것이며, 원문이 없는 공고와 기업회원 공고는 null입니다.")
+    val sourceHtml: String?,
 ) {
     companion object {
         internal fun from(result: AdminJobResult): AdminJobDetailResponse {
@@ -161,7 +161,7 @@ data class AdminJobDetailResponse(
                 benefits = result.benefits,
                 hiringProcess = result.hiringProcess,
                 sourceUrl = result.sourceUrl,
-                sourceText = result.sourceText,
+                sourceHtml = result.sourceHtml,
             )
         }
     }

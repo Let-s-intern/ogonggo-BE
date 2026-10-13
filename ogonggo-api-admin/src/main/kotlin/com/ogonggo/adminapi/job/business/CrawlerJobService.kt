@@ -1,11 +1,13 @@
 package com.ogonggo.adminapi.job.business
 
+import com.ogonggo.adminapi.job.implement.JobSourceHtmlSanitizer
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
 import com.ogonggo.core.job.implement.JobTagAppender
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
@@ -22,6 +24,7 @@ class CrawlerJobService(
     private val jobAppender: JobAppender,
     private val jobManager: JobManager,
     private val jobTagAppender: JobTagAppender,
+    private val jobSourceManager: JobSourceManager,
     private val clock: Clock,
 ) {
 
@@ -39,6 +42,7 @@ class CrawlerJobService(
         val job = jobAppender.append(command.job.toAppendDto())
         val jobId = checkNotNull(job.id) { "저장된 채용공고 식별자가 없습니다." }
         jobTagAppender.append(jobId, command.tags)
+        saveSource(jobId, command.job.sourceHtml, command.job.sourceUrl)
         return jobId
     }
 
@@ -54,13 +58,19 @@ class CrawlerJobService(
         }
 
         jobManager.update(job, command.toUpdateDto(), LocalDateTime.now(clock))
-        command.sourceText?.takeIf { it.isNotBlank() }?.let { jobManager.changeSourceText(job, it) }
+        saveSource(jobId, command.sourceHtml, command.sourceUrl)
     }
 
     /** 원문만 바꾼다. 원문 저장 전에 보낸 공고를 채울 때 쓴다. 운영자가 고친 다른 칸은 건드리지 않는다. */
     @Transactional
-    fun changeSourceText(jobId: Long, sourceText: String) {
-        jobManager.changeSourceText(jobReader.readCrawledForUpdate(jobId), sourceText)
+    fun changeSourceHtml(jobId: Long, sourceHtml: String) {
+        val job = jobReader.readCrawledForUpdate(jobId)
+        saveSource(jobId, sourceHtml, job.sourceUrl)
+    }
+
+    /** 걸러 낸 뒤 글도 이미지도 없으면 저장하지 않는다. 저장된 원문이 있으면 그대로 둔다. */
+    private fun saveSource(jobId: Long, sourceHtml: String?, sourceUrl: String?) {
+        JobSourceHtmlSanitizer.sanitize(sourceHtml, sourceUrl)?.let { jobSourceManager.save(jobId, it) }
     }
 
     /** 직무별로 나뉘어 새 공고로 등록된 원래 공고처럼 더는 쓰지 않는 공고를 지운다. 이미 지운 공고를 다시 지워도 성공한다. */
@@ -107,7 +117,6 @@ private fun CrawlerJobCommand.toAppendDto(): JobAppendDto = JobAppendDto(
     applyEmail = applyEmail,
     inquiryEmail = inquiryEmail,
     sourceUrl = sourceUrl,
-    sourceText = sourceText,
     publicationStatus = JobPublicationStatus.PUBLISHED,
 )
 

@@ -158,11 +158,11 @@ class AdminOpenApiContractTest @Autowired constructor(
 
         listOf("CrawlerJobRegistrationRequest", "CrawlerJobReplaceRequest").forEach { name ->
             assertTrue(
-                document.at("/components/schemas/$name/properties/sourceText").isObject,
-                "$name 에 sourceText 가 없습니다.",
+                document.at("/components/schemas/$name/properties/sourceHtml").isObject,
+                "$name 에 sourceHtml 이 없습니다.",
             )
         }
-        assertTrue(document.at("/paths/~1api~1v1~1internal~1jobs~1{jobId}~1source-text/put").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1internal~1jobs~1{jobId}~1source-html/put").isObject)
     }
 
     private fun openApiDocument() = objectMapper.readTree(
