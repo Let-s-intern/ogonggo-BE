@@ -42,8 +42,8 @@ data class SaveConcernRequest(
     @field:NotBlank
     @field:Size(max = Concern.TITLE_MAX_LENGTH)
     val title: String,
+    @field:Schema(description = "Lexical EditorState JSON 문자열. 사진은 본문에 넣지 않고 `imageIds`로 첨부합니다.")
     @field:NotBlank
-    @field:Size(max = Concern.CONTENT_MAX_LENGTH)
     val content: String,
     @field:Schema(
         description = "첨부할 사진의 이미지 식별자를 보일 순서대로. `usage=CONCERN`으로 올리고 완료한 JPG·PNG만 됩니다. " +

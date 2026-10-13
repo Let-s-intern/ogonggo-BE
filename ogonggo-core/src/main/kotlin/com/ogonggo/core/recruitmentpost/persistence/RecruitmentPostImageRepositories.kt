@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 internal interface RecruitmentPostImageJpaRepository : JpaRepository<RecruitmentPostImage, Long> {
 
     fun findAllByPostIdAndDeletedAtIsNullOrderByDisplayOrderAsc(postId: Long): List<RecruitmentPostImage>
+
+    fun findAllByPostIdInAndDeletedAtIsNull(postIds: Collection<Long>): List<RecruitmentPostImage>
 }

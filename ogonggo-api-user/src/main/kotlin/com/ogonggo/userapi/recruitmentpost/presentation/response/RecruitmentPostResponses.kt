@@ -124,6 +124,8 @@ data class RecruitmentPostSummaryResponse(
     val positions: List<RecruitmentPostPosition>,
     val recruitmentStartDate: LocalDate,
     val recruitmentEndDate: LocalDate,
+    @field:Schema(description = "썸네일. 첫 번째 첨부 사진의 URL이며 사진이 없으면 null입니다.")
+    val thumbnailUrl: String?,
     val viewCount: Long = 0,
     val commentCount: Long = 0,
     val applicationCount: Long = 0,
@@ -144,6 +146,7 @@ data class RecruitmentPostSummaryResponse(
             positions = summary.positions,
             recruitmentStartDate = summary.recruitmentStartDate,
             recruitmentEndDate = summary.recruitmentEndDate,
+            thumbnailUrl = summary.thumbnailUrl,
             viewCount = summary.viewCount,
             commentCount = summary.commentCount,
             applicationCount = summary.applicationCount,

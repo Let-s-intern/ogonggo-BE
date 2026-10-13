@@ -106,7 +106,7 @@ interface ConcernApi {
     @Operation(
         operationId = "createConcern",
         summary = "고민글 작성",
-        description = "로그인한 활성 사용자가 고민글을 작성합니다. 본문은 일반 텍스트입니다. 사진은 `POST /api/v1/images/presigned-urls`(`usage=CONCERN`)로 올리고 완료한 뒤 `imageIds`에 최대 3장 넣습니다.",
+        description = "로그인한 활성 사용자가 고민글을 작성합니다. 본문은 Lexical EditorState JSON이며 사진은 넣지 않습니다. 사진은 `POST /api/v1/images/presigned-urls`(`usage=CONCERN`)로 올리고 완료한 뒤 `imageIds`에 최대 3장 넣습니다.",
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
     @ApiResponses(
@@ -114,7 +114,7 @@ interface ConcernApi {
             ApiResponse(responseCode = "201", description = "작성 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 요청 필드가 올바르지 않음(사진 3장 초과, 같은 사진 중복 포함). IMAGE_ASSET_NOT_AVAILABLE: 내가 올리고 완료한 사진이 아니거나 다른 곳에서 쓰는 중이거나 이미 지워짐. IMAGE_FILE_TYPE_NOT_SUPPORTED: JPG·PNG가 아닌 사진",
+                description = "BAD_REQUEST: 요청 필드가 올바르지 않음(본문이 에디터 JSON이 아니거나 본문에 사진 노드가 있음, 사진 3장 초과, 같은 사진 중복 포함). IMAGE_ASSET_NOT_AVAILABLE: 내가 올리고 완료한 사진이 아니거나 다른 곳에서 쓰는 중이거나 이미 지워짐. IMAGE_FILE_TYPE_NOT_SUPPORTED: JPG·PNG가 아닌 사진",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -145,7 +145,7 @@ interface ConcernApi {
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 요청 필드가 올바르지 않음(사진 3장 초과, 같은 사진 중복 포함). IMAGE_ASSET_NOT_AVAILABLE: 내가 올리고 완료한 사진이 아니거나 다른 곳에서 쓰는 중이거나 이미 지워짐. IMAGE_FILE_TYPE_NOT_SUPPORTED: JPG·PNG가 아닌 사진",
+                description = "BAD_REQUEST: 요청 필드가 올바르지 않음(본문이 에디터 JSON이 아니거나 본문에 사진 노드가 있음, 사진 3장 초과, 같은 사진 중복 포함). IMAGE_ASSET_NOT_AVAILABLE: 내가 올리고 완료한 사진이 아니거나 다른 곳에서 쓰는 중이거나 이미 지워짐. IMAGE_FILE_TYPE_NOT_SUPPORTED: JPG·PNG가 아닌 사진",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

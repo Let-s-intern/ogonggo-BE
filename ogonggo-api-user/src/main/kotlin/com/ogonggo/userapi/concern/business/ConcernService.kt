@@ -13,6 +13,7 @@ import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.concern.implement.dto.ConcernAppendDto
 import com.ogonggo.core.concern.implement.dto.ConcernImageDto
 import com.ogonggo.core.concern.implement.dto.ConcernUpdateDto
+import com.ogonggo.core.editor.lexical.LexicalEditorStateValidator
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -39,6 +40,7 @@ class ConcernService(
     private val concernImageReader: ConcernImageReader,
     private val concernImageManager: ConcernImageManager,
     private val imageAssetManager: ImageAssetManager,
+    private val contentValidator: LexicalEditorStateValidator,
     private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
 ) {
@@ -86,12 +88,13 @@ class ConcernService(
     fun create(userId: Long, command: SaveConcernCommand): Long {
         userReader.read(userId).status.requireActive()
         verifyDistinct(command.imageIds)
+        val content = validContent(command.content)
         val concern = concernAppender.append(
             ConcernAppendDto(
                 authorUserId = userId,
                 category = command.category,
                 title = command.title,
-                content = command.content,
+                content = content,
             ),
         )
         replaceImages(userId, concern.requiredId(), emptyList(), command.imageIds)
@@ -105,11 +108,12 @@ class ConcernService(
         val concern = concernReader.readForUpdate(concernId)
         verifyAuthor(concern, userId)
         verifyDistinct(command.imageIds)
+        val content = validContent(command.content)
         val previousImageIds = concernImageReader.read(concernId).map(ConcernImageDto::imageId)
         replaceImages(userId, concernId, previousImageIds, command.imageIds)
         concernManager.update(
             concern,
-            ConcernUpdateDto(category = command.category, title = command.title, content = command.content),
+            ConcernUpdateDto(category = command.category, title = command.title, content = content),
         )
     }
 
@@ -159,6 +163,17 @@ class ConcernService(
         val now = LocalDateTime.now(clock)
         val images = imageAssetManager.syncImages(userId, previousImageIds, imageIds, ImageAssetUsage.CONCERN, now)
         concernImageManager.replace(concernId, images.map { ConcernImageDto(imageId = it.id, url = it.url) }, now)
+    }
+
+    /** 본문 형식 오류는 요청 필드 검증 오류로 알린다. 사진은 본문 밖 `imageIds`로 첨부하므로 본문 이미지는 받지 않는다. */
+    private fun validContent(content: String): String {
+        val serialized = contentValidator.validateAndSerialize(content) { reason ->
+            throw InvalidRequestFieldException("content", reason)
+        }
+        if (imageAssetManager.containsImages(serialized)) {
+            throw InvalidRequestFieldException("content", "본문에는 사진을 넣을 수 없습니다. 사진은 imageIds로 첨부해 주세요.")
+        }
+        return serialized
     }
 
     private fun verifyDistinct(imageIds: List<String>) {

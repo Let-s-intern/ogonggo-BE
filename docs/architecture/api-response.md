@@ -388,7 +388,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 - 결정일: 2026-10-08 / 리뷰 상태: 팀 리뷰 필요
 - 고민글은 `category`(`ConcernCategory`: `JOB_POSTING` 공고 질문, `CAREER` 직무·커리어, `APPLICATION_INTERVIEW` 서류·면접, `SIDE_EXPERIENCE` 사이드·경험, `ETC` 기타), 제목(100자 이하), 본문으로 이루어집니다.
-- 본문은 일반 텍스트(2000자 이하)입니다. 칼럼은 `LONGTEXT`로 둡니다(2026-10-12).
+- 본문은 모집글과 같이 Lexical EditorState JSON 문자열(`LONGTEXT`, 직렬화 20만 자 이하)입니다. JSON이 아니면 400 `BAD_REQUEST`(`content` 필드)입니다. 사진은 본문에 넣지 않으며, 이미지 노드가 있으면 400 `BAD_REQUEST`(`content`)입니다. 2026-10-12에 일반 텍스트로 바꿨다가 2026-10-13에 다시 Lexical JSON으로 되돌렸습니다.
 - 사진은 본문 밖 첨부입니다. 요청의 `imageIds`에 이미지 식별자를 보일 순서대로 최대 3장 넣고, 목록·상세 응답의 `images`(`[{ id, url }]`, 없으면 빈 배열)로 내려 줍니다. 관리자 상세에도 같은 `images`를 싣습니다. 사진은 `POST /api/v1/images/presigned-urls`에 `usage=CONCERN`으로 올리고 완료한 JPG·PNG만 됩니다. 수정은 남길 사진을 포함해 `imageIds`를 통째로 보내고, 보내지 않으면 사진이 없는 글이 됩니다. 3장을 넘거나 같은 사진이 두 번이면 400 `BAD_REQUEST`, 내가 올리고 완료한 사진이 아니거나 다른 곳에서 쓰는 사진이면 400 `IMAGE_ASSET_NOT_AVAILABLE`, JPG·PNG가 아니면 400 `IMAGE_FILE_TYPE_NOT_SUPPORTED`입니다. 뺀 사진과 지운 고민글의 사진은 참조를 풀어 정리 작업이 지우게 합니다. 고민글은 `concern_images`에 이미지 식별자와 URL을 함께 기억합니다([이미지 참조](layers-and-modules.md#이미지-참조), 2026-10-12).
 - 목록·상세·답변 조회는 로그인 없이 할 수 있고, 작성·수정·삭제·좋아요는 로그인한 활성 사용자만 합니다. 수정·삭제는 작성자 본인만 할 수 있으며, 남의 글이면 403 `CONCERN_PERMISSION_DENIED`·`CONCERN_COMMENT_PERMISSION_DENIED`입니다.
 - 작성자는 렛츠커리어 프로필의 `nickname`·`profileImageUrl`로 보여 주고 사용자 식별자는 싣지 않습니다. 대신 상세와 답변에 내가 쓴 것인지(`mine`)를 줍니다. 프로필이 없는 회원(기업 회원 등)은 두 값이 `null`입니다.
@@ -419,7 +419,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 ### 사이드·스터디 모집글 사진
 
 - 결정일: 2026-10-12 / 리뷰 상태: 팀 리뷰 필요
-- 사진은 본문 밖 첨부입니다. 작성(`POST /api/v1/recruitment-posts`)·임시저장(`POST /api/v1/users/me/recruitment-posts/drafts`)·수정(`PUT /api/v1/recruitment-posts/{postId}`) 요청의 `imageIds`에 보일 순서대로 최대 3장 넣고, 상세 응답과 작성 폼 응답의 `images`(`[{ id, url }]`, 없으면 빈 배열)로 내려 줍니다. 목록에는 싣지 않습니다.
+- 사진은 본문 밖 첨부입니다. 작성(`POST /api/v1/recruitment-posts`)·임시저장(`POST /api/v1/users/me/recruitment-posts/drafts`)·수정(`PUT /api/v1/recruitment-posts/{postId}`) 요청의 `imageIds`에 보일 순서대로 최대 3장 넣고, 상세 응답과 작성 폼 응답의 `images`(`[{ id, url }]`, 없으면 빈 배열)로 내려 줍니다. 목록·북마크 목록에는 사진 목록 대신 첫 번째 사진의 URL을 `thumbnailUrl`로 싣고, 사진이 없으면 `null`입니다(2026-10-13).
 - 사진은 `POST /api/v1/images/presigned-urls`에 `usage=RECRUITMENT_POST`로 올리고 완료한 JPG·PNG만 됩니다. 수정은 남길 사진을 포함해 `imageIds`를 통째로 보내고, 보내지 않으면 사진이 없는 글이 됩니다.
 - 본문(`content`, Lexical JSON)에는 사진을 넣지 않습니다. 이미지 노드가 있으면 400 `BAD_REQUEST`(`content`)입니다. 본문에 사진을 넣던 때의 글도 고칠 때 본문 사진을 빼야 저장되고, 뺀 사진은 참조를 풀어 정리합니다.
 - 3장을 넘거나 같은 사진이 두 번이면 400 `BAD_REQUEST`, 내가 올리고 완료한 사진이 아니거나 다른 곳에서 쓰는 사진이면 400 `IMAGE_ASSET_NOT_AVAILABLE`, JPG·PNG가 아니면 400 `IMAGE_FILE_TYPE_NOT_SUPPORTED`입니다.

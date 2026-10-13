@@ -277,7 +277,7 @@ internal class ConcernImplementPersistenceTest @Autowired constructor(
 
     private fun appendConcern(category: ConcernCategory, title: String = "제목"): Long = checkNotNull(
         concernAppender.append(
-            ConcernAppendDto(authorUserId = USER_ID, category = category, title = title, content = "본문"),
+            ConcernAppendDto(authorUserId = USER_ID, category = category, title = title, content = """{"root":{"children":[]}}"""),
         ).id,
     )
 
