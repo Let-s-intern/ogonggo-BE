@@ -19,4 +19,7 @@ enum class UserErrorCode(
     CURRENT_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "기존 비밀번호가 일치하지 않습니다."),
     INVALID_NEW_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호는 8자 이상이며 특수문자를 하나 이상 포함해야 합니다."),
     SOCIAL_ACCOUNT_PASSWORD_UNAVAILABLE(HttpStatus.BAD_REQUEST, "소셜 로그인으로 가입한 계정은 비밀번호를 변경할 수 없습니다."),
+    COMPANY_MEMBER_ROLE_UNCHANGEABLE(HttpStatus.BAD_REQUEST, "기업 회원의 역할은 바꿀 수 없습니다."),
+    OWN_ROLE_UNCHANGEABLE(HttpStatus.BAD_REQUEST, "자기 역할은 바꿀 수 없습니다."),
+    WITHDRAWN_USER_ROLE_UNCHANGEABLE(HttpStatus.CONFLICT, "탈퇴한 회원의 역할은 바꿀 수 없습니다."),
 }

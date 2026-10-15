@@ -14,9 +14,9 @@ import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentAppendDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentPageDto
 import com.ogonggo.core.recruitmentpost.implement.dto.RecruitmentPostCommentReportAppendDto
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
-import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
@@ -51,13 +51,13 @@ class RecruitmentPostCommentService(
         val result = commentReader.readRootPage(postId, page, size)
         val parentIds = result.comments.mapNotNull { it.id }
         val previews = commentReader.readReplyPreviews(postId, parentIds, REPLY_PREVIEW_SIZE)
-        val profiles = readProfiles(result.comments + previews.values.flatMap { it.comments })
+        val authors = readAuthors(result.comments + previews.values.flatMap { it.comments })
 
         return RecruitmentPostCommentPageResult(
             items = result.comments.map { comment ->
                 RecruitmentPostCommentRootResult(
-                    comment = comment.toResult(userId, profiles),
-                    replies = previews[comment.requiredId()]?.toReplyPageResult(userId, profiles)
+                    comment = comment.toResult(userId, authors),
+                    replies = previews[comment.requiredId()]?.toReplyPageResult(userId, authors)
                         ?: RecruitmentPostCommentReplyPageResult.EMPTY,
                 )
             },
@@ -78,10 +78,10 @@ class RecruitmentPostCommentService(
         postReader.readPublished(postId)
         commentReader.readRoot(postId, parentId)
         val result = commentReader.readReplyPage(postId, parentId, page, size)
-        val profiles = readProfiles(result.comments)
+        val authors = readAuthors(result.comments)
 
         return RecruitmentPostCommentReplyPageResult(
-            items = result.comments.map { it.toResult(userId, profiles) },
+            items = result.comments.map { it.toResult(userId, authors) },
             page = result.page,
             size = result.size,
             totalElements = result.totalElements,
@@ -156,22 +156,31 @@ class RecruitmentPostCommentService(
         userReader.read(userId).status.requireActive()
     }
 
-    private fun readProfiles(comments: Collection<RecruitmentPostComment>): Map<Long, UserProfileDto> =
-        userProfileReader.readAll(comments.map { it.userId }.toSet())
-
-    private fun RecruitmentPostComment.toResult(
-        viewerUserId: Long?,
-        profiles: Map<Long, UserProfileDto>,
-    ): RecruitmentPostCommentResult {
-        val profile = profiles[userId]
-        return RecruitmentPostCommentResult(
-            id = requiredId(),
-            parentId = parentId,
-            author = RecruitmentPostCommentAuthorResult(
+    /** 작성자 역할은 지금 역할이다. 관리자가 역할을 바꾸면 이미 쓴 댓글의 표시도 함께 바뀐다. */
+    private fun readAuthors(comments: Collection<RecruitmentPostComment>): Map<Long, RecruitmentPostCommentAuthorResult> {
+        val userIds = comments.map { it.userId }.toSet()
+        val profiles = userProfileReader.readAll(userIds)
+        val roles = userReader.readRoles(userIds)
+        return userIds.associateWith { userId ->
+            val profile = profiles[userId]
+            RecruitmentPostCommentAuthorResult(
                 userId = userId,
                 nickname = profile?.nickname,
                 profileImageUrl = profile?.profileImageUrl,
-            ),
+                // 회원 행은 지우지 않으므로 비는 일은 없다. 비더라도 표시 없이 보이도록 일반 회원으로 둔다.
+                role = roles[userId] ?: UserRole.USER,
+            )
+        }
+    }
+
+    private fun RecruitmentPostComment.toResult(
+        viewerUserId: Long?,
+        authors: Map<Long, RecruitmentPostCommentAuthorResult>,
+    ): RecruitmentPostCommentResult {
+        return RecruitmentPostCommentResult(
+            id = requiredId(),
+            parentId = parentId,
+            author = authors.getValue(userId),
             content = if (deletedAt == null) content else DELETED_COMMENT_CONTENT,
             createdAt = createdAt,
             updatedAt = updatedAt,
@@ -181,9 +190,9 @@ class RecruitmentPostCommentService(
 
     private fun RecruitmentPostCommentPageDto.toReplyPageResult(
         viewerUserId: Long?,
-        profiles: Map<Long, UserProfileDto>,
+        authors: Map<Long, RecruitmentPostCommentAuthorResult>,
     ): RecruitmentPostCommentReplyPageResult = RecruitmentPostCommentReplyPageResult(
-        items = comments.map { it.toResult(viewerUserId, profiles) },
+        items = comments.map { it.toResult(viewerUserId, authors) },
         page = page,
         size = size,
         totalElements = totalElements,
@@ -244,4 +253,5 @@ data class RecruitmentPostCommentAuthorResult(
     val userId: Long,
     val nickname: String?,
     val profileImageUrl: String?,
+    val role: UserRole,
 )

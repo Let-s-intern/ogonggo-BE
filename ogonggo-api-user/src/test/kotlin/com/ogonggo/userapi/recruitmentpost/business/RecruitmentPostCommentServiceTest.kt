@@ -75,12 +75,14 @@ class RecruitmentPostCommentServiceTest {
         Mockito.`when`(commentReader.readReplyPreviews(POST_ID, listOf(checkNotNull(deletedParent.id)), 5))
             .thenReturn(emptyMap())
         Mockito.`when`(userProfileReader.readAll(setOf(USER_ID))).thenReturn(emptyMap())
+        Mockito.`when`(userReader.readRoles(setOf(USER_ID))).thenReturn(mapOf(USER_ID to UserRole.MENTOR))
 
         // when
         val result = service.readComments(userId = null, postId = POST_ID, page = 0, size = 10)
 
         // then
         assertEquals("삭제된 댓글입니다", result.items.single().comment.content)
+        assertEquals(UserRole.MENTOR, result.items.single().comment.author.role)
         assertEquals(0, result.items.single().replies.totalElements)
     }
 

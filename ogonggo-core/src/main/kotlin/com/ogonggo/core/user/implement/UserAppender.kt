@@ -26,6 +26,7 @@ class UserAppender internal constructor(
                 User.ofLetsCareer(
                     letsCareerUserId = command.letsCareerUserId,
                     joinedAt = command.joinedAt,
+                    isMentor = command.isMentor,
                 ),
             ).toAccount()
         } catch (exception: DataIntegrityViolationException) {

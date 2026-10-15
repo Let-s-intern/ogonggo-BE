@@ -22,6 +22,13 @@ class VerifyResponseTest {
     }
 
     @Test
+    fun `렛츠커리어가 준 멘토 여부를 옮기고 주지 않으면 멘토가 아닌 것으로 본다`() {
+        assertEquals(true, response(isAdmin = false, isMentor = true).toResult().isMentor)
+        assertEquals(false, response(isAdmin = false, isMentor = false).toResult().isMentor)
+        assertEquals(false, response(isAdmin = false, isMentor = null).toResult().isMentor)
+    }
+
+    @Test
     fun `연동에 필요한 값을 빠뜨리지 않고 옮긴다`() {
         val result = response(isAdmin = false).toResult()
 
@@ -42,7 +49,11 @@ class VerifyResponseTest {
         assertNull(response(isAdmin = false, authProvider = null).toResult().authProvider)
     }
 
-    private fun response(isAdmin: Boolean?, authProvider: String? = "SERVICE"): VerifyResponse = VerifyResponse(
+    private fun response(
+        isAdmin: Boolean?,
+        authProvider: String? = "SERVICE",
+        isMentor: Boolean? = null,
+    ): VerifyResponse = VerifyResponse(
         userId = 4821L,
         email = "lets@career.co.kr",
         name = "김렛츠",
@@ -52,6 +63,7 @@ class VerifyResponseTest {
         nicknameUpdatedAt = NICKNAME_UPDATED_AT,
         profileImageUrl = "https://example.com/me.png",
         isAdmin = isAdmin,
+        isMentor = isMentor,
         updatedAt = UPDATED_AT,
     )
 

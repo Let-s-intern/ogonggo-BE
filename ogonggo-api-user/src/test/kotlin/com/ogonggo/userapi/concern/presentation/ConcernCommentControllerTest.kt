@@ -1,7 +1,8 @@
 package com.ogonggo.userapi.concern.presentation
 
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
-import com.ogonggo.userapi.concern.business.ConcernAuthorResult
+import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.userapi.concern.business.ConcernCommentAuthorResult
 import com.ogonggo.userapi.concern.business.ConcernCommentPageResult
 import com.ogonggo.userapi.concern.business.ConcernCommentReplyPageResult
 import com.ogonggo.userapi.concern.business.ConcernCommentResult
@@ -63,6 +64,7 @@ class ConcernCommentControllerTest @Autowired constructor(
             // then
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].official").value(true))
+            .andExpect(jsonPath("$.data.items[0].author.role").value("ADMIN"))
             .andExpect(jsonPath("$.data.items[0].likeCount").value(51))
             .andExpect(jsonPath("$.data.items[0].replies.pageInfo.totalElements").value(0))
     }
@@ -126,7 +128,7 @@ class ConcernCommentControllerTest @Autowired constructor(
     private fun commentResult(official: Boolean) = ConcernCommentResult(
         id = COMMENT_ID,
         parentId = null,
-        author = ConcernAuthorResult(nickname = "렛츠커리어 매니저 쥬디", profileImageUrl = null),
+        author = ConcernCommentAuthorResult(nickname = "렛츠커리어 매니저 쥬디", profileImageUrl = null, role = UserRole.ADMIN),
         official = official,
         concernAuthor = false,
         content = "전환율은 공개된 수치가 없어요.",

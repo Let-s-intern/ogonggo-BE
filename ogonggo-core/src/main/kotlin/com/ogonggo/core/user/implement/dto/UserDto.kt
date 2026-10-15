@@ -12,6 +12,7 @@ import java.time.LocalDateTime
 data class UserAppendDto(
     val letsCareerUserId: Long,
     val joinedAt: LocalDateTime,
+    val isMentor: Boolean = false,
 )
 
 data class CompanyAccountAppendDto(
@@ -181,6 +182,7 @@ data class UserCredentialDto(
 data class GeneralMemberDto(
     val userId: Long,
     val letsCareerUserId: Long?,
+    val role: UserRole,
     val status: UserStatus,
     val joinedAt: LocalDateTime,
     val withdrawnAt: LocalDateTime?,
@@ -190,6 +192,7 @@ data class GeneralMemberDto(
         internal fun of(user: User, profile: UserProfile?): GeneralMemberDto = GeneralMemberDto(
             userId = checkNotNull(user.id) { "사용자 식별자가 없습니다." },
             letsCareerUserId = user.letsCareerUserId,
+            role = user.role,
             status = user.status,
             joinedAt = user.joinedAt,
             withdrawnAt = user.withdrawnAt,

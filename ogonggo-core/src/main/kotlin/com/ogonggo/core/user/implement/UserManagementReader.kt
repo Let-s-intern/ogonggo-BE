@@ -11,7 +11,8 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 
 /**
- * 관리자 콘솔의 회원 조회다. 일반 회원(`USER`)과 기업 회원(`COMPANY`)을 나눠 보며 관리자(`ADMIN`)는 어느 쪽에도 나오지 않는다.
+ * 관리자 콘솔의 회원 조회다. 렛츠커리어로 가입한 일반 회원(`USER`·`MENTOR`·`ADMIN`)과 기업 회원(`COMPANY`)을 나눠 본다.
+ * 역할 변경도 일반 회원 목록에서 하므로 멘토와 관리자도 일반 회원 목록에 나온다.
  * 탈퇴·정지한 회원도 운영자가 확인해야 하므로 상태와 무관하게 조회한다.
  */
 @Component

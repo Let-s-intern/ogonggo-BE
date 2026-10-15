@@ -1,8 +1,12 @@
 package com.ogonggo.core.user.implement
 
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
@@ -14,6 +18,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -25,6 +30,7 @@ import org.springframework.test.context.ContextConfiguration
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
     UserManagementReader::class,
+    UserManager::class,
     UserAppender::class,
     UserProfileManager::class,
     CompanyProfileAppender::class,
@@ -32,6 +38,7 @@ import org.springframework.test.context.ContextConfiguration
 )
 internal class UserManagementPersistenceTest @Autowired constructor(
     private val userManagementReader: UserManagementReader,
+    private val userManager: UserManager,
     private val userAppender: UserAppender,
     private val userProfileManager: UserProfileManager,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -40,22 +47,41 @@ internal class UserManagementPersistenceTest @Autowired constructor(
 ) {
 
     @Test
-    fun `일반 회원 목록은 기업 회원과 관리자를 빼고 최근 가입 순으로 주며 프로필이 없는 회원도 싣는다`() {
+    fun `일반 회원 목록은 기업 회원을 빼고 멘토와 관리자를 포함해 최근 가입 순으로 주며 프로필이 없는 회원도 싣는다`() {
         // given
         val older = generalMember(letsCareerUserId = 1L, nickname = "렛츠")
         val withoutProfile = userAppender.append(UserAppendDto(letsCareerUserId = 2L, joinedAt = NOW)).userId
         val admin = generalMember(letsCareerUserId = 3L, nickname = "운영자")
         promoteToAdmin(admin)
+        val mentor = userAppender.append(UserAppendDto(letsCareerUserId = 4L, joinedAt = NOW, isMentor = true)).userId
         companyMember(email = "hr@ogonggo.co.kr", organizationName = "오공고", managerName = "김담당")
 
         // when
         val result = userManagementReader.readGeneralMemberPage(UserManagementSearchCondition(), page = 0, size = 20)
 
         // then
-        assertEquals(listOf(withoutProfile, older), result.members.map { it.userId })
-        assertEquals(2, result.totalElements)
-        assertNull(result.members.first().profile)
+        assertEquals(listOf(mentor, admin, withoutProfile, older), result.members.map { it.userId })
+        assertEquals(listOf(UserRole.MENTOR, UserRole.ADMIN, UserRole.USER, UserRole.USER), result.members.map { it.role })
+        assertEquals(4, result.totalElements)
+        assertNull(result.members[2].profile)
         assertEquals("렛츠", result.members.last().profile?.nickname)
+    }
+
+    @Test
+    fun `일반 회원 목록을 역할로 거른다`() {
+        // given
+        generalMember(letsCareerUserId = 1L)
+        val mentor = userAppender.append(UserAppendDto(letsCareerUserId = 2L, joinedAt = NOW, isMentor = true)).userId
+
+        // when
+        val result = userManagementReader.readGeneralMemberPage(
+            UserManagementSearchCondition(role = UserRole.MENTOR),
+            page = 0,
+            size = 20,
+        )
+
+        // then
+        assertEquals(listOf(mentor), result.members.map { it.userId })
     }
 
     @Test
@@ -102,6 +128,38 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         // then
         assertEquals(listOf(suspended, lastDay, firstDay), inPeriod.members.map { it.userId })
         assertEquals(listOf(suspended), suspendedInPeriod.members.map { it.userId })
+    }
+
+    @Test
+    fun `정지한 회원도 역할을 바꾸며 같은 역할로 바꾸면 그대로 둔다`() {
+        // given
+        val userId = generalMember(letsCareerUserId = 1L)
+        userRepository.findByIdOrNull(userId)!!.suspend()
+        entityManager.flush()
+
+        // when
+        userManager.changeRole(userId, UserRole.MENTOR)
+        userManager.changeRole(userId, UserRole.MENTOR)
+        entityManager.flush()
+        entityManager.clear()
+
+        // then
+        assertEquals(UserRole.MENTOR, userRepository.findByIdOrNull(userId)!!.role)
+    }
+
+    @Test
+    fun `기업 회원과 탈퇴한 회원은 역할을 바꿀 수 없다`() {
+        // given
+        val company = companyMember(email = "hr@ogonggo.co.kr", organizationName = "오공고", managerName = "김담당")
+        val withdrawn = generalMember(letsCareerUserId = 1L)
+        userRepository.findByIdOrNull(withdrawn)!!.withdraw(NOW)
+        entityManager.flush()
+
+        // when & then
+        val companyError = assertThrows(InvalidValueException::class.java) { userManager.changeRole(company, UserRole.MENTOR) }
+        assertEquals(UserErrorCode.COMPANY_MEMBER_ROLE_UNCHANGEABLE, companyError.errorCode)
+        val withdrawnError = assertThrows(ConflictException::class.java) { userManager.changeRole(withdrawn, UserRole.MENTOR) }
+        assertEquals(UserErrorCode.WITHDRAWN_USER_ROLE_UNCHANGEABLE, withdrawnError.errorCode)
     }
 
     @Test
@@ -157,13 +215,9 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         return userId
     }
 
-    /** 관리자 역할은 운영자가 DB에서 직접 부여하므로 도메인에 전이가 없다. */
     private fun promoteToAdmin(userId: Long) {
+        userManager.changeRole(userId, UserRole.ADMIN)
         entityManager.flush()
-        entityManager.createNativeQuery("update users set role = 'ADMIN' where id = :id")
-            .setParameter("id", userId)
-            .executeUpdate()
-        entityManager.clear()
     }
 
     private companion object {

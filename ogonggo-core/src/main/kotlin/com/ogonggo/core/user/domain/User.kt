@@ -95,6 +95,17 @@ internal class User private constructor(
         withdrawnAt = now
     }
 
+    /**
+     * 렛츠커리어로 가입한 일반 회원 계정의 역할을 `USER`·`MENTOR`·`ADMIN` 사이에서 바꾼다.
+     * 기업 회원은 계정 형태가 달라 역할을 바꿀 수 없다.
+     */
+    fun changeRole(newRole: UserRole) {
+        check(letsCareerUserId != null) { "기업 회원의 역할은 바꿀 수 없습니다." }
+        check(status != UserStatus.WITHDRAWN) { "탈퇴한 회원의 역할은 바꿀 수 없습니다." }
+        require(newRole in UserRole.GENERAL_MEMBER_ROLES) { "일반 회원 역할로만 바꿀 수 있습니다." }
+        role = newRole
+    }
+
     fun suspend() {
         check(status != UserStatus.WITHDRAWN) { "탈퇴한 사용자는 정지할 수 없습니다." }
         status = UserStatus.SUSPENDED
@@ -106,15 +117,18 @@ internal class User private constructor(
     }
 
     companion object {
-        /** 렛츠커리어 토큰 교환으로 만들어지는 일반 회원 계정. */
-        fun ofLetsCareer(letsCareerUserId: Long, joinedAt: LocalDateTime): User {
+        /**
+         * 렛츠커리어 토큰 교환으로 만들어지는 일반 회원 계정.
+         * 렛츠커리어 멘토는 이때 한 번만 멘토로 만든다. 그 뒤의 역할은 오공고 관리자가 바꾼다.
+         */
+        fun ofLetsCareer(letsCareerUserId: Long, joinedAt: LocalDateTime, isMentor: Boolean = false): User {
             require(letsCareerUserId > 0) { "렛츠커리어 사용자 식별자는 양수여야 합니다." }
 
             return User(
                 letsCareerUserId = letsCareerUserId,
                 email = null,
                 password = null,
-                role = UserRole.USER,
+                role = if (isMentor) UserRole.MENTOR else UserRole.USER,
                 status = UserStatus.ACTIVE,
                 joinedAt = joinedAt,
             )

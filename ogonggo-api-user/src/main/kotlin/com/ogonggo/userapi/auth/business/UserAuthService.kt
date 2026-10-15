@@ -65,7 +65,7 @@ class UserAuthService(
     private fun synchronizeAccount(letsCareerUser: LetsCareerUser, now: LocalDateTime): SynchronizedAccount {
         val existingAccount = userReader.readByLetsCareerUserId(letsCareerUser.userId)
         val account = existingAccount ?: userAppender.append(
-            UserAppendDto(letsCareerUserId = letsCareerUser.userId, joinedAt = now),
+            UserAppendDto(letsCareerUserId = letsCareerUser.userId, joinedAt = now, isMentor = letsCareerUser.isMentor),
         )
         signInValidator.validate(account.status)
 
