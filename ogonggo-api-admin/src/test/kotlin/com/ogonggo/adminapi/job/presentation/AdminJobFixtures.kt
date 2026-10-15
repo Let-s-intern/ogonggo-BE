@@ -24,7 +24,7 @@ internal object AdminJobFixtures {
         employmentType = JobEmploymentType.CONTRACT,
         experienceType = JobExperienceType.EXPERIENCED,
         jobField = JobField.PLANNING_STRATEGY,
-        jobRole = JobRole.DESIGN_SPACE_INTERIOR_VMD,
+        jobRole = JobRole.DESIGN_UX_UI_PRODUCT,
         educationLevel = JobEducationLevel.ANY,
         recruitmentType = JobRecruitmentType.PERIOD,
         recruitmentStartAt = LocalDateTime.of(2026, 9, 8, 0, 0),

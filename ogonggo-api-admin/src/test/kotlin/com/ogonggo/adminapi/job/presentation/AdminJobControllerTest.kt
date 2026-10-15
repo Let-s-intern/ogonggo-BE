@@ -65,7 +65,7 @@ class AdminJobControllerTest @Autowired constructor(
             reviewStatus = ContentReviewStatus.PENDING,
             recruitmentStatus = JobRecruitmentStatus.RECRUITING,
             jobField = JobField.PLANNING_STRATEGY,
-            jobRoles = setOf(JobRole.DESIGN_SPACE_INTERIOR_VMD, JobRole.DESIGN_GRAPHIC_VISUAL),
+            jobRoles = setOf(JobRole.DESIGN_UX_UI_PRODUCT, JobRole.DESIGN_RESEARCH),
             keyword = "후지",
         )
         Mockito.`when`(adminJobService.getJobs(condition, JobSortType.VIEW_COUNT, 1, 20))
@@ -81,7 +81,7 @@ class AdminJobControllerTest @Autowired constructor(
                     .param("reviewStatus", "PENDING")
                     .param("recruitmentStatus", "RECRUITING")
                     .param("jobField", "PLANNING_STRATEGY")
-                    .param("jobRole", "DESIGN_SPACE_INTERIOR_VMD", "DESIGN_GRAPHIC_VISUAL")
+                    .param("jobRole", "DESIGN_UX_UI_PRODUCT", "DESIGN_RESEARCH")
                     .param("sort", "VIEW_COUNT"),
             ),
         )
@@ -90,7 +90,7 @@ class AdminJobControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].visibility").value("HIDDEN"))
             .andExpect(jsonPath("$.data.items[0].source").value("COMPANY"))
             .andExpect(jsonPath("$.data.items[0].jobField").value("PLANNING_STRATEGY"))
-            .andExpect(jsonPath("$.data.items[0].jobRole").value("DESIGN_SPACE_INTERIOR_VMD"))
+            .andExpect(jsonPath("$.data.items[0].jobRole").value("DESIGN_UX_UI_PRODUCT"))
             .andExpect(jsonPath("$.data.items[0].recruitmentStatus").value("RECRUITING"))
             .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-09-10T10:48:00"))
             .andExpect(jsonPath("$.data.items[0].responsibilities").doesNotExist())
@@ -128,7 +128,7 @@ class AdminJobControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.id").value(693))
             .andExpect(jsonPath("$.data.jobField").value("PLANNING_STRATEGY"))
-            .andExpect(jsonPath("$.data.jobRole").value("DESIGN_SPACE_INTERIOR_VMD"))
+            .andExpect(jsonPath("$.data.jobRole").value("DESIGN_UX_UI_PRODUCT"))
             .andExpect(jsonPath("$.data.responsibilities").value("주요 업무"))
     }
 

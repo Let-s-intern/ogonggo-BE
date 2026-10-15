@@ -250,8 +250,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val matched = appendInRange()
         appendInRange(employmentType = JobEmploymentType.FULL_TIME)
         appendInRange(experienceType = JobExperienceType.EXPERIENCED)
-        appendInRange(jobField = JobField.PLANNING_STRATEGY, jobRole = JobRole.DESIGN_WEB)
-        appendInRange(jobRole = JobRole.IT_FRONTEND)
+        appendInRange(jobField = JobField.PLANNING_STRATEGY, jobRole = JobRole.DESIGN_UX_UI_PRODUCT)
+        appendInRange(jobRole = JobRole.IT_FRONTEND_FULLSTACK)
         appendInRange(title = "데이터 인턴")
 
         // when
@@ -853,7 +853,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         // given
         val firstBookmarked = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
         val lastBookmarked = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
-        val otherRole = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_FRONTEND))
+        val otherRole = publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_FRONTEND_FULLSTACK))
         val otherType = publishCommand(createCommand(employmentType = JobEmploymentType.FULL_TIME, jobRole = JobRole.IT_BACKEND))
         // 북마크하지 않은 공고는 조건에 맞아도 나오지 않는다.
         publishCommand(createCommand(employmentType = JobEmploymentType.INTERN, jobRole = JobRole.IT_BACKEND))
@@ -881,7 +881,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     fun `직군 필터는 그 직군의 직무 공고도 남기고 직무 필터는 고른 직무 중 하나에 맞는 공고만 남긴다`() {
         // given
         val backend = publishCommand(createCommand(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_BACKEND))
-        val frontend = publishCommand(createCommand(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND))
+        val frontend = publishCommand(createCommand(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND_FULLSTACK))
         val marketing =
             publishCommand(createCommand(jobField = JobField.MARKETING_ADVERTISING, jobRole = JobRole.MARKETING_PERFORMANCE))
 

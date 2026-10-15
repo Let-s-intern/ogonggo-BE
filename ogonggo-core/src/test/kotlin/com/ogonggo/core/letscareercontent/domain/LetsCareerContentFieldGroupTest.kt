@@ -12,6 +12,6 @@ class LetsCareerContentFieldGroupTest {
     fun `다섯 직군만 추천 직군이고 합친 직군의 직무는 묶음 직군에 속한다`() {
         LetsCareerContentFieldGroup.TAGGABLE.forEach { assertEquals(it, LetsCareerContentFieldGroup.of(it)) }
         assertNull(LetsCareerContentFieldGroup.of(JobField.GAME))
-        assertEquals(JobField.IT_DEVELOPMENT, JobRole.AI_DATA_ANALYST.jobField)
+        assertEquals(JobField.IT_DEVELOPMENT, JobRole.AI_DATA_ANALYST_SCIENTIST.jobField)
     }
 }
