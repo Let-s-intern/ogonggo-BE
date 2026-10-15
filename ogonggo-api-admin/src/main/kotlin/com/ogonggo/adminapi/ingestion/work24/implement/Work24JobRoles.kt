@@ -8,6 +8,7 @@ import com.ogonggo.core.job.domain.JobRole
  * 고용24 직종 분류(고용24 공통코드 직종코드)와 오공고 직군·직무 분류는 체계가 달라, 세분류마다 가장 가까운 직무를 골랐다.
  * 세분류 이름으로 정하지 못한 코드는 중분류에 가까운 직무(대개 "기타")를 쓴다.
  * 표에 없는 코드는 직군·직무를 비운다. 고용24가 직종코드를 바꾸면 이 표도 함께 바꾼다.
+ * 2026-10-15 기획이 뺀 직무(방송작가, 디자인, 경리, 텔레마케터 등)로 옮기던 코드는 표에서 지웠다. 그 공고는 이제 받지 않는다.
  */
 internal object Work24JobRoles {
 
@@ -31,13 +32,11 @@ internal object Work24JobRoles {
         "013300" to JobRole.LEGAL_ETC, // 법률‧경찰‧소방 및 교도 관리자
         "013400" to JobRole.MEDICAL_HOSPITAL_ADMIN, // 보건 의료 관련 관리자(부서장)
         "013500" to JobRole.PUBLIC_SOCIAL_SERVICE, // 사회복지 관련 관리자(부서장)
-        "013600" to JobRole.MEDIA_ETC, // 문화‧예술 관련 관리자(부서장)
         "013700" to JobRole.IT_DEV_PM, // 정보 통신 관련 관리자(부서장)
         "013900" to JobRole.PLANNING_ETC, // 기타 전문 서비스 관리자
         "013901" to JobRole.SALES_GENERAL, // 부동산·임대업 관리자
         "013902" to JobRole.PRODUCTION_FACILITY_MANAGEMENT, // 아파트 관리소장
         "013903" to JobRole.PRODUCTION_FACILITY_MANAGEMENT, // 빌딩 관리소장
-        "013904" to JobRole.HR_RECRUITER, // 조사, 인력공급·알선 및 기타 전문서비스 관리자(부서장)
         "014100" to JobRole.SERVICE_HOTEL, // 숙박·여행·오락 및 스포츠 관련 관리자
         "014101" to JobRole.SERVICE_HOTEL, // 미용·여행·숙박·오락 서비스 관리자
         "014102" to JobRole.SERVICE_ETC, // 스포츠 관리자
@@ -109,15 +108,6 @@ internal object Work24JobRoles {
         "027101" to JobRole.ACCOUNTING_FINANCE, // 재무 사무원
         "027102" to JobRole.ACCOUNTING_ACCOUNTING, // 회계 사무원(회계·세무 사무소)
         "027103" to JobRole.ACCOUNTING_ACCOUNTING, // 회계 사무원(일반 사업체)
-        "027200" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원
-        "027201" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(무역)
-        "027202" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(운수)
-        "027203" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(건설)
-        "027204" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(제조)
-        "027205" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(회계·세무 사무소)
-        "027206" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(일반사업체)
-        "027207" to JobRole.ACCOUNTING_BOOKKEEPING, // 경리 사무원(아파트·빌딩)
-        "027208" to JobRole.ACCOUNTING_BOOKKEEPING, // 단순 경리 사무원
         "028100" to JobRole.TRADE_IMPORT_EXPORT, // 무역 사무원
         "028101" to JobRole.TRADE_IMPORT_EXPORT, // 무역 사무원(영어)
         "028102" to JobRole.TRADE_IMPORT_EXPORT, // 무역 사무원(중국어)
@@ -155,10 +145,7 @@ internal object Work24JobRoles {
         "028512" to JobRole.PRODUCTION_QUALITY, // 품질관리 사무원(그 외 분야)
         "028900" to JobRole.TRADE_IMPORT_EXPORT, // 기타 운송 및 무역 사무원
         "029103" to JobRole.SERVICE_HOTEL, // 호텔·콘도·숙박시설 프론트 사무원
-        "029202" to JobRole.CS_INBOUND, // 콜센터 상담원(콜센터·고객센터·CS센터)
         "029210" to JobRole.MEDICAL_HOSPITAL_ADMIN, // 병원 코디네이터
-        "029212" to JobRole.HR_RECRUITER, // 취업 알선원
-        "029902" to JobRole.MEDIA_PUBLISHING, // 출판·자료 편집 사무원
         "110100" to JobRole.PUBLIC_EDUCATION_RESEARCH, // 인문과학 연구원
         "110200" to JobRole.PUBLIC_EDUCATION_RESEARCH, // 사회과학 연구원
         "121100" to JobRole.ENGINEERING_ETC, // 자연과학 연구원
@@ -168,44 +155,43 @@ internal object Work24JobRoles {
         "122103" to JobRole.ENGINEERING_ETC, // 임업 및 산림 연구원 및 기술자
         "122200" to JobRole.ENGINEERING_BIO_PHARMA, // 생명과학 시험원
         "122300" to JobRole.ENGINEERING_ETC, // 농림어업 관련 시험원
-        "131100" to JobRole.IT_HARDWARE_ENGINEER, // 컴퓨터 하드웨어 기술자 및 연구원
+        "131100" to JobRole.IT_ETC, // 컴퓨터 하드웨어 기술자 및 연구원
         "131200" to JobRole.ENGINEERING_TELECOM_NETWORK, // 통신공학 기술자 및 연구원
         "131201" to JobRole.ENGINEERING_TELECOM_NETWORK, // 통신기기·장비 개발자 및 연구원
         "131202" to JobRole.ENGINEERING_TELECOM_NETWORK, // 통신기술 개발자 및 통신망 운영 기술자
         "131203" to JobRole.ENGINEERING_TELECOM_NETWORK, // 통신공사 감리 기술자
         "132000" to JobRole.IT_ETC, // 컴퓨터시스템 전문가
         "132001" to JobRole.PLANNING_CONSULTING, // IT 컨설턴트
-        "132002" to JobRole.IT_SOFTWARE_ENGINEER, // 컴퓨터시스템 설계 및 분석가
+        "132002" to JobRole.IT_ETC, // 컴퓨터시스템 설계 및 분석가
         "132003" to JobRole.IT_ETC, // IT 감리 전문가(시스템 감리)
-        "133100" to JobRole.IT_SYSTEM_SOFTWARE, // 시스템 소프트웨어 개발자
-        "133101" to JobRole.IT_SYSTEM_SOFTWARE, // 시스템 소프트웨어 개발자(프로그래머)
-        "133102" to JobRole.IT_EMBEDDED, // 펌웨어 및 임베디드 소프트웨어 프로그래머
-        "133200" to JobRole.IT_APPLICATION, // 응용 소프트웨어 개발자
+        "133100" to JobRole.IT_ETC, // 시스템 소프트웨어 개발자
+        "133101" to JobRole.IT_ETC, // 시스템 소프트웨어 개발자(프로그래머)
+        "133102" to JobRole.IT_EMBEDDED_IOT_ROBOTICS, // 펌웨어 및 임베디드 소프트웨어 프로그래머
+        "133200" to JobRole.IT_ETC, // 응용 소프트웨어 개발자
         "133201" to JobRole.IT_BACKEND, // JAVA 프로그래밍 언어 전문가
-        "133202" to JobRole.IT_SOFTWARE_ENGINEER, // C언어 및 그 외 프로그래밍 언어 전문가
+        "133202" to JobRole.IT_ETC, // C언어 및 그 외 프로그래밍 언어 전문가
         "133203" to JobRole.IT_ERP_SAP, // 범용 응용 소프트웨어 프로그래머(ERP,정보처리,재무관리 등)
-        "133204" to JobRole.IT_APPLICATION, // 산업특화 응용 소프트웨어 프로그래머(국방,항공,교통,에너지,금융,자동차 등)
-        "133205" to JobRole.IT_SYSTEM_NETWORK, // 네트워크 프로그래머
+        "133204" to JobRole.IT_ETC, // 산업특화 응용 소프트웨어 프로그래머(국방,항공,교통,에너지,금융,자동차 등)
+        "133205" to JobRole.IT_INFRA_DEVOPS, // 네트워크 프로그래머
         "133206" to JobRole.GAME_CLIENT, // 게임 프로그래머
-        "133207" to JobRole.IT_CROSS_PLATFORM, // 모바일 애플리케이션 프로그래머(앱·어플 개발)
-        "133300" to JobRole.IT_FULLSTACK, // 웹 개발자
-        "133301" to JobRole.IT_FULLSTACK, // 웹 개발자(웹 엔지니어·웹 프로그래머)
+        "133207" to JobRole.IT_ETC, // 모바일 애플리케이션 프로그래머(앱·어플 개발)
+        "133300" to JobRole.IT_FRONTEND_FULLSTACK, // 웹 개발자
+        "133301" to JobRole.IT_FRONTEND_FULLSTACK, // 웹 개발자(웹 엔지니어·웹 프로그래머)
         "133302" to JobRole.PLANNING_SERVICE_PRODUCT_PLANNING, // 웹 기획자
-        "133900" to JobRole.IT_QA, // 기타 컴퓨터 시스템 및 소프트웨어 전문가(IT 테스터 및 IT QA 전문가 등)
-        "134100" to JobRole.IT_SYSTEM_NETWORK, // 네트워크 시스템 개발자
+        "133900" to JobRole.IT_ETC, // 기타 컴퓨터 시스템 및 소프트웨어 전문가(IT 테스터 및 IT QA 전문가 등)
+        "134100" to JobRole.IT_INFRA_DEVOPS, // 네트워크 시스템 개발자
         "134200" to JobRole.IT_SECURITY, // 정보보안 전문가
         "134201" to JobRole.IT_SECURITY, // 정보보호 전문가
         "134202" to JobRole.IT_SECURITY, // 침해사고 대응 전문가
         "134900" to JobRole.IT_SECURITY, // 기타 네트워크 및 정보 보안 전문가(디지털 포렌식 전문가 등)
         "135100" to JobRole.AI_DATA_ENGINEER, // 데이터 시스템 전문가
         "135101" to JobRole.AI_DATA_ENGINEER, // 데이터 설계 및 프로그래머
-        "135102" to JobRole.IT_DBA, // 데이터베이스 운영·관리자
-        "135200" to JobRole.AI_DATA_ANALYST, // 데이터 분석가(빅데이터 분석가)
-        "136101" to JobRole.IT_SYSTEM_NETWORK, // 정보시스템 운영자
-        "136102" to JobRole.IT_SYSTEM_NETWORK, // 네트워크 관리자(클라우딩컴퓨터운영관리자)
+        "135102" to JobRole.IT_ETC, // 데이터베이스 운영·관리자
+        "135200" to JobRole.AI_DATA_ANALYST_SCIENTIST, // 데이터 분석가(빅데이터 분석가)
+        "136101" to JobRole.IT_INFRA_DEVOPS, // 정보시스템 운영자
+        "136102" to JobRole.IT_INFRA_DEVOPS, // 네트워크 관리자(클라우딩컴퓨터운영관리자)
         "136103" to JobRole.IT_ETC, // IT 기술지원 전문가
         "136200" to JobRole.IT_ETC, // 웹 운영자(홈페이지 관리자)
-        "137000" to JobRole.MEDIA_TRANSMISSION_PROGRAMMING, // 통신 및 방송 송출 장비 기사
         "140100" to JobRole.CONSTRUCTION_ARCHITECTURAL_DESIGN, // 건축가(건축설계 포함)
         "140200" to JobRole.CONSTRUCTION_ARCHITECTURAL_DESIGN, // 건축공학 기술자
         "140201" to JobRole.CONSTRUCTION_ARCHITECTURAL_DESIGN, // 건축 현장소장
@@ -374,79 +360,15 @@ internal object Work24JobRoles {
         "307902" to JobRole.MEDICAL_POSTPARTUM_CARE, // 산후조리 종사원(산모 도우미)
         "307903" to JobRole.MEDICAL_ETC, // 기타 보건·의료 서비스 종사원
         "411100" to JobRole.MEDIA_CONTENT_PLANNING_EDITOR, // 작가
-        "411200" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 번역가 및 통역가
-        "411201" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 번역가(영어)
-        "411202" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 번역가(중국어)
-        "411203" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 번역가(일본어)
-        "411204" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 번역가(기타 언어)
-        "411205" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 통역가(영어)
-        "411206" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 통역가(중국어)
-        "411207" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 통역가(일본어)
-        "411208" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 통역가(기타 언어)
-        "411209" to JobRole.MEDIA_TRANSLATION_INTERPRETATION, // 수화 및 의료 통역가
-        "411300" to JobRole.MEDIA_PUBLISHING, // 출판물 전문가
-        "412000" to JobRole.MEDIA_REPORTER, // 기자 및 언론 관련 전문가
-        "412001" to JobRole.MEDIA_REPORTER, // 신문·방송 기자
-        "412002" to JobRole.MEDIA_REPORTER, // 잡지·생활정보지 및 기타 기자
-        "413100" to JobRole.MEDIA_EXHIBITION_CURATOR, // 학예사 및 문화재 보존원
-        "413101" to JobRole.MEDIA_EXHIBITION_CURATOR, // 학예사(큐레이터)
-        "413102" to JobRole.MEDIA_EXHIBITION_CURATOR, // 문화재보존원(컨서베이터)
         "413200" to JobRole.PUBLIC_ETC, // 사서 및 기록물관리사
         "413201" to JobRole.PUBLIC_ETC, // 사서
         "413202" to JobRole.PUBLIC_ETC, // 기록물 관리사(기록물관리전문요원)
-        "414100" to JobRole.MEDIA_ETC, // 화가 및 조각가
-        "414200" to JobRole.MEDIA_PHOTOGRAPHER, // 사진기자 및 사진사
-        "414300" to JobRole.MEDIA_WEBTOON_WEB_NOVEL, // 만화가 및 만화영화 작가
-        "414301" to JobRole.MEDIA_WEBTOON_WEB_NOVEL, // 만화가
-        "414302" to JobRole.MEDIA_CG_MOTION_GRAPHICS, // 만화영화 작가(애니메이터)
-        "414400" to JobRole.MEDIA_MUSIC_RECORDS, // 국악 및 전통 예능인
-        "414500" to JobRole.MEDIA_MUSIC_RECORDS, // 지휘자‧작곡가 및 연주가
-        "414600" to JobRole.MEDIA_MUSIC_RECORDS, // 가수 및 성악가
-        "414700" to JobRole.MEDIA_ETC, // 무용가 및 안무가
-        "414900" to JobRole.MEDIA_ETC, // 기타 시각 및 공연 예술가
-        "414901" to JobRole.MEDIA_ETC, // 조련사(공연)·마술사 등 기타 시각 및 공연 예술가
-        "414902" to JobRole.MEDIA_ETC, // 동화구연사
-        "415100" to JobRole.DESIGN_INDUSTRIAL_PRODUCT, // 제품 디자이너
-        "415101" to JobRole.DESIGN_INDUSTRIAL_PRODUCT, // 기계·자동차·금속 제품 디자이너
-        "415102" to JobRole.DESIGN_INDUSTRIAL_PRODUCT, // 조명·전기·전자·통신 기기 디자이너
-        "415103" to JobRole.DESIGN_INDUSTRIAL_PRODUCT, // 가구 디자이너
-        "415104" to JobRole.DESIGN_INDUSTRIAL_PRODUCT, // 팬시, 귀금속, 생활잡화 등 기타 제품 디자이너
-        "415200" to JobRole.DESIGN_FASHION_TEXTILE, // 패션 디자이너
-        "415201" to JobRole.DESIGN_FASHION_TEXTILE, // 의상 디자이너
-        "415202" to JobRole.DESIGN_FASHION_TEXTILE, // 직물(텍스타일) 디자이너
-        "415203" to JobRole.DESIGN_FASHION_TEXTILE, // 가방·신발·엑세서리 디자이너
-        "415300" to JobRole.DESIGN_SPACE_INTERIOR_VMD, // 실내장식 디자이너
-        "415301" to JobRole.DESIGN_SPACE_INTERIOR_VMD, // 인테리어 디자이너
-        "415302" to JobRole.DESIGN_SPACE_INTERIOR_VMD, // 무대·세트·디스플레이 디자이너
-        "415400" to JobRole.DESIGN_GRAPHIC_VISUAL, // 시각 디자이너
-        "415401" to JobRole.DESIGN_ADVERTISING_CONTENT, // 광고디자이너
-        "415402" to JobRole.DESIGN_PUBLISHING_EDITORIAL, // 책·인쇄물·출판 디자이너
-        "415403" to JobRole.DESIGN_PACKAGE, // 포장디자이너
-        "415404" to JobRole.DESIGN_ILLUSTRATOR, // 일러스트레이터·삽화가
-        "415405" to JobRole.DESIGN_GRAPHIC_VISUAL, // 색채전문가(컬러리스트)
-        "415406" to JobRole.DESIGN_GRAPHIC_VISUAL, // 기타 시각 디자이너
-        "415500" to JobRole.DESIGN_ADVERTISING_CONTENT, // 미디어 콘텐츠 디자이너
-        "415501" to JobRole.DESIGN_WEB, // 웹 디자이너
         "415502" to JobRole.GAME_PLANNING_PM, // 게임 디자이너
-        "415503" to JobRole.DESIGN_VFX_3D, // 그래픽아트 기술자
         "415504" to JobRole.DESIGN_UX_UI_PRODUCT, // UX/UI 디자이너
-        "415505" to JobRole.DESIGN_ADVERTISING_CONTENT, // 기타 미디어 콘텐츠 디자이너
         "416100" to JobRole.MEDIA_PD_DIRECTOR, // 감독 및 기술 감독
-        "416200" to JobRole.MEDIA_MODEL_ACTOR, // 배우 및 모델
-        "416301" to JobRole.MEDIA_ANNOUNCER_SHOW_HOST, // 아나운서 및 리포터
-        "416302" to JobRole.MEDIA_ANNOUNCER_SHOW_HOST, // 쇼핑호스트
-        "416303" to JobRole.MEDIA_ANNOUNCER_SHOW_HOST, // 사내(장내) 방송 아나운서
-        "416400" to JobRole.MEDIA_CINEMATOGRAPHER, // 촬영기사
-        "416500" to JobRole.MEDIA_BROADCAST_ENGINEERING, // 음향 및 녹음 기사
         "416600" to JobRole.MEDIA_VIDEO_EDITOR, // 영상·녹화 및 편집 기사
-        "416700" to JobRole.MEDIA_BROADCAST_ENGINEERING, // 조명기사 및 영사기사
         "416800" to JobRole.MEDIA_CREATOR_INFLUENCER, // 미디어 콘텐츠 창작자
-        "416900" to JobRole.MEDIA_ETC, // 기타 연극·영화 및 영상 관련 종사원
         "416901" to JobRole.MEDIA_PD_DIRECTOR, // 방송연출 보조(AD, FD)
-        "416902" to JobRole.MEDIA_ETC, // 엑스트라,소품·무대의상 관리 등 기타 연극·영화·방송 종사원
-        "417100" to JobRole.MEDIA_DISTRIBUTION_PRODUCTION, // 공연 및 시각예술 기획자
-        "417200" to JobRole.MEDIA_DISTRIBUTION_PRODUCTION, // 영화 및 음반 기획자
-        "417300" to JobRole.MEDIA_ARTIST_MANAGEMENT, // 연예인 및 스포츠 매니저
         "420100" to JobRole.SERVICE_ETC, // 스포츠 감독 및 코치
         "420200" to JobRole.SERVICE_ETC, // 직업 운동선수
         "420300" to JobRole.SERVICE_ETC, // 경기 심판 및 경기 기록원
@@ -590,13 +512,6 @@ internal object Work24JobRoles {
         "613902" to JobRole.SALES_GENERAL, // 체인점 영업원
         "613903" to JobRole.SALES_B2C, // 상조·렌탈·회원모집 영업원
         "613904" to JobRole.SALES_GENERAL, // 기타 영업원
-        "614000" to JobRole.CS_OUTBOUND, // 텔레마케터
-        "614001" to JobRole.CS_OUTBOUND, // 텔레마케터(콜센터)
-        "614002" to JobRole.CS_OUTBOUND, // 텔레마케터(학원, 학습지, 유학)
-        "614003" to JobRole.CS_OUTBOUND, // 텔레마케터(금융·보험·대출·부동산)
-        "614004" to JobRole.CS_OUTBOUND, // 텔레마케터(쇼핑몰, 백화점, 마트)
-        "614005" to JobRole.CS_OUTBOUND, // 텔레마케터(인터넷, 통신)
-        "614006" to JobRole.CS_OUTBOUND, // 기타 텔레마케터
         "615100" to JobRole.SERVICE_STORE_MANAGEMENT, // 소규모 상점 경영 및 일선 관리 종사원(매장매니저·매장슈퍼바이저 등)
         "615200" to JobRole.SERVICE_STORE_MANAGEMENT, // 상점 판매원
         "615201" to JobRole.SERVICE_STORE_MANAGEMENT, // 백화점 판매원
