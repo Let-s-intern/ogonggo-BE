@@ -82,7 +82,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 | `GET /api/v1/announcements` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
 | `GET /api/v1/concerns` | `category`. `sort`는 `LATEST`·`VIEW_COUNT`·`COMMENT_COUNT`([취준고민](#취준고민) 참고) | 없음 |
 
-검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. 고용 형태(`employmentType`), 경력 유형(`experienceType`), 직무(`jobRole`)는 `jobRole=IT_BACKEND&jobRole=IT_FRONTEND`처럼 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며(고용 형태·경력 유형은 2026-10-10부터), 나머지 필터는 하나씩 고릅니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
+검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. 고용 형태(`employmentType`), 경력 유형(`experienceType`), 직무(`jobRole`)는 `jobRole=IT_BACKEND&jobRole=IT_FRONTEND_FULLSTACK`처럼 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며(고용 형태·경력 유형은 2026-10-10부터), 나머지 필터는 하나씩 고릅니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
 
 부트캠프의 `category`는 [enum 선택지](#enum-선택지)의 `BootcampCategory` 값을 받으며 하나만 고를 수 있습니다(2026-09-30, 리뷰 상태: 팀 리뷰 필요). 같은 날 `tuitionType`과 `status` 필터를 없앴습니다. 없앤 파라미터를 보내도 오류 없이 무시합니다.
 
@@ -322,6 +322,11 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
   - 합친 직군의 직무는 합쳐진 직군 아래로 옮겼습니다. 그래서 `/enums`에서 IT·개발을 고르면 AI·데이터 직무도 함께 나오고, 목록 필터 `jobField=IT_DEVELOPMENT`는 AI·데이터 직무 공고도 고릅니다. 직무 이름(`AI_DATA_ANALYST` 등)은 바꾸지 않아 앞부분이 직군과 다를 수 있습니다.
   - 없앤 직군 값(`AI_DATA` 등)을 보내면 400 `BAD_REQUEST`입니다. 운영 DB의 `jobs.job_field`는 배포 전에 합친 직군으로 바꿉니다.
   - 나머지 14개 직군(게임, 법률 등)은 그대로입니다.
+- 2026-10-15 기획의 직무 필터 개선에 따라 지금은 직군 19개, 직무 229개입니다. 리뷰 상태: 팀 리뷰 필요.
+  - IT·개발 직무 42개를 16개로 묶었습니다. 백엔드, 프론트 풀스택, 웹, 안드로이드, iOS, 인프라·DevOps, 정보보호·보안, 임베디드·IoT·로봇, ERP·SAP, 개발PM, 기타IT·개발, 데이터분석·사이언티스트, 데이터엔지니어, 머신러닝·MLOps, LLM·생성형AI, 기타AI·데이터입니다. 어느 묶음에도 들지 않는 직무(DBA, 크로스플랫폼, QA, RAG, NLP 등)는 기타IT·개발로, AI 직무(컴퓨터비전, AI리서치 등)는 기타AI·데이터로 옮겼습니다.
+  - 기획이 뺀 직무 41개(방송작가 등 미디어·엔터 직무 19개, 웹디자인 등 디자인 직무 14개, 리크루터·헤드헌터, IR·공시, 경리·회계보조, 인바운드, 아웃바운드, 기타고객상담, 기술기획, 금융·보험영업)를 지웠습니다. 이미 등록된 공고는 같은 직군의 "기타" 직무로 옮기고, 고용24 직종 표에서도 지워 그 직종의 공고는 더 받지 않습니다.
+  - 남긴 직무는 이름과 코드를 그대로 두고, 라벨만 기획 표에 맞췄습니다(서버·백엔드 → 백엔드, UXUI·프로덕트 → UXUI·프로덕트디자인, 디자인리서치 → 리서치).
+  - 없앤 직무 값을 보내면 400 `BAD_REQUEST`입니다. 운영 DB의 `jobs.job_role`과 렛츠커리어 콘텐츠 직무 태그(`lets_career_contents.tag_job_roles`)는 배포 전에 새 직무로 바꿉니다.
 - 둘 다 선택 값입니다. 직무를 보내면 같은 직군이어야 하며 어긋나면 400 `BAD_REQUEST`(`[jobRole]`)입니다.
 - 사용자 채용공고 목록·상세·달력·북마크 목록과 관리자 채용공고 목록·상세 응답에 `jobField`, `jobRole`을 싣습니다. 정하지 않은 공고는 `null`입니다.
 - 관리자 목록 필터도 사용자 목록과 같습니다. `jobField`만 보내면 그 직군의 직무 공고도 걸리고, `jobRole`은 여러 번 보내 그중 하나라도 맞는 공고를 고릅니다.
