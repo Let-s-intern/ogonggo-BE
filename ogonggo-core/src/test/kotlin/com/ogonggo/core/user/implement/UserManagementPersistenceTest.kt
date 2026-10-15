@@ -215,13 +215,9 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         return userId
     }
 
-    /** 관리자 역할은 운영자가 DB에서 직접 부여하므로 도메인에 전이가 없다. */
     private fun promoteToAdmin(userId: Long) {
+        userManager.changeRole(userId, UserRole.ADMIN)
         entityManager.flush()
-        entityManager.createNativeQuery("update users set role = 'ADMIN' where id = :id")
-            .setParameter("id", userId)
-            .executeUpdate()
-        entityManager.clear()
     }
 
     private companion object {

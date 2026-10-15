@@ -16,7 +16,6 @@ import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
-import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.userapi.user.implement.requireActive
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -141,12 +140,27 @@ class ConcernCommentService(
         return CommentViewContext(
             viewerUserId = viewerUserId,
             concernAuthorUserId = concernAuthorUserId,
-            profiles = userProfileReader.readAll(comments.map { it.userId }.toSet()),
+            authors = readAuthors(comments.map { it.userId }.toSet()),
             likeCounts = likeReader.countAll(commentIds),
             likedCommentIds = viewerUserId
                 ?.let { likeReader.readLikedCommentIds(it, commentIds) }
                 ?: emptySet(),
         )
+    }
+
+    /** 작성자 역할은 지금 역할이다. 작성 당시 관리자였는지는 [ConcernComment.official]이 따로 남긴다. */
+    private fun readAuthors(userIds: Set<Long>): Map<Long, ConcernCommentAuthorResult> {
+        val profiles = userProfileReader.readAll(userIds)
+        val roles = userReader.readRoles(userIds)
+        return userIds.associateWith { userId ->
+            val profile = profiles[userId]
+            ConcernCommentAuthorResult(
+                nickname = profile?.nickname,
+                profileImageUrl = profile?.profileImageUrl,
+                // 회원 행은 지우지 않으므로 비는 일은 없다. 비더라도 표시 없이 보이도록 일반 회원으로 둔다.
+                role = roles[userId] ?: UserRole.USER,
+            )
+        }
     }
 
     private fun ConcernComment.toResult(context: CommentViewContext): ConcernCommentResult {
@@ -155,7 +169,7 @@ class ConcernCommentService(
         return ConcernCommentResult(
             id = commentId,
             parentId = parentId,
-            author = context.profiles[userId].toAuthor(),
+            author = context.authors.getValue(userId),
             official = official,
             concernAuthor = userId == context.concernAuthorUserId,
             content = if (deleted) DELETED_COMMENT_CONTENT else content,
@@ -189,7 +203,7 @@ class ConcernCommentService(
     private class CommentViewContext(
         val viewerUserId: Long?,
         val concernAuthorUserId: Long,
-        val profiles: Map<Long, UserProfileDto>,
+        val authors: Map<Long, ConcernCommentAuthorResult>,
         val likeCounts: Map<Long, Long>,
         val likedCommentIds: Set<Long>,
     )

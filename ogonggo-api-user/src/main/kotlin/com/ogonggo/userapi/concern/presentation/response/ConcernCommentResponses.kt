@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.concern.presentation.response
 
+import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.userapi.concern.business.ConcernCommentAuthorResult
 import com.ogonggo.userapi.concern.business.ConcernCommentPageResult
 import com.ogonggo.userapi.concern.business.ConcernCommentReplyPageResult
 import com.ogonggo.userapi.concern.business.ConcernCommentResult
@@ -12,10 +14,27 @@ data class CreateConcernCommentResponse(
     val id: Long,
 )
 
+/** 고민글 작성자 응답에 현재 역할을 더한 것이다. */
+data class ConcernCommentAuthorResponse(
+    @field:Schema(description = "렛츠커리어 프로필 닉네임. 프로필이 없으면 null")
+    val nickname: String?,
+    val profileImageUrl: String?,
+    @field:Schema(description = "작성자의 현재 역할. MENTOR는 멘토, ADMIN은 멘토보다 위 등급(관리자)으로 표시합니다.")
+    val role: UserRole,
+) {
+    companion object {
+        fun from(result: ConcernCommentAuthorResult) = ConcernCommentAuthorResponse(
+            nickname = result.nickname,
+            profileImageUrl = result.profileImageUrl,
+            role = result.role,
+        )
+    }
+}
+
 data class ConcernCommentResponse(
     val id: Long,
     val parentId: Long?,
-    val author: ConcernAuthorResponse,
+    val author: ConcernCommentAuthorResponse,
     @field:Schema(description = "관리자가 쓴 운영자 답변이면 true (렛츠커리어 매니저 배지)")
     val official: Boolean,
     @field:Schema(description = "고민글 작성자(질문자)가 쓴 댓글이면 true")
@@ -35,7 +54,7 @@ data class ConcernCommentResponse(
         fun from(result: ConcernCommentResult) = ConcernCommentResponse(
             id = result.id,
             parentId = result.parentId,
-            author = ConcernAuthorResponse.from(result.author),
+            author = ConcernCommentAuthorResponse.from(result.author),
             official = result.official,
             concernAuthor = result.concernAuthor,
             content = result.content,
@@ -51,7 +70,7 @@ data class ConcernCommentResponse(
 
 data class ConcernCommentRootResponse(
     val id: Long,
-    val author: ConcernAuthorResponse,
+    val author: ConcernCommentAuthorResponse,
     @field:Schema(description = "관리자가 쓴 운영자 답변이면 true (렛츠커리어 매니저 배지)")
     val official: Boolean,
     @field:Schema(description = "고민글 작성자(질문자)가 쓴 답변이면 true")
@@ -72,7 +91,7 @@ data class ConcernCommentRootResponse(
             val comment = result.comment
             return ConcernCommentRootResponse(
                 id = comment.id,
-                author = ConcernAuthorResponse.from(comment.author),
+                author = ConcernCommentAuthorResponse.from(comment.author),
                 official = comment.official,
                 concernAuthor = comment.concernAuthor,
                 content = comment.content,

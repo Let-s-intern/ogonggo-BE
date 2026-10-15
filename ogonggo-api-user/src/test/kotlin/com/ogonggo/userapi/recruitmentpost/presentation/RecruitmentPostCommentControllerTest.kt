@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.recruitmentpost.presentation
 
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.recruitmentpost.business.CreateRecruitmentPostCommentCommand
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentAuthorResult
@@ -69,6 +70,7 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
             // then
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].id").value(COMMENT_ID))
+            .andExpect(jsonPath("$.data.items[0].author.role").value("MENTOR"))
             .andExpect(jsonPath("$.data.items[0].replies.items[0].parentId").value(COMMENT_ID))
             .andExpect(jsonPath("$.data.items[0].replies.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.items[0].replies.pageInfo.totalElements").value(6))
@@ -207,6 +209,7 @@ class RecruitmentPostCommentControllerTest @Autowired constructor(
             userId = USER_ID,
             nickname = "닉네임",
             profileImageUrl = null,
+            role = UserRole.MENTOR,
         ),
         content = "댓글 내용",
         createdAt = CREATED_AT,

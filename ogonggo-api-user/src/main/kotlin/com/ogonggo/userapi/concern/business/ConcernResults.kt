@@ -1,11 +1,19 @@
 package com.ogonggo.userapi.concern.business
 
 import com.ogonggo.core.concern.domain.ConcernCategory
+import com.ogonggo.core.user.domain.UserRole
 import java.time.LocalDateTime
 
 data class ConcernAuthorResult(
     val nickname: String?,
     val profileImageUrl: String?,
+)
+
+/** 답변·답글 작성자. 고민글 작성자와 달리 멘토·관리자를 표시하도록 현재 역할을 싣는다. */
+data class ConcernCommentAuthorResult(
+    val nickname: String?,
+    val profileImageUrl: String?,
+    val role: UserRole,
 )
 
 data class ConcernImageResult(
@@ -52,7 +60,7 @@ data class ConcernDetailResult(
 data class ConcernCommentResult(
     val id: Long,
     val parentId: Long?,
-    val author: ConcernAuthorResult,
+    val author: ConcernCommentAuthorResult,
     val official: Boolean,
     val concernAuthor: Boolean,
     val content: String,

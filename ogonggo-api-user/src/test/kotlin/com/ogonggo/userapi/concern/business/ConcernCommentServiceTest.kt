@@ -108,7 +108,7 @@ class ConcernCommentServiceTest {
     }
 
     @Test
-    fun `고민글 작성자가 단 답글은 질문자가 쓴 것으로 표시한다`() {
+    fun `고민글 작성자가 단 답글은 질문자가 쓴 것으로 표시하고 작성자의 현재 역할을 싣는다`() {
         // given
         val concern = Mockito.mock(Concern::class.java)
         Mockito.`when`(concern.authorUserId).thenReturn(OTHER_USER_ID)
@@ -117,12 +117,15 @@ class ConcernCommentServiceTest {
         Mockito.`when`(concernReader.read(CONCERN_ID)).thenReturn(concern)
         Mockito.`when`(commentReader.readReplyPage(CONCERN_ID, PARENT_ID, 0, 5))
             .thenReturn(ConcernCommentPageDto(listOf(byQuestioner, byOther), page = 0, size = 5, totalElements = 2, totalPages = 1))
+        Mockito.`when`(userReader.readRoles(setOf(OTHER_USER_ID, USER_ID))).thenReturn(mapOf(USER_ID to UserRole.MENTOR))
 
         // when
         val result = service.readReplies(null, CONCERN_ID, PARENT_ID, page = 0, size = 5)
 
         // then
         assertEquals(listOf(true, false), result.items.map { it.concernAuthor })
+        // 역할을 읽지 못한 작성자는 표시 없이 일반 회원으로 둔다.
+        assertEquals(listOf(UserRole.USER, UserRole.MENTOR), result.items.map { it.author.role })
     }
 
     @Test

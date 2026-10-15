@@ -1,11 +1,13 @@
 package com.ogonggo.userapi.recruitmentpost.presentation.response
 
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentAuthorResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentPageResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentReplyPageResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentResult
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentRootResult
 import com.ogonggo.userapi.response.PageResponse
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
 internal fun RecruitmentPostCommentPageResult.toPageResponse(): PageResponse<RecruitmentPostCommentRootResponse> =
@@ -76,6 +78,8 @@ data class RecruitmentPostCommentAuthorResponse(
     val userId: Long,
     val nickname: String?,
     val profileImageUrl: String?,
+    @field:Schema(description = "작성자의 현재 역할. MENTOR는 멘토, ADMIN은 멘토보다 위 등급(관리자)으로 표시합니다.")
+    val role: UserRole,
 ) {
     companion object {
         fun from(result: RecruitmentPostCommentAuthorResult): RecruitmentPostCommentAuthorResponse =
@@ -83,6 +87,7 @@ data class RecruitmentPostCommentAuthorResponse(
                 userId = result.userId,
                 nickname = result.nickname,
                 profileImageUrl = result.profileImageUrl,
+                role = result.role,
             )
     }
 }

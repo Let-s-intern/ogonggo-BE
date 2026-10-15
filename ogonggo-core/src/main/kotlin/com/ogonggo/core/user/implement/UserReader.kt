@@ -2,6 +2,7 @@ package com.ogonggo.core.user.implement
 
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.user.domain.User
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserCredentialDto
@@ -20,6 +21,14 @@ class UserReader internal constructor(
     fun read(userId: Long): UserAccountDto =
         userRepository.findByIdOrNull(userId)?.toAccount()
             ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
+
+    /** 댓글 작성자 표시처럼 여러 회원의 현재 역할만 필요할 때 쓴다. 없는 회원은 결과에 없다. */
+    fun readRoles(userIds: Collection<Long>): Map<Long, UserRole> =
+        if (userIds.isEmpty()) {
+            emptyMap()
+        } else {
+            userRepository.findAllById(userIds.toSet()).associate { user -> user.requiredId() to user.role }
+        }
 
     fun readFcmToken(userId: Long): String? {
         val user = userRepository.findByIdOrNull(userId)
