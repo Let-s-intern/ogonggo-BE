@@ -73,11 +73,11 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     @Test
     fun `직군만 거르면 그 직군의 직무 공고도 걸리고 직무는 여러 개 중 하나라도 맞으면 걸린다`() {
         val backend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_BACKEND))
-        val frontend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND))
+        val frontend = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.IT_FRONTEND_FULLSTACK))
         val fieldOnly = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT))
         // 2026-10-12 AI·데이터 직군을 IT·개발로 합쳐 AI·데이터 직무도 IT·개발로 고르면 걸린다
-        val dataAnalyst = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.AI_DATA_ANALYST))
-        jobAppender.append(command(jobField = JobField.PLANNING_STRATEGY, jobRole = JobRole.DESIGN_WEB))
+        val dataAnalyst = jobAppender.append(command(jobField = JobField.IT_DEVELOPMENT, jobRole = JobRole.AI_DATA_ANALYST_SCIENTIST))
+        jobAppender.append(command(jobField = JobField.PLANNING_STRATEGY, jobRole = JobRole.DESIGN_UX_UI_PRODUCT))
         jobAppender.append(command())
 
         assertEquals(
@@ -86,7 +86,7 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         )
         assertEquals(
             listOf(frontend.id, backend.id),
-            ids(JobManagementSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND))),
+            ids(JobManagementSearchCondition(jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND_FULLSTACK))),
         )
     }
 

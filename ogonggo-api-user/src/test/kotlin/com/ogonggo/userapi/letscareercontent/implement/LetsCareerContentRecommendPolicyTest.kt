@@ -152,7 +152,7 @@ class LetsCareerContentRecommendPolicyTest {
         val contents = listOf(itContent, marketingContent, forAll)
 
         // when
-        val dataAnalyst = policy.recommend(job(jobRole = JobRole.AI_DATA_ANALYST), null, contents, WEIGHTS, NOW, 2)
+        val dataAnalyst = policy.recommend(job(jobRole = JobRole.AI_DATA_ANALYST_SCIENTIST), null, contents, WEIGHTS, NOW, 2)
         val game = policy.recommend(job(jobField = JobField.GAME), null, contents, WEIGHTS, NOW, 1)
 
         // then

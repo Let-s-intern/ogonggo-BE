@@ -485,16 +485,17 @@ class Work24CollectorTest {
     }
 
     @Test
-    fun `시급·일급 공고와 직군·직무로 분류할 수 없는 직종의 공고는 상세를 부르지 않고 제외한다`() {
+    fun `시급·일급 공고와 직군·직무로 분류할 수 없거나 기획이 뺀 직무의 직종 공고는 상세를 부르지 않고 제외한다`() {
         server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
             .andRespond(
                 xml(
                     """
-                    <wantedRoot><total>4</total>
+                    <wantedRoot><total>5</total>
                       <wanted><wantedAuthNo>K1</wantedAuthNo><salTpNm>시급</salTpNm><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
                       <wanted><wantedAuthNo>K2</wantedAuthNo><salTpNm>일급</salTpNm><wantedInfoUrl>$WORKNET/K2</wantedInfoUrl></wanted>
                       <wanted><wantedAuthNo>K3</wantedAuthNo><salTpNm>월급</salTpNm><jobsCd>133201</jobsCd><company>회사</company><title>제목</title><wantedInfoUrl>$WORKNET/K3</wantedInfoUrl></wanted>
                       <wanted><wantedAuthNo>K4</wantedAuthNo><salTpNm>월급</salTpNm><jobsCd>999999</jobsCd><wantedInfoUrl>$WORKNET/K4</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K5</wantedAuthNo><salTpNm>월급</salTpNm><jobsCd>415501</jobsCd><wantedInfoUrl>$WORKNET/K5</wantedInfoUrl></wanted>
                     </wantedRoot>
                     """.trimIndent(),
                 ),
@@ -506,7 +507,7 @@ class Work24CollectorTest {
         val result = collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
 
         server.verify()
-        assertEquals(3, result.excludedCount)
+        assertEquals(4, result.excludedCount)
         assertEquals(listOf("K3"), appendedJobs.map { it.externalId })
     }
 

@@ -308,7 +308,7 @@ class UserReadControllerTest @Autowired constructor(
             employmentTypes = setOf(JobEmploymentType.INTERN, JobEmploymentType.FULL_TIME),
             experienceTypes = setOf(JobExperienceType.NEWCOMER, JobExperienceType.IRRELEVANT),
             jobField = JobField.IT_DEVELOPMENT,
-            jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND),
+            jobRoles = setOf(JobRole.IT_BACKEND, JobRole.IT_FRONTEND_FULLSTACK),
             recruitmentStatus = JobRecruitmentStatus.RECRUITING,
         )
         Mockito.`when`(userJobService.getJobs(USER_ID, condition, JobSortType.VIEW_COUNT, 0, 10))
@@ -319,7 +319,7 @@ class UserReadControllerTest @Autowired constructor(
                 .param("employmentType", "INTERN", "FULL_TIME")
                 .param("experienceType", "NEWCOMER", "IRRELEVANT")
                 .param("jobField", "IT_DEVELOPMENT")
-                .param("jobRole", "IT_BACKEND", "IT_FRONTEND")
+                .param("jobRole", "IT_BACKEND", "IT_FRONTEND_FULLSTACK")
                 .param("sort", "VIEW_COUNT")
                 .with(authenticatedUser()),
         ).andExpect(status().isOk)
