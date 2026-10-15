@@ -9,4 +9,5 @@ enum class UserRole(
     USER(1, "일반 회원"),
     COMPANY(2, "기업 회원"),
     ADMIN(3, "관리자 회원"),
+    MENTOR(4, "멘토 회원"),
 }

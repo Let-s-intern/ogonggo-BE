@@ -54,6 +54,13 @@ class UserDomainTest {
     }
 
     @Test
+    fun `렛츠커리어 멘토는 계정을 만들 때 멘토가 된다`() {
+        val user = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt, isMentor = true)
+
+        assertEquals(UserRole.MENTOR, user.role)
+    }
+
+    @Test
     fun `기업 계정은 가입 시점에 기업 회원이며 렛츠커리어 식별자를 갖지 않는다`() {
         val user = User.ofCompany(
             email = "company@example.com",

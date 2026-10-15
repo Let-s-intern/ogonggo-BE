@@ -22,6 +22,8 @@ data class LetsCareerUser(
     val profileImageUrl: String?,
     val isAdmin: Boolean,
     val updatedAt: LocalDateTime?,
+    /** 오공고 계정을 처음 만들 때만 쓴다. 이후 역할은 오공고 관리자가 바꾼다. */
+    val isMentor: Boolean = false,
     /** 닉네임만의 최종 수정 일시다. 렛츠커리어가 아직 주지 않거나 한 번도 고친 적 없으면 null이다. */
     val nicknameUpdatedAt: LocalDateTime? = null,
 )
@@ -87,6 +89,7 @@ internal data class VerifyResponse(
     val nicknameUpdatedAt: LocalDateTime? = null,
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
+    val isMentor: Boolean? = null,
     val updatedAt: LocalDateTime?,
 ) {
     /** 렛츠커리어가 주는 형태를 오공고가 쓰는 형태로 옮긴다. */
@@ -101,6 +104,8 @@ internal data class VerifyResponse(
         profileImageUrl = profileImageUrl,
         // 렛츠커리어가 값을 주지 않으면 관리자가 아닌 것으로 본다.
         isAdmin = isAdmin ?: false,
+        // 렛츠커리어가 아직 값을 주지 않으면 멘토가 아닌 것으로 본다.
+        isMentor = isMentor ?: false,
         updatedAt = updatedAt,
         nicknameUpdatedAt = nicknameUpdatedAt,
     )

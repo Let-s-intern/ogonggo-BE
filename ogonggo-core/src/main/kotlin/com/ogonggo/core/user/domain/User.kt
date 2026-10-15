@@ -106,15 +106,18 @@ internal class User private constructor(
     }
 
     companion object {
-        /** 렛츠커리어 토큰 교환으로 만들어지는 일반 회원 계정. */
-        fun ofLetsCareer(letsCareerUserId: Long, joinedAt: LocalDateTime): User {
+        /**
+         * 렛츠커리어 토큰 교환으로 만들어지는 일반 회원 계정.
+         * 렛츠커리어 멘토는 이때 한 번만 멘토로 만든다. 그 뒤의 역할은 오공고 관리자가 바꾼다.
+         */
+        fun ofLetsCareer(letsCareerUserId: Long, joinedAt: LocalDateTime, isMentor: Boolean = false): User {
             require(letsCareerUserId > 0) { "렛츠커리어 사용자 식별자는 양수여야 합니다." }
 
             return User(
                 letsCareerUserId = letsCareerUserId,
                 email = null,
                 password = null,
-                role = UserRole.USER,
+                role = if (isMentor) UserRole.MENTOR else UserRole.USER,
                 status = UserStatus.ACTIVE,
                 joinedAt = joinedAt,
             )

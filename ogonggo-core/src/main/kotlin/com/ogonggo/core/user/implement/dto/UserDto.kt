@@ -12,6 +12,7 @@ import java.time.LocalDateTime
 data class UserAppendDto(
     val letsCareerUserId: Long,
     val joinedAt: LocalDateTime,
+    val isMentor: Boolean = false,
 )
 
 data class CompanyAccountAppendDto(

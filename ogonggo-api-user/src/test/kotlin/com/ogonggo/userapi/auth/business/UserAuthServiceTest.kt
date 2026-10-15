@@ -98,6 +98,19 @@ class UserAuthServiceTest {
     }
 
     @Test
+    fun `렛츠커리어 멘토가 처음 로그인하면 멘토로 계정을 만든다`() {
+        stubLetsCareerUser(isMentor = true)
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
+        Mockito.`when`(userAppender.append(UserAppendDto(LETSCAREER_USER_ID, NOW, isMentor = true)))
+            .thenReturn(activeAccount())
+        stubIssuedTokens()
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verify(userAppender).append(UserAppendDto(LETSCAREER_USER_ID, NOW, isMentor = true))
+    }
+
+    @Test
     fun `이미 가입한 사용자는 계정을 만들지 않고 프로필만 동기화한다`() {
         stubLetsCareerUser()
         Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(activeAccount())
@@ -183,7 +196,7 @@ class UserAuthServiceTest {
         Mockito.verifyNoInteractions(tokenProvider)
     }
 
-    private fun stubLetsCareerUser() {
+    private fun stubLetsCareerUser(isMentor: Boolean = false) {
         Mockito.`when`(letsCareerAuthClient.verify(LC_ACCESS_TOKEN)).thenReturn(
             LetsCareerUser(
                 userId = LETSCAREER_USER_ID,
@@ -195,6 +208,7 @@ class UserAuthServiceTest {
                 profileImageUrl = null,
                 isAdmin = false,
                 updatedAt = LETSCAREER_UPDATED_AT,
+                isMentor = isMentor,
             ),
         )
     }
