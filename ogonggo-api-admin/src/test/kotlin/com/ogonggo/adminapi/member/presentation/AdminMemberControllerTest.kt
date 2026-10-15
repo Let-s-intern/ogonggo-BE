@@ -18,11 +18,15 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -133,6 +137,56 @@ class AdminMemberControllerTest @Autowired constructor(
         Mockito.verifyNoInteractions(adminMemberService)
     }
 
+    @Test
+    fun `역할 변경은 로그인한 관리자 식별자와 바꿀 역할을 서비스에 넘긴다`() {
+        mockMvc.perform(
+            signedInAdmin(
+                patch("/api/v1/admin/general-members/$USER_ID/role")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"role": "MENTOR"}"""),
+            ),
+        )
+            .andExpect(status().isOk)
+
+        Mockito.verify(adminMemberService).changeGeneralMemberRole(ADMIN_USER_ID, USER_ID, UserRole.MENTOR)
+    }
+
+    @Test
+    fun `역할을 기업 회원으로 바꾸거나 빠뜨리면 role 파라미터 오류로 알린다`() {
+        mockMvc.perform(
+            signedInAdmin(
+                patch("/api/v1/admin/general-members/$USER_ID/role")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"role": "COMPANY"}"""),
+            ),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message").value("[role] 일반 회원 역할(USER·MENTOR·ADMIN)로만 바꿀 수 있습니다."))
+        mockMvc.perform(
+            signedInAdmin(
+                patch("/api/v1/admin/general-members/$USER_ID/role")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"),
+            ),
+        )
+            .andExpect(status().isBadRequest)
+
+        Mockito.verifyNoInteractions(adminMemberService)
+    }
+
+    @Test
+    fun `관리자 토큰이 없으면 역할을 바꿀 수 없다`() {
+        mockMvc.perform(
+            patch("/api/v1/admin/general-members/$USER_ID/role")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"role": "ADMIN"}"""),
+        )
+            .andExpect(status().isUnauthorized)
+
+        Mockito.verifyNoInteractions(adminMemberService)
+    }
+
     private fun generalMember(): GeneralMemberDto = GeneralMemberDto(
         userId = USER_ID,
         letsCareerUserId = 4821L,
@@ -162,8 +216,17 @@ class AdminMemberControllerTest @Autowired constructor(
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
         request.with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY)))
 
+    /** 관리자 인증 필터처럼 사용자 식별자를 주체로 남긴다. */
+    private fun signedInAdmin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
+        request.with(
+            authentication(
+                UsernamePasswordAuthenticationToken(ADMIN_USER_ID, null, listOf(SimpleGrantedAuthority(ADMIN_AUTHORITY))),
+            ),
+        )
+
     private companion object {
         const val USER_ID = 7L
+        const val ADMIN_USER_ID = 1L
         val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 28, 10, 0)
     }
 }

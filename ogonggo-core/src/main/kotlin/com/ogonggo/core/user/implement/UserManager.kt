@@ -1,6 +1,10 @@
 package com.ogonggo.core.user.implement
 
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.springframework.data.repository.findByIdOrNull
@@ -19,6 +23,22 @@ class UserManager internal constructor(
 
         user.changePassword(encodedPassword)
         userRepository.save(user)
+    }
+
+    /** 같은 역할로 바꾸면 아무것도 바꾸지 않는다. 변경 이력은 남기지 않는다. */
+    @Transactional
+    fun changeRole(userId: Long, role: UserRole) {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
+
+        if (user.letsCareerUserId == null) {
+            throw InvalidValueException(UserErrorCode.COMPANY_MEMBER_ROLE_UNCHANGEABLE)
+        }
+        if (user.status == UserStatus.WITHDRAWN) {
+            throw ConflictException(UserErrorCode.WITHDRAWN_USER_ROLE_UNCHANGEABLE)
+        }
+
+        user.changeRole(role)
     }
 
     @Transactional

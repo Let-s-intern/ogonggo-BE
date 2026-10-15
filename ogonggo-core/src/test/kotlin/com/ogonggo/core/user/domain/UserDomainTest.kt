@@ -222,4 +222,28 @@ class UserDomainTest {
         val letsCareer = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt)
         assertThrows(IllegalStateException::class.java) { letsCareer.changePassword("new-encoded") }
     }
+
+    @Test
+    fun `일반 회원 계정은 USER·MENTOR·ADMIN 사이에서 역할을 바꿀 수 있다`() {
+        val user = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt)
+
+        user.changeRole(UserRole.MENTOR)
+        assertEquals(UserRole.MENTOR, user.role)
+        user.changeRole(UserRole.ADMIN)
+        assertEquals(UserRole.ADMIN, user.role)
+        user.changeRole(UserRole.USER)
+        assertEquals(UserRole.USER, user.role)
+
+        assertThrows(IllegalArgumentException::class.java) { user.changeRole(UserRole.COMPANY) }
+    }
+
+    @Test
+    fun `기업 계정과 탈퇴한 계정은 역할을 바꿀 수 없다`() {
+        val company = User.ofCompany(email = "company@example.com", encodedPassword = "encoded", joinedAt = joinedAt)
+        assertThrows(IllegalStateException::class.java) { company.changeRole(UserRole.MENTOR) }
+
+        val withdrawn = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt)
+        withdrawn.withdraw(joinedAt.plusDays(1))
+        assertThrows(IllegalStateException::class.java) { withdrawn.changeRole(UserRole.MENTOR) }
+    }
 }

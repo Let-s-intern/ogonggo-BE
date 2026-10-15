@@ -95,6 +95,17 @@ internal class User private constructor(
         withdrawnAt = now
     }
 
+    /**
+     * 렛츠커리어로 가입한 일반 회원 계정의 역할을 `USER`·`MENTOR`·`ADMIN` 사이에서 바꾼다.
+     * 기업 회원은 계정 형태가 달라 역할을 바꿀 수 없다.
+     */
+    fun changeRole(newRole: UserRole) {
+        check(letsCareerUserId != null) { "기업 회원의 역할은 바꿀 수 없습니다." }
+        check(status != UserStatus.WITHDRAWN) { "탈퇴한 회원의 역할은 바꿀 수 없습니다." }
+        require(newRole in UserRole.GENERAL_MEMBER_ROLES) { "일반 회원 역할로만 바꿀 수 있습니다." }
+        role = newRole
+    }
+
     fun suspend() {
         check(status != UserStatus.WITHDRAWN) { "탈퇴한 사용자는 정지할 수 없습니다." }
         status = UserStatus.SUSPENDED

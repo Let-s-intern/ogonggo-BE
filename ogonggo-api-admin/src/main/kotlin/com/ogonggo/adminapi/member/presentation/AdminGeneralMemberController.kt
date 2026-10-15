@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.member.business.AdminMemberService
+import com.ogonggo.adminapi.member.presentation.request.ChangeGeneralMemberRoleRequest
 import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -8,8 +9,12 @@ import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -48,5 +53,15 @@ class AdminGeneralMemberController(
                 totalPages = result.totalPages,
             ),
         )
+    }
+
+    @PatchMapping("/{userId}/role")
+    override fun changeGeneralMemberRole(
+        @AuthenticationPrincipal adminUserId: Long,
+        @PathVariable("userId") userId: Long,
+        @RequestBody request: ChangeGeneralMemberRoleRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminMemberService.changeGeneralMemberRole(adminUserId, userId, request.generalMemberRole())
+        return SuccessResponse.ok()
     }
 }

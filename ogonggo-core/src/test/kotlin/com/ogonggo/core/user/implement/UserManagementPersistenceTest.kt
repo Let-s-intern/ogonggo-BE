@@ -1,9 +1,12 @@
 package com.ogonggo.core.user.implement
 
+import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
@@ -15,6 +18,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -26,6 +30,7 @@ import org.springframework.test.context.ContextConfiguration
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
     UserManagementReader::class,
+    UserManager::class,
     UserAppender::class,
     UserProfileManager::class,
     CompanyProfileAppender::class,
@@ -33,6 +38,7 @@ import org.springframework.test.context.ContextConfiguration
 )
 internal class UserManagementPersistenceTest @Autowired constructor(
     private val userManagementReader: UserManagementReader,
+    private val userManager: UserManager,
     private val userAppender: UserAppender,
     private val userProfileManager: UserProfileManager,
     private val companyProfileAppender: CompanyProfileAppender,
@@ -122,6 +128,38 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         // then
         assertEquals(listOf(suspended, lastDay, firstDay), inPeriod.members.map { it.userId })
         assertEquals(listOf(suspended), suspendedInPeriod.members.map { it.userId })
+    }
+
+    @Test
+    fun `정지한 회원도 역할을 바꾸며 같은 역할로 바꾸면 그대로 둔다`() {
+        // given
+        val userId = generalMember(letsCareerUserId = 1L)
+        userRepository.findByIdOrNull(userId)!!.suspend()
+        entityManager.flush()
+
+        // when
+        userManager.changeRole(userId, UserRole.MENTOR)
+        userManager.changeRole(userId, UserRole.MENTOR)
+        entityManager.flush()
+        entityManager.clear()
+
+        // then
+        assertEquals(UserRole.MENTOR, userRepository.findByIdOrNull(userId)!!.role)
+    }
+
+    @Test
+    fun `기업 회원과 탈퇴한 회원은 역할을 바꿀 수 없다`() {
+        // given
+        val company = companyMember(email = "hr@ogonggo.co.kr", organizationName = "오공고", managerName = "김담당")
+        val withdrawn = generalMember(letsCareerUserId = 1L)
+        userRepository.findByIdOrNull(withdrawn)!!.withdraw(NOW)
+        entityManager.flush()
+
+        // when & then
+        val companyError = assertThrows(InvalidValueException::class.java) { userManager.changeRole(company, UserRole.MENTOR) }
+        assertEquals(UserErrorCode.COMPANY_MEMBER_ROLE_UNCHANGEABLE, companyError.errorCode)
+        val withdrawnError = assertThrows(ConflictException::class.java) { userManager.changeRole(withdrawn, UserRole.MENTOR) }
+        assertEquals(UserErrorCode.WITHDRAWN_USER_ROLE_UNCHANGEABLE, withdrawnError.errorCode)
     }
 
     @Test
