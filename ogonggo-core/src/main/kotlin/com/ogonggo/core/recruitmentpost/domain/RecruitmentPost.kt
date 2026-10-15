@@ -445,6 +445,12 @@ private fun validatePublishedValues(
         RecruitmentPostContactMethod.OPEN_KAKAO -> require(isHttpUrl(contactValue)) {
             "카카오톡 오픈채팅 링크를 입력해 주세요."
         }
+        RecruitmentPostContactMethod.SLACK -> require(isHttpUrl(contactValue)) {
+            "슬랙 링크를 입력해 주세요."
+        }
+        RecruitmentPostContactMethod.DISCORD -> require(isHttpUrl(contactValue)) {
+            "디스코드 링크를 입력해 주세요."
+        }
     }
 }
 
@@ -492,6 +498,12 @@ private fun validateDraftValues(
             }
             RecruitmentPostContactMethod.OPEN_KAKAO -> require(isHttpUrl(contactValue)) {
                 "카카오톡 오픈채팅 링크를 입력해 주세요."
+            }
+            RecruitmentPostContactMethod.SLACK -> require(isHttpUrl(contactValue)) {
+                "슬랙 링크를 입력해 주세요."
+            }
+            RecruitmentPostContactMethod.DISCORD -> require(isHttpUrl(contactValue)) {
+                "디스코드 링크를 입력해 주세요."
             }
         }
     }
