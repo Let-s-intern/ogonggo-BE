@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.error.InvalidRequestParameterException
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import java.time.LocalDate
 
@@ -11,7 +12,11 @@ internal fun memberSearchCondition(
     status: UserStatus?,
     joinedFrom: LocalDate?,
     joinedTo: LocalDate?,
+    role: UserRole? = null,
 ): UserManagementSearchCondition {
+    if (role != null && role !in UserRole.GENERAL_MEMBER_ROLES) {
+        throw InvalidRequestParameterException("role", "일반 회원 역할(USER·MENTOR·ADMIN)만 거를 수 있습니다.")
+    }
     if (joinedFrom != null && joinedTo != null && joinedFrom.isAfter(joinedTo)) {
         throw InvalidRequestParameterException("joinedFrom", "가입 기간 시작일은 종료일보다 늦을 수 없습니다.")
     }
@@ -20,5 +25,6 @@ internal fun memberSearchCondition(
         joinedFrom = joinedFrom,
         joinedTo = joinedTo,
         keyword = keyword?.takeIf { it.isNotBlank() },
+        role = role,
     )
 }

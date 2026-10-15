@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.member.presentation.response
 
 import com.ogonggo.core.user.domain.UserGrade
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.dto.CompanyMemberDto
 import com.ogonggo.core.user.implement.dto.GeneralMemberDto
@@ -12,6 +13,8 @@ data class AdminGeneralMemberResponse(
     val userId: Long,
     @Schema(description = "렛츠커리어 사용자 식별자")
     val letsCareerUserId: Long?,
+    @Schema(description = "USER·MENTOR·ADMIN 중 하나입니다.")
+    val role: UserRole,
     val status: UserStatus,
     val joinedAt: LocalDateTime,
     @Schema(description = "탈퇴 일시. 탈퇴하지 않았으면 null입니다.")
@@ -41,6 +44,7 @@ data class AdminGeneralMemberResponse(
             return AdminGeneralMemberResponse(
                 userId = member.userId,
                 letsCareerUserId = member.letsCareerUserId,
+                role = member.role,
                 status = member.status,
                 joinedAt = member.joinedAt,
                 withdrawnAt = member.withdrawnAt,

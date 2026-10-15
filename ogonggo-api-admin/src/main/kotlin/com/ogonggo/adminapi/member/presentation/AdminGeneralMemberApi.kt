@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberRespo
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -28,8 +29,8 @@ interface AdminGeneralMemberApi {
         operationId = "listGeneralMembers",
         summary = "일반 회원 목록 조회",
         description = """
-            렛츠커리어로 가입한 일반 회원을 최근 가입 순으로 반환합니다. 관리자·기업 회원은 나오지 않습니다.
-            탈퇴·정지한 회원도 포함하며 status로 거를 수 있습니다.
+            렛츠커리어로 가입한 일반 회원을 최근 가입 순으로 반환합니다. 멘토(MENTOR)와 관리자(ADMIN)도 나오며 기업 회원은 나오지 않습니다.
+            탈퇴·정지한 회원도 포함하며 status로 거를 수 있습니다. role로 USER·MENTOR·ADMIN 중 하나만 거를 수 있습니다.
 
             keyword는 닉네임이나 이메일에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
             joinedFrom·joinedTo는 가입일(YYYY-MM-DD) 범위이며 두 날짜를 모두 포함합니다.
@@ -41,7 +42,7 @@ interface AdminGeneralMemberApi {
             ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 페이지 범위나 필터 값이 올바르지 않거나 가입 기간 시작일이 종료일보다 늦습니다.",
+                description = "BAD_REQUEST: 페이지 범위나 필터 값이 올바르지 않거나, 가입 기간 시작일이 종료일보다 늦거나, role이 COMPANY입니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
@@ -53,5 +54,6 @@ interface AdminGeneralMemberApi {
         status: UserStatus?,
         @Parameter(description = "가입일 시작(포함)") joinedFrom: LocalDate?,
         @Parameter(description = "가입일 끝(포함)") joinedTo: LocalDate?,
+        @Parameter(description = "역할. USER·MENTOR·ADMIN만 받습니다.") role: UserRole?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminGeneralMemberResponse>>>
 }

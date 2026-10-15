@@ -14,4 +14,6 @@ data class UserManagementSearchCondition(
      * 일반 회원은 닉네임·이메일, 기업 회원은 회사명·담당자 이름에서 찾는다.
      */
     val keyword: String? = null,
+    /** 일반 회원 목록에서만 쓴다. 기업 회원 목록은 역할이 하나뿐이다. */
+    val role: UserRole? = null,
 )

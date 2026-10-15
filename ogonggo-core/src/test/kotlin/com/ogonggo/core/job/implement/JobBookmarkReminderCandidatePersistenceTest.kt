@@ -73,6 +73,7 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         val jobId = checkNotNull(job.id)
         val scrappedUserId = appendUser("010-1234-5678", "홍길동")
         val preparingUserId = appendUser("01012345678", "준비중")
+        val mentorUserId = appendUser("01012345004", "멘토", role = UserRole.MENTOR)
         val excludedStatuses = listOf(
             JobApplicationStatus.APPLIED,
             JobApplicationStatus.INTERVIEWING,
@@ -93,6 +94,7 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         (listOf(
             scrappedUserId,
             preparingUserId,
+            mentorUserId,
             suspendedUserId,
             companyUserId,
             deletedBookmarkUserId,
@@ -123,7 +125,7 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         val candidates = reminderReader.readEligibleCandidates(scheduleAt, null, limit = 100)
 
         // then
-        assertEquals(setOf(scrappedUserId, preparingUserId), candidates.map { it.userId }.toSet())
+        assertEquals(setOf(scrappedUserId, preparingUserId, mentorUserId), candidates.map { it.userId }.toSet())
         assertEquals("홍길동", candidates.first { it.userId == scrappedUserId }.recipientName)
         assertEquals("010-1234-5678", candidates.first { it.userId == scrappedUserId }.recipientNo)
         assertTrue(candidates.all { it.postingTitle == "백엔드 개발자" })
@@ -266,8 +268,8 @@ internal class JobBookmarkReminderCandidatePersistenceTest @Autowired constructo
         role: UserRole = UserRole.USER,
         active: Boolean = true,
     ): Long {
-        val user = if (role == UserRole.USER) {
-            User.ofLetsCareer(nextLetsCareerUserId++, LocalDateTime.of(2026, 10, 4, 9, 0))
+        val user = if (role != UserRole.COMPANY) {
+            User.ofLetsCareer(nextLetsCareerUserId++, LocalDateTime.of(2026, 10, 4, 9, 0), isMentor = role == UserRole.MENTOR)
         } else {
             User.ofCompany("company${nextLetsCareerUserId++}@example.com", "encoded", LocalDateTime.of(2026, 10, 4, 9, 0))
         }

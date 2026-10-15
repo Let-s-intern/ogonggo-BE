@@ -2,6 +2,7 @@ package com.ogonggo.core.user.implement
 
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
@@ -40,22 +41,41 @@ internal class UserManagementPersistenceTest @Autowired constructor(
 ) {
 
     @Test
-    fun `일반 회원 목록은 기업 회원과 관리자를 빼고 최근 가입 순으로 주며 프로필이 없는 회원도 싣는다`() {
+    fun `일반 회원 목록은 기업 회원을 빼고 멘토와 관리자를 포함해 최근 가입 순으로 주며 프로필이 없는 회원도 싣는다`() {
         // given
         val older = generalMember(letsCareerUserId = 1L, nickname = "렛츠")
         val withoutProfile = userAppender.append(UserAppendDto(letsCareerUserId = 2L, joinedAt = NOW)).userId
         val admin = generalMember(letsCareerUserId = 3L, nickname = "운영자")
         promoteToAdmin(admin)
+        val mentor = userAppender.append(UserAppendDto(letsCareerUserId = 4L, joinedAt = NOW, isMentor = true)).userId
         companyMember(email = "hr@ogonggo.co.kr", organizationName = "오공고", managerName = "김담당")
 
         // when
         val result = userManagementReader.readGeneralMemberPage(UserManagementSearchCondition(), page = 0, size = 20)
 
         // then
-        assertEquals(listOf(withoutProfile, older), result.members.map { it.userId })
-        assertEquals(2, result.totalElements)
-        assertNull(result.members.first().profile)
+        assertEquals(listOf(mentor, admin, withoutProfile, older), result.members.map { it.userId })
+        assertEquals(listOf(UserRole.MENTOR, UserRole.ADMIN, UserRole.USER, UserRole.USER), result.members.map { it.role })
+        assertEquals(4, result.totalElements)
+        assertNull(result.members[2].profile)
         assertEquals("렛츠", result.members.last().profile?.nickname)
+    }
+
+    @Test
+    fun `일반 회원 목록을 역할로 거른다`() {
+        // given
+        generalMember(letsCareerUserId = 1L)
+        val mentor = userAppender.append(UserAppendDto(letsCareerUserId = 2L, joinedAt = NOW, isMentor = true)).userId
+
+        // when
+        val result = userManagementReader.readGeneralMemberPage(
+            UserManagementSearchCondition(role = UserRole.MENTOR),
+            page = 0,
+            size = 20,
+        )
+
+        // then
+        assertEquals(listOf(mentor), result.members.map { it.userId })
     }
 
     @Test

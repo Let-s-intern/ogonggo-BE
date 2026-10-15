@@ -73,7 +73,7 @@ internal class JobBookmarkReminderQueryRepository(
                 job.recruitmentStatus.eq(JobRecruitmentStatus.RECRUITING),
                 job.recruitmentEndAt.goe(now),
                 job.deletedAt.isNull,
-                user.role.eq(UserRole.USER),
+                user.role.`in`(UserRole.USER, UserRole.MENTOR),
                 user.status.eq(UserStatus.ACTIVE),
                 userProfile.name.isNotNull,
                 userProfile.name.trim().ne(""),

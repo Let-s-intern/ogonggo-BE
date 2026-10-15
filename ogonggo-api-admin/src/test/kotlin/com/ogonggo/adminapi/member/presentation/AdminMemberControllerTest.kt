@@ -6,6 +6,7 @@ import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.adminapi.member.business.AdminMemberService
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.dto.CompanyMemberPageDto
 import com.ogonggo.core.user.implement.dto.GeneralMemberDto
@@ -50,13 +51,14 @@ class AdminMemberControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `일반 회원 목록은 검색어·상태·가입 기간을 조건으로 옮기고 프로필을 펼쳐 준다`() {
+    fun `일반 회원 목록은 검색어·상태·가입 기간·역할을 조건으로 옮기고 프로필을 펼쳐 준다`() {
         // given
         val condition = UserManagementSearchCondition(
             status = UserStatus.ACTIVE,
             joinedFrom = LocalDate.of(2026, 9, 1),
             joinedTo = LocalDate.of(2026, 9, 28),
             keyword = "렛츠",
+            role = UserRole.MENTOR,
         )
         Mockito.`when`(adminMemberService.getGeneralMembers(condition, 0, 20)).thenReturn(
             GeneralMemberPageDto(
@@ -75,11 +77,13 @@ class AdminMemberControllerTest @Autowired constructor(
                     .param("keyword", "렛츠")
                     .param("status", "ACTIVE")
                     .param("joinedFrom", "2026-09-01")
-                    .param("joinedTo", "2026-09-28"),
+                    .param("joinedTo", "2026-09-28")
+                    .param("role", "MENTOR"),
             ),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].userId").value(USER_ID))
+            .andExpect(jsonPath("$.data.items[0].role").value("MENTOR"))
             .andExpect(jsonPath("$.data.items[0].nickname").value("렛츠"))
             .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
@@ -120,9 +124,19 @@ class AdminMemberControllerTest @Autowired constructor(
         Mockito.verifyNoInteractions(adminMemberService)
     }
 
+    @Test
+    fun `일반 회원 목록은 기업 회원 역할로 거를 수 없다`() {
+        mockMvc.perform(admin(get("/api/v1/admin/general-members").param("role", "COMPANY")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(adminMemberService)
+    }
+
     private fun generalMember(): GeneralMemberDto = GeneralMemberDto(
         userId = USER_ID,
         letsCareerUserId = 4821L,
+        role = UserRole.MENTOR,
         status = UserStatus.ACTIVE,
         joinedAt = NOW,
         withdrawnAt = null,

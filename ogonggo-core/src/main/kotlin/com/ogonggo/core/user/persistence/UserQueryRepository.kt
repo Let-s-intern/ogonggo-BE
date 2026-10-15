@@ -30,7 +30,8 @@ internal class UserQueryRepository(
         pageable: Pageable,
     ): Page<Pair<User, UserProfile?>> {
         val predicates = arrayOf(
-            user.role.eq(UserRole.USER),
+            user.role.`in`(UserRole.GENERAL_MEMBER_ROLES),
+            condition.role?.let(user.role::eq),
             *commonPredicates(condition),
             condition.keyword?.takeIf { it.isNotBlank() }?.let {
                 userProfile.nickname.containsIgnoreCase(it).or(userProfile.email.containsIgnoreCase(it))
