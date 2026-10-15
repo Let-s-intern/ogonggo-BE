@@ -128,6 +128,12 @@ data class CreateRecruitmentPostRequest(
                 RecruitmentPostContactMethod.OPEN_KAKAO -> if (!isHttpUrl(contactValue)) {
                     invalid("contactValue", "카카오톡 오픈채팅 링크를 입력해 주세요.")
                 }
+                RecruitmentPostContactMethod.SLACK -> if (!isHttpUrl(contactValue)) {
+                    invalid("contactValue", "슬랙 링크를 입력해 주세요.")
+                }
+                RecruitmentPostContactMethod.DISCORD -> if (!isHttpUrl(contactValue)) {
+                    invalid("contactValue", "디스코드 링크를 입력해 주세요.")
+                }
             }
         }
     }
@@ -213,6 +219,12 @@ data class UpdateRecruitmentPostRequest(
             }
             RecruitmentPostContactMethod.OPEN_KAKAO -> if (!isHttpUrl(contactValue)) {
                 invalid("contactValue", "카카오톡 오픈채팅 링크를 입력해 주세요.")
+            }
+            RecruitmentPostContactMethod.SLACK -> if (!isHttpUrl(contactValue)) {
+                invalid("contactValue", "슬랙 링크를 입력해 주세요.")
+            }
+            RecruitmentPostContactMethod.DISCORD -> if (!isHttpUrl(contactValue)) {
+                invalid("contactValue", "디스코드 링크를 입력해 주세요.")
             }
         }
     }
@@ -305,6 +317,12 @@ data class CreateRecruitmentPostDraftRequest(
             }
             RecruitmentPostContactMethod.OPEN_KAKAO -> if (!isHttpUrl(contactValue)) {
                 invalid("contactValue", "카카오톡 오픈채팅 링크를 입력해 주세요.")
+            }
+            RecruitmentPostContactMethod.SLACK -> if (!isHttpUrl(contactValue)) {
+                invalid("contactValue", "슬랙 링크를 입력해 주세요.")
+            }
+            RecruitmentPostContactMethod.DISCORD -> if (!isHttpUrl(contactValue)) {
+                invalid("contactValue", "디스코드 링크를 입력해 주세요.")
             }
         }
     }

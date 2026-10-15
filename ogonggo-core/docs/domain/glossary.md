@@ -47,7 +47,7 @@
 | 모집글 | `RecruitmentPost` | 사이드 프로젝트·스터디 팀원을 모으는 글 |
 | 모집 유형 | `RecruitmentPostType` | 사이드 프로젝트, 스터디 |
 | 모집 포지션 | `RecruitmentPostPosition` | 백엔드, 프론트엔드, 디자인, 기획, 마케팅, 기타 |
-| 연락 수단 | `RecruitmentPostContactMethod` | 카카오톡 오픈채팅, 이메일 |
+| 연락 수단 | `RecruitmentPostContactMethod` | 카카오톡 오픈채팅, 이메일, 슬랙, 디스코드 |
 | 모집글 지원 기록 | `RecruitmentPostApplication` | 회원이 모집글의 연락처를 열었거나 스크랩을 지원 준비로 옮긴 기록. **실제 지원서 제출이 아닙니다.** |
 | 댓글 신고 | `RecruitmentPostCommentReport` | 모집글 댓글에 대한 신고 |
 | 취준고민, 고민글 | `Concern` | 취업 준비 고민을 묻는 게시판 글. 본문은 모집글처럼 Lexical EditorState JSON이고, 사진은 본문 밖 첨부입니다. |

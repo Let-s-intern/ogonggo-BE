@@ -141,10 +141,18 @@ class RecruitmentPostDomainTest {
         val kakaoException = assertThrows(IllegalArgumentException::class.java) {
             createPostFixture(contactMethod = RecruitmentPostContactMethod.OPEN_KAKAO, contactValue = "not-a-url")
         }
+        val slackException = assertThrows(IllegalArgumentException::class.java) {
+            createPostFixture(contactMethod = RecruitmentPostContactMethod.SLACK, contactValue = "not-a-url")
+        }
+        val discordException = assertThrows(IllegalArgumentException::class.java) {
+            createPostFixture(contactMethod = RecruitmentPostContactMethod.DISCORD, contactValue = "not-a-url")
+        }
 
         // then
         assertEquals("이메일 형식으로 입력해 주세요.", emailException.message)
         assertEquals("카카오톡 오픈채팅 링크를 입력해 주세요.", kakaoException.message)
+        assertEquals("슬랙 링크를 입력해 주세요.", slackException.message)
+        assertEquals("디스코드 링크를 입력해 주세요.", discordException.message)
     }
 
     @Test
