@@ -102,7 +102,7 @@ class Work24Collector(
 
     /**
      * 구인인증번호로 이미 등록했으면 건너뛴다. 운영자가 지운 공고도 등록한 것으로 본다.
-     * 크롤러가 같은 원문을 먼저 등록했어도 건너뛰어 같은 공고가 두 번 보이지 않게 한다.
+     * AI 서버가 같은 원문을 먼저 등록했어도 건너뛰어 같은 공고가 두 번 보이지 않게 한다.
      * 임시로 최소 경력이 [TEMPORARY_MAX_CAREER_YEARS]년보다 긴 공고는 뺀다. 연수는 상세에만 있다.
      */
     private fun importJob(target: Work24CollectionTarget, item: JsonNode): Outcome {

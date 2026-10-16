@@ -198,7 +198,7 @@ data class UserJobDetailResponse(
 }
 
 /**
- * 공고 상세의 '공고 분석' 탭 내용이다. 크롤러가 AI로 만든다.
+ * 공고 상세의 '공고 분석' 탭 내용이다. AI 서버가 만든다.
  * 값이 null인 칸은 공고에서 확인할 수 없다는 뜻이며 '공고에 명시 없음'으로 그린다.
  */
 data class UserJobAnalysisResponse(

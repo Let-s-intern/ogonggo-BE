@@ -161,7 +161,7 @@ data class UserJobResult(
     val hiringProcess: String?,
     val recruitmentNotice: String?,
     val sourceUrl: String?,
-    /** 크롤러가 보낸 원문 HTML이다. 원문이 없는 공고와 기업회원 공고는 null이다. */
+    /** AI 서버가 보낸 원문 HTML이다. 원문이 없는 공고와 기업회원 공고는 null이다. */
     val sourceHtml: String?,
     /** 이메일로 지원받는 공고가 지원서를 받는 주소다. */
     val applyEmail: String?,

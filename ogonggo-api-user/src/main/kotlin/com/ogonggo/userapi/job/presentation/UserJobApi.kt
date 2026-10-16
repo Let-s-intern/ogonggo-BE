@@ -42,7 +42,7 @@ interface UserJobApi {
             보내지 않으면 항상 false입니다.
 
             sort로 정렬을 고릅니다. LATEST는 최신순, VIEW_COUNT는 조회수순이며 조회 수가 같으면 등록 역순입니다.
-            LATEST는 크롤러가 수집한 공고를 먼저 보이고, 그 안에서 늦게 등록한 날의 공고를 먼저 보입니다.
+            LATEST는 AI 서버가 수집한 공고를 먼저 보이고, 그 안에서 늦게 등록한 날의 공고를 먼저 보입니다.
             같은 날 등록한 공고끼리는 한 회사 공고가 몰리지 않도록 섞되, 순서는 요청마다 같습니다.
 
             employmentType, experienceType, jobField(직군), jobRole(직무), region, subRegion으로 목록을 좁힙니다.

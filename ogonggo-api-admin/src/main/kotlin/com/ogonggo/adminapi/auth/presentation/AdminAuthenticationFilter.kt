@@ -16,7 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter
  *
  * 토큰이 유효하면 관리자가 아니어도 인증은 남긴다. 그래야 토큰 없는 요청은 401, 관리자가 아닌 요청은 403으로 나뉜다.
  * 토큰이 없거나 유효하지 않으면 인증 없이 통과시켜 EntryPoint가 401로 응답하게 한다.
- * 크롤러의 내부 경로는 사용자 조회가 필요 없으므로 이 필터를 거치지 않는다.
+ * AI 서버의 내부 경로는 사용자 조회가 필요 없으므로 이 필터를 거치지 않는다.
  */
 class AdminAuthenticationFilter(
     private val tokenParser: AdminAccessTokenParser,

@@ -101,7 +101,7 @@ data class AdminJobSummary(
     }
 }
 
-/** 목록 항목에 본문 칸과 원문 주소·원문을 더한 값이다. 크롤러가 못 읽어 온 본문 칸은 비어 있을 수 있다. */
+/** 목록 항목에 본문 칸과 원문 주소·원문을 더한 값이다. AI 서버가 못 읽어 온 본문 칸은 비어 있을 수 있다. */
 data class AdminJobResult(
     val summary: AdminJobSummary,
     val companyAndTeamIntroduction: String?,
@@ -112,7 +112,7 @@ data class AdminJobResult(
     val benefits: String?,
     val hiringProcess: String?,
     val sourceUrl: String?,
-    /** 크롤러가 보낸 원문 HTML이다. 원문이 없는 공고는 null이다. */
+    /** AI 서버가 보낸 원문 HTML이다. 원문이 없는 공고는 null이다. */
     val sourceHtml: String?,
 ) {
     companion object {

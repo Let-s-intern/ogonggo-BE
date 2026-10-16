@@ -389,7 +389,7 @@ GET /api/v1/users/me
 | 서버 | 키 | 설명 |
 | --- | --- | --- |
 | 렛츠커리어 | `spring.security.internal.api-key` | 내부 API 키. 미설정 시 내부 API 전면 차단 |
-| 오공고 관리자 | `ogonggo.admin.internal.api-key` | 크롤러 등 내부 클라이언트용 키. 미설정 시 내부 API 전면 차단 |
+| 오공고 관리자 | `ogonggo.admin.internal.api-key` | AI 서버 등 내부 클라이언트용 키. 미설정 시 내부 API 전면 차단 |
 | 오공고 | `ogonggo.auth.jwt.secret` | Base64 HS512 시크릿. 렛츠커리어와 공유하지 않는다 |
 | 오공고 | `ogonggo.auth.jwt.access-token-validity` | 기본 30분 |
 | 오공고 | `ogonggo.auth.jwt.refresh-token-validity` | 기본 14일 |
@@ -401,7 +401,7 @@ GET /api/v1/users/me
 
 ## 7-1. 내부 클라이언트 인증
 
-크롤러처럼 사람이 아닌 클라이언트는 사용자 로그인 흐름을 쓰지 않고 관리자 API의 `/api/v1/internal/**`만 사용합니다. 인증은 `X-Internal-Api-Key` 헤더 하나로 하며, 값이 `ogonggo.admin.internal.api-key`와 같을 때만 `ROLE_INTERNAL` 권한을 부여합니다.
+AI 서버처럼 사람이 아닌 클라이언트는 사용자 로그인 흐름을 쓰지 않고 관리자 API의 `/api/v1/internal/**`만 사용합니다. 인증은 `X-Internal-Api-Key` 헤더 하나로 하며, 값이 `ogonggo.admin.internal.api-key`와 같을 때만 `ROLE_INTERNAL` 권한을 부여합니다.
 
 키를 비교할 때는 비교에 걸린 시간으로 키를 추측할 수 없도록 상수 시간 비교를 사용합니다. 키를 설정하지 않으면 어떤 요청도 통과하지 못하므로 내부 API가 전면 차단됩니다. 키가 없거나 다르면 401 `UNAUTHORIZED`로 응답합니다.
 
@@ -440,7 +440,7 @@ GET /api/v1/users/me
 
 **Swagger UI가 API와 같은 오리진에 있어도 CORS 대상입니다.** 브라우저는 GET·HEAD가 아닌 요청에는 동일 오리진에도 `Origin` 헤더를 붙이고, 스프링은 `Origin`이 있으면 CORS 요청으로 처리합니다(Spring 5.0에서 동일 오리진 예외가 빠졌습니다). 게다가 앱이 API Gateway 뒤에 있어 자기 공개 주소를 알지 못해 스스로와 비교할 수도 없습니다. 그래서 Swagger를 띄우는 주소도 목록에 넣어야 하며, 넣지 않으면 조회(GET)는 되는데 `POST`만 `403 Invalid CORS request`로 막혀 원인을 찾기 어렵습니다.
 
-관리자 API의 내부 경로(`X-Internal-Api-Key`)는 크롤러의 서버 간 호출이라 CORS와 무관합니다. CORS는 브라우저만 강제하는 규칙이라 서버 간 호출에는 영향이 없습니다. 같은 이유로 `curl`로는 오리진과 무관하게 호출됩니다.
+관리자 API의 내부 경로(`X-Internal-Api-Key`)는 AI 서버의 서버 간 호출이라 CORS와 무관합니다. CORS는 브라우저만 강제하는 규칙이라 서버 간 호출에는 영향이 없습니다. 같은 이유로 `curl`로는 오리진과 무관하게 호출됩니다.
 
 **확인 필요**: 운영 프론트엔드는 HTTPS인데 API는 아직 ALB의 HTTP 주소(`http://ogonggo-alb-....elb.amazonaws.com`)뿐입니다. HTTPS 페이지에서 HTTP API를 호출하면 CORS 이전에 mixed content로 차단됩니다. ACM 인증서와 ALB 443 리스너, API 서브도메인이 준비되어야 운영에서 실제로 호출할 수 있습니다.
 
@@ -448,7 +448,7 @@ GET /api/v1/users/me
 
 > 관리자도 사용자 API의 로그인으로 `OG-access`를 받는다. 관리자 API는 토큰을 발급하지 않고 검증만 한다.
 
-관리자 콘솔 경로(`/api/v1/admin/**`)는 `AdminAuthenticationFilter`가 `Authorization: Bearer`의 서명·만료·`type=access`를 확인하고, `AdminAuthService`가 `UserReader`로 현재 역할과 상태를 읽어 `ADMIN`이면서 `ACTIVE`일 때만 `ROLE_ADMIN` 권한을 줍니다. 크롤러의 `/api/v1/internal/**`은 이 필터를 거치지 않습니다.
+관리자 콘솔 경로(`/api/v1/admin/**`)는 `AdminAuthenticationFilter`가 `Authorization: Bearer`의 서명·만료·`type=access`를 확인하고, `AdminAuthService`가 `UserReader`로 현재 역할과 상태를 읽어 `ADMIN`이면서 `ACTIVE`일 때만 `ROLE_ADMIN` 권한을 줍니다. AI 서버의 `/api/v1/internal/**`은 이 필터를 거치지 않습니다.
 
 역할은 토큰에 없으므로 요청마다 조회합니다. 역할을 회수하거나 계정을 정지하면 액세스 토큰이 만료되기 전이라도 다음 요청부터 막힙니다. 콘솔 안에서 권한을 더 나누지 않습니다.
 

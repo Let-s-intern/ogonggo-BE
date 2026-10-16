@@ -41,7 +41,7 @@ class JobReader internal constructor(
     fun existsByExternalId(source: ContentSource, externalId: String): Boolean =
         jobRepository.existsBySourceAndExternalId(source, externalId)
 
-    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 자신이 등록한 공고만 다룬다. */
+    /** AI 서버가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. AI 서버는 자신이 등록한 공고만 다룬다. */
     fun readCrawledBySourceUrl(sourceUrl: String): Job =
         jobRepository.findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
