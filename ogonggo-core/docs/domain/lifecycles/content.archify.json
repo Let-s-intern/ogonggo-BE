@@ -28,7 +28,7 @@
       "id": "published", "type": "success", "label": "게시", "sublabel": "회원에게 노출", "lane": "main", "col": 2, "step": "02", "tag": "PUBLISHED",
       "sources": [
         { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/Job.kt", "line": 528, "end_line": 536, "label": "Job.publish" },
-        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/job/business/CrawlerJobService.kt", "line": 103, "label": "크롤러 등록 시 게시" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/job/business/AiJobService.kt", "line": 103, "label": "크롤러 등록 시 게시" },
         { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/ingestion/work24/implement/Work24JobMapper.kt", "line": 112, "label": "고용24 수집 시 게시" }
       ]
     },

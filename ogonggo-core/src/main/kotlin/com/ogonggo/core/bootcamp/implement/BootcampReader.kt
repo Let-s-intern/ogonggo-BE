@@ -39,7 +39,7 @@ class BootcampReader internal constructor(
     fun existsByExternalId(source: ContentSource, externalId: String): Boolean =
         bootcampRepository.existsBySourceAndExternalId(source, externalId)
 
-    /** 크롤러가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. 크롤러는 자신이 등록한 부트캠프만 다룬다. */
+    /** AI 서버가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. AI 서버는 자신이 등록한 부트캠프만 다룬다. */
     fun readCrawledBySourceUrl(sourceUrl: String): Bootcamp =
         bootcampRepository.findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)

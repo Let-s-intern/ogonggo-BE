@@ -4,7 +4,7 @@ import com.ogonggo.core.enumeration.EnumField
 
 /**
  * 렛츠커리어 콘텐츠가 다루는 취업 준비 단계다. 공고가 요구하는 제출물·전형과 맞춰 추천에 쓴다.
- * 크롤러가 AI로 콘텐츠마다 붙인다.
+ * AI 서버가 콘텐츠마다 붙인다.
  */
 enum class LetsCareerContentTopic(
     override val code: Int,

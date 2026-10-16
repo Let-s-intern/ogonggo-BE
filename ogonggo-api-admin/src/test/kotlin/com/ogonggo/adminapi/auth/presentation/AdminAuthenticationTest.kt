@@ -90,7 +90,7 @@ class AdminAuthenticationTest @Autowired constructor(
             .andExpect(jsonPath("$.data.id").value(693))
     }
 
-    /** 크롤러 키는 내부 경로 전용이다. 키가 맞아도 관리자 콘솔은 열리지 않는다. */
+    /** AI 서버 키는 내부 경로 전용이다. 키가 맞아도 관리자 콘솔은 열리지 않는다. */
     @Test
     fun `내부 API 키로는 관리자 콘솔을 호출할 수 없다`() {
         mockMvc.perform(get(JOB_PATH).header(INTERNAL_API_KEY_HEADER, INTERNAL_API_KEY))
