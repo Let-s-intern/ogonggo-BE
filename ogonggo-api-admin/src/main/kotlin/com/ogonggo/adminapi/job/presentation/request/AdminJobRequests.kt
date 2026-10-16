@@ -63,11 +63,11 @@ data class ReplaceAdminTodayJobsRequest(
     }
 }
 
-/** 오늘의 공고 카드에 공고와 함께 보여 줄 추천 문구다. 길이는 카드 폭에서 한 줄 남짓 들어가는 만큼으로 둔다. */
+/** 오늘의 공고 카드에 공고와 함께 보여 줄 추천 문구다. 제목은 카드 폭에서 한 줄 남짓, 설명은 여러 줄로 200자까지 둔다. */
 data class AdminTodayJobRequest(
     @field:Positive val jobId: Long,
     @field:NotBlank @field:Size(max = 30) val recommendationTitle: String,
-    @field:NotBlank @field:Size(max = 50) val recommendationDescription: String,
+    @field:NotBlank @field:Size(max = 200) val recommendationDescription: String,
 ) {
     fun toDto(): TodayJobDto.Request = TodayJobDto.Request(
         jobId = jobId,
