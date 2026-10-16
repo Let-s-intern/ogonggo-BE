@@ -278,7 +278,7 @@ class AdminJobControllerTest @Autowired constructor(
             todayJobItem(title = " ") to "jobs[0].recommendationTitle",
             todayJobItem(title = "가".repeat(31)) to "jobs[0].recommendationTitle",
             todayJobItem(description = "") to "jobs[0].recommendationDescription",
-            todayJobItem(description = "가".repeat(51)) to "jobs[0].recommendationDescription",
+            todayJobItem(description = "가".repeat(201)) to "jobs[0].recommendationDescription",
         ).forEach { (item, field) ->
             mockMvc.perform(admin(putTodayJobs("""{"jobs": [$item]}""")))
                 .andExpect(status().isBadRequest)

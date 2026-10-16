@@ -60,6 +60,6 @@ internal class TodayJob(
     companion object {
         /** 카드 폭에서 한 줄 남짓 들어가는 길이다. */
         const val RECOMMENDATION_TITLE_MAX_LENGTH = 30
-        const val RECOMMENDATION_DESCRIPTION_MAX_LENGTH = 50
+        const val RECOMMENDATION_DESCRIPTION_MAX_LENGTH = 200
     }
 }
