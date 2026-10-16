@@ -64,6 +64,25 @@ internal class User private constructor(
     var fcmToken: String? = null /* 현재 사용자의 FCM 알림 수신 토큰 */
         protected set
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "inflow_source", length = 20)
+    var inflowSource: UserInflowSource? = null /* 렛츠커리어 기존 회원인지 오공고로 처음 들어온 회원인지. 기업 회원과 아직 모르는 계정은 없다 */
+        protected set
+
+    /**
+     * 한 번만 정한다. 이미 정했거나 기업 회원이면 그대로 둔다.
+     * 렛츠커리어 첫 로그인 서비스로 알 수 있으면(knownInflowSource) 그 값을 쓰고,
+     * 모르면 렛츠커리어 가입 일시와 오공고 가입 일시를 비교한다. 둘 다 없으면 비워 두고 다음 로그인에 다시 시도한다.
+     */
+    fun classifyInflowSource(knownInflowSource: UserInflowSource?, letsCareerJoinedAt: LocalDateTime?) {
+        if (inflowSource != null || letsCareerUserId == null) {
+            return
+        }
+
+        inflowSource = knownInflowSource
+            ?: letsCareerJoinedAt?.let { UserInflowSource.classify(it, joinedAt) }
+    }
+
     fun changeFcmToken(fcmToken: String) {
         require(fcmToken.isNotBlank()) { "FCM 토큰은 비어 있을 수 없습니다." }
         this.fcmToken = fcmToken
@@ -121,7 +140,13 @@ internal class User private constructor(
          * 렛츠커리어 토큰 교환으로 만들어지는 일반 회원 계정.
          * 렛츠커리어 멘토는 이때 한 번만 멘토로 만든다. 그 뒤의 역할은 오공고 관리자가 바꾼다.
          */
-        fun ofLetsCareer(letsCareerUserId: Long, joinedAt: LocalDateTime, isMentor: Boolean = false): User {
+        fun ofLetsCareer(
+            letsCareerUserId: Long,
+            joinedAt: LocalDateTime,
+            isMentor: Boolean = false,
+            knownInflowSource: UserInflowSource? = null,
+            letsCareerJoinedAt: LocalDateTime? = null,
+        ): User {
             require(letsCareerUserId > 0) { "렛츠커리어 사용자 식별자는 양수여야 합니다." }
 
             return User(
@@ -131,7 +156,7 @@ internal class User private constructor(
                 role = if (isMentor) UserRole.MENTOR else UserRole.USER,
                 status = UserStatus.ACTIVE,
                 joinedAt = joinedAt,
-            )
+            ).apply { classifyInflowSource(knownInflowSource, letsCareerJoinedAt) }
         }
 
         /**

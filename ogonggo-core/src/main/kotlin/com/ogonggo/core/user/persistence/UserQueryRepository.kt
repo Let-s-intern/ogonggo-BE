@@ -32,6 +32,7 @@ internal class UserQueryRepository(
         val predicates = arrayOf(
             user.role.`in`(UserRole.GENERAL_MEMBER_ROLES),
             condition.role?.let(user.role::eq),
+            condition.inflowSource?.let(user.inflowSource::eq),
             *commonPredicates(condition),
             condition.keyword?.takeIf { it.isNotBlank() }?.let {
                 userProfile.nickname.containsIgnoreCase(it).or(userProfile.email.containsIgnoreCase(it))

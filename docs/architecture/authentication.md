@@ -167,6 +167,16 @@ Business Service는 `userId: Long?`를 받고 `null`이면 북마크 저장소�
 
 멘토 반영을 최초 가입 한 번으로 둔 이유는 오공고 관리자가 역할을 바꿀 수 있기 때문입니다. 로그인마다 렛츠커리어 값을 따라가면 관리자가 내린 멘토가 다음 로그인에 다시 올라갑니다. 이 기능 전에 가입한 렛츠커리어 멘토와 가입 이후 렛츠커리어에서 멘토가 된 사람은 자동으로 바뀌지 않으므로 관리자가 바꿉니다.
 
+### 유입 구분
+
+일반 회원이 렛츠커리어를 쓰다가 오공고로 넘어왔는지(`LETSCAREER`), 오공고에서 로그인하려다 렛츠커리어 계정을 처음 만들었는지(`OGONGGO`)를 `users.inflow_source`에 둡니다. 관리자 일반 회원 목록이 응답에 싣고 `inflowSource`로 거릅니다.
+
+**1순위: 첫 로그인 서비스.** 렛츠커리어는 가입한 계정이 처음 로그인한 서비스를 `user.first_sign_in_service`에 남기고 verify 응답의 `firstSignInService`로 줍니다. 렛츠커리어 자체 화면(이메일 로그인, 프로퍼티 화이트리스트로 돌아오는 소셜 로그인)이면 `LETSCAREER`, SSO 로그인이나 DB 화이트리스트로 돌아오는 소셜 로그인이면 그 화이트리스트 항목의 `service_name`입니다. 오공고는 이 값이 `ogonggo.letscareer.sso-service-name`과 같으면 `OGONGGO`, `LETSCAREER`이거나 다른 렛츠커리어 서비스(VOD 등)면 `LETSCAREER`로 정합니다. 가입 직후 렛츠커리어에서 무언가 하고 바로 오공고로 넘어와도 렛츠커리어에서 먼저 로그인했으므로 정확히 `LETSCAREER`로 잡힙니다.
+
+**2순위: 가입 일시.** 첫 로그인 서비스를 기록하기 전에 만든 렛츠커리어 계정은 `firstSignInService`가 null입니다. 이때만 verify 응답의 `createdAt`(렛츠커리어 가입 일시)이 오공고 가입 일시(`joined_at`)보다 1시간 넘게 앞서면 `LETSCAREER`, 아니면 `OGONGGO`로 봅니다(`UserInflowSource.OGONGGO_SIGN_UP_WINDOW`). `sso-service-name`을 설정하지 않았을 때 `LETSCAREER`가 아닌 값도 이 기준으로 넘어갑니다. 두 서버 모두 한국 시간으로 일시를 저장하므로 그대로 비교합니다.
+
+한 번 정하면 다시 계산하지 않습니다. 계정을 만들 때 정하고, 값이 비어 있으면 다음 로그인에 채웁니다. 이 기능 전에 가입한 오공고 회원은 운영 DB에 한 번 채워 넣으며, 그때는 가입 일시에 더해 오공고 가입 전 렛츠커리어 프로그램·리드 신청 이력이 있으면 `LETSCAREER`로 봅니다. 기업 회원은 렛츠커리어를 거치지 않으므로 비워 둡니다.
+
 ### 기업 회원가입과 로그인
 
 기업 회원은 렛츠커리어를 거치지 않습니다. 오공고가 이메일과 비밀번호를 직접 소유하는 유일한 지점입니다.
@@ -395,6 +405,7 @@ GET /api/v1/users/me
 | 오공고 | `ogonggo.auth.jwt.refresh-token-validity` | 기본 14일 |
 | 오공고 | `ogonggo.letscareer.base-url` | 렛츠커리어 서버 주소 |
 | 오공고 | `ogonggo.letscareer.internal-api-key` | 렛츠커리어와 같은 값 |
+| 오공고 | `ogonggo.letscareer.sso-service-name` | 렛츠커리어 `sso_redirect_whitelist.service_name`에 등록된 오공고 이름. 비우면 [유입 구분](#유입-구분)이 가입 일시 기준으로 넘어간다 |
 | 오공고 | `spring.data.redis.host`, `spring.data.redis.port` | 리프레시 토큰 저장소 |
 
 두 서버의 내부 API 키는 같은 값이어야 하며, JWT 시크릿은 반드시 서로 달라야 합니다.

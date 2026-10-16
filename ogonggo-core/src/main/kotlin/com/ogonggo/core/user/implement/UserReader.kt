@@ -72,6 +72,7 @@ internal fun User.toAccount(): UserAccountDto = UserAccountDto(
     status = status,
     role = role,
     joinedAt = joinedAt,
+    inflowSource = inflowSource,
 )
 
 private fun User.requiredId(): Long = checkNotNull(id) { "사용자 식별자가 없습니다." }

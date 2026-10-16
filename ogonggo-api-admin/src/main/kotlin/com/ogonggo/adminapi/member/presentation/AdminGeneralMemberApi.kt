@@ -6,6 +6,7 @@ import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberRespo
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import io.swagger.v3.oas.annotations.Operation
@@ -35,6 +36,7 @@ interface AdminGeneralMemberApi {
         description = """
             렛츠커리어로 가입한 일반 회원을 최근 가입 순으로 반환합니다. 멘토(MENTOR)와 관리자(ADMIN)도 나오며 기업 회원은 나오지 않습니다.
             탈퇴·정지한 회원도 포함하며 status로 거를 수 있습니다. role로 USER·MENTOR·ADMIN 중 하나만 거를 수 있습니다.
+            inflowSource로 렛츠커리어 기존 회원(LETSCAREER)과 오공고 신규 유입(OGONGGO)을 거를 수 있습니다.
 
             keyword는 닉네임이나 이메일에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
             joinedFrom·joinedTo는 가입일(YYYY-MM-DD) 범위이며 두 날짜를 모두 포함합니다.
@@ -59,6 +61,7 @@ interface AdminGeneralMemberApi {
         @Parameter(description = "가입일 시작(포함)") joinedFrom: LocalDate?,
         @Parameter(description = "가입일 끝(포함)") joinedTo: LocalDate?,
         @Parameter(description = "역할. USER·MENTOR·ADMIN만 받습니다.") role: UserRole?,
+        @Parameter(description = "유입 구분. 아직 정해지지 않은 회원은 어느 값으로 걸러도 나오지 않습니다.") inflowSource: UserInflowSource?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminGeneralMemberResponse>>>
 
     @Operation(

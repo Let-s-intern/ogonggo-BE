@@ -5,11 +5,13 @@ import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserGrade
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.user.implement.UserAppender
+import com.ogonggo.core.user.implement.UserManager
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
 import com.ogonggo.core.user.implement.dto.UserProfileJobInfoDto
@@ -18,6 +20,7 @@ import com.ogonggo.userapi.user.implement.LetsCareerJobProfile
 import com.ogonggo.userapi.user.implement.LetsCareerUserClient
 import com.ogonggo.userapi.auth.implement.JwtProperties
 import com.ogonggo.userapi.auth.implement.LetsCareerAuthClient
+import com.ogonggo.userapi.auth.implement.LetsCareerProperties
 import com.ogonggo.userapi.auth.implement.LetsCareerUser
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.auth.implement.RefreshTokenStore
@@ -47,6 +50,7 @@ class UserAuthServiceTest {
     private val userReader = Mockito.mock(UserReader::class.java)
     private val letsCareerUserClient = Mockito.mock(LetsCareerUserClient::class.java)
     private val userAppender = Mockito.mock(UserAppender::class.java)
+    private val userManager = Mockito.mock(UserManager::class.java)
     private val userProfileManager = Mockito.mock(UserProfileManager::class.java)
     private val tokenProvider = Mockito.mock(OgonggoTokenProvider::class.java)
     private val refreshTokenStore = Mockito.mock(RefreshTokenStore::class.java)
@@ -60,6 +64,7 @@ class UserAuthServiceTest {
         userReader = userReader,
         letsCareerUserClient = letsCareerUserClient,
         userAppender = userAppender,
+        userManager = userManager,
         userProfileManager = userProfileManager,
         tokenProvider = tokenProvider,
         refreshTokenStore = refreshTokenStore,
@@ -67,6 +72,7 @@ class UserAuthServiceTest {
         eventPublisher = eventPublisher,
         jwtProperties = JWT_PROPERTIES,
         transactionTemplate = transactionTemplate,
+        letsCareerProperties = LETSCAREER_PROPERTIES,
         clock = clock,
     )
 
@@ -137,6 +143,63 @@ class UserAuthServiceTest {
     }
 
     @Test
+    fun `첫 로그인이면 렛츠커리어 가입 일시를 계정 생성에 넘긴다`() {
+        stubLetsCareerUser(joinedAt = LETSCAREER_JOINED_AT)
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
+        val appendCommand = UserAppendDto(LETSCAREER_USER_ID, NOW, letsCareerJoinedAt = LETSCAREER_JOINED_AT)
+        Mockito.`when`(userAppender.append(appendCommand))
+            .thenReturn(activeAccount(inflowSource = UserInflowSource.LETSCAREER))
+        stubIssuedTokens()
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verify(userAppender).append(appendCommand)
+        Mockito.verifyNoInteractions(userManager)
+    }
+
+    @Test
+    fun `유입 구분이 비어 있는 기존 계정은 로그인할 때 채운다`() {
+        stubLetsCareerUser(joinedAt = LETSCAREER_JOINED_AT)
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(activeAccount())
+        stubIssuedTokens()
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verify(userManager).classifyInflowSource(USER_ID, null, LETSCAREER_JOINED_AT)
+    }
+
+    @Test
+    fun `오공고에서 처음 로그인한 렛츠커리어 계정은 오공고 신규 유입으로 만든다`() {
+        stubLetsCareerUser(joinedAt = LETSCAREER_JOINED_AT, firstSignInService = OGONGGO_SSO_SERVICE_NAME)
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID)).thenReturn(null)
+        val appendCommand = UserAppendDto(
+            LETSCAREER_USER_ID,
+            NOW,
+            knownInflowSource = UserInflowSource.OGONGGO,
+            letsCareerJoinedAt = LETSCAREER_JOINED_AT,
+        )
+        Mockito.`when`(userAppender.append(appendCommand))
+            .thenReturn(activeAccount(inflowSource = UserInflowSource.OGONGGO))
+        stubIssuedTokens()
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verify(userAppender).append(appendCommand)
+    }
+
+    @Test
+    fun `유입 구분이 정해진 계정은 다시 계산하지 않는다`() {
+        stubLetsCareerUser(joinedAt = LETSCAREER_JOINED_AT)
+        Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID))
+            .thenReturn(activeAccount(inflowSource = UserInflowSource.OGONGGO))
+        stubIssuedTokens()
+
+        service.signInWithLetsCareer(LC_ACCESS_TOKEN)
+
+        Mockito.verifyNoInteractions(userManager)
+    }
+
+    @Test
     fun `정지된 사용자는 토큰을 발급받지 못한다`() {
         stubLetsCareerUser()
         Mockito.`when`(userReader.readByLetsCareerUserId(LETSCAREER_USER_ID))
@@ -196,7 +259,11 @@ class UserAuthServiceTest {
         Mockito.verifyNoInteractions(tokenProvider)
     }
 
-    private fun stubLetsCareerUser(isMentor: Boolean = false) {
+    private fun stubLetsCareerUser(
+        isMentor: Boolean = false,
+        joinedAt: LocalDateTime? = null,
+        firstSignInService: String? = null,
+    ) {
         Mockito.`when`(letsCareerAuthClient.verify(LC_ACCESS_TOKEN)).thenReturn(
             LetsCareerUser(
                 userId = LETSCAREER_USER_ID,
@@ -209,6 +276,8 @@ class UserAuthServiceTest {
                 isAdmin = false,
                 updatedAt = LETSCAREER_UPDATED_AT,
                 isMentor = isMentor,
+                joinedAt = joinedAt,
+                firstSignInService = firstSignInService,
             ),
         )
     }
@@ -220,6 +289,7 @@ class UserAuthServiceTest {
 
     private fun activeAccount(
         status: UserStatus = UserStatus.ACTIVE,
+        inflowSource: UserInflowSource? = null,
     ): UserAccountDto =
         UserAccountDto(
             userId = USER_ID,
@@ -228,6 +298,7 @@ class UserAuthServiceTest {
             status = status,
             role = UserRole.USER,
             joinedAt = JOINED_AT,
+            inflowSource = inflowSource,
         )
 
     @Test
@@ -305,6 +376,13 @@ class UserAuthServiceTest {
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 27, 10, 0)
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private val EMPTY_JOB_INFO = UserProfileJobInfoDto(null, null, null, null, null, null, null, null)
+        private const val OGONGGO_SSO_SERVICE_NAME = "오공고"
+        private val LETSCAREER_PROPERTIES = LetsCareerProperties(
+            baseUrl = "http://letscareer.test",
+            internalApiKey = "internal-key",
+            ssoServiceName = OGONGGO_SSO_SERVICE_NAME,
+        )
+        private val LETSCAREER_JOINED_AT: LocalDateTime = LocalDateTime.of(2025, 3, 2, 14, 30)
         private val LETSCAREER_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 20, 9, 0)
         private val LETSCAREER_JOB_PROFILE_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 10, 9, 0)
         private const val USER_ID = 17L

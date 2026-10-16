@@ -16,4 +16,6 @@ data class UserManagementSearchCondition(
     val keyword: String? = null,
     /** 일반 회원 목록에서만 쓴다. 기업 회원 목록은 역할이 하나뿐이다. */
     val role: UserRole? = null,
+    /** 일반 회원 목록에서만 쓴다. 아직 정하지 못한 회원은 어느 값으로 걸러도 나오지 않는다. */
+    val inflowSource: UserInflowSource? = null,
 )

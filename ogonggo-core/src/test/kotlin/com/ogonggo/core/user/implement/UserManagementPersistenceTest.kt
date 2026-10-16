@@ -3,6 +3,7 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -82,6 +83,39 @@ internal class UserManagementPersistenceTest @Autowired constructor(
 
         // then
         assertEquals(listOf(mentor), result.members.map { it.userId })
+    }
+
+    @Test
+    fun `일반 회원 목록을 유입 구분으로 거르며 나중에 채운 회원도 걸린다`() {
+        // given
+        val existing = userAppender.append(
+            UserAppendDto(letsCareerUserId = 1L, joinedAt = NOW, letsCareerJoinedAt = NOW.minusYears(1)),
+        ).userId
+        val newcomer = userAppender.append(
+            UserAppendDto(letsCareerUserId = 2L, joinedAt = NOW, letsCareerJoinedAt = NOW.minusMinutes(5)),
+        ).userId
+        val filledLater = userAppender.append(UserAppendDto(letsCareerUserId = 3L, joinedAt = NOW)).userId
+        userAppender.append(UserAppendDto(letsCareerUserId = 4L, joinedAt = NOW))
+        userManager.classifyInflowSource(filledLater, null, NOW.minusSeconds(30))
+        entityManager.flush()
+        entityManager.clear()
+
+        // when
+        val letsCareer = userManagementReader.readGeneralMemberPage(
+            UserManagementSearchCondition(inflowSource = UserInflowSource.LETSCAREER),
+            page = 0,
+            size = 20,
+        )
+        val ogonggo = userManagementReader.readGeneralMemberPage(
+            UserManagementSearchCondition(inflowSource = UserInflowSource.OGONGGO),
+            page = 0,
+            size = 20,
+        )
+
+        // then
+        assertEquals(listOf(existing), letsCareer.members.map { it.userId })
+        assertEquals(listOf(filledLater, newcomer), ogonggo.members.map { it.userId })
+        assertEquals(UserInflowSource.OGONGGO, ogonggo.members.first().inflowSource)
     }
 
     @Test

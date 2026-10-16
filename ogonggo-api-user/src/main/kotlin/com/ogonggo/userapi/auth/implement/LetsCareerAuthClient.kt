@@ -3,6 +3,7 @@ package com.ogonggo.userapi.auth.implement
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.userapi.auth.error.AuthErrorCode
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
@@ -26,7 +27,28 @@ data class LetsCareerUser(
     val isMentor: Boolean = false,
     /** 닉네임만의 최종 수정 일시다. 렛츠커리어가 아직 주지 않거나 한 번도 고친 적 없으면 null이다. */
     val nicknameUpdatedAt: LocalDateTime? = null,
-)
+    /** 렛츠커리어 가입 일시. 렛츠커리어가 아직 주지 않으면 null이다. */
+    val joinedAt: LocalDateTime? = null,
+    /** 계정이 처음 로그인한 서비스. LETSCAREER 또는 SSO 화이트리스트의 서비스 이름이며, 기록 전에 만든 계정은 null이다. */
+    val firstSignInService: String? = null,
+) {
+    /**
+     * 첫 로그인 서비스로 유입 구분을 알 수 있으면 돌려준다. 모르면 null이고 가입 일시로 정한다.
+     * 렛츠커리어 화면이나 다른 렛츠커리어 서비스(VOD 등)에서 처음 로그인했으면 렛츠커리어 기존 회원이다.
+     * 오공고의 SSO 서비스 이름을 설정하지 않았으면 오공고에서 처음 로그인했는지 알 수 없으므로 렛츠커리어 화면에서 처음 로그인한 경우만 가른다.
+     */
+    fun knownInflowSource(ogonggoSsoServiceName: String?): UserInflowSource? = when {
+        firstSignInService == null -> null
+        firstSignInService == LETSCAREER_SIGN_IN_SERVICE -> UserInflowSource.LETSCAREER
+        ogonggoSsoServiceName.isNullOrBlank() -> null
+        firstSignInService == ogonggoSsoServiceName -> UserInflowSource.OGONGGO
+        else -> UserInflowSource.LETSCAREER
+    }
+
+    companion object {
+        private const val LETSCAREER_SIGN_IN_SERVICE = "LETSCAREER"
+    }
+}
 
 @Component
 class LetsCareerAuthClient(
@@ -90,6 +112,9 @@ internal data class VerifyResponse(
     val profileImageUrl: String?,
     val isAdmin: Boolean?,
     val isMentor: Boolean? = null,
+    /** 렛츠커리어 가입 일시. 이 값을 싣기 전의 렛츠커리어가 응답해도 로그인이 깨지지 않도록 비어 있을 수 있다. */
+    val createdAt: LocalDateTime? = null,
+    val firstSignInService: String? = null,
     val updatedAt: LocalDateTime?,
 ) {
     /** 렛츠커리어가 주는 형태를 오공고가 쓰는 형태로 옮긴다. */
@@ -106,6 +131,8 @@ internal data class VerifyResponse(
         isAdmin = isAdmin ?: false,
         // 렛츠커리어가 아직 값을 주지 않으면 멘토가 아닌 것으로 본다.
         isMentor = isMentor ?: false,
+        joinedAt = createdAt,
+        firstSignInService = firstSignInService,
         updatedAt = updatedAt,
         nicknameUpdatedAt = nicknameUpdatedAt,
     )

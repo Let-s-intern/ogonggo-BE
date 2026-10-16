@@ -54,6 +54,7 @@ import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserStatus
 import org.springframework.stereotype.Component
 
@@ -132,6 +133,7 @@ class EnumOptionReader {
             // 회원
             enumOptionsOf<UserRole>(),
             enumOptionsOf<UserStatus>(),
+            enumOptionsOf<UserInflowSource>(),
             enumOptionsOf<UserGrade>(),
             enumOptionsOf<LetsCareerAuthProvider>(),
         )
