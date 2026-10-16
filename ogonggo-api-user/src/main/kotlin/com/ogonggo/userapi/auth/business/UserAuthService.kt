@@ -3,6 +3,7 @@ package com.ogonggo.userapi.auth.business
 import com.ogonggo.core.error.UnauthorizedException
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.user.implement.UserAppender
+import com.ogonggo.core.user.implement.UserManager
 import com.ogonggo.core.user.implement.UserProfileManager
 import com.ogonggo.core.user.implement.dto.UserProfileSyncDto
 import com.ogonggo.core.user.implement.UserReader
@@ -11,6 +12,7 @@ import com.ogonggo.userapi.auth.implement.LetsCareerAuthClient
 import com.ogonggo.userapi.auth.implement.LetsCareerUser
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
 import com.ogonggo.userapi.auth.implement.JwtProperties
+import com.ogonggo.userapi.auth.implement.LetsCareerProperties
 import com.ogonggo.userapi.auth.implement.RefreshTokenStore
 import com.ogonggo.userapi.auth.implement.SignInValidator
 import com.ogonggo.userapi.auth.error.AuthErrorCode
@@ -27,6 +29,7 @@ class UserAuthService(
     private val userReader: UserReader,
     private val letsCareerUserClient: LetsCareerUserClient,
     private val userAppender: UserAppender,
+    private val userManager: UserManager,
     private val userProfileManager: UserProfileManager,
     private val tokenProvider: OgonggoTokenProvider,
     private val refreshTokenStore: RefreshTokenStore,
@@ -34,6 +37,7 @@ class UserAuthService(
     private val eventPublisher: ApplicationEventPublisher,
     private val jwtProperties: JwtProperties,
     private val transactionTemplate: TransactionTemplate,
+    private val letsCareerProperties: LetsCareerProperties,
     private val clock: Clock,
 ) {
 
@@ -64,10 +68,22 @@ class UserAuthService(
 
     private fun synchronizeAccount(letsCareerUser: LetsCareerUser, now: LocalDateTime): SynchronizedAccount {
         val existingAccount = userReader.readByLetsCareerUserId(letsCareerUser.userId)
+        val knownInflowSource = letsCareerUser.knownInflowSource(letsCareerProperties.ssoServiceName)
         val account = existingAccount ?: userAppender.append(
-            UserAppendDto(letsCareerUserId = letsCareerUser.userId, joinedAt = now, isMentor = letsCareerUser.isMentor),
+            UserAppendDto(
+                letsCareerUserId = letsCareerUser.userId,
+                joinedAt = now,
+                isMentor = letsCareerUser.isMentor,
+                knownInflowSource = knownInflowSource,
+                letsCareerJoinedAt = letsCareerUser.joinedAt,
+            ),
         )
         signInValidator.validate(account.status)
+
+        // 이 기능 전에 가입했거나 렛츠커리어가 값을 주지 않았던 계정만 여기서 채운다. 한 번 정하면 다시 계산하지 않는다.
+        if (account.inflowSource == null) {
+            userManager.classifyInflowSource(account.userId, knownInflowSource, letsCareerUser.joinedAt)
+        }
 
         userProfileManager.sync(letsCareerUser.toSyncCommand(account.userId, now))
 

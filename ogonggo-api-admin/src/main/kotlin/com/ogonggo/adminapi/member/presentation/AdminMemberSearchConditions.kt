@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.error.InvalidRequestParameterException
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -13,6 +14,7 @@ internal fun memberSearchCondition(
     joinedFrom: LocalDate?,
     joinedTo: LocalDate?,
     role: UserRole? = null,
+    inflowSource: UserInflowSource? = null,
 ): UserManagementSearchCondition {
     if (role != null && role !in UserRole.GENERAL_MEMBER_ROLES) {
         throw InvalidRequestParameterException("role", "일반 회원 역할(USER·MENTOR·ADMIN)만 거를 수 있습니다.")
@@ -26,5 +28,6 @@ internal fun memberSearchCondition(
         joinedTo = joinedTo,
         keyword = keyword?.takeIf { it.isNotBlank() },
         role = role,
+        inflowSource = inflowSource,
     )
 }

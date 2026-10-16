@@ -54,6 +54,61 @@ class UserDomainTest {
     }
 
     @Test
+    fun `렛츠커리어 가입 후 1시간이 지나 오공고에 가입하면 렛츠커리어 기존 회원이다`() {
+        val user = User.ofLetsCareer(
+            letsCareerUserId = 1L,
+            joinedAt = joinedAt,
+            letsCareerJoinedAt = joinedAt.minusHours(1).minusSeconds(1),
+        )
+
+        assertEquals(UserInflowSource.LETSCAREER, user.inflowSource)
+    }
+
+    @Test
+    fun `렛츠커리어 가입 후 1시간 안에 오공고에 가입하면 오공고 신규 유입이다`() {
+        val user = User.ofLetsCareer(
+            letsCareerUserId = 1L,
+            joinedAt = joinedAt,
+            letsCareerJoinedAt = joinedAt.minusHours(1),
+        )
+
+        assertEquals(UserInflowSource.OGONGGO, user.inflowSource)
+    }
+
+    @Test
+    fun `첫 로그인 서비스로 아는 유입 구분이 있으면 가입 일시보다 먼저 쓴다`() {
+        val user = User.ofLetsCareer(
+            letsCareerUserId = 1L,
+            joinedAt = joinedAt,
+            knownInflowSource = UserInflowSource.LETSCAREER,
+            letsCareerJoinedAt = joinedAt.minusMinutes(3),
+        )
+
+        assertEquals(UserInflowSource.LETSCAREER, user.inflowSource)
+    }
+
+    @Test
+    fun `렛츠커리어 가입 일시를 모르면 유입 구분을 비워 두고 나중에 한 번만 정한다`() {
+        val user = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt)
+        assertNull(user.inflowSource)
+
+        user.classifyInflowSource(null, joinedAt.minusMinutes(3))
+        assertEquals(UserInflowSource.OGONGGO, user.inflowSource)
+
+        user.classifyInflowSource(UserInflowSource.LETSCAREER, joinedAt.minusYears(1))
+        assertEquals(UserInflowSource.OGONGGO, user.inflowSource)
+    }
+
+    @Test
+    fun `기업 회원은 유입 구분을 갖지 않는다`() {
+        val user = User.ofCompany(email = "hr@company.com", encodedPassword = "encoded", joinedAt = joinedAt)
+
+        user.classifyInflowSource(UserInflowSource.LETSCAREER, joinedAt.minusYears(1))
+
+        assertNull(user.inflowSource)
+    }
+
+    @Test
     fun `렛츠커리어 멘토는 계정을 만들 때 멘토가 된다`() {
         val user = User.ofLetsCareer(letsCareerUserId = 1L, joinedAt = joinedAt, isMentor = true)
 

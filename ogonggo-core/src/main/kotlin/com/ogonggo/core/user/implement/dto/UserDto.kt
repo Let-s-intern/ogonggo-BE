@@ -4,6 +4,7 @@ import com.ogonggo.core.user.domain.CompanyProfile
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserGrade
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
@@ -13,6 +14,10 @@ data class UserAppendDto(
     val letsCareerUserId: Long,
     val joinedAt: LocalDateTime,
     val isMentor: Boolean = false,
+    /** 렛츠커리어 첫 로그인 서비스로 이미 아는 유입 구분. 모르면 null이고 letsCareerJoinedAt으로 정한다. */
+    val knownInflowSource: UserInflowSource? = null,
+    /** 렛츠커리어 가입 일시. 유입 구분을 모를 때 쓴다. */
+    val letsCareerJoinedAt: LocalDateTime? = null,
 )
 
 data class CompanyAccountAppendDto(
@@ -167,6 +172,7 @@ data class UserAccountDto(
     val status: UserStatus,
     val role: UserRole,
     val joinedAt: LocalDateTime,
+    val inflowSource: UserInflowSource? = null,
 )
 data class UserCredentialDto(
     val userId: Long,
@@ -187,6 +193,7 @@ data class GeneralMemberDto(
     val joinedAt: LocalDateTime,
     val withdrawnAt: LocalDateTime?,
     val profile: UserProfileDto?,
+    val inflowSource: UserInflowSource? = null,
 ) {
     companion object {
         internal fun of(user: User, profile: UserProfile?): GeneralMemberDto = GeneralMemberDto(
@@ -197,6 +204,7 @@ data class GeneralMemberDto(
             joinedAt = user.joinedAt,
             withdrawnAt = user.withdrawnAt,
             profile = profile?.let(UserProfileDto::from),
+            inflowSource = user.inflowSource,
         )
     }
 }

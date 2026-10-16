@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.member.presentation.request.ChangeGeneralMemberRoleR
 import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import org.springframework.format.annotation.DateTimeFormat
@@ -38,9 +39,10 @@ class AdminGeneralMemberController(
         @RequestParam(name = "joinedTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         joinedTo: LocalDate?,
         @RequestParam(name = "role", required = false) role: UserRole?,
+        @RequestParam(name = "inflowSource", required = false) inflowSource: UserInflowSource?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminGeneralMemberResponse>>> {
         val result = adminMemberService.getGeneralMembers(
-            condition = memberSearchCondition(keyword, status, joinedFrom, joinedTo, role),
+            condition = memberSearchCondition(keyword, status, joinedFrom, joinedTo, role, inflowSource),
             page = page - 1,
             size = size,
         )

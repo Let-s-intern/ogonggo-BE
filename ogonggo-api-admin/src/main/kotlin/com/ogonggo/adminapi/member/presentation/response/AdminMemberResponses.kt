@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.member.presentation.response
 
 import com.ogonggo.core.user.domain.UserGrade
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.implement.dto.CompanyMemberDto
@@ -19,6 +20,8 @@ data class AdminGeneralMemberResponse(
     val joinedAt: LocalDateTime,
     @Schema(description = "탈퇴 일시. 탈퇴하지 않았으면 null입니다.")
     val withdrawnAt: LocalDateTime?,
+    @Schema(description = "유입 구분. 렛츠커리어를 쓰다 넘어왔으면 LETSCAREER, 오공고로 처음 들어왔으면 OGONGGO입니다. 아직 정하지 못한 회원은 null입니다.")
+    val inflowSource: UserInflowSource?,
     val name: String?,
     val nickname: String?,
     @Schema(description = "렛츠커리어에서 받은 이메일")
@@ -48,6 +51,7 @@ data class AdminGeneralMemberResponse(
                 status = member.status,
                 joinedAt = member.joinedAt,
                 withdrawnAt = member.withdrawnAt,
+                inflowSource = member.inflowSource,
                 name = profile?.name,
                 nickname = profile?.nickname,
                 email = profile?.email,

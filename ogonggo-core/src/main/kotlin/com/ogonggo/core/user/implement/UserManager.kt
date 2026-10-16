@@ -3,6 +3,7 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -10,6 +11,7 @@ import com.ogonggo.core.user.persistence.UserJpaRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 
 @Component
 class UserManager internal constructor(
@@ -39,6 +41,15 @@ class UserManager internal constructor(
         }
 
         user.changeRole(role)
+    }
+
+    /** 이미 정한 회원은 바꾸지 않는다. 로그인 트랜잭션 안에서 부른다. */
+    @Transactional
+    fun classifyInflowSource(userId: Long, knownInflowSource: UserInflowSource?, letsCareerJoinedAt: LocalDateTime?) {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
+
+        user.classifyInflowSource(knownInflowSource, letsCareerJoinedAt)
     }
 
     @Transactional

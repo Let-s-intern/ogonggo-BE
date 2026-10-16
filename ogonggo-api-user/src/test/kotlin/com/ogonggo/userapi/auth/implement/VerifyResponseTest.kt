@@ -40,6 +40,8 @@ class VerifyResponseTest {
         assertEquals("https://example.com/me.png", result.profileImageUrl)
         assertEquals(UPDATED_AT, result.updatedAt)
         assertEquals(NICKNAME_UPDATED_AT, result.nicknameUpdatedAt)
+        assertEquals(CREATED_AT, result.joinedAt)
+        assertEquals("오공고", result.firstSignInService)
     }
 
     @Test
@@ -64,10 +66,13 @@ class VerifyResponseTest {
         profileImageUrl = "https://example.com/me.png",
         isAdmin = isAdmin,
         isMentor = isMentor,
+        createdAt = CREATED_AT,
+        firstSignInService = "오공고",
         updatedAt = UPDATED_AT,
     )
 
     companion object {
+        private val CREATED_AT: LocalDateTime = LocalDateTime.of(2025, 3, 2, 14, 30)
         private val UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 9, 1, 10, 0)
         private val NICKNAME_UPDATED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 30, 10, 0)
     }
