@@ -3,8 +3,12 @@ package com.ogonggo.core.job.implement
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobEmploymentType
+import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobSearchCondition
+import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.error.JobErrorCode
@@ -129,6 +133,88 @@ internal class TodayJobPersistenceTest @Autowired constructor(
 
         assertEquals(listOf(current.id), jobReader.readToday().map { it.job.id })
     }
+
+    @Test
+    fun `PICK을 바꾸면 같은 날 등록한 공고 중 PICK과 직군이 같은 공고가 최신순 목록 앞에 온다`() {
+        // given
+        val marketing = List(3) { publishedJob(JobField.MARKETING_ADVERTISING, NOW) }
+        val development = List(3) { publishedJob(JobField.IT_DEVELOPMENT, NOW) }
+        publishedJob(null, NOW)
+
+        // when
+        todayJobManager.replace(todayJobs(marketing.first()), NOW)
+
+        // then
+        assertEquals(marketing.ids(), latestJobIds().take(3).toSet())
+
+        // when
+        todayJobManager.replace(todayJobs(development.first()), NOW.plusHours(1))
+
+        // then
+        assertEquals(development.ids(), latestJobIds().take(3).toSet())
+    }
+
+    @Test
+    fun `PICK과 직군이 같아도 더 늦게 등록한 날의 공고를 앞지르지 않는다`() {
+        // given
+        val oldMarketing = publishedJob(JobField.MARKETING_ADVERTISING, NOW.minusDays(1))
+        val newIt = publishedJob(JobField.IT_DEVELOPMENT, NOW)
+
+        // when
+        todayJobManager.replace(todayJobs(oldMarketing), NOW)
+
+        // then
+        assertEquals(listOf(newIt.id, oldMarketing.id), latestJobIds())
+    }
+
+    @Test
+    fun `PICK을 정한 뒤 등록한 공고도 PICK과 직군이 같으면 같은 날 공고 중 앞에 온다`() {
+        // given
+        val pick = publishedJob(JobField.MARKETING_ADVERTISING, NOW.minusDays(1))
+        todayJobManager.replace(todayJobs(pick), NOW)
+        val others = List(3) { publishedJob(JobField.IT_DEVELOPMENT, NOW) }
+
+        // when
+        val marketing = publishedJob(JobField.MARKETING_ADVERTISING, NOW)
+
+        // then
+        assertEquals(marketing.id, latestJobIds().first())
+        assertEquals(others.ids(), latestJobIds().drop(1).take(3).toSet())
+    }
+
+    @Test
+    fun `PICK을 비우면 직군과 관계없이 같은 날 공고끼리 다시 섞인다`() {
+        // given
+        val marketing = publishedJob(JobField.MARKETING_ADVERTISING, NOW)
+        todayJobManager.replace(todayJobs(marketing), NOW)
+        assertEquals(JobListSortKey.PICK_FIELD_BIT, sortKeyOf(marketing) and JobListSortKey.PICK_FIELD_BIT)
+
+        // when
+        todayJobManager.replace(emptyList(), NOW.plusHours(1))
+
+        // then
+        assertEquals(0L, sortKeyOf(marketing) and JobListSortKey.PICK_FIELD_BIT)
+    }
+
+    private fun latestJobIds(): List<Long?> =
+        jobReader.readPublishedPage(JobSearchCondition(), JobSortType.LATEST, 0, 20).jobs.map { it.id }
+
+    private fun sortKeyOf(job: Job): Long = jobReader.readPublished(job.requiredId()).listSortKey
+
+    private fun List<Job>.ids(): Set<Long?> = map { it.id }.toSet()
+
+    private fun publishedJob(jobField: JobField?, registeredAt: LocalDateTime): Job = jobAppender.append(
+        JobAppendDto(
+            companyName = "오공고",
+            title = "공고",
+            jobField = jobField,
+            employmentType = JobEmploymentType.FULL_TIME,
+            experienceType = JobExperienceType.EXPERIENCED,
+            recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
+            publicationStatus = JobPublicationStatus.PUBLISHED,
+        ),
+        registeredAt,
+    )
 
     private fun publishedJob(): Job = jobAppender.append(
         JobAppendDto(
