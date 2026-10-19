@@ -337,7 +337,11 @@ class Job internal constructor(
     var externalId: String? = externalId /* 외부 식별값 */
         protected set
 
-    /** 공개 목록 최신순의 정렬 키다. 규칙은 [JobListSortKey]에 있고, 등록할 때 정해져 바뀌지 않는다. */
+    /**
+     * 공개 목록 최신순의 정렬 키다. 규칙은 [JobListSortKey]에 있다.
+     * 등록할 때 정하고, 오늘의 공고를 바꾸면 PICK 직군 비트만 벌크 갱신으로 다시 쓴다.
+     * 엔티티 수정이 읽어 둔 예전 값으로 벌크 갱신을 덮어쓰지 않도록 엔티티로는 바꾸지 않는다.
+     */
     @Column(name = "list_sort_key", nullable = false, updatable = false)
     var listSortKey: Long = listSortKey /* 목록 정렬 키 */
         protected set

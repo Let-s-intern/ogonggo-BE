@@ -4,6 +4,8 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobAnalysis
 import com.ogonggo.core.job.domain.JobApplicationStatus
 import com.ogonggo.core.job.domain.JobBookmark
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
@@ -92,6 +94,54 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
         @Param("recruitingStatus") recruitingStatus: JobRecruitmentStatus = JobRecruitmentStatus.RECRUITING,
         @Param("closedStatus") closedStatus: JobRecruitmentStatus = JobRecruitmentStatus.CLOSED,
     ): Int
+
+    /**
+     * 정렬 키의 PICK 직군 비트([JobListSortKey.PICK_FIELD_BIT])를 넘어온 직군의 공고에 켠다.
+     * 비트 연산은 MySQL과 H2의 문법이 달라 나머지 연산으로 비트가 꺼진 행만 골라 더한다.
+     * 정렬 키는 공고 내용이 아니므로 수정 일시를 바꾸지 않는다. 공고 분석이 수정 일시로 다시 볼 공고를 고르기 때문이다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Job job
+        set job.listSortKey = job.listSortKey + :bit
+        where job.jobField in :jobFields
+          and mod(job.listSortKey, :bit * 2) < :bit
+          and job.deletedAt is null
+        """,
+    )
+    fun markPickField(
+        @Param("jobFields") jobFields: Collection<JobField>,
+        @Param("bit") bit: Long = JobListSortKey.PICK_FIELD_BIT,
+    ): Int
+
+    /** 넘어온 직군이 아닌 공고의 PICK 직군 비트를 끈다. 직군이 없는 공고도 끈다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Job job
+        set job.listSortKey = job.listSortKey - :bit
+        where (job.jobField is null or job.jobField not in :jobFields)
+          and mod(job.listSortKey, :bit * 2) >= :bit
+          and job.deletedAt is null
+        """,
+    )
+    fun unmarkPickFieldExcept(
+        @Param("jobFields") jobFields: Collection<JobField>,
+        @Param("bit") bit: Long = JobListSortKey.PICK_FIELD_BIT,
+    ): Int
+
+    /** 오늘의 공고가 비면 모든 공고의 PICK 직군 비트를 끈다. 빈 목록은 `not in`에 넘길 수 없어 따로 둔다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Job job
+        set job.listSortKey = job.listSortKey - :bit
+        where mod(job.listSortKey, :bit * 2) >= :bit
+          and job.deletedAt is null
+        """,
+    )
+    fun unmarkAllPickField(@Param("bit") bit: Long = JobListSortKey.PICK_FIELD_BIT): Int
 
     /**
      * 공고 분석을 다시 볼 후보다. 게시 중인 모집 중 공고 가운데 분석이 없거나, 분석·확인한 뒤로 공고가 바뀐 것이다.

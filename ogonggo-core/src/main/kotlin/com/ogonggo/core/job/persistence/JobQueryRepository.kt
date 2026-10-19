@@ -5,6 +5,7 @@ import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobBookmarkSearchCondition
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -193,6 +194,21 @@ internal class JobQueryRepository(
      * 운영자가 고른 오늘의 공고를 고른 순서대로 읽는다. 공고와 오늘의 공고는 연관관계가 없으므로 명시적으로 조인한다.
      * 고른 뒤에 삭제된 공고는 항상 빼고, 게시 중인 공고만 볼지는 호출하는 쪽이 정한다.
      */
+    /** 사용자에게 보이는 오늘의 공고, 즉 게시 중이고 삭제되지 않은 공고의 직군을 겹치지 않게 읽는다. 직군이 없는 공고는 뺀다. */
+    fun findPublishedTodayJobFields(): Set<JobField> =
+        queryFactory.selectDistinct(job.jobField)
+            .from(todayJob)
+            .join(job).on(job.id.eq(todayJob.jobId))
+            .where(
+                todayJob.deletedAt.isNull,
+                job.deletedAt.isNull,
+                job.publicationStatus.eq(JobPublicationStatus.PUBLISHED),
+                job.jobField.isNotNull,
+            )
+            .fetch()
+            .filterNotNull()
+            .toSet()
+
     fun findToday(publishedOnly: Boolean): List<TodayJobDto.Response> =
         queryFactory.select(todayJob, job)
             .from(todayJob)

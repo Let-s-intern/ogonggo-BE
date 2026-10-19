@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
+import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.job.persistence.JobBookmarkReminderQueryRepository
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
@@ -33,6 +34,7 @@ import java.time.LocalDateTime
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
 @Import(
     JobAppender::class,
+    JobQueryRepository::class,
     JobManager::class,
     JobBookmarkManager::class,
     JobBookmarkReminderReader::class,
