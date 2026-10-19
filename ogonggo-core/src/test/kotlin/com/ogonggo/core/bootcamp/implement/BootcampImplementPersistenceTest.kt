@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
 import com.ogonggo.core.bootcamp.domain.BootcampBookmarkSearchCondition
@@ -334,6 +335,42 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
             listOf(linkedOld.id, linkedPopular.id, plainPopular.id, plainLatest.id),
             publicPage(sortType = BootcampSortType.VIEW_COUNT, now = now).bootcamps.map { it.id },
         )
+    }
+
+    @Test
+    fun `공개 목록은 마감되지 않은 비즈니스 등록 과정을 기업 연계 과정보다도 앞에 둔다`() {
+        val companyOpen = approvedCompanyBootcamp()
+        val linked = bootcampAppender.append(work24Command("A-1", enterpriseLinked = true))
+        val plain = bootcampAppender.append(createCommand())
+        listOf(linked, plain).forEach(bootcampManager::startRecruitment)
+        val companyClosed = approvedCompanyBootcamp()
+        bootcampManager.close(companyClosed, NOW)
+
+        // 모집 종료 일시(8월 31일) 전
+        val beforeDeadline = LocalDateTime.of(2026, 8, 15, 12, 0)
+        assertEquals(
+            listOf(companyOpen.id, linked.id, companyClosed.id, plain.id),
+            publicPage(now = beforeDeadline).bootcamps.map { it.id },
+        )
+        assertEquals(
+            listOf(companyOpen.id, linked.id),
+            publicPage(sortType = BootcampSortType.VIEW_COUNT, now = beforeDeadline).bootcamps.take(2).map { it.id },
+        )
+        // 종료 일시가 지나면 자동 마감 전이라도 다른 부트캠프와 같이 정렬한다.
+        assertEquals(
+            listOf(linked.id, companyClosed.id, plain.id, companyOpen.id),
+            publicPage(now = LocalDateTime.of(2026, 9, 15, 12, 0)).bootcamps.map { it.id },
+        )
+    }
+
+    /** 비즈니스 등록 부트캠프는 검수를 승인해야 게시된다. */
+    private fun approvedCompanyBootcamp(): Bootcamp {
+        val bootcamp = bootcampAppender.append(
+            createCommand(ownerUserId = USER_ID, publicationStatus = BootcampPublicationStatus.DRAFT),
+        )
+        bootcampManager.startRecruitment(bootcamp)
+        bootcampManager.approveReview(bootcamp, NOW)
+        return bootcamp
     }
 
     @Test

@@ -20,12 +20,14 @@ import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
+import java.time.Clock
 import java.time.LocalDateTime
 
 @Component
 class JobReader internal constructor(
     private val jobRepository: JobJpaRepository,
     private val jobQueryRepository: JobQueryRepository,
+    private val clock: Clock,
 ) {
 
     fun read(jobId: Long): Job =
@@ -62,17 +64,26 @@ class JobReader internal constructor(
             publicationStatus = JobPublicationStatus.PUBLISHED,
         ) ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
-    /** 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. */
     fun readPublishedPage(
         condition: JobSearchCondition,
         sortType: JobSortType,
         page: Int,
         size: Int,
+    ): JobPageDto = readPublishedPage(condition, sortType, page, size, LocalDateTime.now(clock))
+
+    /** 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. 마감 여부는 [now] 기준이다. */
+    fun readPublishedPage(
+        condition: JobSearchCondition,
+        sortType: JobSortType,
+        page: Int,
+        size: Int,
+        now: LocalDateTime,
     ): JobPageDto {
         validatePageRequest(page, size)
         val result = jobQueryRepository.findPublishedPage(
             condition = condition,
             sortType = sortType,
+            now = now,
             pageable = PageRequest.of(page, size),
         )
         return JobPageDto(

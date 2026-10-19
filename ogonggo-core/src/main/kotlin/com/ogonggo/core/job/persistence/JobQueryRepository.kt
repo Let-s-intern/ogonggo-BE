@@ -43,11 +43,60 @@ internal class JobQueryRepository(
     private val queryFactory: JPAQueryFactory,
 ) {
 
+    /**
+     * 공개 목록은 어느 정렬이든 마감되지 않은 비즈니스 등록 공고를 먼저 두고([companyRecruiting]), 그 뒤에 나머지 공고를 둔다.
+     * 두 묶음 안에서는 고른 정렬을 따른다.
+     *
+     * 우선 여부를 정렬식으로 앞에 두면 정렬 키 인덱스를 타지 못해 조건에 맞는 공고를 전부 읽어 정렬해야 한다.
+     * 비즈니스 등록 공고는 소수이므로 두 묶음을 따로 읽어 이어 붙이고, 나머지 공고는 지금처럼 인덱스 순서로 읽는다.
+     * 우선 공고 수를 세어 요청한 페이지가 어느 묶음의 어디부터인지 정한다.
+     */
     fun findPublishedPage(
         condition: JobSearchCondition,
         sortType: JobSortType,
+        now: LocalDateTime,
         pageable: Pageable,
-    ): Page<Job> = findPage(publishedPredicates(condition), sortType, PUBLISHED_LATEST, pageable)
+    ): Page<Job> {
+        val predicates = publishedPredicates(condition)
+        val prioritized = companyRecruiting(now)
+        val prioritizedCount = queryFactory.select(job.count())
+            .from(job)
+            .where(*predicates, prioritized)
+            .fetchOne() ?: 0L
+
+        val head = if (pageable.offset < prioritizedCount) {
+            sorted(queryFactory.selectFrom(job).where(*predicates, prioritized), sortType, PUBLISHED_LATEST)
+                .paged(pageable)
+                .fetch()
+        } else {
+            emptyList()
+        }
+        val remaining = pageable.pageSize - head.size
+        val tail = if (remaining > 0) {
+            sorted(queryFactory.selectFrom(job).where(*predicates, prioritized.not()), sortType, PUBLISHED_LATEST)
+                .offset(maxOf(pageable.offset - prioritizedCount, 0L))
+                .limit(remaining.toLong())
+                .fetch()
+        } else {
+            emptyList()
+        }
+
+        val countQuery = queryFactory.select(job.count())
+            .from(job)
+            .where(*predicates)
+
+        return pageOf(head + tail, pageable, countQuery)
+    }
+
+    /**
+     * 기업이 비즈니스로 등록했고 아직 마감되지 않은 공고다. 마감 처리됐거나 모집 종료 일시가 지나면 다른 공고와 같이 정렬한다.
+     * 자동 마감 작업은 매시 돌므로 그 사이에 종료 일시가 지난 공고도 바로 빼도록 종료 일시를 함께 본다.
+     * 상시 모집처럼 종료 일시가 없는 공고는 마감 처리 전까지 마감되지 않은 것으로 본다.
+     */
+    private fun companyRecruiting(now: LocalDateTime): BooleanExpression =
+        job.source.eq(ContentSource.COMPANY)
+            .and(recruiting())
+            .and(job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)))
 
     /**
      * 북마크한 공고 중 게시된 것만 읽는다. 선택 필터는 공개 목록과 같고, 지원 단계와 모집 상태로 더 좁힐 수 있다.

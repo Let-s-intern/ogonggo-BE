@@ -165,6 +165,53 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertNotEquals(jobIds.reversed(), listed)
     }
 
+    @Test
+    fun `공개 목록은 어느 정렬이든 마감되지 않은 비즈니스 등록 공고를 맨 앞에 두고 페이지를 넘겨도 빠지거나 겹치지 않는다`() {
+        // given
+        val oldCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 28, 10, 0))
+        val newCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 29, 10, 0))
+        val companyOpen = appendAndApprove(createCommand(ownerUserId = USER_ID), LocalDateTime.of(2026, 9, 1, 10, 0))
+        val companyExpiring = appendAndApprove(
+            createCommand(ownerUserId = USER_ID, recruitmentEndAt = LocalDateTime.of(2026, 10, 5, 23, 59)),
+            LocalDateTime.of(2026, 9, 2, 10, 0),
+        )
+        val companyClosed = appendAndApprove(createCommand(ownerUserId = USER_ID), LocalDateTime.of(2026, 9, 3, 10, 0))
+        jobManager.close(jobReader.read(companyClosed), NOW)
+        view(jobReader.read(newCrawled), times = 3)
+
+        // when
+        val beforeDeadline = LocalDateTime.of(2026, 10, 1, 12, 0)
+        val afterDeadline = LocalDateTime.of(2026, 10, 6, 0, 0)
+        val latestBefore = (0..2).map { readPage(page = it, size = 2, now = beforeDeadline) }
+        val latestAfter = (0..2).map { readPage(page = it, size = 2, now = afterDeadline) }
+        val viewCountBefore = readPage(page = 0, size = 10, sortType = JobSortType.VIEW_COUNT, now = beforeDeadline)
+
+        // then
+        assertEquals(
+            listOf(companyExpiring, companyOpen, newCrawled, oldCrawled, companyClosed),
+            latestBefore.flatMap { page -> page.jobs.map { it.id } },
+        )
+        assertEquals(5L, latestBefore.first().totalElements)
+        assertEquals(listOf(true, true, false), latestBefore.map { it.hasNext })
+        // 모집 종료 일시가 지나면 자동 마감 전이라도 다른 공고와 같이 정렬한다.
+        assertEquals(
+            listOf(companyOpen, newCrawled, oldCrawled, companyClosed, companyExpiring),
+            latestAfter.flatMap { page -> page.jobs.map { it.id } },
+        )
+        // 조회 수가 가장 많은 공고도 우선 공고 뒤에 온다.
+        assertEquals(
+            listOf(companyExpiring, companyOpen, newCrawled),
+            viewCountBefore.jobs.take(3).map { it.id },
+        )
+    }
+
+    /** 비즈니스 등록 공고는 검수를 승인해야 게시된다. */
+    private fun appendAndApprove(command: JobAppendDto, registeredAt: LocalDateTime): Long {
+        val job = jobAppender.append(command, registeredAt)
+        jobManager.approveReview(job, registeredAt)
+        return checkNotNull(job.id)
+    }
+
     private fun appendAndPublish(command: JobAppendDto, registeredAt: LocalDateTime): Long {
         val job = jobAppender.append(command, registeredAt)
         jobManager.publish(job)
@@ -1116,7 +1163,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         size: Int,
         sortType: JobSortType = JobSortType.LATEST,
         condition: JobSearchCondition = JobSearchCondition.NONE,
-    ): JobPageDto = jobReader.readPublishedPage(condition, sortType, page, size)
+        now: LocalDateTime = NOW,
+    ): JobPageDto = jobReader.readPublishedPage(condition, sortType, page, size, now)
 
     private fun createCommand(
         recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,

@@ -18,6 +18,7 @@ import com.ogonggo.core.contentreview.domain.ContentSource
 import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
+import com.querydsl.core.types.dsl.CaseBuilder
 import com.querydsl.core.types.dsl.Expressions
 import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
@@ -42,7 +43,26 @@ internal class BootcampQueryRepository(
         publicStatuses: Collection<BootcampRecruitmentStatus>,
         now: LocalDateTime,
         pageable: Pageable,
-    ): Page<Bootcamp> = findPage(publicPredicates(condition, publicStatuses, now), sortType, pageable, enterpriseFirst = true)
+    ): Page<Bootcamp> = findPage(
+        publicPredicates(condition, publicStatuses, now),
+        sortType,
+        pageable,
+        leadingOrders = arrayOf(companyRecruitingFirst(now), bootcamp.enterpriseLinked.desc()),
+    )
+
+    /**
+     * 기업이 비즈니스로 등록했고 아직 마감되지 않은 부트캠프를 맨 앞에 둔다. 마감 처리됐거나 모집 종료 일시가 지나면 다른 부트캠프와 같이 정렬한다.
+     * 자동 마감 작업은 매시 돌므로 그 사이에 종료 일시가 지난 부트캠프도 바로 빼도록 종료 일시를 함께 본다.
+     */
+    private fun companyRecruitingFirst(now: LocalDateTime): OrderSpecifier<Int> =
+        CaseBuilder()
+            .`when`(
+                bootcamp.source.eq(ContentSource.COMPANY)
+                    .and(bootcamp.status.eq(BootcampRecruitmentStatus.RECRUITING))
+                    .and(bootcamp.recruitmentEndAt.isNull.or(bootcamp.recruitmentEndAt.goe(now))),
+            ).then(1)
+            .otherwise(0)
+            .desc()
 
     /**
      * 북마크한 부트캠프 중 지금 공개된 것만 읽는다. 선택 필터는 공개 목록과 같고, 신청 단계로 더 좁힐 수 있다.
@@ -87,15 +107,15 @@ internal class BootcampQueryRepository(
         condition: BootcampManagementSearchCondition,
         sortType: BootcampSortType,
         pageable: Pageable,
-    ): Page<Bootcamp> = findPage(managementPredicates(condition), sortType, pageable, enterpriseFirst = false)
+    ): Page<Bootcamp> = findPage(managementPredicates(condition), sortType, pageable, leadingOrders = emptyArray())
 
     private fun findPage(
         predicates: Array<Predicate?>,
         sortType: BootcampSortType,
         pageable: Pageable,
-        enterpriseFirst: Boolean,
+        leadingOrders: Array<OrderSpecifier<*>>,
     ): Page<Bootcamp> {
-        val content = sorted(queryFactory.selectFrom(bootcamp).where(*predicates), sortType, enterpriseFirst)
+        val content = sorted(queryFactory.selectFrom(bootcamp).where(*predicates), sortType, leadingOrders)
             .paged(pageable)
             .fetch()
 
@@ -169,21 +189,20 @@ internal class BootcampQueryRepository(
      * 지표 행은 첫 지표 발생 시점에 생기므로 아직 없는 부트캠프는 0으로 본다.
      * 조회 수가 같을 때 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.
      *
-     * 공개 목록은 어느 정렬이든 기업 연계 과정을 먼저 두고([enterpriseFirst]) 그 안에서 고른 정렬을 따른다.
+     * 공개 목록은 어느 정렬이든 마감되지 않은 비즈니스 등록 과정, 기업 연계 과정 순으로 먼저 두고([leadingOrders]) 그 안에서 고른 정렬을 따른다.
      * 관리 목록은 운영자가 등록 순서대로 봐야 하므로 앞에 두지 않는다.
      */
     private fun sorted(
         query: JPAQuery<Bootcamp>,
         sortType: BootcampSortType,
-        enterpriseFirst: Boolean,
+        leadingOrders: Array<OrderSpecifier<*>>,
     ): JPAQuery<Bootcamp> {
-        val first: Array<OrderSpecifier<*>> = if (enterpriseFirst) arrayOf(bootcamp.enterpriseLinked.desc()) else emptyArray()
         return when (sortType) {
-            BootcampSortType.LATEST -> query.orderBy(*first, bootcamp.id.desc())
+            BootcampSortType.LATEST -> query.orderBy(*leadingOrders, bootcamp.id.desc())
 
             BootcampSortType.VIEW_COUNT -> query
                 .leftJoin(bootcampMetric).on(bootcampMetric.bootcampId.eq(bootcamp.id))
-                .orderBy(*first, VIEW_COUNT_OR_ZERO.desc(), bootcamp.id.desc())
+                .orderBy(*leadingOrders, VIEW_COUNT_OR_ZERO.desc(), bootcamp.id.desc())
         }
     }
 
