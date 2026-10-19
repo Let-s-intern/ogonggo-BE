@@ -199,6 +199,15 @@ interface AdminJobApi {
             fields는 companyAndTeamIntroduction, responsibilities, qualifications, preferredQualifications,
             compensation, benefits, hiringProcess만 반영하고 나머지 키는 버립니다. 빈 문자열은 그 칸을 비웁니다.
             등록 경로(source)는 바꿀 수 없어 보내도 무시합니다.
+
+            공고 정보(companyName, 경력 experienceType·experienceMinYears, 모집 기간 recruitmentType·recruitmentStartAt·recruitmentEndAt,
+            직군·직무 jobField·jobRole, 지역 region·subRegion, 학력, 고용 형태, 지원 방법·이메일 등)는 null이거나 보내지 않으면 그대로 둡니다.
+            값을 비우려면 필드 이름을 clear 배열에 담습니다. 예: "clear": ["experienceMinYears", "recruitmentEndAt"]
+            같은 필드를 보내면서 clear에도 담거나, clear에 비울 수 없는 이름을 담거나, 문자열에 공백만 보내면 400입니다.
+
+            직군·시·도를 바꾸면서 직무·시·군·구를 보내지 않으면, 바뀐 직군·시·도에 맞지 않는 기존 직무·시·군·구는 지웁니다.
+            직무·시·군·구만 보내면 직군·시·도도 그에 맞춰 바뀝니다. 모집 기간 유형을 ALWAYS_OPEN으로 바꾸면 모집 종료 일시를 지웁니다.
+            모집 종료 일시를 바꾸면 모집 상태를 다시 정합니다. 종료 일시가 지난 공고의 마감일을 미루면 모집 중으로 돌아가며, 직접 마감한 공고는 마감으로 남습니다.
         """,
     )
     @ApiResponses(
@@ -206,7 +215,7 @@ interface AdminJobApi {
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 제목이 비었거나 reviewStatus에 REJECTED를 보냈습니다.",
+                description = "BAD_REQUEST: 제목이 비었거나, reviewStatus에 REJECTED를 보냈거나, 공고 정보 값이 올바르지 않거나 서로 맞지 않습니다(직군과 직무, 시·도와 시·군·구, 모집 시작·종료 일시, 상시 채용의 종료 일시).",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.adminapi.job.business.AdminTodayJobSummary
 import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -95,14 +96,23 @@ data class AdminJobDetailResponse(
     val id: Long,
     val title: String,
     val companyName: String,
+    val parentCompanyName: String?,
+    val industry: String?,
+    val coverImageUrl: String?,
+    val logoUrl: String?,
     val employmentType: JobEmploymentType,
     val experienceType: JobExperienceType,
+    @Schema(description = "최소 요구 경력 연수입니다. 공고에 없으면 null입니다.")
+    val experienceMinYears: Int?,
     val jobField: JobField?,
     val jobRole: JobRole?,
     val educationLevel: JobEducationLevel,
     val recruitmentType: JobRecruitmentType,
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
+    val recruitmentHeadcount: Int?,
+    val closesWhenFilled: Boolean?,
+    val autoCloseEnabled: Boolean?,
     val region: Region?,
     val subRegion: SubRegion?,
     val closedAt: LocalDateTime?,
@@ -123,6 +133,10 @@ data class AdminJobDetailResponse(
     val compensation: String?,
     val benefits: String?,
     val hiringProcess: String?,
+    val recruitmentNotice: String?,
+    val applicationMethod: JobApplicationMethod?,
+    val applyEmail: String?,
+    val inquiryEmail: String?,
     val sourceUrl: String?,
     @Schema(description = "채용공고 원문 HTML입니다. 원문 페이지의 본문 영역을 안전한 태그만 남긴 것이며, 원문이 없는 공고와 기업회원 공고는 null입니다.")
     val sourceHtml: String?,
@@ -134,14 +148,22 @@ data class AdminJobDetailResponse(
                 id = summary.id,
                 title = summary.title,
                 companyName = summary.companyName,
+                parentCompanyName = result.parentCompanyName,
+                industry = result.industry,
+                coverImageUrl = result.coverImageUrl,
+                logoUrl = result.logoUrl,
                 employmentType = summary.employmentType,
                 experienceType = summary.experienceType,
+                experienceMinYears = result.experienceMinYears,
                 jobField = summary.jobField,
                 jobRole = summary.jobRole,
                 educationLevel = summary.educationLevel,
                 recruitmentType = summary.recruitmentType,
                 recruitmentStartAt = summary.recruitmentStartAt,
                 recruitmentEndAt = summary.recruitmentEndAt,
+                recruitmentHeadcount = result.recruitmentHeadcount,
+                closesWhenFilled = result.closesWhenFilled,
+                autoCloseEnabled = result.autoCloseEnabled,
                 region = summary.region,
                 subRegion = summary.subRegion,
                 closedAt = summary.closedAt,
@@ -160,6 +182,10 @@ data class AdminJobDetailResponse(
                 compensation = result.compensation,
                 benefits = result.benefits,
                 hiringProcess = result.hiringProcess,
+                recruitmentNotice = result.recruitmentNotice,
+                applicationMethod = result.applicationMethod,
+                applyEmail = result.applyEmail,
+                inquiryEmail = result.inquiryEmail,
                 sourceUrl = result.sourceUrl,
                 sourceHtml = result.sourceHtml,
             )
