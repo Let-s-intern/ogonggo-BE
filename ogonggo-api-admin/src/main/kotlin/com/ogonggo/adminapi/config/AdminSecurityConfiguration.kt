@@ -81,7 +81,7 @@ class AdminSecurityConfiguration {
 
     /**
      * 브라우저에서 관리자 API를 호출하는 오리진만 연다.
-     * 내부 API 경로는 크롤러의 서버 간 호출이라 CORS와 무관하지만,
+     * 내부 API 경로는 AI 서버의 서버 간 호출이라 CORS와 무관하지만,
      * CORS는 브라우저만 강제하는 규칙이므로 전체 경로 하나로 등록해도 서버 간 호출에 영향이 없다.
      */
     private fun corsConfigurationSource(): CorsConfigurationSource =

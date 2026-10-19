@@ -47,7 +47,7 @@
       "id": "tagged", "type": "success", "label": "태그 최신", "sublabel": "추천 후보", "lane": "tag", "col": 2, "tag": "해시 일치",
       "sources": [
         { "path": "ogonggo-core/src/main/kotlin/com/ogonggo/core/letscareercontent/domain/LetsCareerContent.kt", "line": 133, "end_line": 154, "label": "tag · currentTags" },
-        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/letscareercontent/business/CrawlerLetsCareerContentTagService.kt", "line": 29, "end_line": 33, "label": "해시가 다르면 거절" },
+        { "path": "ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/letscareercontent/business/AiLetsCareerContentTagService.kt", "line": 29, "end_line": 33, "label": "해시가 다르면 거절" },
         { "path": "ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/letscareercontent/implement/LetsCareerContentRecommendPolicy.kt", "line": 59, "end_line": 61, "label": "추천 조건" }
       ]
     },

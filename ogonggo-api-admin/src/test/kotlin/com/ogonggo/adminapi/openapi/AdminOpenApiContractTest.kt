@@ -92,7 +92,7 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
-    fun `크롤러 내부 API는 내부 API 키 인증을 요구한다`() {
+    fun `AI 서버 내부 API는 내부 API 키 인증을 요구한다`() {
         val document = openApiDocument()
 
         listOf(
@@ -113,7 +113,7 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
-    fun `크롤러 부트캠프 등록은 중복 원문을 409 BOOTCAMP_ALREADY_EXISTS로 명시한다`() {
+    fun `AI 서버 부트캠프 등록은 중복 원문을 409 BOOTCAMP_ALREADY_EXISTS로 명시한다`() {
         val document = openApiDocument()
 
         val conflict = document.at("/paths/~1api~1v1~1internal~1bootcamps/post/responses/409/description").asText()
@@ -122,10 +122,10 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
-    fun `크롤러 부트캠프 요청의 모집 상태는 선택 칸이며 모집 중과 모집 마감만 받는다`() {
+    fun `AI 서버 부트캠프 요청의 모집 상태는 선택 칸이며 모집 중과 모집 마감만 받는다`() {
         val document = openApiDocument()
 
-        val schema = document.at("/components/schemas/CrawlerBootcampRequest")
+        val schema = document.at("/components/schemas/AiBootcampRequest")
         val statusSchema = schema.at("/properties/status")
         assertEquals(listOf("RECRUITING", "CLOSED"), statusSchema.at("/enum").map { it.asText() })
         // 값 설명 표도 받는 값만 싣는다.
@@ -153,10 +153,10 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
-    fun `크롤러 공고 등록과 교체는 원문을 받고 원문만 바꾸는 API가 있다`() {
+    fun `AI 서버 공고 등록과 교체는 원문을 받고 원문만 바꾸는 API가 있다`() {
         val document = openApiDocument()
 
-        listOf("CrawlerJobRegistrationRequest", "CrawlerJobReplaceRequest").forEach { name ->
+        listOf("AiJobRegistrationRequest", "AiJobReplaceRequest").forEach { name ->
             assertTrue(
                 document.at("/components/schemas/$name/properties/sourceHtml").isObject,
                 "$name 에 sourceHtml 이 없습니다.",
