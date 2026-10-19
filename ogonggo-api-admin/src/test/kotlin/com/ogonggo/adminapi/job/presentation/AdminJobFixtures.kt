@@ -44,6 +44,17 @@ internal object AdminJobFixtures {
 
     fun detail(id: Long = 693L): AdminJobResult = AdminJobResult(
         summary = summary(id),
+        parentCompanyName = null,
+        industry = null,
+        coverImageUrl = null,
+        logoUrl = null,
+        experienceMinYears = 3,
+        recruitmentHeadcount = null,
+        closesWhenFilled = null,
+        autoCloseEnabled = null,
+        applicationMethod = null,
+        applyEmail = null,
+        inquiryEmail = null,
         companyAndTeamIntroduction = null,
         responsibilities = "주요 업무",
         qualifications = null,
@@ -51,6 +62,7 @@ internal object AdminJobFixtures {
         compensation = null,
         benefits = null,
         hiringProcess = null,
+        recruitmentNotice = null,
         sourceUrl = "https://example.com/jobs/693",
         sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
     )

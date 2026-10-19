@@ -6,6 +6,8 @@ import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companio
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
+import com.ogonggo.adminapi.job.business.AdminJobClearableField
+import com.ogonggo.adminapi.job.business.AdminJobDetailsPatch
 import com.ogonggo.adminapi.job.business.AdminJobPageResult
 import com.ogonggo.adminapi.job.business.AdminJobService
 import com.ogonggo.adminapi.job.business.AdminJobSummary
@@ -15,6 +17,7 @@ import com.ogonggo.adminapi.job.business.AdminJobVisibilityChangeCommand
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobContentField
+import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
@@ -26,6 +29,7 @@ import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import org.hamcrest.Matchers.startsWith
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -174,6 +178,60 @@ class AdminJobControllerTest @Autowired constructor(
                 ),
             ),
         )
+    }
+
+    @Test
+    fun `공고 정보와 clear를 보내면 바꿀 값과 비울 값으로 나눠 넘기고 상세에 공고 정보를 싣는다`() {
+        Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
+
+        mockMvc.perform(
+            admin(
+                patchJson(
+                    mapOf(
+                        "experienceType" to "EXPERIENCED",
+                        "experienceMinYears" to 3,
+                        "recruitmentEndAt" to "2026-09-30T23:59:00",
+                        "jobRole" to "IT_BACKEND",
+                        "clear" to listOf("recruitmentHeadcount", "applyEmail"),
+                    ),
+                ),
+            ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.experienceMinYears").value(3))
+
+        Mockito.verify(adminJobService).updateJob(
+            693L,
+            AdminJobUpdateCommand(
+                details = AdminJobDetailsPatch(
+                    experienceType = JobExperienceType.EXPERIENCED,
+                    experienceMinYears = 3,
+                    recruitmentEndAt = LocalDateTime.of(2026, 9, 30, 23, 59),
+                    jobRole = JobRole.IT_BACKEND,
+                    cleared = setOf(AdminJobClearableField.RECRUITMENT_HEADCOUNT, AdminJobClearableField.APPLY_EMAIL),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `비울 수 없는 이름을 clear에 담거나 보낸 값을 함께 비우거나 공백만 보내면 400으로 응답한다`() {
+        mockMvc.perform(admin(patchJson(mapOf("clear" to listOf("companyName")))))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[clear] 비울 수 없는 필드입니다: companyName"))
+
+        mockMvc.perform(admin(patchJson(mapOf("experienceMinYears" to 2, "clear" to listOf("experienceMinYears")))))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[experienceMinYears] 값을 보내면서 비울 수 없습니다."))
+
+        mockMvc.perform(admin(patchJson(mapOf("industry" to " "))))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[industry] 공백일 수 없습니다. 비우려면 clear에 담아 주세요."))
+
+        mockMvc.perform(admin(patchJson(mapOf("experienceMinYears" to -1))))
+            .andExpect(status().isBadRequest)
+
+        Mockito.verifyNoInteractions(adminJobService)
     }
 
     @Test

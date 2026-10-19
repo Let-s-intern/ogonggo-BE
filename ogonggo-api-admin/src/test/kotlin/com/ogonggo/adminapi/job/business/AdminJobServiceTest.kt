@@ -1,11 +1,14 @@
 package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobContentField
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
@@ -16,10 +19,15 @@ import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
+import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.implement.dto.TodayJobDto
+import com.ogonggo.core.region.domain.Region
+import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
@@ -90,6 +98,101 @@ class AdminJobServiceTest {
 
         Mockito.verify(jobManager).editContent(job, JobContentEditDto(title = "고친 제목", contents = contents))
         Mockito.verifyNoMoreInteractions(jobManager)
+    }
+
+    @Test
+    fun `공고 정보를 보내면 보낸 값만 바꾸고 나머지는 현재 값으로 한 번에 고친다`() {
+        val job = lockedJob(reviewStatus = null).also(::stubDetails)
+        val endAt = LocalDateTime.of(2026, 9, 30, 23, 59)
+
+        service.updateJob(
+            JOB_ID,
+            AdminJobUpdateCommand(details = AdminJobDetailsPatch(experienceMinYears = 5, recruitmentEndAt = endAt)),
+        )
+
+        Mockito.verify(jobManager).update(
+            job,
+            currentValues().copy(experienceMinYears = 5, recruitmentEndAt = endAt),
+            NOW,
+        )
+        Mockito.verifyNoMoreInteractions(jobManager)
+    }
+
+    @Test
+    fun `비우라고 한 공고 정보는 지운다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val merged = AdminJobDetailsPatch(
+            cleared = setOf(AdminJobClearableField.EXPERIENCE_MIN_YEARS, AdminJobClearableField.RECRUITMENT_END_AT),
+        ).mergeInto(job)
+
+        assertEquals(currentValues().copy(experienceMinYears = null, recruitmentEndAt = null), merged)
+    }
+
+    @Test
+    fun `직군을 바꾸면서 직무를 보내지 않으면 다른 직군의 기존 직무를 지운다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val merged = AdminJobDetailsPatch(jobField = JobField.IT_DEVELOPMENT).mergeInto(job)
+
+        assertEquals(JobField.IT_DEVELOPMENT, merged.jobField)
+        assertNull(merged.jobRole)
+    }
+
+    @Test
+    fun `직무만 보내면 직군도 그 직무의 직군으로 맞춘다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val merged = AdminJobDetailsPatch(jobRole = JobRole.IT_BACKEND).mergeInto(job)
+
+        assertEquals(JobField.IT_DEVELOPMENT, merged.jobField)
+        assertEquals(JobRole.IT_BACKEND, merged.jobRole)
+    }
+
+    @Test
+    fun `직군과 맞지 않는 직무를 함께 보내면 400 예외를 던진다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            AdminJobDetailsPatch(jobField = JobField.GAME, jobRole = JobRole.IT_BACKEND).mergeInto(job)
+        }
+
+        assertEquals("jobRole", exception.fieldName)
+    }
+
+    @Test
+    fun `시·도를 바꾸면서 시·군·구를 보내지 않으면 다른 시·도의 기존 시·군·구를 지운다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val merged = AdminJobDetailsPatch(region = Region.GYEONGGI).mergeInto(job)
+
+        assertEquals(Region.GYEONGGI, merged.region)
+        assertNull(merged.subRegion)
+    }
+
+    @Test
+    fun `상시 채용으로 바꾸면 모집 종료 일시를 지우고 종료 일시를 함께 보내면 400 예외를 던진다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val merged = AdminJobDetailsPatch(recruitmentType = JobRecruitmentType.ALWAYS_OPEN).mergeInto(job)
+        assertEquals(JobRecruitmentType.ALWAYS_OPEN, merged.recruitmentType)
+        assertNull(merged.recruitmentEndAt)
+
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            AdminJobDetailsPatch(recruitmentType = JobRecruitmentType.ALWAYS_OPEN, recruitmentEndAt = NOW).mergeInto(job)
+        }
+        assertEquals("recruitmentEndAt", exception.fieldName)
+    }
+
+    @Test
+    fun `모집 시작 일시를 종료 일시보다 늦게 바꾸면 400 예외를 던진다`() {
+        val job = mockJob().also(::stubDetails)
+
+        val exception = assertThrows(InvalidRequestFieldException::class.java) {
+            AdminJobDetailsPatch(recruitmentStartAt = LocalDateTime.of(2026, 10, 1, 0, 0)).mergeInto(job)
+        }
+
+        assertEquals("recruitmentStartAt", exception.fieldName)
     }
 
     @Test
@@ -170,6 +273,45 @@ class AdminJobServiceTest {
     private fun jobWithStatus(publicationStatus: JobPublicationStatus): Job = Mockito.mock(Job::class.java).also { job ->
         Mockito.`when`(job.publicationStatus).thenReturn(publicationStatus)
     }
+
+    private fun mockJob(): Job = Mockito.mock(Job::class.java)
+
+    /** [currentValues]와 같은 값을 갖도록 공고 정보를 채운다. 본문 칸은 비워 둔다. */
+    private fun stubDetails(job: Job) {
+        Mockito.`when`(job.companyName).thenReturn("오공고")
+        Mockito.`when`(job.title).thenReturn("백엔드 개발자")
+        Mockito.`when`(job.jobField).thenReturn(JobField.PLANNING_STRATEGY)
+        Mockito.`when`(job.jobRole).thenReturn(JobRole.DESIGN_UX_UI_PRODUCT)
+        Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
+        Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
+        Mockito.`when`(job.experienceMinYears).thenReturn(3)
+        Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
+        Mockito.`when`(job.region).thenReturn(Region.SEOUL)
+        Mockito.`when`(job.subRegion).thenReturn(SubRegion.SEOUL_GANGNAM_GU)
+        Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
+        Mockito.`when`(job.recruitmentStartAt).thenReturn(LocalDateTime.of(2026, 9, 1, 0, 0))
+        Mockito.`when`(job.recruitmentEndAt).thenReturn(LocalDateTime.of(2026, 9, 14, 23, 59))
+        // Mockito는 감싼 숫자·불리언 게터에 0·false를 돌려주므로 비어 있는 값으로 맞춘다.
+        Mockito.`when`(job.recruitmentHeadcount).thenReturn(null)
+        Mockito.`when`(job.closesWhenFilled).thenReturn(null)
+        Mockito.`when`(job.autoCloseEnabled).thenReturn(null)
+    }
+
+    private fun currentValues(): JobUpdateDto = JobUpdateDto(
+        companyName = "오공고",
+        title = "백엔드 개발자",
+        jobField = JobField.PLANNING_STRATEGY,
+        jobRole = JobRole.DESIGN_UX_UI_PRODUCT,
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
+        experienceMinYears = 3,
+        educationLevel = JobEducationLevel.ANY,
+        region = Region.SEOUL,
+        subRegion = SubRegion.SEOUL_GANGNAM_GU,
+        recruitmentType = JobRecruitmentType.PERIOD,
+        recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0),
+        recruitmentEndAt = LocalDateTime.of(2026, 9, 14, 23, 59),
+    )
 
     private fun lockedJob(reviewStatus: ContentReviewStatus?): Job {
         val job = Mockito.mock(Job::class.java)
