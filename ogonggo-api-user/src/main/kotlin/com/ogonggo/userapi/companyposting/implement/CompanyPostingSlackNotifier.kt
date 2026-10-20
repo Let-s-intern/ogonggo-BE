@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.companyposting.implement
 
 import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
+import com.ogonggo.userapi.companyposting.business.CompanyPostingType
 import com.ogonggo.userapi.config.UserAsyncConfiguration.Companion.COMPANY_POSTING_TASK_EXECUTOR
 import com.ogonggo.userapi.slack.SlackBlock
 import com.ogonggo.userapi.slack.SLACK_REST_CLIENT
@@ -65,6 +66,13 @@ internal class CompanyPostingSlackNotifier(
 
 private val RECRUITMENT_END_AT_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
+/**
+ * 직무만 쓰면 직군마다 있는 "기타"처럼 뜻이 모호해져 직군을 앞에 붙인다.
+ * 직무 이름에 이미 `·`가 들어가 있어 구분자는 `>`를 쓴다.
+ */
+private fun CompanyPostingRegisteredEvent.jobDescription(): String? =
+    listOfNotNull(jobField?.desc, jobRole?.desc).joinToString(" > ").ifBlank { null }
+
 /** 요약 줄에 종류·기업명·제목을 넣어 채널 목록에서 바로 어떤 건인지 보이게 한다. */
 private fun CompanyPostingRegisteredEvent.toSlackMessage(): SlackMessage =
     SlackMessage(
@@ -76,7 +84,11 @@ private fun CompanyPostingRegisteredEvent.toSlackMessage(): SlackMessage =
                     SlackText.labeled("ID", postingId.toString()),
                     SlackText.labeled("기업명", companyName),
                     SlackText.labeled("등록 계정", accountEmail),
-                    SlackText.labeled("모집 마감", recruitmentEndAt?.format(RECRUITMENT_END_AT_FORMAT)),
+                    when (type) {
+                        CompanyPostingType.JOB -> SlackText.labeled("직무", jobDescription())
+                        CompanyPostingType.BOOTCAMP ->
+                            SlackText.labeled("모집 마감", recruitmentEndAt?.format(RECRUITMENT_END_AT_FORMAT))
+                    },
                 ),
             ),
             SlackBlock.text(SlackText.labeled("제목", title)),

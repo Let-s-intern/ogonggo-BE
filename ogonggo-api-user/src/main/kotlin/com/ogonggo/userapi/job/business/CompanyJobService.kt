@@ -47,7 +47,8 @@ class CompanyJobService(
                 companyName = command.companyName,
                 title = command.title,
                 accountEmail = account.email,
-                recruitmentEndAt = command.recruitmentEndAt,
+                jobField = command.jobField,
+                jobRole = command.jobRole,
             ),
         )
         return job.requiredId()

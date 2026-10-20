@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.companyposting.business
 
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import java.time.LocalDateTime
 
 /**
@@ -14,7 +16,12 @@ data class CompanyPostingRegisteredEvent(
     val companyName: String,
     val title: String,
     val accountEmail: String?,
-    val recruitmentEndAt: LocalDateTime?,
+    /** 부트캠프만 쓴다 */
+    val recruitmentEndAt: LocalDateTime? = null,
+    /** 채용공고만 쓴다 */
+    val jobField: JobField? = null,
+    /** 채용공고만 쓴다 */
+    val jobRole: JobRole? = null,
 )
 
 enum class CompanyPostingType(val desc: String) {

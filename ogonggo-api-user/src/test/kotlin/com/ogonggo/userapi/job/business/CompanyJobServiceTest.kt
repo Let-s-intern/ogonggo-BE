@@ -67,7 +67,8 @@ class CompanyJobServiceTest {
                 companyName = command().companyName,
                 title = command().title,
                 accountEmail = ACCOUNT_EMAIL,
-                recruitmentEndAt = command().recruitmentEndAt,
+                jobField = command().jobField,
+                jobRole = command().jobRole,
             ),
         )
     }

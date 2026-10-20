@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.companyposting.implement
 
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
 import com.ogonggo.userapi.companyposting.business.CompanyPostingType
 import com.ogonggo.userapi.slack.SlackProperties
@@ -29,11 +31,35 @@ class CompanyPostingSlackNotifierTest {
             .andExpect(jsonPath("$.text").value("🆕 비즈니스 채용공고 등록 - 오공고 · 백엔드 개발자"))
             .andExpect(jsonPath("$.blocks[0].fields[1].text").value("*ID*\n3"))
             .andExpect(jsonPath("$.blocks[0].fields[3].text").value("*등록 계정*\ncompany@example.com"))
-            .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*모집 마감*\n2026-11-30 23:59"))
+            // `>`는 이스케이프되어 나가고 슬랙 화면에는 `>`로 보인다.
+            .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*직무*\nIT·개발 &gt; 백엔드"))
             .andExpect(jsonPath("$.blocks[1].text.text").value("*제목*\n백엔드 개발자"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(EVENT)
+
+        server.verify()
+    }
+
+    @Test
+    fun `부트캠프는 직무 대신 모집 마감을 보낸다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val notifier = CompanyPostingSlackNotifier(builder.build(), properties(WEBHOOK_URL))
+
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.text").value("🆕 비즈니스 부트캠프 등록 - 오공고 · 백엔드 개발자"))
+            .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*모집 마감*\n2026-11-30 23:59"))
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        notifier.notify(
+            EVENT.copy(
+                type = CompanyPostingType.BOOTCAMP,
+                jobField = null,
+                jobRole = null,
+                recruitmentEndAt = LocalDateTime.of(2026, 11, 30, 23, 59),
+            ),
+        )
 
         server.verify()
     }
@@ -90,7 +116,8 @@ class CompanyPostingSlackNotifierTest {
             companyName = "오공고",
             title = "백엔드 개발자",
             accountEmail = "company@example.com",
-            recruitmentEndAt = LocalDateTime.of(2026, 11, 30, 23, 59),
+            jobField = JobField.IT_DEVELOPMENT,
+            jobRole = JobRole.IT_BACKEND,
         )
     }
 }
