@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-26
-- 최종 변경일: 2026-10-12
+- 최종 변경일: 2026-10-20
 - 적용 범위: `ogonggo-server`
 - 예상 독자: 오공고 서버를 개발·리뷰하는 모든 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -14,7 +14,8 @@
 ```text
 ogonggo-api-user  ──┐
                     ├──> ogonggo-core
-ogonggo-api-admin ──┘
+ogonggo-api-admin ──┤
+                    └──> ogonggo-logging   (런타임 전용, core는 참조하지 않음)
 
 Controller → API Service → API/core Implement → core Repository
 ```
@@ -48,6 +49,7 @@ Controller → API Service → API/core Implement → core Repository
 | `ogonggo-api-user` | Presentation, Business, 사용자 Implement | 사용자 HTTP 계약·유스케이스·정책 구현 | `UserJobController`, `UserJobService` |
 | `ogonggo-api-admin` | Presentation, Business, 관리자 Implement | 관리자 HTTP 계약·유스케이스·정책 구현 | `AdminJobController`, `AdminJobService` |
 | `ogonggo-core` | Domain, 공통 Implement, Persistence | 공통 규칙·구현, JPA·MySQL 영속성 | `Job`, `JobReader`, `JobManager`, Repository |
+| `ogonggo-logging` | 없음(설정 모듈) | 두 API의 로그 출력 형식 | `logback-spring.xml` |
 
 ### core의 성격
 
@@ -58,6 +60,15 @@ ogonggo-core = Domain + Common Implement + Persistence(JPA/MySQL)
 ```
 
 core는 엔티티 매핑과 Repository를 한 곳에서 관리해 두 API가 같은 DB를 일관되게 사용하도록 합니다. 사용자·관리자 유스케이스는 포함하지 않으며, 저장 기술을 분리할 필요가 생기면 별도 Domain/Persistence 모듈 분리를 다시 검토합니다.
+
+### logging의 성격
+
+- 결정일: 2026-10-20 / 리뷰 상태: 팀 리뷰 필요
+- `ogonggo-logging`은 코드 없이 `logback-spring.xml`과 JSON 인코더 의존성만 가진 설정 모듈입니다. 두 API는 `runtimeOnly`로 포함하고, core는 참조하지 않습니다. 로그를 찍는 코드는 모든 모듈이 SLF4J만 씁니다.
+- 배경: 로그를 Datadog으로 보내면서 두 API가 같은 JSON 형식과 트레이스 식별자 필드를 내야 했습니다. 이 형식은 사용자·관리자 정책과 무관하게 함께 바뀌고, 도메인이나 영속성과도 무관하므로 core에 둘 이유도 없습니다.
+- [오류 처리](error-handling.md#7-검토한-대안)에서 `web-common` 모듈을 뺀 것은 HTTP 공유 코드의 규모에 비해 컴포넌트 스캔이 복잡해지기 때문이었습니다. 이 모듈은 빈과 코드가 없어 그 비용이 생기지 않습니다. 빈을 넣어야 하면 컴포넌트 스캔 범위 밖이므로 `AutoConfiguration.imports`로 등록합니다.
+- API 모듈에 `logback-spring.xml`을 따로 두지 않습니다. 같은 이름의 파일이 둘이면 클래스패스에서 먼저 잡힌 하나만 적용됩니다.
+- 메트릭 전송은 이 모듈에 넣지 않고 `ogonggo-observability`로 따로 둡니다(확인 필요). 운영 구성은 [Datadog 로그·APM 연동](../infra/datadog.md)을 읽습니다.
 
 ### Presentation
 
@@ -177,7 +188,7 @@ core에는 `Service`라는 이름을 쓰지 않습니다. 유스케이스는 각
 
 루트 엔티티가 없는 패키지가 남아 있습니다. 해당 기능을 바꿀 때 함께 정리합니다(확인 필요).
 
-- `adminapi/content`(관리 목록 공통 정렬·노출), `userapi/challenge`, `userapi/advertisement`, `userapi/scheduling`(메트릭 모듈 분리 전까지 유지)
+- `adminapi/content`(관리 목록 공통 정렬·노출), `userapi/challenge`, `userapi/advertisement`, `userapi/scheduling`(`ogonggo-observability` 메트릭 모듈 분리 전까지 유지)
 
 ## 6. 의존성과 구현 규칙
 
