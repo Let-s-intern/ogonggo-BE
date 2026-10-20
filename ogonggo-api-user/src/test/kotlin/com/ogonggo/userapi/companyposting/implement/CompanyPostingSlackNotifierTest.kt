@@ -2,6 +2,7 @@ package com.ogonggo.userapi.companyposting.implement
 
 import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
 import com.ogonggo.userapi.companyposting.business.CompanyPostingType
+import com.ogonggo.userapi.slack.SlackProperties
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
@@ -78,8 +79,8 @@ class CompanyPostingSlackNotifierTest {
         server.verify()
     }
 
-    private fun properties(registeredUrl: String): CompanyPostingSlackProperties =
-        CompanyPostingSlackProperties(registeredUrl = registeredUrl)
+    private fun properties(companyPosting: String): SlackProperties =
+        SlackProperties(companyPosting = companyPosting)
 
     companion object {
         private const val WEBHOOK_URL = "https://hooks.slack.com/services/T000/B000/xxxx"

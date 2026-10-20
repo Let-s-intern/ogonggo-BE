@@ -3,7 +3,9 @@ package com.ogonggo.userapi.companyposting.implement
 import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
 import com.ogonggo.userapi.config.UserAsyncConfiguration.Companion.COMPANY_POSTING_TASK_EXECUTOR
 import com.ogonggo.userapi.slack.SlackBlock
+import com.ogonggo.userapi.slack.SLACK_REST_CLIENT
 import com.ogonggo.userapi.slack.SlackMessage
+import com.ogonggo.userapi.slack.SlackProperties
 import com.ogonggo.userapi.slack.SlackText
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -23,17 +25,17 @@ import java.time.format.DateTimeFormatter
  */
 @Component
 internal class CompanyPostingSlackNotifier(
-    @Qualifier(COMPANY_POSTING_SLACK_REST_CLIENT)
-    private val companyPostingSlackRestClient: RestClient,
-    private val properties: CompanyPostingSlackProperties,
+    @Qualifier(SLACK_REST_CLIENT)
+    private val slackRestClient: RestClient,
+    private val properties: SlackProperties,
 ) {
 
     @Async(COMPANY_POSTING_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun notify(event: CompanyPostingRegisteredEvent) {
-        if (properties.registeredUrl.isBlank()) {
+        if (properties.companyPosting.isBlank()) {
             log.warn(
-                "ogonggo.company-posting.slack.registered-url이 설정되지 않아 알림을 건너뜁니다. type={}, postingId={}",
+                "ogonggo.slack.company-posting이 설정되지 않아 알림을 건너뜁니다. type={}, postingId={}",
                 event.type,
                 event.postingId,
             )
@@ -41,8 +43,8 @@ internal class CompanyPostingSlackNotifier(
         }
 
         try {
-            companyPostingSlackRestClient.post()
-                .uri(properties.registeredUrl)
+            slackRestClient.post()
+                .uri(properties.companyPosting)
                 .body(event.toSlackMessage())
                 .retrieve()
                 .toBodilessEntity()
@@ -80,5 +82,3 @@ private fun CompanyPostingRegisteredEvent.toSlackMessage(): SlackMessage =
             SlackBlock.text(SlackText.labeled("제목", title)),
         ),
     )
-
-internal const val COMPANY_POSTING_SLACK_REST_CLIENT = "companyPostingSlackRestClient"
