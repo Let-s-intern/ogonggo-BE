@@ -5,6 +5,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.NullSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.boot.logging.LoggingInitializationContext
@@ -42,10 +45,12 @@ class LogbackConfigurationTest {
         assertThat(fields["dd.trace_id"].asText()).isEqualTo("1234567890")
     }
 
-    @Test
-    fun `형식을 지정하지 않으면 사람이 읽는 텍스트로 남긴다`(output: CapturedOutput) {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = ["jsno", "JSON"])
+    fun `json이 아니거나 비어 있으면 로그를 버리지 않고 텍스트로 남긴다`(format: String?, output: CapturedOutput) {
         // given
-        initialize(format = null)
+        initialize(format = format)
 
         // when
         LoggerFactory.getLogger("ogonggo.test").info("공고 목록 조회")

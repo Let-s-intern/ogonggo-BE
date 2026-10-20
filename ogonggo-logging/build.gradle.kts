@@ -20,6 +20,8 @@ dependencyManagement {
 dependencies {
     // 8.x는 logback 1.5가 필요하다. Spring Boot 3.2는 logback 1.4를 쓴다.
     implementation("net.logstash.logback:logstash-logback-encoder:7.4")
+    // logback-spring.xml의 <if>가 LOG_FORMAT 값으로 출력 형식을 고를 때 쓴다.
+    implementation("org.codehaus.janino:janino")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")

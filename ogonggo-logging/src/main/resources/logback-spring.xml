@@ -2,8 +2,9 @@
 <!--
   두 API가 함께 쓰는 로그 설정. 출력 형식은 환경변수 LOG_FORMAT으로 고른다.
 
-  - text(기본): Spring Boot 기본 콘솔 형식. 로컬 bootRun과 테스트에서 쓴다.
-  - json: 한 줄에 JSON 하나. 컨테이너 이미지가 기본으로 켜며, Datadog이 필드를 그대로 읽는다.
+  - json: 한 줄에 JSON 하나. 컨테이너 이미지가 켜며, Datadog이 필드를 그대로 읽는다.
+  - 그 밖의 값이나 비어 있으면: Spring Boot 기본 텍스트 형식. 로컬 bootRun과 테스트에서 쓴다.
+    값을 잘못 넣어도 로그가 사라지지 않게 json이 아니면 모두 텍스트로 남긴다.
 
   dd-java-agent가 붙어 있으면 MDC에 dd.trace_id·dd.span_id·dd.service·dd.env·dd.version을 넣고,
   json 형식은 MDC를 필드로 내보내므로 Datadog에서 로그와 트레이스가 이어진다.
@@ -12,18 +13,23 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <appender name="text" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
-            <charset>${CONSOLE_LOG_CHARSET}</charset>
-        </encoder>
-    </appender>
-
-    <appender name="json" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
-    </appender>
+    <if condition='"json".equals(property("LOG_FORMAT"))'>
+        <then>
+            <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+                <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+            </appender>
+        </then>
+        <else>
+            <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+                <encoder>
+                    <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+                    <charset>${CONSOLE_LOG_CHARSET}</charset>
+                </encoder>
+            </appender>
+        </else>
+    </if>
 
     <root level="INFO">
-        <appender-ref ref="${LOG_FORMAT:-text}"/>
+        <appender-ref ref="CONSOLE"/>
     </root>
 </configuration>
