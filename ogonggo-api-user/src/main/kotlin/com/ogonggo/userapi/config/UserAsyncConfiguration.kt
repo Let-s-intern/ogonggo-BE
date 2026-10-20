@@ -81,10 +81,28 @@ class UserAsyncConfiguration {
         setAwaitTerminationSeconds(5)
     }
 
+    /**
+     * 기업회원 공고·부트캠프 등록 슬랙 알림 전용 실행기다.
+     *
+     * 등록은 드물어 스레드 하나로 충분하다. 공고는 DB에 남으므로 큐가 차면 알림을 버린다.
+     * CallerRuns로 두면 커밋 직후 요청 스레드가 슬랙 응답을 기다리게 된다.
+     */
+    @Bean(name = [COMPANY_POSTING_TASK_EXECUTOR])
+    fun companyPostingTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        corePoolSize = 1
+        maxPoolSize = 1
+        queueCapacity = 100
+        setThreadNamePrefix("company-posting-")
+        setRejectedExecutionHandler(ThreadPoolExecutor.DiscardPolicy())
+        setWaitForTasksToCompleteOnShutdown(true)
+        setAwaitTerminationSeconds(5)
+    }
+
     companion object {
         const val METRIC_TASK_EXECUTOR = "metricTaskExecutor"
         const val ADVERTISEMENT_TASK_EXECUTOR = "advertisementTaskExecutor"
         const val NOTIFICATION_DELIVERY_TASK_EXECUTOR = "notificationDeliveryTaskExecutor"
         const val NOTIFICATION_ENQUEUE_TASK_EXECUTOR = "notificationEnqueueTaskExecutor"
+        const val COMPANY_POSTING_TASK_EXECUTOR = "companyPostingTaskExecutor"
     }
 }

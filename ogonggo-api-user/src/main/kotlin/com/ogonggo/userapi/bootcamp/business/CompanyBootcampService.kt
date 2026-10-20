@@ -12,9 +12,13 @@ import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
+import com.ogonggo.userapi.companyposting.business.CompanyPostingType
 import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -26,14 +30,25 @@ class CompanyBootcampService(
     private val bootcampAppender: BootcampAppender,
     private val bootcampManager: BootcampManager,
     private val clock: Clock,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     @Transactional
     fun create(userId: Long, command: BootcampAppendDto): Long {
-        verifyCompany(userId)
+        val account = verifyCompany(userId)
         val closedAt = if (command.status == BootcampRecruitmentStatus.CLOSED) LocalDateTime.now(clock) else null
         val bootcamp = bootcampAppender.append(
             command.copy(ownerUserId = userId, closedAt = closedAt),
+        )
+        eventPublisher.publishEvent(
+            CompanyPostingRegisteredEvent(
+                type = CompanyPostingType.BOOTCAMP,
+                postingId = bootcamp.requiredId(),
+                companyName = command.companyName,
+                title = command.title,
+                accountEmail = account.email,
+                recruitmentEndAt = command.recruitmentEndAt,
+            ),
         )
         return bootcamp.requiredId()
     }
@@ -82,12 +97,13 @@ class CompanyBootcampService(
         )
     }
 
-    private fun verifyCompany(userId: Long) {
+    private fun verifyCompany(userId: Long): UserAccountDto {
         val account = userReader.read(userId)
         account.status.requireActive()
         if (account.role != UserRole.COMPANY) {
             throw ForbiddenException(UserErrorCode.COMPANY_ROLE_REQUIRED)
         }
+        return account
     }
 
     private fun Bootcamp.toResult(): CompanyBootcampResult {
