@@ -9,9 +9,13 @@ import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
+import com.ogonggo.userapi.companyposting.business.CompanyPostingType
 import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -29,12 +33,24 @@ class CompanyJobService(
     private val jobAppender: JobAppender,
     private val jobManager: JobManager,
     private val clock: Clock,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     @Transactional
     fun create(userId: Long, command: JobAppendDto): Long {
-        verifyCompany(userId)
-        return jobAppender.append(command.copy(ownerUserId = userId)).requiredId()
+        val account = verifyCompany(userId)
+        val job = jobAppender.append(command.copy(ownerUserId = userId))
+        eventPublisher.publishEvent(
+            CompanyPostingRegisteredEvent(
+                type = CompanyPostingType.JOB,
+                postingId = job.requiredId(),
+                companyName = command.companyName,
+                title = command.title,
+                accountEmail = account.email,
+                recruitmentEndAt = command.recruitmentEndAt,
+            ),
+        )
+        return job.requiredId()
     }
 
     fun getJobs(userId: Long, page: Int, size: Int): CompanyJobPageResult {
@@ -79,11 +95,12 @@ class CompanyJobService(
         jobManager.delete(jobReader.readOwnedForDelete(userId, jobId), LocalDateTime.now(clock))
     }
 
-    private fun verifyCompany(userId: Long) {
+    private fun verifyCompany(userId: Long): UserAccountDto {
         val account = userReader.read(userId)
         account.status.requireActive()
         if (account.role != UserRole.COMPANY) {
             throw ForbiddenException(UserErrorCode.COMPANY_ROLE_REQUIRED)
         }
+        return account
     }
 }

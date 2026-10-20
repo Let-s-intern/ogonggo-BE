@@ -15,10 +15,13 @@ import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.UserAccountDto
 import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.userapi.companyposting.business.CompanyPostingRegisteredEvent
+import com.ogonggo.userapi.companyposting.business.CompanyPostingType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -31,7 +34,8 @@ class CompanyJobServiceTest {
     private val jobAppender = Mockito.mock(JobAppender::class.java)
     private val jobManager = Mockito.mock(JobManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZONE)
-    private val service = CompanyJobService(userReader, jobReader, jobAppender, jobManager, clock)
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
+    private val service = CompanyJobService(userReader, jobReader, jobAppender, jobManager, clock, eventPublisher)
 
     @Test
     fun `등록한 공고에 소유자를 채운다`() {
@@ -48,6 +52,27 @@ class CompanyJobServiceTest {
     }
 
     @Test
+    fun `등록하면 운영 채널 알림용 이벤트를 발행한다`() {
+        givenAccount(role = UserRole.COMPANY)
+        val saved = Mockito.mock(Job::class.java)
+        Mockito.`when`(saved.id).thenReturn(JOB_ID)
+        Mockito.`when`(jobAppender.append(command().copy(ownerUserId = USER_ID))).thenReturn(saved)
+
+        service.create(USER_ID, command())
+
+        Mockito.verify(eventPublisher).publishEvent(
+            CompanyPostingRegisteredEvent(
+                type = CompanyPostingType.JOB,
+                postingId = JOB_ID,
+                companyName = command().companyName,
+                title = command().title,
+                accountEmail = ACCOUNT_EMAIL,
+                recruitmentEndAt = command().recruitmentEndAt,
+            ),
+        )
+    }
+
+    @Test
     fun `기업 회원이 아니면 등록을 막는다`() {
         givenAccount(role = UserRole.USER)
 
@@ -55,6 +80,7 @@ class CompanyJobServiceTest {
 
         assertEquals(UserErrorCode.COMPANY_ROLE_REQUIRED, exception.errorCode)
         Mockito.verifyNoInteractions(jobAppender)
+        Mockito.verifyNoInteractions(eventPublisher)
     }
 
     @Test
@@ -121,7 +147,7 @@ class CompanyJobServiceTest {
             UserAccountDto(
                 userId = USER_ID,
                 letsCareerUserId = null,
-                email = "company@example.com",
+                email = ACCOUNT_EMAIL,
                 status = status,
                 role = role,
                 joinedAt = JOINED_AT,
@@ -143,5 +169,6 @@ class CompanyJobServiceTest {
         private val JOINED_AT: LocalDateTime = LocalDateTime.of(2026, 8, 1, 9, 0)
         private const val USER_ID = 17L
         private const val JOB_ID = 3L
+        private const val ACCOUNT_EMAIL = "company@example.com"
     }
 }
