@@ -121,7 +121,7 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
         assertEquals(1, notificationCount(account.userId))
         val notification = jdbc.queryForMap(
             "select channel, template_code, status, recipient_address, deduplication_key " +
-                "from notifications where recipient_user_id = ?",
+                "from notifications where recipient_user_id = ? and channel = 'KAKAO'",
             account.userId,
         )
         assertEquals("KAKAO", notification["channel"])
@@ -129,6 +129,15 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
         assertEquals("PENDING", notification["status"])
         assertEquals("01012345678", notification["recipient_address"])
         assertEquals("sign_up_confirm:user:${account.userId}:KAKAO", notification["deduplication_key"])
+        val email = jdbc.queryForMap(
+            "select template_code, status, recipient_address, deduplication_key " +
+                "from notifications where recipient_user_id = ? and channel = 'EMAIL'",
+            account.userId,
+        )
+        assertEquals("sign_up_welcome", email["template_code"])
+        assertEquals("PENDING", email["status"])
+        assertEquals("lets@career.co.kr", email["recipient_address"])
+        assertEquals("sign_up_welcome:user:${account.userId}:EMAIL", email["deduplication_key"])
         boundary.server.verify()
 
         // when
@@ -137,6 +146,7 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
         // then
         assertFalse(secondLogin.isNewUser)
         assertEquals(1, notificationCount(account.userId))
+        assertEquals(1, notificationCount(account.userId, channel = "EMAIL"))
     }
 
     @Test
@@ -161,7 +171,7 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
     }
 
     @Test
-    fun `번호가 잘못돼도 계정 가입은 성공하고 HTTP 요청만 생략한다`() {
+    fun `번호가 잘못돼도 계정 가입은 성공하고 알림톡만 생략한다`() {
         // given
         stubLetsCareerUser(4822L, "010")
 
@@ -173,6 +183,8 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
         assertTrue(result.isNewUser)
         val account = checkNotNull(userReader.readByLetsCareerUserId(4822L))
         assertEquals(0, notificationCount(account.userId))
+        // 환영 메일은 휴대폰 번호와 무관하므로 그대로 적재한다.
+        assertEquals(1, notificationCount(account.userId, channel = "EMAIL"))
         boundary.server.verify()
     }
 
@@ -234,11 +246,13 @@ class UserSignUpAlimTalkEventIntegrationTest @Autowired constructor(
         boundary.server.verify()
     }
 
-    private fun notificationCount(userId: Long): Int = checkNotNull(
+    /** 같은 가입 이벤트로 환영 메일도 적재되므로 채널을 나눠 센다. */
+    private fun notificationCount(userId: Long, channel: String = "KAKAO"): Int = checkNotNull(
         jdbc.queryForObject(
-            "select count(*) from notifications where recipient_user_id = ?",
+            "select count(*) from notifications where recipient_user_id = ? and channel = ?",
             Int::class.java,
             userId,
+            channel,
         ),
     )
 

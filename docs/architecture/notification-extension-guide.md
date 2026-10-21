@@ -34,6 +34,37 @@ flowchart LR
 
 **선택 기준:** 이벤트 처리인지 예약 대상 평가인지 먼저 결정한다. 채널과 템플릿 선택은 별도 결정이다. 예를 들어 FCM 예약 알림은 예약형 적재와 FCM sender가 모두 필요하다.
 
+### 이메일 설정과 템플릿
+
+이메일 sender는 SES SMTP를 `spring.mail.*`로 쓰고, 발신 주소는 광고 문의 확인 메일과 함께 쓰는 공통 키 `ogonggo.mail.from`에서 읽는다. 발신 주소가 비어 있으면 발송하지 않고 `CHANNEL_NOT_CONFIGURED`로 기록한다.
+
+```yaml
+spring:
+  mail:
+    properties:
+      mail:
+        smtp:
+          # 발송 실행기 스레드가 SMTP 응답을 무한정 기다리지 않게 한다. JavaMail 기본값은 무제한이다.
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+
+ogonggo:
+  mail:
+    from: ${OGONGGO_MAIL_FROM:}
+```
+
+메일은 provider에 템플릿을 등록하지 않으므로 제목과 본문을 `EmailTemplate`이 소유한다. 알림 행에는 template code와 변수만 저장한다. 본문은 `ogonggo-api-user/src/main/resources/mail/`에 HTML(`*.html`)과 같은 내용의 텍스트(`*.txt`)로 두고 둘 다 보낸다. 문구를 고칠 때는 두 파일을 함께 고친다. 새 메일은 `EmailTemplate`에 항목과 본문 파일을 추가하고 같은 `template_code`로 적재한다. SMTP 예외 메시지에는 수신 주소가 섞일 수 있어 `result_detail`에 원문을 남기지 않는다.
+
+| 결과 | 저장 분류 |
+| --- | --- |
+| 발신 주소 미설정 | `FAILED` / `CHANNEL_NOT_CONFIGURED` |
+| 미등록 template code | `FAILED` / `TEMPLATE_CONFIGURATION` |
+| payload 해석 불가, 수신 주소 형식 오류 | `FAILED` / `INVALID_REQUEST` |
+| SMTP 인증 실패 | `FAILED` / `AUTHENTICATION_CONFIGURATION` |
+| SMTP 서버의 수신자 거절(`SendFailedException`) | `FAILED` / `CLIENT_ERROR` |
+| 연결 실패·중단 등 그 밖의 SMTP 오류 | `UNKNOWN` / `TRANSPORT_ERROR` |
+
 ### FCM 설정과 payload
 
 FCM sender를 활성화하려면 사용자 API 설정에 Firebase 서비스 계정 정보를 넣는다. 모든 값을 생략하면 Google Application Default Credentials를 사용한다. 일부 값만 설정하면 기동 시 실패한다.
@@ -147,7 +178,8 @@ Authorization: Bearer {ogonggo-access-token}
 
 ## 현재 구현상 유의점
 
-- 실제 발송 sender는 `KAKAO`와 설정이 활성화된 `FCM`이다. FCM 토큰은 `PUT /api/v1/users/me/fcm-token`으로 저장하고, 알림 행의 `recipient_address`에 대상 토큰을 넣어 발송한다. `EMAIL`은 enum/확장 경계만 있다.
+- 실제 발송 sender는 `KAKAO`, `EMAIL`과 설정이 활성화된 `FCM`이다. FCM 토큰은 `PUT /api/v1/users/me/fcm-token`으로 저장하고, 알림 행의 `recipient_address`에 대상 토큰을 넣어 발송한다.
+- 일반 회원 가입(오공고 계정 최초 생성) 이벤트는 가입 알림톡과 가입 환영 메일을 listener별로 따로 적재한다. 한 채널의 생략·적재 실패는 다른 채널에 영향을 주지 않는다. 기업 회원 가입은 이 이벤트를 발행하지 않는다.
 - 스크랩 리마인드 scheduler는 템플릿 승인 전까지 코드 등록이 보류되어 있어 현재 실행되지 않는다.
 - 템플릿 코드는 알림 행의 `template_code`를 사용한다. `nhn.templateCode`는 호환용 설정이다.
 - NHN 멱등성은 provider의 단기 중복 억제일 뿐 애플리케이션 재시도 정책이 아니다. provider 접수 이후 사용자 도착 여부도 현재 추적하지 않는다.
@@ -157,8 +189,8 @@ Authorization: Bearer {ogonggo-access-token}
 ## 기준 코드
 
 - 적재 계약: [NotificationAppender](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/intake/implement/NotificationAppender.kt), [NotificationAppendDto](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/intake/implement/dto/NotificationAppendDto.kt)
-- 가입 이벤트: [UserSignUpAlimTalkEventListener](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/signup/UserSignUpAlimTalkEventListener.kt)
+- 가입 이벤트: [UserSignUpAlimTalkEventListener](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/signup/UserSignUpAlimTalkEventListener.kt), [UserSignUpEmailEventListener](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/signup/UserSignUpEmailEventListener.kt)
 - 예약형 적재: [JobBookmarkReminderEnqueueService](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/business/JobBookmarkReminderEnqueueService.kt), [JobBookmarkReminderScheduler](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/reminder/JobBookmarkReminderScheduler.kt)
-- 발송 확장: [NotificationDispatcher](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationDispatcher.kt), [NotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationSender.kt), [KakaoNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/alimtalk/KakaoNotificationSender.kt)
+- 발송 확장: [NotificationDispatcher](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationDispatcher.kt), [NotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationSender.kt), [KakaoNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/alimtalk/KakaoNotificationSender.kt), [EmailNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/email/EmailNotificationSender.kt)
 - FCM 토큰·sender: [FcmTokenController](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/fcm/presentation/FcmTokenController.kt), [FcmNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/fcm/implement/FcmNotificationSender.kt)
 - 운영 주기: [스케줄 작업 가이드](scheduling.md), [시간 처리 가이드](time-handling.md)

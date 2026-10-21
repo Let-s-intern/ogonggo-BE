@@ -3,6 +3,7 @@ package com.ogonggo.userapi.advertisement.implement
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
+import com.ogonggo.userapi.mail.OgonggoMailProperties
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,7 +25,7 @@ class AdvertisementInquiryMailSenderTest {
 
     @Test
     fun `문의를 남긴 주소로 소개서를 붙인 접수 확인 메일을 보낸다`() {
-        val sender = AdvertisementInquiryMailSender(javaMailSender, AdvertisementMailProperties(from = FROM))
+        val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
         Mockito.doNothing().`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
 
         sender.sendConfirmation(NOTIFICATION)
@@ -45,7 +46,7 @@ class AdvertisementInquiryMailSenderTest {
 
     @Test
     fun `본문에 담당자 이름과 신청 내용을 담는다`() {
-        val sender = AdvertisementInquiryMailSender(javaMailSender, AdvertisementMailProperties(from = FROM))
+        val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
         Mockito.doNothing().`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
 
         sender.sendConfirmation(NOTIFICATION)
@@ -62,7 +63,7 @@ class AdvertisementInquiryMailSenderTest {
 
     @Test
     fun `발신 주소가 없으면 보내지 않는다`() {
-        val sender = AdvertisementInquiryMailSender(javaMailSender, AdvertisementMailProperties(from = ""))
+        val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = ""))
 
         sender.sendConfirmation(NOTIFICATION)
 
@@ -72,7 +73,7 @@ class AdvertisementInquiryMailSenderTest {
     @Test
     fun `메일 발송이 실패해도 예외를 밖으로 던지지 않는다`() {
         // 문의는 이미 슬랙으로 전달된 뒤다. 확인 메일 실패로 접수를 되돌리지 않는다.
-        val sender = AdvertisementInquiryMailSender(javaMailSender, AdvertisementMailProperties(from = FROM))
+        val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
         Mockito.doThrow(MailSendException("SMTP 연결 실패"))
             .`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
 

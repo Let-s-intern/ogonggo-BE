@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisement.implement
 
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.config.UserAsyncConfiguration.Companion.ADVERTISEMENT_TASK_EXECUTOR
+import com.ogonggo.userapi.mail.OgonggoMailProperties
 import jakarta.mail.internet.MimeMessage
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
@@ -29,7 +30,7 @@ interface AdvertisementInquiryMailer {
 @Component
 internal class AdvertisementInquiryMailSender(
     private val javaMailSender: JavaMailSender,
-    private val properties: AdvertisementMailProperties,
+    private val properties: OgonggoMailProperties,
 ) : AdvertisementInquiryMailer {
 
     @Async(ADVERTISEMENT_TASK_EXECUTOR)
