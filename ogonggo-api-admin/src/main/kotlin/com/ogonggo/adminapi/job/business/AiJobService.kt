@@ -73,6 +73,15 @@ class AiJobService(
         JobSourceHtmlSanitizer.sanitize(sourceHtml, sourceUrl)?.let { jobSourceManager.save(jobId, it) }
     }
 
+    /**
+     * 사용자 화면에서 내린다. AI 분석을 끝내 하지 못한 공고처럼 보여 줄 수 없는 공고에 쓴다.
+     * 분석은 고용24 공고도 하므로 소유자 없이 수집한 공고 둘 다 숨긴다. 이미 숨긴 공고를 다시 숨겨도 성공한다.
+     */
+    @Transactional
+    fun hide(jobId: Long) {
+        jobManager.hide(jobReader.readCollectedForUpdate(jobId))
+    }
+
     /** 직무별로 나뉘어 새 공고로 등록된 원래 공고처럼 더는 쓰지 않는 공고를 지운다. 이미 지운 공고를 다시 지워도 성공한다. */
     @Transactional
     fun delete(jobId: Long) {

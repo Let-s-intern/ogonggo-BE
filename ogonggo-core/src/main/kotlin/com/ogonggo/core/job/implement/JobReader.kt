@@ -53,6 +53,15 @@ class JobReader internal constructor(
         jobRepository.findByIdAndSourceForUpdate(jobId, ContentSource.CRAWLER)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
 
+    /**
+     * 소유자 없이 수집한 공고(크롤링·고용24)를 잠가 찾는다. AI 서버가 분석하지 못한 공고를 숨길 때 쓴다.
+     * 기업회원 공고는 소유자가 관리하므로 찾지 않는다.
+     */
+    fun readCollectedForUpdate(jobId: Long): Job =
+        jobRepository.findByIdAndSourceForUpdate(jobId, ContentSource.CRAWLER)
+            ?: jobRepository.findByIdAndSourceForUpdate(jobId, ContentSource.WORK24)
+            ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
+
     /** 삭제는 멱등해야 하므로 이미 삭제된 수집 공고도 잠가 찾는다. */
     fun readCrawledForDelete(jobId: Long): Job =
         jobRepository.findIncludingDeletedByIdAndSourceForUpdate(jobId, ContentSource.CRAWLER)

@@ -96,6 +96,22 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `소유자 없이 수집한 공고는 크롤링과 고용24 모두 찾고 기업회원 공고는 찾지 않는다`() {
+        // given
+        val crawled = checkNotNull(jobAppender.append(createCommand()).id)
+        val work24 = checkNotNull(
+            jobAppender.append(createCommand().copy(source = ContentSource.WORK24, externalId = "K1")).id,
+        )
+        val company = checkNotNull(jobAppender.append(createCommand(ownerUserId = USER_ID)).id)
+
+        // when, then
+        assertEquals(crawled, jobReader.readCollectedForUpdate(crawled).id)
+        assertEquals(work24, jobReader.readCollectedForUpdate(work24).id)
+        val exception = assertThrows(EntityNotFoundException::class.java) { jobReader.readCollectedForUpdate(company) }
+        assertEquals(JobErrorCode.JOB_NOT_FOUND, exception.errorCode)
+    }
+
+    @Test
     fun `같은 등록 경로에서 같은 외부 식별값은 두 번 저장할 수 없다`() {
         jobAppender.append(createCommand().copy(source = ContentSource.WORK24, externalId = "K1"))
 

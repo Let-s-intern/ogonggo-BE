@@ -186,6 +186,15 @@ class AiJobServiceTest {
     }
 
     @Test
+    fun `수집 공고를 숨긴다`() {
+        Mockito.`when`(jobReader.readCollectedForUpdate(JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
+
+        service.hide(JOB_ID)
+
+        assertEquals(listOf("hide"), managerCalls)
+    }
+
+    @Test
     fun `원문 URL로 수집 공고의 식별자를 찾는다`() {
         Mockito.`when`(jobReader.readCrawledBySourceUrl(SOURCE_URL)).thenReturn(savedJob)
 

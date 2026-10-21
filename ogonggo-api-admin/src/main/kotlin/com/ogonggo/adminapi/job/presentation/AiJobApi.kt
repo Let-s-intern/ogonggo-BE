@@ -165,6 +165,34 @@ interface AiJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "hideAiJob",
+        summary = "AI 서버 채용공고 숨김",
+        description = """
+            수집 공고를 숨김 상태로 바꿔 사용자 화면에서 내립니다. 지우지는 않아 관리자 콘솔에서 다시 노출할 수 있습니다.
+            AI 분석을 끝내 하지 못한 공고처럼 보여 줄 수 없는 공고에 씁니다. 크롤링 공고와 고용24 공고를 숨깁니다.
+            이미 숨긴 공고를 다시 숨겨도 성공합니다. 삭제한 공고와 기업회원 공고는 찾지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "숨김 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "401",
+                description = UNAUTHORIZED_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "JOB_NOT_FOUND: 크롤링·고용24 공고가 없습니다. 기업회원 공고도 찾지 않습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun hideJob(
+        @Positive jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
         operationId = "deleteAiJob",
         summary = "AI 서버 채용공고 삭제",
         description = """

@@ -58,6 +58,14 @@ class AiJobController(
         return SuccessResponse.ok()
     }
 
+    @PostMapping("/{jobId}/hide")
+    override fun hideJob(
+        @PathVariable("jobId") jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        aiJobService.hide(jobId)
+        return SuccessResponse.ok()
+    }
+
     @DeleteMapping("/{jobId}")
     override fun deleteJob(
         @PathVariable("jobId") jobId: Long,
