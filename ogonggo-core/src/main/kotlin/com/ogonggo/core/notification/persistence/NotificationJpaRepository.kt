@@ -37,9 +37,14 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         """
         select notification from Notification notification
         where notification.scheduledAt <= :now
-          and (notification.scheduledAt > :notBefore or notification.createdAt > :notBefore)
+          and (
+            notification.dispatchExpiresAt > :now
+            or (notification.dispatchExpiresAt is null
+                and (notification.scheduledAt > :notBefore or notification.createdAt > :notBefore))
+          )
           and notification.status = :pending
-        order by notification.scheduledAt, notification.id
+        order by case when notification.batchId is null then 0 else 1 end,
+          notification.scheduledAt, notification.id
         """,
     )
     fun findDue(
@@ -54,7 +59,11 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         select count(notification) from Notification notification
         where notification.status = :pending
           and notification.scheduledAt <= :now
-          and (notification.scheduledAt > :notBefore or notification.createdAt > :notBefore)
+          and (
+            notification.dispatchExpiresAt > :now
+            or (notification.dispatchExpiresAt is null
+                and (notification.scheduledAt > :notBefore or notification.createdAt > :notBefore))
+          )
         """,
     )
     fun countDuePending(
@@ -67,11 +76,15 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         """
         select count(notification) from Notification notification
         where notification.status = :pending
-          and notification.scheduledAt <= :notBefore
-          and notification.createdAt <= :notBefore
+          and (
+            notification.dispatchExpiresAt <= :now
+            or (notification.dispatchExpiresAt is null
+                and notification.scheduledAt <= :notBefore and notification.createdAt <= :notBefore)
+          )
         """,
     )
     fun countExpiredPending(
+        @Param("now") now: LocalDateTime,
         @Param("notBefore") notBefore: LocalDateTime,
         @Param("pending") pending: NotificationStatus,
     ): Long

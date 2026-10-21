@@ -13,4 +13,6 @@ data class NotificationAppendDto(
     val scheduledAt: LocalDateTime,
     val recipientUserId: Long? = null,
     val userNotificationId: Long? = null,
+    val batchId: String? = null,
+    val dispatchExpiresAt: LocalDateTime? = null,
 )

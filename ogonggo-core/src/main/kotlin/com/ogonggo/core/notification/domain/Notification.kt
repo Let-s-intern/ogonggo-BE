@@ -38,6 +38,7 @@ enum class NotificationStatus(override val code: Int, override val desc: String)
     ],
     indexes = [
         Index(name = "idx_notification_user_notification", columnList = "user_notification_id"),
+        Index(name = "idx_notification_batch", columnList = "batch_id, status"),
         Index(name = "idx_notification_due", columnList = "status, scheduled_at, id"),
         Index(name = "idx_notification_cleanup", columnList = "status, updated_at, id"),
     ],
@@ -68,6 +69,13 @@ internal class Notification(
     /** 이 시각이 되면 dispatcher가 provider 발송을 시도한다. */
     @Column(name = "scheduled_at", nullable = false)
     val scheduledAt: LocalDateTime,
+
+    @Column(name = "batch_id", length = 36)
+    val batchId: String? = null,
+
+    /** null이면 기존 8분 정책을 따른다. 어드민 발송은 명시한 시각까지 대기한다. */
+    @Column(name = "dispatch_expires_at")
+    val dispatchExpiresAt: LocalDateTime? = null,
 ) : BaseTimeEntity() {
 
     @Id

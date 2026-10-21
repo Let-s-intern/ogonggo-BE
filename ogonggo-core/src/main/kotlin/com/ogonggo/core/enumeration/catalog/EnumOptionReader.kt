@@ -58,6 +58,7 @@ import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.usernotification.domain.UserNotificationType
 import com.ogonggo.core.usernotification.domain.UserNotificationPushSkipReason
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
 import org.springframework.stereotype.Component
 
 /**
@@ -87,6 +88,7 @@ class EnumOptionReader {
             // 알림
             enumOptionsOf<NotificationChannel>(),
             enumOptionsOf<NotificationStatus>(),
+            enumOptionsOf<NotificationBatchTargetType>(),
             enumOptionsOf<UserNotificationType>(),
             enumOptionsOf<UserNotificationPushSkipReason>(),
             // 직군·직무. JobRole의 parent는 속한 JobField다.

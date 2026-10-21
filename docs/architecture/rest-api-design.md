@@ -440,3 +440,8 @@ API 버전 변경은 기존 클라이언트가 호환되지 않는 외부 계약
 - `/api/v1/users/me/notifications`는 로그인한 활성 회원의 알림함이다. GET 목록과 GET `/unread-count`, PATCH `/{notificationId}/read`, PATCH `/read-all`을 제공한다.
 - 읽음은 알림의 상태 전이이며 본문 없는 명령별 PATCH를 사용한다. 최초 읽은 시각을 보존하고 반복 호출에 성공한다. 모두 읽음은 요청에서 고정한 시각·ID 상한 뒤의 신규 알림을 제외한다.
 - 댓글 생성 POST의 일반 멱등성은 바꾸지 않는다. 같은 댓글 발생 건의 알림함·기기별 대기열만 DB 제약으로 중복을 방지한다. 요청·응답은 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)을 따른다.
+
+## 어드민 FCM 발송 묶음
+
+- `POST /api/v1/admin/notification-batches`는 대기열과 운영 기록을 함께 생성하고 적재 완료 후 201로 응답한다. POST마다 새 발송이며 요청 멱등성은 제공하지 않는다.
+- `GET /api/v1/admin/notification-batches/{batchId}`는 30일 미만의 묶음별 처리 현황을 제공한다. 관리자 권한이 필요하며 자세한 요청·응답은 `AdminNotificationBatchApi`가 소유한다.

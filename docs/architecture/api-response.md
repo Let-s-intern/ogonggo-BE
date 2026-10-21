@@ -578,3 +578,9 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 최근 30일 경계의 본인 미삭제 알림만 반환한다. 목록 항목의 표시 이름·이미지·제목·미리보기는 생성 당시 스냅샷이며 `isRead`는 `readAt` 존재 여부다. 비어 있으면 `items: []`, 다음 페이지가 없으면 `nextCursor: null`, `hasNext: false`다.
 - `GET /api/v1/users/me/notifications/unread-count`의 `data.count`는 실제 Long 개수다. 두 읽음 PATCH는 본문 없이 호출하고 200, `data: null`로 응답한다. 한 건 읽음의 타인·만료·삭제·없는 알림은 404 `USER_NOTIFICATION_NOT_FOUND`다.
 - 인증·요청·응답·예외는 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)을, 댓글 생성의 알림 적재는 [알림 추가 가이드](notification-extension-guide.md#댓글-자동-알림과-사용자-알림함)를 따른다.
+
+### 어드민 FCM 발송 묶음
+
+- 생성은 201이며 `batchId`와 대상 회원 수·실제 수신 회원 수·토큰별 적재 수·토큰 없음/비활성 제외 회원 수를 반환한다. 토큰이 없어 0건이어도 묶음은 생성한다.
+- 조회는 200이며 운영 정보, `sentCount`·`failedCount`·`unknownCount`·`pendingCount`·`expiredCount`, `completed`와 상태·`resultCode`별 사유 건수를 반환한다. 성공은 provider 접수이며 미확정과 기한 초과를 실패에 합치지 않는다.
+- `dispatchExpiresAt`은 발송 대기 종료 시각, `resultsAvailableUntil`은 조회 종료 시각이다. 생성 후 정확히 30일부터 404이며 관련 정책은 [어드민 FCM 발송](notification-extension-guide.md#어드민-fcm-발송)을 따른다.

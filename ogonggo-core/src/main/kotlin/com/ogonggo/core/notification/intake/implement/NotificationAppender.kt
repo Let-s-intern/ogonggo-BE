@@ -61,6 +61,8 @@ class NotificationAppender internal constructor(
                     recipientAddress = it.recipientAddress,
                     payloadJson = it.payloadJson,
                     scheduledAt = it.scheduledAt,
+                    batchId = it.batchId,
+                    dispatchExpiresAt = it.dispatchExpiresAt,
                 )
             }
             .toList()

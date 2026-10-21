@@ -62,7 +62,7 @@ class NotificationMetricsTest {
     fun `대기 잔량 gauge는 전체 due stale 미래 건수를 구분한다`() {
         Mockito.`when`(notificationManager.countPendingTotal()).thenReturn(11L)
         Mockito.`when`(notificationManager.countPendingDue(now, now.minusMinutes(8))).thenReturn(4L)
-        Mockito.`when`(notificationManager.countPendingExpired(now.minusMinutes(8))).thenReturn(5L)
+        Mockito.`when`(notificationManager.countPendingExpired(now, now.minusMinutes(8))).thenReturn(5L)
         Mockito.`when`(notificationManager.countPendingFuture(now)).thenReturn(2L)
 
         assertEquals(11.0, backlog("total"))

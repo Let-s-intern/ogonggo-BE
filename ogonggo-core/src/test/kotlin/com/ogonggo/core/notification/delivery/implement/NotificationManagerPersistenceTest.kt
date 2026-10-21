@@ -87,7 +87,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
 
         assertEquals(4L, notificationManager.countPendingTotal())
         assertEquals(2L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
-        assertEquals(1L, notificationManager.countPendingExpired(now.minusMinutes(8)))
+        assertEquals(1L, notificationManager.countPendingExpired(now, now.minusMinutes(8)))
         assertEquals(1L, notificationManager.countPendingFuture(now))
     }
 
@@ -210,6 +210,32 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertFalse("${prefix}pending:user:17" in remaining)
         assertEquals(NotificationStatus.SENT, remaining["${prefix}sent:user:18"]?.status)
         assertEquals(NotificationStatus.PENDING, remaining["other-job:pending"]?.status)
+    }
+
+    @Test
+    @DisplayName("어드민 발송은 지정 기한까지 처리하고 기존 알림을 먼저 발송한다")
+    fun `어드민 대기 기한은 기존 8분 창과 독립적이다`() {
+        // given
+        val now = LocalDateTime.of(2026, 10, 22, 12, 0)
+        append("old-comment", now.minusMinutes(9))
+        append("new-comment", now.minusMinutes(1))
+        listOf("admin-due" to now.plusHours(23), "admin-expired" to now).forEach { (key, expires) ->
+            notificationAppender.append(NotificationAppendDto(
+                deduplicationKey = key, channel = NotificationChannel.FCM, templateCode = "admin_notification",
+                recipientAddress = "test-token", payloadJson = "{}", scheduledAt = now.minusHours(1),
+                recipientUserId = 17, batchId = "test-batch", dispatchExpiresAt = expires,
+            ))
+            jdbcTemplate.update("update notifications set created_at = ? where deduplication_key = ?", now.minusHours(1), key)
+        }
+
+        // when
+        val due = notificationManager.findDue(now, now.minusMinutes(8), 10)
+
+        // then
+        assertEquals(listOf("new-comment", "admin-due"), due.map { it.deduplicationKey })
+        assertEquals(2L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
+        assertEquals(2L, notificationManager.countPendingExpired(now, now.minusMinutes(8)))
+        assertEquals(4L, notificationManager.countPendingTotal())
     }
 
     private fun append(

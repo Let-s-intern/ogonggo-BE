@@ -165,6 +165,28 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("/paths/~1api~1v1~1internal~1jobs~1{jobId}~1source-html/put").isObject)
     }
 
+    @Test
+    fun `FCM 발송 API는 관리자 인증과 적재 응답 및 요청 길이를 명세한다`() {
+        // given
+        val document = openApiDocument()
+        val create = document.at("/paths/~1api~1v1~1admin~1notification-batches/post")
+        val result = document.at("/paths/~1api~1v1~1admin~1notification-batches~1{batchId}/get")
+        val request = document.at("/components/schemas/CreateNotificationBatchRequest")
+
+        // when, then
+        assertEquals("createNotificationBatch", create.at("/operationId").asText())
+        assertEquals("getNotificationBatch", result.at("/operationId").asText())
+        assertTrue(create.at("/security/0/BearerAuth").isArray)
+        assertTrue(result.at("/security/0/BearerAuth").isArray)
+        assertTrue(create.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(result.at("/responses/200/content/application~1json/schema").isObject)
+        assertEquals(100, request.at("/properties/title/maxLength").asInt())
+        assertEquals(1000, request.at("/properties/body/maxLength").asInt())
+        assertEquals("string", request.at("/properties/data/additionalProperties/type").asText())
+        assertEquals("uuid", result.at("/parameters").first { it.at("/name").asText() == "batchId" }.at("/schema/format").asText())
+        assertTrue(result.at("/responses/404/description").asText().contains("NOTIFICATION_BATCH_NOT_FOUND"))
+    }
+
     private fun openApiDocument() = objectMapper.readTree(
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)

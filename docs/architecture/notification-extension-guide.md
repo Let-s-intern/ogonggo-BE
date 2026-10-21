@@ -12,7 +12,7 @@
 2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 수신 주소 하나·채널 한 개의 발송 기록이다. 다중 기기 FCM은 설치마다 행을 만든다.
 3. `deduplication_key`는 같은 논리 알림의 재처리에도 변하지 않게 만든다. 별도 회차로 다시 보낼 때는 회차 식별자를 포함한다.
 4. 발송 결과 상태는 `PENDING → SENT | FAILED | UNKNOWN`이다. `SENT`는 provider 접수, `FAILED`는 명시적 거절, `UNKNOWN`은 접수 여부를 판단할 수 없는 결과다. `SENT`는 사용자 도착을 뜻하지 않는다.
-5. dispatcher는 `max(scheduled_at, created_at)`이 현재 시각 기준 최근 8분 이내인 due `PENDING`만 조회한다. 지연 적재된 행은 적재 시각부터 창을 적용하고, 그보다 오래된 행은 `PENDING`으로 남겨 자동 발송하지 않는다.
+5. dispatcher는 기본적으로 `max(scheduled_at, created_at)`이 현재 시각 기준 최근 8분 이내인 due `PENDING`만 조회한다. 어드민 발송처럼 `dispatch_expires_at`이 있으면 그 시각 전까지 조회한다. 지연 적재된 행은 적재 시각부터 창을 적용하고, 그보다 오래된 행은 `PENDING`으로 남겨 자동 발송하지 않는다.
 6. provider 호출·요청/응답 변환은 채널 sender가 맡고, dispatcher에는 채널별 분기 로직을 추가하지 않는다.
 7. `SENT`·`FAILED`·`UNKNOWN`은 terminal 상태로 자동 재발송하지 않고 30일 후 정리한다. `PENDING`은 자동 정리하지 않는다. 삭제된 행의 중복 키는 다시 사용할 수 있다.
 
@@ -183,6 +183,18 @@ Authorization: Bearer {ogonggo-access-token}
 
 코드 롤백은 작업 1 버전으로 되돌리고 새 테이블·컬럼·행을 유지한다. 롤백 이후 댓글은 새 알림을 만들지 않고 알림함 API가 없어지므로 클라이언트 배포도 맞춰야 한다. 기존 대기열은 작업 1 발송기에서 발송될 수 있으므로 발송까지 멈추려면 기존 delivery 작업을 중지한다. 이때 미처리 건의 8분 창 경과를 확인한다. 작업 1 이전 버전으로의 롤백은 토큰 역이관 제약까지 별도로 검토한다.
 
+## 어드민 FCM 발송
+
+- `POST /api/v1/admin/notification-batches`: `targetType`, `userIds`, `title`, `body`, `data`를 받는다. `USER_IDS`는 양수 ID 1~1,000개를 중복 제거하고, `ALL`은 `userIds` 없이 전체 활성 회원을 평가한다. 없는 지정 회원이 있으면 404 `USER_NOT_FOUND`로 전체 롤백한다.
+- 제목과 본문은 공백만 있는 값을 거부하며 각각 최대 100자·1,000자다. `data`는 최대 20개의 문자열 맵이며 `url`에 http(s) 이동 주소가 필요하다. FCM 예약 키·문자열이 아닌 값·직렬화한 전체 메시지 4,096바이트 초과는 400 `BAD_REQUEST`다.
+- 500명씩 대상과 토큰을 조회해 기존 `NotificationAppender`로 적재한다. 응답은 적재 완료 후 201이며 `batchId`, `targetUserCount`, `recipientUserCount`, `enqueuedCount`, `skippedNoTokenUserCount`, `skippedInactiveUserCount`를 반환한다. 적재 건수는 활성 토큰별, 나머지는 중복 제거한 회원 수다. 전체 발송은 정지·탈퇴 회원을 처음부터 제외한다.
+- `notification_batches`에 요청 관리자·시각·대상 유형·지정 ID·제목·본문·data·건수를 남긴다. 기록과 대기열은 같은 트랜잭션으로 저장하고, 0건도 기록한다. 요청 성공 로그에는 묶음 ID·관리자·대상 유형·건수만 남긴다.
+- 실제 발송은 사용자 API의 기존 FCM sender가 맡는다. 어드민은 적재 시점부터 24시간 동안 대기하고, 기존 8분 정책의 알림을 먼저 발송한다. 어드민 요청은 사용자 알림함에 추가하지 않는다. POST마다 새 묶음을 만들며 요청 멱등 키·자동 재발송·예약 발송은 제공하지 않는다.
+- `GET /api/v1/admin/notification-batches/{batchId}`: 운영 정보와 `sentCount`, `failedCount`, `unknownCount`, `pendingCount`, `expiredCount`, `completed`, `failureReasons`를 반환한다. 사유는 `status`, `resultCode`, `count`이며 토큰·provider 응답 원문을 노출하지 않는다. `SENT`는 FCM 접수이고 단말 도착은 아니다.
+- 24시간 경계부터 남은 PENDING은 DB 상태를 바꾸지 않고 `expiredCount`로 구분한다. `completed`는 발송 대기가 없거나 대기 기한이 끝났다는 뜻이다. 직전에 시작한 provider 요청의 결과는 이후 바뀔 수 있다. UNKNOWN·기한 초과는 실패와 합치거나 자동 재시도하지 않는다.
+- 결과는 생성 후 30일 미만까지 조회하며 만료·없는 묶음은 404 `NOTIFICATION_BATCH_NOT_FOUND`다. 이후 원본 발송 기록은 기존 정리 작업의 대상이 되고 요청 운영 기록은 남는다. 별도 작업 시스템과 요청 기록 자동 삭제는 추가하지 않았다.
+- 배포 전에 [`2026-10-22-admin-notification-batches.sql`](../schema/2026-10-22-admin-notification-batches.sql)을 적용하고, 24시간 정책을 읽는 사용자 API를 먼저 교체한 뒤 관리자 API를 배포한다. 구버전으로 롤백하면 어드민 대기 건도 8분 제한을 받으므로 신규 요청을 중단하고 남은 대기 건을 확인한다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
+
 ## 구현 규칙
 
 ### 적재와 중복 방지
@@ -253,7 +265,7 @@ Authorization: Bearer {ogonggo-access-token}
 - 스크랩 리마인드 scheduler는 템플릿 승인 전까지 코드 등록이 보류되어 있어 현재 실행되지 않는다.
 - 템플릿 코드는 알림 행의 `template_code`를 사용한다. `nhn.templateCode`는 호환용 설정이다.
 - NHN 멱등성은 provider의 단기 중복 억제일 뿐 애플리케이션 재시도 정책이 아니다. provider 접수 이후 사용자 도착 여부도 현재 추적하지 않는다.
-- `max(scheduled_at, created_at)` 기준 최근 8분 이내의 due `PENDING`만 dispatcher가 읽는다. NHN 멱등성 10분보다 2분 짧게 잘라 결과 저장 실패 후 재호출 가능 구간을 제한한다. 늦게 적재된 D-1 알림은 적재 시각부터 처리 창을 적용한다. 두 시각 모두 8분을 넘긴 행은 상태를 바꾸거나 삭제하지 않고 남겨 운영 조회 대상으로 둔다.
+- 기본 알림은 `max(scheduled_at, created_at)` 기준 최근 8분 이내의 due `PENDING`만 dispatcher가 읽는다. 어드민 발송은 명시한 24시간 기한을 따른다. NHN 멱등성 10분보다 2분 짧게 잘라 결과 저장 실패 후 재호출 가능 구간을 제한한다. 늦게 적재된 D-1 알림은 적재 시각부터 처리 창을 적용한다. 두 시각 모두 8분을 넘긴 행은 상태를 바꾸거나 삭제하지 않고 남겨 운영 조회 대상으로 둔다.
 - dispatcher 전체 ShedLock은 최대 90초다. 실행이 끝날 때 60초 이상 걸렸으면 경고 로그를 남기며, 반복되면 lock 시간을 늘릴 운영 신호로 본다. 행별 claim은 없으므로 만료된 lock과 장시간 정지 상황까지 수학적으로 중복 발송을 막는 보장은 아니다.
 
 ## 기준 코드
