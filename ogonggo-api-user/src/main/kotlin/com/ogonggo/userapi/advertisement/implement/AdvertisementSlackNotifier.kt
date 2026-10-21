@@ -62,8 +62,8 @@ internal class AdvertisementSlackNotifier(
  * 영업 담당자가 열어보지 않고도 바로 연락할 건인지 구분할 수 있어야 한다.
  */
 private fun AdvertisementInquiryNotification.toSlackMessage(): SlackMessage =
-    SlackMessage(
-        text = "📢 B2B 광고 문의 - $companyName (${inquiryType.desc})",
+    SlackMessage.withHeadline(
+        headline = "📢 B2B 광고 문의 - ${SlackText.escape(companyName)} (${inquiryType.desc})",
         blocks = listOf(
             SlackBlock.fields(
                 // 저장하지 않아 어드민에서 다시 볼 수 없다. 회신 수단을 함께 싣는다.

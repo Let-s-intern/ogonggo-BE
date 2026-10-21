@@ -31,13 +31,15 @@ class AdvertisementSlackNotifierTest {
             .andExpect(method(org.springframework.http.HttpMethod.POST))
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.text").value("📢 B2B 광고 문의 - 렛츠커리어 (지금 바로 무료 홍보 할래요)"))
-            .andExpect(jsonPath("$.blocks[0].fields[0].text").value("*기업명*\n렛츠커리어"))
-            .andExpect(jsonPath("$.blocks[0].fields[2].text").value("*이메일*\nmanager@ogonggo.co.kr"))
-            .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*신청 유형*\n지금 바로 무료 홍보 할래요"))
+            // blocks가 있으면 슬랙이 text를 본문에 그리지 않아 첫 블록에 같은 줄을 넣는다.
+            .andExpect(jsonPath("$.blocks[0].text.text").value("*📢 B2B 광고 문의 - 렛츠커리어 (지금 바로 무료 홍보 할래요)*"))
+            .andExpect(jsonPath("$.blocks[1].fields[0].text").value("*기업명*\n렛츠커리어"))
+            .andExpect(jsonPath("$.blocks[1].fields[2].text").value("*이메일*\nmanager@ogonggo.co.kr"))
+            .andExpect(jsonPath("$.blocks[1].fields[4].text").value("*신청 유형*\n지금 바로 무료 홍보 할래요"))
             .andExpect(
-                jsonPath("$.blocks[0].fields[5].text").value("*희망 홍보 채널*\n오픈채팅방 · 마케팅"),
+                jsonPath("$.blocks[1].fields[5].text").value("*희망 홍보 채널*\n오픈채팅방 · 마케팅"),
             )
-            .andExpect(jsonPath("$.blocks[1].text.text").value("*현재 홍보 채널 · 어려운 점*\n$PROMOTION_ANSWER"))
+            .andExpect(jsonPath("$.blocks[2].text.text").value("*현재 홍보 채널 · 어려운 점*\n$PROMOTION_ANSWER"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(NOTIFICATION)
@@ -57,8 +59,8 @@ class AdvertisementSlackNotifierTest {
 
         server.expect(requestTo(WEBHOOK_URL))
             // 필드 블록에는 text 키가, 본문 블록에는 fields 키가 아예 없어야 한다.
-            .andExpect(jsonPath("$.blocks[0].text").doesNotExist())
-            .andExpect(jsonPath("$.blocks[1].fields").doesNotExist())
+            .andExpect(jsonPath("$.blocks[1].text").doesNotExist())
+            .andExpect(jsonPath("$.blocks[2].fields").doesNotExist())
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(NOTIFICATION)
@@ -74,7 +76,7 @@ class AdvertisementSlackNotifierTest {
         val notifier = AdvertisementSlackNotifier(builder.build(), properties(WEBHOOK_URL))
 
         server.expect(requestTo(WEBHOOK_URL))
-            .andExpect(jsonPath("$.blocks[1].text.text").value("*현재 홍보 채널 · 어려운 점*\n&lt;!channel&gt; A&amp;B"))
+            .andExpect(jsonPath("$.blocks[2].text.text").value("*현재 홍보 채널 · 어려운 점*\n&lt;!channel&gt; A&amp;B"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(NOTIFICATION.copy(promotionAnswer = "<!channel> A&B"))

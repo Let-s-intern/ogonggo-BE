@@ -5,12 +5,22 @@ import com.fasterxml.jackson.annotation.JsonInclude
 /**
  * 슬랙 인커밍 웹훅으로 보내는 Block Kit 메시지다.
  *
- * text는 채널 목록과 푸시 알림에 뜨는 줄이다. 열어보지 않고도 무슨 건인지 알 수 있게 요약을 넣는다.
+ * text는 푸시 알림과 채널 목록 미리보기에만 쓰인다. blocks가 있으면 슬랙이 text를 본문에 그리지 않으므로,
+ * 본문에도 요약이 보이도록 [withHeadline]으로 같은 줄을 첫 블록에 굵게 넣는다.
  */
 internal data class SlackMessage(
     val text: String,
     val blocks: List<SlackBlock>,
-)
+) {
+    companion object {
+        /** [headline]은 이스케이프를 마친 값이어야 한다. 알림 미리보기와 본문 첫 줄에 같이 쓴다. */
+        fun withHeadline(headline: String, blocks: List<SlackBlock>): SlackMessage =
+            SlackMessage(
+                text = headline,
+                blocks = listOf(SlackBlock.text(SlackText(text = "*$headline*"))) + blocks,
+            )
+    }
+}
 
 /**
  * section 블록은 text 와 fields 중 쓰는 쪽만 담아야 한다.

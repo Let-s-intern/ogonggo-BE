@@ -75,8 +75,8 @@ private fun CompanyPostingRegisteredEvent.jobDescription(): String? =
 
 /** 요약 줄에 종류·기업명·제목을 넣어 채널 목록에서 바로 어떤 건인지 보이게 한다. */
 private fun CompanyPostingRegisteredEvent.toSlackMessage(): SlackMessage =
-    SlackMessage(
-        text = "🆕 비즈니스 ${type.desc} 등록 - ${SlackText.escape(companyName)} · ${SlackText.escape(title)}",
+    SlackMessage.withHeadline(
+        headline = "🆕 비즈니스 ${type.desc} 등록 - ${SlackText.escape(companyName)} · ${SlackText.escape(title)}",
         blocks = listOf(
             SlackBlock.fields(
                 listOf(
