@@ -90,6 +90,8 @@ Before deploying this branch's notifications, verify the production schema and a
 일반적인 기존 스키마 변경 SQL은 main의 배포 절차를 따르며, 이 브랜치의 알림 기능에 필요한 SQL만 위 파일로 관리합니다.
 
 If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07-fcm-token.sql` once before the user API rollout. The FCM sender remains disabled until Firebase credentials and `ogonggo.firebase.enabled` are configured. Firebase service-account values are external secrets; do not commit them. The FCM configuration format is documented in [알림 추가 가이드](docs/architecture/notification-extension-guide.md#fcm-설정과-payload).
+
+다중 기기 FCM 토큰으로 전환할 때는 토큰 등록·해제와 기존 알림 발송을 잠시 중단하고 `docs/schema/2026-10-21-user-fcm-tokens.sql`을 적용한 뒤 사용자 API를 배포합니다. 기존 토큰의 중복 소유는 이관하지 않으며, 이전 `users.fcm_token`은 이관 원본으로 유지합니다. 쓰기 재개 후에는 원본이 최신 상태가 아니므로 단순 버전 롤백을 할 수 없습니다. [이관·배포 절차](docs/architecture/notification-extension-guide.md#다중-기기-토큰-이관배포)를 따릅니다.
 ## Work24 (고용24) Open API
 
 관리자 API의 `GET /api/v1/admin/work24/{apiName}`가 고용24 Open API를 대신 호출합니다. 인증키는 사용 신청한 서비스마다 따로 발급되므로 서비스별로 넣습니다. 비워 두면 해당 서비스 호출만 503으로 실패합니다.

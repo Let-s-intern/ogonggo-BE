@@ -5,6 +5,11 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
+import com.ogonggo.core.user.implement.UserReader
+import com.ogonggo.core.user.implement.dto.UserAccountDto
+import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -18,24 +23,29 @@ import java.time.ZoneId
 
 class FcmTestNotificationServiceTest {
 
-    private val fcmTokenService = Mockito.mock(FcmTokenService::class.java)
+    private val userReader = Mockito.mock(UserReader::class.java)
+    private val tokenReader = Mockito.mock(UserFcmTokenReader::class.java)
     private val notificationAppender = Mockito.mock(NotificationAppender::class.java)
     private lateinit var service: FcmTestNotificationService
 
     @BeforeEach
     fun setUp() {
         service = FcmTestNotificationService(
-            fcmTokenService = fcmTokenService,
+            userReader = userReader,
+            tokenReader = tokenReader,
             notificationAppender = notificationAppender,
             objectMapper = ObjectMapper(),
             clock = Clock.fixed(Instant.parse("2026-10-10T01:02:03Z"), ZoneId.of("Asia/Seoul")),
+        )
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(
+            UserAccountDto(USER_ID, 1L, null, UserStatus.ACTIVE, UserRole.USER, LocalDateTime.of(2026, 10, 10, 9, 0)),
         )
     }
 
     @Test
     fun `내 FCM 토큰으로 발송할 notification을 즉시 적재한다`() {
         // given
-        Mockito.`when`(fcmTokenService.get(USER_ID)).thenReturn(FCM_TOKEN)
+        Mockito.`when`(tokenReader.readLatest(USER_ID)).thenReturn(FCM_TOKEN)
         val command = SendFcmTestNotificationCommand(
             title = "테스트 제목",
             body = "테스트 본문",
@@ -68,7 +78,7 @@ class FcmTestNotificationServiceTest {
     @Test
     fun `내 FCM 토큰이 없으면 notification을 적재하지 않는다`() {
         // given
-        Mockito.`when`(fcmTokenService.get(USER_ID)).thenReturn(null)
+        Mockito.`when`(tokenReader.readLatest(USER_ID)).thenReturn(null)
 
         // when
         val exception = assertThrows<EntityNotFoundException> {

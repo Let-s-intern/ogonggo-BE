@@ -77,7 +77,7 @@ internal class Notification(
         protected set
 
     /** 주소와 payload는 30일 이내 발송 결과를 추적하는 동안 보존한다. */
-    @Column(name = "recipient_address", length = 512)
+    @Column(name = "recipient_address", length = 4096)
     var recipientAddress: String? = recipientAddress
         protected set
 

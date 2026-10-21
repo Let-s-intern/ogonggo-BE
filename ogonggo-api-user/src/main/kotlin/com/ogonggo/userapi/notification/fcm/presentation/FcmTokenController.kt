@@ -2,11 +2,13 @@ package com.ogonggo.userapi.notification.fcm.presentation
 
 import com.ogonggo.userapi.notification.fcm.business.FcmTokenService
 import com.ogonggo.userapi.notification.fcm.presentation.request.ReplaceFcmTokenRequest
+import com.ogonggo.userapi.notification.fcm.presentation.request.DeleteFcmTokenRequest
 import com.ogonggo.userapi.notification.fcm.presentation.response.FcmTokenResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -23,7 +25,7 @@ class FcmTokenController(
         @AuthenticationPrincipal userId: Long,
         @RequestBody request: ReplaceFcmTokenRequest,
     ): ResponseEntity<SuccessResponse<FcmTokenResponse>> {
-        fcmTokenService.replace(userId, request.token)
+        fcmTokenService.replace(userId, request.toCommand())
         return SuccessResponse.ok(FcmTokenResponse(request.token))
     }
 
@@ -32,4 +34,13 @@ class FcmTokenController(
         @AuthenticationPrincipal userId: Long,
     ): ResponseEntity<SuccessResponse<FcmTokenResponse>> =
         SuccessResponse.ok(FcmTokenResponse(fcmTokenService.get(userId)))
+
+    @DeleteMapping
+    override fun deleteMyFcmToken(
+        @AuthenticationPrincipal userId: Long,
+        @RequestBody request: DeleteFcmTokenRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        fcmTokenService.delete(userId, request.token)
+        return SuccessResponse.ok()
+    }
 }

@@ -71,6 +71,25 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `FCM 토큰 계약은 설치 UUID와 해제 및 충돌 응답을 명시한다`() {
+        // given
+        val document = openApiDocument()
+        // when
+        val operations = document.at("/paths/~1api~1v1~1users~1me~1fcm-token")
+        val request = document.at("/components/schemas/ReplaceFcmTokenRequest")
+        // then
+        assertEquals("deleteMyFcmToken", operations.at("/delete/operationId").asText())
+        assertTrue(operations.at("/delete/security/0/BearerAuth").isArray)
+        assertTrue(operations.at("/delete/responses/200/content/application~1json/schema").isObject)
+        assertTrue(operations.at("/put/responses/409/description").asText().contains("FCM_TOKEN_CONFLICT"))
+        assertEquals(4096, request.at("/properties/token/maxLength").asInt())
+        assertEquals("uuid", request.at("/properties/deviceId/format").asText())
+        assertTrue(request.at("/required").any { it.asText() == "token" })
+        assertFalse(request.at("/required").any { it.asText() == "deviceId" })
+        assertEquals(4096, document.at("/components/schemas/DeleteFcmTokenRequest/properties/token/maxLength").asInt())
+    }
+
+    @Test
     fun `사용자 OpenAPI는 인터페이스의 경로와 인증과 오류 명세를 노출한다`() {
         val document = openApiDocument()
 

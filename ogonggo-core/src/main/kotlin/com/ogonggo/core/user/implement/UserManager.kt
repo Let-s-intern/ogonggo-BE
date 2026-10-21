@@ -52,21 +52,4 @@ class UserManager internal constructor(
         user.classifyInflowSource(knownInflowSource, letsCareerJoinedAt)
     }
 
-    @Transactional
-    fun changeFcmToken(userId: Long, fcmToken: String) {
-        val user = userRepository.findByIdOrNull(userId)
-            ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
-
-        user.changeFcmToken(fcmToken)
-        userRepository.save(user)
-    }
-
-    @Transactional
-    fun clearFcmToken(userId: Long, expectedToken: String) {
-        val user = userRepository.findByIdOrNull(userId)
-            ?: return
-
-        user.clearFcmToken(expectedToken)
-        userRepository.save(user)
-    }
 }

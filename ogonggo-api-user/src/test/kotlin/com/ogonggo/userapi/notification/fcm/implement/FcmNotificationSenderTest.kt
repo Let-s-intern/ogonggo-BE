@@ -8,16 +8,29 @@ import com.google.firebase.messaging.MessagingErrorCode
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.core.notification.domain.NotificationChannel
-import com.ogonggo.core.user.implement.UserManager
+import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenManager
+import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.junit.jupiter.api.BeforeEach
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 internal class FcmNotificationSenderTest {
 
     private val firebaseMessaging = Mockito.mock(FirebaseMessaging::class.java)
-    private val userManager = Mockito.mock(UserManager::class.java)
-    private val sender = FcmNotificationSender(firebaseMessaging, jacksonObjectMapper(), userManager)
+    private val tokenReader = Mockito.mock(UserFcmTokenReader::class.java)
+    private val tokenManager = Mockito.mock(UserFcmTokenManager::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-10-21T11:00:00Z"), ZoneId.of("Asia/Seoul"))
+    private val sender = FcmNotificationSender(firebaseMessaging, jacksonObjectMapper(), tokenReader, tokenManager, clock)
+
+    @BeforeEach
+    fun setUp() {
+        Mockito.`when`(tokenReader.isDeliverable(17L, "fcm-token-1")).thenReturn(true)
+    }
 
     @Test
     fun `FCM payload를 Firebase 메시지로 보내고 provider 메시지 ID를 반환한다`() {
@@ -70,6 +83,42 @@ internal class FcmNotificationSenderTest {
 
         assertEquals("INVALID_ARGUMENT", result.resultCode)
         assertEquals("Invalid token [REDACTED]", result.detail)
+        Mockito.verifyNoInteractions(tokenManager)
+    }
+
+    @Test
+    fun `발송 직전에 소유권이 없거나 회원이 비활성이면 Firebase를 호출하지 않는다`() {
+        // given
+        Mockito.`when`(tokenReader.isDeliverable(17L, "fcm-token-1")).thenReturn(false)
+        // when
+        val result = sender.send(validNotification()) as NotificationDeliveryResult.Failed
+        // then
+        assertEquals("FCM_RECIPIENT_INACTIVE", result.resultCode)
+        Mockito.verifyNoInteractions(firebaseMessaging, tokenManager)
+    }
+
+    @Test
+    fun `회원 식별자 없는 FCM 대기 알림은 발송하지 않는다`() {
+        // when
+        val result = sender.send(validNotification().copy(recipientUserId = null)) as NotificationDeliveryResult.Failed
+        // then
+        assertEquals("FCM_RECIPIENT_INACTIVE", result.resultCode)
+        Mockito.verifyNoInteractions(firebaseMessaging, tokenManager)
+    }
+
+    @Test
+    fun `UNREGISTERED 응답은 발송한 회원과 토큰으로 조건부 해제한다`() {
+        // given
+        val exception = Mockito.mock(FirebaseMessagingException::class.java)
+        Mockito.doReturn(MessagingErrorCode.UNREGISTERED).`when`(exception).messagingErrorCode
+        Mockito.doReturn("Invalid fcm-token-1").`when`(exception).message
+        Mockito.`when`(firebaseMessaging.send(Mockito.any(Message::class.java))).thenThrow(exception)
+        // when
+        val result = sender.send(validNotification()) as NotificationDeliveryResult.Failed
+        // then
+        assertEquals("UNREGISTERED", result.resultCode)
+        assertEquals("Invalid [REDACTED]", result.detail)
+        Mockito.verify(tokenManager).revoke(17L, "fcm-token-1", LocalDateTime.now(clock))
     }
 
     private fun validNotification() = NotificationMessageDto(

@@ -9,10 +9,13 @@ import com.ogonggo.core.notification.delivery.implement.dto.NotificationDelivery
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
-import com.ogonggo.core.user.implement.UserManager
+import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenManager
+import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenReader
 import com.ogonggo.userapi.notification.delivery.implement.NotificationSender
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.LocalDateTime
 
 /** FCM 알림 행을 Firebase Admin SDK 메시지로 변환해 발송한다. */
 @Component
@@ -20,7 +23,9 @@ import org.springframework.stereotype.Component
 internal class FcmNotificationSender(
     private val firebaseMessaging: FirebaseMessaging,
     private val objectMapper: ObjectMapper,
-    private val userManager: UserManager,
+    private val tokenReader: UserFcmTokenReader,
+    private val tokenManager: UserFcmTokenManager,
+    private val clock: Clock,
 ) : NotificationSender {
 
     override val channel = NotificationChannel.FCM
@@ -33,6 +38,15 @@ internal class FcmNotificationSender(
                 resultCode = "INVALID_FCM_PAYLOAD",
                 failureCategory = NotificationFailureCategory.INVALID_REQUEST,
                 detail = "FCM payload를 해석할 수 없습니다.",
+            )
+        }
+
+        val userId = notification.recipientUserId
+        if (userId == null || !tokenReader.isDeliverable(userId, notification.recipientAddress)) {
+            return NotificationDeliveryResult.Failed(
+                resultCode = "FCM_RECIPIENT_INACTIVE",
+                failureCategory = NotificationFailureCategory.CLIENT_ERROR,
+                detail = "수신자가 비활성이거나 토큰 연결이 해제·변경되었습니다.",
             )
         }
 
@@ -52,20 +66,21 @@ internal class FcmNotificationSender(
         } catch (exception: FirebaseMessagingException) {
             val errorCode = exception.messagingErrorCode?.name ?: "FIREBASE_MESSAGING_ERROR"
             if (exception.messagingErrorCode == com.google.firebase.messaging.MessagingErrorCode.UNREGISTERED) {
-                notification.recipientUserId?.let { userManager.clearFcmToken(it, notification.recipientAddress) }
+                tokenManager.revoke(userId, notification.recipientAddress, LocalDateTime.now(clock))
             }
             NotificationDeliveryResult.Failed(
                 resultCode = errorCode,
                 failureCategory = errorCode.toFailureCategory(),
-                detail = exception.message.toSafeDetail(),
+                detail = exception.message.toSafeDetail(notification.recipientAddress),
             )
         }
     }
 
-    private fun String?.toSafeDetail(): String? = this
+    private fun String?.toSafeDetail(token: String): String? = this
+        ?.replace(FCM_TOKEN_PATTERN, "[REDACTED]")
+        ?.replace(token, "[REDACTED]")
         ?.replace(EMAIL_PATTERN, "[REDACTED]")
         ?.replace(PHONE_PATTERN, "[REDACTED]")
-        ?.replace(FCM_TOKEN_PATTERN, "[REDACTED]")
         ?.replace(WHITESPACE_PATTERN, " ")
         ?.trim()
         ?.takeIf(String::isNotBlank)
