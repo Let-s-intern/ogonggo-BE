@@ -29,11 +29,13 @@ class CompanyPostingSlackNotifierTest {
         server.expect(requestTo(WEBHOOK_URL))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.text").value("🆕 비즈니스 채용공고 등록 - 오공고 · 백엔드 개발자"))
-            .andExpect(jsonPath("$.blocks[0].fields[1].text").value("*ID*\n3"))
-            .andExpect(jsonPath("$.blocks[0].fields[3].text").value("*등록 계정*\ncompany@example.com"))
+            // blocks가 있으면 슬랙이 text를 본문에 그리지 않아 첫 블록에 같은 줄을 넣는다.
+            .andExpect(jsonPath("$.blocks[0].text.text").value("*🆕 비즈니스 채용공고 등록 - 오공고 · 백엔드 개발자*"))
+            .andExpect(jsonPath("$.blocks[1].fields[1].text").value("*ID*\n3"))
+            .andExpect(jsonPath("$.blocks[1].fields[3].text").value("*등록 계정*\ncompany@example.com"))
             // `>`는 이스케이프되어 나가고 슬랙 화면에는 `>`로 보인다.
-            .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*직무*\nIT·개발 &gt; 백엔드"))
-            .andExpect(jsonPath("$.blocks[1].text.text").value("*제목*\n백엔드 개발자"))
+            .andExpect(jsonPath("$.blocks[1].fields[4].text").value("*직무*\nIT·개발 &gt; 백엔드"))
+            .andExpect(jsonPath("$.blocks[2].text.text").value("*제목*\n백엔드 개발자"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(EVENT)
@@ -49,7 +51,7 @@ class CompanyPostingSlackNotifierTest {
 
         server.expect(requestTo(WEBHOOK_URL))
             .andExpect(jsonPath("$.text").value("🆕 비즈니스 부트캠프 등록 - 오공고 · 백엔드 개발자"))
-            .andExpect(jsonPath("$.blocks[0].fields[4].text").value("*모집 마감*\n2026-11-30 23:59"))
+            .andExpect(jsonPath("$.blocks[1].fields[4].text").value("*모집 마감*\n2026-11-30 23:59"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(
