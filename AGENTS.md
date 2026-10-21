@@ -32,6 +32,7 @@
 | 사용자 인증, 렛츠커리어 로그인 연동, 토큰 수명, 내부 API 키, 사용자 역할과 기업회원 등록, 브라우저 CORS 허용 오리진 | [`docs/architecture/authentication.md`](docs/architecture/authentication.md) | 로그인·토큰·세션 흐름이나 사용자 역할을 바꾸거나, 렛츠커리어 연동 지점 또는 CORS 허용 오리진을 수정할 때 |
 | 스케줄 작업, DB로 관리하는 실행 주기(cron)·켜짐 여부, 작업 추가 방법 | [`docs/architecture/scheduling.md`](docs/architecture/scheduling.md) | 주기 작업을 추가·변경하거나 운영 중 주기를 바꿀 때 |
 | 통합 알림 구조, 이벤트·예약형 알림 적재, 중복 방지, provider adapter, 새 알림 추가 절차 | [`docs/architecture/notification-extension-guide.md`](docs/architecture/notification-extension-guide.md) | 알림을 새로 추가하거나 notification 상태·발송 흐름·채널을 변경할 때 |
+| 로그 출력 형식(`ogonggo-logging`), Datadog APM 트레이서, ECS 사이드카와 Datadog 비용 관리 | [`docs/infra/datadog.md`](docs/infra/datadog.md) | 로그 형식·Dockerfile의 트레이서·태스크 정의의 Datadog 설정을 바꾸거나 메트릭을 Datadog으로 보내려 할 때 |
 | 배포 검증, GitHub Actions 게이트, 자동 롤백, 시크릿 로그 마스킹 | [`docs/infra/ci-cd-validation.md`](docs/infra/ci-cd-validation.md) | 배포 워크플로, 시크릿, 배포 절차를 수정할 때 |
 | 실제 Gradle 모듈과 의존성 | `settings.gradle.kts`, 루트 및 각 모듈의 `build.gradle.kts` | 모듈이나 라이브러리 의존성을 변경할 때 |
 

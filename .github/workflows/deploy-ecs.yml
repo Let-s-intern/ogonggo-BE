@@ -364,6 +364,7 @@ jobs:
           docker build \
             -f "${{ inputs.module }}/Dockerfile" \
             --build-arg JAR_FILE="${{ inputs.module }}/build/libs/${{ inputs.module }}.jar" \
+            --build-arg GIT_SHA="$IMAGE_TAG" \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" \
             .
@@ -379,6 +380,7 @@ jobs:
       # 실제 컨테이너 포트가 태스크 정의·ALB 타겟 그룹과 맞는지는 스모크 테스트가 확인한다.
       # ddl-auto도 덮어쓴다. 운영은 none이라 빈 CI DB에는 스키마가 만들어지지 않기 때문이다.
       # 덕분에 JPA 매핑으로 스키마를 만들 수 있는지까지 함께 확인된다.
+      # 러너에는 datadog-agent가 없으므로 트레이서를 끈다. 켜 두어도 기동은 되지만 연결 실패 경고만 쌓인다.
       - name: 컨테이너 기동 검증
         if: inputs.startup-verification
         env:
@@ -420,6 +422,7 @@ jobs:
             -e SPRING_DATA_REDIS_HOST=ci-redis \
             -e SPRING_DATA_REDIS_PORT=6379 \
             -e SPRING_JPA_HIBERNATE_DDL_AUTO=update \
+            -e DD_TRACE_ENABLED=false \
             "$IMAGE" >/dev/null
 
           echo "애플리케이션 기동을 기다립니다."

@@ -18,12 +18,14 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 ## Modules
 
 ```text
-ogonggo-api-user  ---> ogonggo-core <--- ogonggo-api-admin
+ogonggo-api-user  ---> ogonggo-core     <--- ogonggo-api-admin
+ogonggo-api-user  ---> ogonggo-logging  <--- ogonggo-api-admin
 ```
 
 - `ogonggo-core`: user, job, bootcamp, recruitment post, concern (취준고민) and announcement domain boundaries; JPA persistence
 - `ogonggo-api-user`: public API and LetsCareer login integration
 - `ogonggo-api-admin`: administrator API boundary
+- `ogonggo-logging`: shared log format for both APIs (`logback-spring.xml`, JSON when `LOG_FORMAT=json`); runtime only, no code
 
 `ogonggo-api-user` and `ogonggo-api-admin` are independent Spring Boot applications and cannot depend on each other.
 
@@ -129,6 +131,8 @@ docker compose up --build
 ```
 
 CI는 러너에서 Gradle 의존성 캐시를 사용해 jar를 만든 뒤 `JAR_FILE` 빌드 인자로 경로를 넘깁니다.
+
+이미지는 Datadog APM 트레이서(`dd-java-agent`)를 붙여 실행하고 로그를 JSON으로 남깁니다. 에이전트가 없는 로컬에서는 `docker-compose.yml`이 트레이서를 끕니다. 운영 구성은 [Datadog 로그·APM 연동](docs/infra/datadog.md)을 읽습니다.
 
 ## Deployment
 

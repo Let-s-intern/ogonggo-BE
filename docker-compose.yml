@@ -42,6 +42,8 @@ services:
       LETSCAREER_BASE_URL: ${LETSCAREER_BASE_URL}
       LETSCAREER_INTERNAL_API_KEY: ${LETSCAREER_INTERNAL_API_KEY}
       SERVER_PORT: 8080
+      # 로컬에는 datadog-agent가 없다. 트레이서가 에이전트 연결 실패 경고를 남기지 않게 끈다.
+      DD_TRACE_ENABLED: "false"
     ports:
       - "8080:8080"
     depends_on:
@@ -59,6 +61,7 @@ services:
       DB_USERNAME: ogonggo
       DB_PASSWORD: ogonggo
       SERVER_PORT: 8081
+      DD_TRACE_ENABLED: "false"
     ports:
       - "8081:8081"
     depends_on:
