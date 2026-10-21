@@ -11,4 +11,5 @@ data class NotificationMessageDto(
     val payloadJson: String,
     val deduplicationKey: String,
     val recipientUserId: Long? = null,
+    val userNotificationId: Long? = null,
 )

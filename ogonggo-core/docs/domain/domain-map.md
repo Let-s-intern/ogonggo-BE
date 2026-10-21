@@ -46,6 +46,11 @@
 
 **취준고민**(`Concern`)은 취업 준비 고민을 묻고 답하는 게시판입니다. 고민글에 달린 댓글이 답변, 답변에 단 댓글이 답글입니다.
 
+### 사용자 알림함: `usernotification`, `notification`
+
+- **사용자 알림함**(`UserNotification`)은 모집글 부모 댓글의 새 답글·취준고민 글의 새 최상위 댓글로 생기는 소식입니다. 수신 회원에게 표시 스냅샷과 읽음 시각을 보관하고 최근 30일을 조회합니다.
+- **발송 기록**(`Notification`)은 수신자의 활성 설치마다 생성합니다. 알림함 한 건에 발송 기록 0~N건이 연결되며 토큰이 없으면 알림함만 남깁니다. FCM 접수·실패는 읽음 상태를 바꾸지 않습니다.
+
 ### 렛츠커리어 추천: `letscareercontent`, `challenge`
 
 렛츠커리어의 교육 프로그램과 자료를 오공고 화면에서 추천합니다. 비슷해 보이지만 고르는 주체가 다릅니다.
@@ -70,6 +75,8 @@
 | 댓글, 답변 | 달린다 | 모집글, 취준고민 | 1 : N. 댓글에 다시 댓글이 달림 | `parentId` |
 | 일반 회원 | 렛츠커리어 계정으로 로그인한다 | 렛츠커리어 | 1 : 1 | `User.letsCareerUserId` |
 | 일반 회원 / 기업 회원 | 가진다 | 회원 프로필 / 기업 프로필 | 1 : 1 | `UserProfile.userId`, `CompanyProfile.userId` |
+| 회원 | 보관한다 | 사용자 알림함 | 수신자 1 : N. 행위자와 발생 글·댓글을 함께 식별 | `recipientUserId`, `actorUserId`, `type`, `postId`, `commentId` |
+| 사용자 알림함 | 발송한다 | 발송 기록 | 1 : 0..N. 활성 설치마다 적재하며 기존 일반 발송의 연결은 선택 | `Notification.userNotificationId` |
 | 렛츠커리어 콘텐츠 | 공고마다 맞춰 추천된다 | 채용공고 | 저장하지 않음. 공고를 열 때 계산 | `LetsCareerContentRecommendPolicy` |
 | 렛츠커리어 | 모집 중인 챌린지를 보여 준다 | 일반 회원 (비로그인 포함) | 최대 3개를 무작위로. 회원과 무관하고 저장하지 않음 | `LetsCareerChallengeClient` |
 | 렛츠커리어 | 사본을 보낸다 | 렛츠커리어 콘텐츠 | 주기적으로 덮어씀 | `LetsCareerContent.externalId` |

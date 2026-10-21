@@ -37,6 +37,7 @@ enum class NotificationStatus(override val code: Int, override val desc: String)
         UniqueConstraint(name = "uk_notification_deduplication_key", columnNames = ["deduplication_key"]),
     ],
     indexes = [
+        Index(name = "idx_notification_user_notification", columnList = "user_notification_id"),
         Index(name = "idx_notification_due", columnList = "status, scheduled_at, id"),
         Index(name = "idx_notification_cleanup", columnList = "status, updated_at, id"),
     ],
@@ -57,6 +58,9 @@ internal class Notification(
     /** 내부 사용자와 연결할 수 없는 수신 대상도 허용하므로 nullable이다. */
     @Column(name = "recipient_user_id")
     val recipientUserId: Long? = null,
+
+    @Column(name = "user_notification_id")
+    val userNotificationId: Long? = null,
 
     recipientAddress: String,
     payloadJson: String,

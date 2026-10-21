@@ -55,6 +55,8 @@ import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserInflowSource
+import com.ogonggo.core.usernotification.domain.UserNotificationType
+import com.ogonggo.core.usernotification.domain.UserNotificationPushSkipReason
 import com.ogonggo.core.user.domain.UserStatus
 import org.springframework.stereotype.Component
 
@@ -85,6 +87,8 @@ class EnumOptionReader {
             // 알림
             enumOptionsOf<NotificationChannel>(),
             enumOptionsOf<NotificationStatus>(),
+            enumOptionsOf<UserNotificationType>(),
+            enumOptionsOf<UserNotificationPushSkipReason>(),
             // 직군·직무. JobRole의 parent는 속한 JobField다.
             enumOptionsOf<JobField>(),
             enumOptionsOf<JobRole>(),

@@ -57,6 +57,7 @@ class NotificationAppender internal constructor(
                     channel = it.channel,
                     templateCode = it.templateCode,
                     recipientUserId = it.recipientUserId,
+                    userNotificationId = it.userNotificationId,
                     recipientAddress = it.recipientAddress,
                     payloadJson = it.payloadJson,
                     scheduledAt = it.scheduledAt,

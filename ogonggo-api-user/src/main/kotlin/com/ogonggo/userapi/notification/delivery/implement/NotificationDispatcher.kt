@@ -118,9 +118,10 @@ class NotificationDispatcher internal constructor(
             )
     } catch (exception: Exception) {
         log.error(
-            "알림 sender 예외. runId={}, notificationId={}, errorType={}",
+            "알림 sender 예외. runId={}, notificationId={}, userNotificationId={}, errorType={}",
             runId,
             notification.notificationId,
+            notification.userNotificationId,
             exception::class.simpleName,
             safeStackTrace(exception),
         )
@@ -142,7 +143,7 @@ class NotificationDispatcher internal constructor(
                 now = LocalDateTime.now(clock),
             )
             if (!recorded) {
-                log.error("알림 발송 결과를 기록하지 못했습니다. runId={}, notificationId={}", runId, notification.notificationId)
+                log.error("알림 발송 결과를 기록하지 못했습니다. runId={}, notificationId={}, userNotificationId={}", runId, notification.notificationId, notification.userNotificationId)
                 notificationMetrics.recordUnresolved(notification.channel)
                 NotificationDispatchOutcome.UNRESOLVED
             } else {
@@ -152,9 +153,10 @@ class NotificationDispatcher internal constructor(
             }
         } catch (exception: Exception) {
             log.error(
-                "알림 발송 결과가 미확정입니다. runId={}, notificationId={}, errorType={}",
+                "알림 발송 결과가 미확정입니다. runId={}, notificationId={}, userNotificationId={}, errorType={}",
                 runId,
                 notification.notificationId,
+                notification.userNotificationId,
                 exception::class.simpleName,
                 safeStackTrace(exception),
             )
@@ -170,24 +172,27 @@ class NotificationDispatcher internal constructor(
     ) {
         when (result) {
             is NotificationDeliveryResult.Sent -> log.debug(
-                "알림 provider 접수. runId={}, notificationId={}, channel={}",
+                "알림 provider 접수. runId={}, notificationId={}, userNotificationId={}, channel={}",
                 runId,
                 notification.notificationId,
+                notification.userNotificationId,
                 notification.channel,
             )
             is NotificationDeliveryResult.Failed -> log.warn(
-                "알림 발송 실패. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}, resultDetail={}",
+                "알림 발송 실패. runId={}, notificationId={}, userNotificationId={}, channel={}, failureCategory={}, resultCode={}, resultDetail={}",
                 runId,
                 notification.notificationId,
+                notification.userNotificationId,
                 notification.channel,
                 result.failureCategory,
                 result.resultCode,
                 result.detail,
             )
             is NotificationDeliveryResult.Unknown -> log.warn(
-                "알림 provider 접수 여부 미확정. runId={}, notificationId={}, channel={}, failureCategory={}, resultCode={}, resultDetail={}",
+                "알림 provider 접수 여부 미확정. runId={}, notificationId={}, userNotificationId={}, channel={}, failureCategory={}, resultCode={}, resultDetail={}",
                 runId,
                 notification.notificationId,
+                notification.userNotificationId,
                 notification.channel,
                 result.failureCategory,
                 result.resultCode,

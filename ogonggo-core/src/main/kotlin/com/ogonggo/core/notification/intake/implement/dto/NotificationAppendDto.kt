@@ -12,4 +12,5 @@ data class NotificationAppendDto(
     val payloadJson: String,
     val scheduledAt: LocalDateTime,
     val recipientUserId: Long? = null,
+    val userNotificationId: Long? = null,
 )

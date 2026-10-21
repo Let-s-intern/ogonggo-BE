@@ -570,3 +570,11 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - **Spring `Pageable`을 계층 전체에 전달:** Spring 타입과 임의 정렬 입력이 Business·core 계약으로 퍼지므로 제외했습니다.
 
 관리자 도메인 API를 추가할 때 이 문서의 적용 범위와 구현 상태를 갱신해야 합니다.
+
+### 사용자 알림함
+
+- 결정일: 2026-10-21 / 리뷰 상태: 팀 리뷰 필요
+- `GET /api/v1/users/me/notifications`는 댓글 소식을 `items`, `nextCursor`, `hasNext`로 반환한다. 1부터 시작하는 page 목록의 예외로 커서를 쓰며 기본 `size=20`, 최대 100이다. 생성 시각·ID 내림차순으로 새 소식 삽입 중 페이지 이동을 지원한다.
+- 최근 30일 경계의 본인 미삭제 알림만 반환한다. 목록 항목의 표시 이름·이미지·제목·미리보기는 생성 당시 스냅샷이며 `isRead`는 `readAt` 존재 여부다. 비어 있으면 `items: []`, 다음 페이지가 없으면 `nextCursor: null`, `hasNext: false`다.
+- `GET /api/v1/users/me/notifications/unread-count`의 `data.count`는 실제 Long 개수다. 두 읽음 PATCH는 본문 없이 호출하고 200, `data: null`로 응답한다. 한 건 읽음의 타인·만료·삭제·없는 알림은 404 `USER_NOTIFICATION_NOT_FOUND`다.
+- 인증·요청·응답·예외는 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)을, 댓글 생성의 알림 적재는 [알림 추가 가이드](notification-extension-guide.md#댓글-자동-알림과-사용자-알림함)를 따른다.

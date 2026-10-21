@@ -71,6 +71,35 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다`() {
+        // given
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1users~1me~1notifications"
+        // when, then
+        listOf(
+            "$base/get" to "listMyNotifications",
+            "$base~1unread-count/get" to "getMyNotificationUnreadCount",
+            "$base~1{notificationId}~1read/patch" to "readMyNotification",
+            "$base~1read-all/patch" to "readAllMyNotifications",
+        ).forEach { (path, operationId) ->
+            val operation = document.at(path)
+            assertEquals(operationId, operation.at("/operationId").asText())
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(operation.at("/responses/403/description").asText().contains("USER_SUSPENDED"))
+        }
+        val list = document.at("$base/get")
+        assertPageParameter(list, "size", defaultValue = "20", minimum = 1, maximum = 100)
+        assertTrue(list.at("/parameters").any { it.at("/name").asText() == "cursor" && !it.at("/required").asBoolean() })
+        assertTrue(document.at("$base~1{notificationId}~1read/patch/responses/404/description").asText().contains("USER_NOTIFICATION_NOT_FOUND"))
+        val item = document.at("/components/schemas/UserNotificationResponse/properties")
+        assertTrue(item.has("isRead"))
+        assertTrue(item.at("/actorProfileImageUrl/nullable").asBoolean())
+        assertTrue(document.at("/components/schemas/UserNotificationPageResponse/properties/nextCursor/nullable").asBoolean())
+        assertEquals(setOf("SIDE_STUDY_COMMENT_REPLY", "CONCERN_COMMENT"), item.at("/type/enum").map { it.asText() }.toSet())
+    }
+
+    @Test
     fun `FCM 토큰 계약은 설치 UUID와 해제 및 충돌 응답을 명시한다`() {
         // given
         val document = openApiDocument()
