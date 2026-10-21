@@ -15,10 +15,19 @@ import org.springframework.context.annotation.Configuration
 class AdminScheduledJobConfiguration {
 
     @Bean
-    fun work24DailyCollectionJob(scheduler: Work24CollectionScheduler) = ScheduledJobDefinition(
-        name = Work24CollectionScheduler.SCHEDULER_NAME,
+    fun work24JobCollectionJob(scheduler: Work24CollectionScheduler) = ScheduledJobDefinition(
+        name = Work24CollectionScheduler.JOB_SCHEDULER_NAME,
         defaultCron = "0 0 4 * * *",
-        description = "고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 (매일 04:00)",
-        action = scheduler::collect,
+        description = "고용24 채용정보·일학습병행 훈련과정을 채용공고로 등록 (매일 04:00)",
+        action = scheduler::collectJobs,
+    )
+
+    /** 두 수집이 고용24를 동시에 부르지 않도록 채용공고 수집 뒤로 둔다. */
+    @Bean
+    fun work24BootcampCollectionJob(scheduler: Work24CollectionScheduler) = ScheduledJobDefinition(
+        name = Work24CollectionScheduler.BOOTCAMP_SCHEDULER_NAME,
+        defaultCron = "0 0 5 * * *",
+        description = "고용24 국민내일배움카드 훈련과정을 부트캠프로 등록 (매일 05:00)",
+        action = scheduler::collectBootcamps,
     )
 }
