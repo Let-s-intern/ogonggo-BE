@@ -54,7 +54,7 @@ ogonggo:
     from: ${OGONGGO_MAIL_FROM:}
 ```
 
-메일은 provider에 템플릿을 등록하지 않으므로 제목과 본문을 `EmailTemplate`이 소유한다. 알림 행에는 template code와 변수만 저장한다. 새 메일은 `EmailTemplate`에 항목을 추가하고 같은 `template_code`로 적재한다. SMTP 예외 메시지에는 수신 주소가 섞일 수 있어 `result_detail`에 원문을 남기지 않는다.
+메일은 provider에 템플릿을 등록하지 않으므로 제목과 본문을 `EmailTemplate`이 소유한다. 알림 행에는 template code와 변수만 저장한다. 본문은 `ogonggo-api-user/src/main/resources/mail/`에 HTML(`*.html`)과 같은 내용의 텍스트(`*.txt`)로 두고 둘 다 보낸다. 문구를 고칠 때는 두 파일을 함께 고친다. 새 메일은 `EmailTemplate`에 항목과 본문 파일을 추가하고 같은 `template_code`로 적재한다. SMTP 예외 메시지에는 수신 주소가 섞일 수 있어 `result_detail`에 원문을 남기지 않는다.
 
 | 결과 | 저장 분류 |
 | --- | --- |

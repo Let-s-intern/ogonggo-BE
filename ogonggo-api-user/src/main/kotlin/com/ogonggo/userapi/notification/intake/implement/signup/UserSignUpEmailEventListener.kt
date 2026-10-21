@@ -1,13 +1,11 @@
 package com.ogonggo.userapi.notification.intake.implement.signup
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.userapi.auth.business.UserSignedUpEvent
 import com.ogonggo.userapi.config.UserAsyncConfiguration
 import com.ogonggo.userapi.notification.channel.email.EmailTemplate
-import com.ogonggo.userapi.notification.channel.email.dto.SignUpWelcomeEmailParametersDto
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
@@ -26,7 +24,6 @@ import org.springframework.transaction.event.TransactionalEventListener
 @Component
 internal class UserSignUpEmailEventListener(
     private val notificationAppender: NotificationAppender,
-    private val objectMapper: ObjectMapper,
     @Qualifier(UserAsyncConfiguration.NOTIFICATION_ENQUEUE_TASK_EXECUTOR)
     private val enqueueTaskExecutor: TaskExecutor,
 ) {
@@ -63,9 +60,8 @@ internal class UserSignUpEmailEventListener(
                     channel = NotificationChannel.EMAIL,
                     templateCode = TEMPLATE.templateCode,
                     recipientAddress = email,
-                    payloadJson = objectMapper.writeValueAsString(
-                        SignUpWelcomeEmailParametersDto(name = event.name?.takeIf(String::isNotBlank)),
-                    ),
+                    // 환영 메일은 모든 회원에게 같은 본문을 보내므로 템플릿 변수가 없다.
+                    payloadJson = EMPTY_PAYLOAD,
                     scheduledAt = event.joinedAt,
                     recipientUserId = event.userId,
                 ),
@@ -88,6 +84,7 @@ internal class UserSignUpEmailEventListener(
 
     private companion object {
         val TEMPLATE = EmailTemplate.SIGN_UP_WELCOME
+        const val EMPTY_PAYLOAD = "{}"
         val log = LoggerFactory.getLogger(UserSignUpEmailEventListener::class.java)
     }
 }

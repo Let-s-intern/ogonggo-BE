@@ -7,10 +7,11 @@ import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.userapi.mail.OgonggoMailProperties
 import jakarta.mail.MessagingException
+import jakarta.mail.Part
 import jakarta.mail.SendFailedException
 import jakarta.mail.internet.MimeMessage
+import jakarta.mail.internet.MimeMultipart
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
@@ -41,22 +42,30 @@ class EmailNotificationSenderTest {
         val sent = capturedMessage()
         assertEquals(FROM, sent.from.single().toString())
         assertEquals("lets@career.co.kr", sent.allRecipients.single().toString())
-        assertEquals("[오공고] 오공고에 오신 것을 환영합니다", sent.subject)
-        assertTrue((sent.content as String).startsWith("안녕하세요, 김렛츠님."))
+        assertEquals("[오늘의 공고] 가입 선물로 AI 자소서 프롬프트를 보내드려요 🎁", sent.subject)
     }
 
     @Test
-    fun `이름이 없으면 이름 없이 인사한다`() {
+    fun `HTML 본문과 텍스트 본문에 모두 무료 자료 링크를 담는다`() {
         // given
         Mockito.doNothing().`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
 
         // when
-        sender.send(notification(payloadJson = "{}"))
+        sender.send(notification())
 
         // then
-        val body = capturedMessage().content as String
-        assertTrue(body.startsWith("안녕하세요.\n"))
-        assertFalse(body.contains("님."))
+        // HTML을 막은 메일 클라이언트에서도 자료 링크가 보여야 한다.
+        val html = partOf(capturedMessage(), "text/html")
+        val text = partOf(capturedMessage(), "text/plain")
+        listOf(
+            "https://app.notion.com/p/letsintern/AI-3ff5e77cbee1808fb14cc45c5165cc70",
+            "https://open.kakao.com/o/gMl9i82g",
+            "https://www.instagram.com/letscareer.official",
+            "https://www.instagram.com/letscareer.job/",
+        ).forEach { link ->
+            assertTrue(html.contains(link), link)
+            assertTrue(text.contains(link), link)
+        }
     }
 
     @Test
@@ -122,6 +131,18 @@ class EmailNotificationSenderTest {
         )
     }
 
+    /** 텍스트와 HTML을 함께 보내면 본문이 multipart 안쪽에 있어 MIME 타입이 맞는 파트를 찾을 때까지 내려간다. */
+    private fun partOf(message: MimeMessage, mimeType: String): String {
+        fun find(part: Part): String? = when (val content = part.content) {
+            is MimeMultipart -> (0 until content.count).firstNotNullOfOrNull { find(content.getBodyPart(it)) }
+            is String -> content.takeIf { part.isMimeType(mimeType) }
+            else -> null
+        }
+        // 파트별 Content-Type 헤더는 발송 때 saveChanges에서 채워진다. 발송을 가로챘으므로 직접 부른다.
+        message.saveChanges()
+        return checkNotNull(find(message)) { "$mimeType 본문이 없습니다." }
+    }
+
     private fun capturedMessage(): MimeMessage {
         val captor = ArgumentCaptor.forClass(MimeMessage::class.java)
         Mockito.verify(javaMailSender).send(captor.capture())
@@ -130,7 +151,7 @@ class EmailNotificationSenderTest {
 
     private fun notification(
         templateCode: String = "sign_up_welcome",
-        payloadJson: String = """{"name":"김렛츠"}""",
+        payloadJson: String = "{}",
     ) = NotificationMessageDto(
         notificationId = 1L,
         channel = NotificationChannel.EMAIL,

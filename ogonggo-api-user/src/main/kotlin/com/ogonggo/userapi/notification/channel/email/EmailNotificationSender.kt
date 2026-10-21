@@ -82,11 +82,12 @@ internal class EmailNotificationSender(
 
     private fun createMessage(recipientAddress: String, content: EmailContent): MimeMessage {
         val message = javaMailSender.createMimeMessage()
-        val helper = MimeMessageHelper(message, false, ENCODING)
+        // 텍스트와 HTML 본문을 함께 담으려면 multipart여야 한다.
+        val helper = MimeMessageHelper(message, true, ENCODING)
         helper.setFrom(properties.from)
         helper.setTo(recipientAddress)
         helper.setSubject(content.subject)
-        helper.setText(content.body, false)
+        helper.setText(content.text, content.html)
         return message
     }
 

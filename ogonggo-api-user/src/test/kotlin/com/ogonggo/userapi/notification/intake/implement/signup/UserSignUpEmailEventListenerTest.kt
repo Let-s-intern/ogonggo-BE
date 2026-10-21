@@ -3,7 +3,6 @@ package com.ogonggo.userapi.notification.intake.implement.signup
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
@@ -22,7 +21,7 @@ class UserSignUpEmailEventListenerTest {
 
     private val appender = Mockito.mock(NotificationAppender::class.java)
     private val taskExecutor = CapturingTaskExecutor()
-    private val listener = UserSignUpEmailEventListener(appender, ObjectMapper(), taskExecutor)
+    private val listener = UserSignUpEmailEventListener(appender, taskExecutor)
 
     @Test
     fun `가입한 일반 회원의 렛츠커리어 이메일로 환영 메일을 적재한다`() {
@@ -32,7 +31,7 @@ class UserSignUpEmailEventListenerTest {
         // then
         Mockito.verifyNoInteractions(appender)
         taskExecutor.runAll()
-        Mockito.verify(appender).appendInNewTransaction(notification("""{"name":"김렛츠"}"""))
+        Mockito.verify(appender).appendInNewTransaction(notification())
     }
 
     @Test
@@ -42,7 +41,7 @@ class UserSignUpEmailEventListenerTest {
         taskExecutor.runAll()
 
         // then
-        Mockito.verify(appender).appendInNewTransaction(notification("{}"))
+        Mockito.verify(appender).appendInNewTransaction(notification())
     }
 
     @Test
@@ -75,7 +74,7 @@ class UserSignUpEmailEventListenerTest {
         val logAppender = ListAppender<ILoggingEvent>().apply { start() }
         logger.addAppender(logAppender)
         Mockito.doThrow(IllegalStateException("lets@career.co.kr 적재 실패"))
-            .`when`(appender).appendInNewTransaction(notification("""{"name":"김렛츠"}"""))
+            .`when`(appender).appendInNewTransaction(notification())
 
         // when
         try {
@@ -103,12 +102,12 @@ class UserSignUpEmailEventListenerTest {
         joinedAt = LocalDateTime.of(2026, 8, 27, 0, 0),
     )
 
-    private fun notification(payloadJson: String) = NotificationAppendDto(
+    private fun notification() = NotificationAppendDto(
         deduplicationKey = "sign_up_welcome:user:17:EMAIL",
         channel = NotificationChannel.EMAIL,
         templateCode = "sign_up_welcome",
         recipientAddress = "lets@career.co.kr",
-        payloadJson = payloadJson,
+        payloadJson = "{}",
         scheduledAt = LocalDateTime.of(2026, 8, 27, 0, 0),
         recipientUserId = 17,
     )
