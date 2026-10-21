@@ -22,10 +22,10 @@ class AdminWork24CollectionServiceTest {
     )
 
     @Test
-    fun `준비되지 않은 대상은 건너뛰고 한 대상이 실패해도 나머지를 서울 시각으로 받는다`() {
+    fun `채용공고 수집은 준비되지 않은 대상은 건너뛰고 한 대상이 실패해도 나머지를 서울 시각으로 받는다`() {
         // given
-        val targets = Work24CollectionTarget.entries
-        targets.forEach { target ->
+        val targets = listOf(Work24CollectionTarget.RECRUITMENTS, Work24CollectionTarget.WORK_STUDY_COURSES)
+        Work24CollectionTarget.entries.forEach { target ->
             Mockito.`when`(collector.isReady(target)).thenReturn(target != Work24CollectionTarget.RECRUITMENTS)
             Mockito.`when`(collector.collect(target, SEOUL_NOW))
                 .thenReturn(Work24CollectDto(target, pageCount = 1, appendedCount = 1, skippedCount = 0, excludedCount = 0, failedCount = 0))
@@ -34,7 +34,7 @@ class AdminWork24CollectionServiceTest {
             .thenThrow(InternalServerException(Work24ErrorCode.WORK24_UNAVAILABLE))
 
         // when
-        val results = service.collectAll()
+        val results = service.collectJobs()
 
         // then
         assertEquals(targets, results.map { it.target })
@@ -46,8 +46,27 @@ class AdminWork24CollectionServiceTest {
             AdminWork24CollectResult.Failed(Work24CollectionTarget.WORK_STUDY_COURSES),
             results.first { it.target == Work24CollectionTarget.WORK_STUDY_COURSES },
         )
-        assertEquals(targets.size - 2, results.count { it is AdminWork24CollectResult.Collected })
         Mockito.verify(collector, Mockito.never()).collect(Work24CollectionTarget.RECRUITMENTS, SEOUL_NOW)
+        Mockito.verify(collector, Mockito.never()).collect(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES, SEOUL_NOW)
+    }
+
+    @Test
+    fun `부트캠프 수집은 부트캠프로 넣는 대상만 받는다`() {
+        // given
+        Mockito.`when`(collector.isReady(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES)).thenReturn(true)
+        val collected = Work24CollectDto(
+            Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES,
+            pageCount = 1, appendedCount = 1, skippedCount = 0, excludedCount = 0, failedCount = 0,
+        )
+        Mockito.`when`(collector.collect(Work24CollectionTarget.K_DIGITAL_TRAINING_COURSES, SEOUL_NOW)).thenReturn(collected)
+
+        // when
+        val results = service.collectBootcamps()
+
+        // then
+        assertEquals(listOf(AdminWork24CollectResult.Collected(collected)), results)
+        Mockito.verify(collector, Mockito.never()).isReady(Work24CollectionTarget.RECRUITMENTS)
+        Mockito.verify(collector, Mockito.never()).isReady(Work24CollectionTarget.WORK_STUDY_COURSES)
     }
 
     private companion object {

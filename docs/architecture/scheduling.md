@@ -35,13 +35,16 @@ scheduled_jobs (name, cron, enabled)
 | `jobAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 채용공고 자동 마감. 직접 마감한 것이 아니므로 `closed_at`은 남기지 않는다 |
 | `bootcampAutoClose` | 사용자 | `0 0 * * * *` | 모집 종료 일시가 지난 모집 중 부트캠프 자동 마감 |
 | `imageAssetCleanup` | 사용자 | `0 30 * * * *` | 쓰이지 않은 업로드 이미지 정리 |
-| `work24DailyCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·훈련과정을 채용공고·부트캠프로 등록 |
+| `work24JobCollection` | 관리자 | `0 0 4 * * *` | 고용24 채용정보·일학습병행 훈련과정을 채용공고로 등록 |
+| `work24BootcampCollection` | 관리자 | `0 0 5 * * *` | 고용24 국민내일배움카드(K-디지털 트레이닝) 훈련과정을 부트캠프로 등록. 채용공고 수집과 고용24 호출이 겹치지 않게 한 시간 뒤에 둔다 |
 | `letsCareerJobProfileSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 학력·희망 조건을 렛츠커리어로 전송([인증 문서](authentication.md#전달-양쪽-아웃박스)) |
 | `letsCareerNicknameSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 닉네임을 렛츠커리어로 전송([인증 문서](authentication.md#닉네임)) |
 | `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 | `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
 | `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
+
+2026-10-21 이전에는 `work24DailyCollection` 하나가 채용공고와 부트캠프를 함께 받아, 한쪽만 끌 수 없었다. 지금은 두 작업으로 나눠 따로 켜고 끈다.
 
 2026-09-27 이전에는 앞의 두 작업이 기동 직후부터 1시간 간격(`fixedDelay`)으로 돌았고 주기를 `application.yml`로 바꿨다. 지금은 매시 정해진 분에 돌며 해당 설정 키는 쓰지 않는다.
 

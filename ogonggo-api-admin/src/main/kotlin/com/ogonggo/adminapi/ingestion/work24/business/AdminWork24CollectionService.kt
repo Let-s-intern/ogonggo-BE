@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.ingestion.work24.business
 
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24CollectionTarget
 import com.ogonggo.adminapi.ingestion.work24.implement.Work24Collector
+import com.ogonggo.adminapi.ingestion.work24.implement.Work24Destination
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -19,13 +20,21 @@ class AdminWork24CollectionService(
     private val clock: Clock,
 ) {
 
+    /** 채용정보와 일학습병행 훈련과정을 채용공고로 받는다. */
+    fun collectJobs(): List<AdminWork24CollectResult> =
+        collectAll(Work24CollectionTarget.entries.filter { it.destination != Work24Destination.BOOTCAMP })
+
+    /** 국민내일배움카드 훈련과정을 부트캠프로 받는다. */
+    fun collectBootcamps(): List<AdminWork24CollectResult> =
+        collectAll(Work24CollectionTarget.entries.filter { it.destination == Work24Destination.BOOTCAMP })
+
     /**
      * 한 대상이 실패해도 나머지는 계속 받는다. 인증키가 없는 대상은 호출하지 않고 건너뛴다.
      * 실패한 대상이 있어도 예외를 던지지 않고 결과에 담는다.
      */
-    fun collectAll(): List<AdminWork24CollectResult> {
+    private fun collectAll(targets: List<Work24CollectionTarget>): List<AdminWork24CollectResult> {
         val now = LocalDateTime.now(clock)
-        return Work24CollectionTarget.entries.map { target -> collect(target, now) }
+        return targets.map { target -> collect(target, now) }
     }
 
     private fun collect(target: Work24CollectionTarget, now: LocalDateTime): AdminWork24CollectResult {
