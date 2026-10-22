@@ -6,6 +6,7 @@ import com.ogonggo.core.notification.delivery.implement.dto.NotificationDelivery
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.userapi.notification.metrics.NotificationMetrics
+import com.ogonggo.userapi.config.NotificationDeliveryProperties
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -21,6 +22,29 @@ import java.util.concurrent.atomic.AtomicInteger
 class NotificationDispatcherTest {
 
     private val now = LocalDateTime.of(2026, 10, 6, 12, 0)
+
+    @Test
+    @DisplayName("설정한 동시성만큼 대기 알림을 읽어 모두 발송하고 결과를 저장한다")
+    fun `동시성을 늘리면 네 건을 넘는 묶음도 처리한다`() {
+        // given
+        val notifications = (1L..16L).map { notification(it) }
+        val manager = Mockito.mock(NotificationManager::class.java)
+        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 16)).thenReturn(notifications, emptyList())
+        val delivered = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+        val providerResult = NotificationDeliveryResult.Sent("provider")
+        notifications.forEach { Mockito.`when`(manager.complete(it.notificationId, providerResult, now)).thenReturn(true) }
+        val dispatcher = dispatcher(manager, listOf(sender(NotificationChannel.KAKAO) {
+            delivered.add(it.notificationId)
+            providerResult
+        }), NotificationDeliveryProperties(maxConcurrency = 16))
+
+        // when
+        dispatcher.dispatch()
+
+        // then
+        assertEquals((1L..16L).toSet(), delivered)
+        notifications.forEach { Mockito.verify(manager).complete(it.notificationId, providerResult, now) }
+    }
 
     @Test
     @DisplayName("due 알림은 전용 실행기에서 sender를 호출하고 provider 접수 결과를 기록한다")
@@ -143,7 +167,11 @@ class NotificationDispatcherTest {
         assertEquals(true, NotificationDispatcher.shouldWarnLongRun(60_000))
     }
 
-    private fun dispatcher(manager: NotificationManager, senders: List<NotificationSender>): NotificationDispatcher {
+    private fun dispatcher(
+        manager: NotificationManager,
+        senders: List<NotificationSender>,
+        properties: NotificationDeliveryProperties = NotificationDeliveryProperties(),
+    ): NotificationDispatcher {
         val clock = Clock.fixed(Instant.parse("2026-10-06T03:00:00Z"), ZoneId.of("Asia/Seoul"))
         return NotificationDispatcher(
             notificationManager = manager,
@@ -151,6 +179,7 @@ class NotificationDispatcherTest {
             taskExecutor = TaskExecutor { task -> Thread(task, "notification-test").apply { start() } },
             notificationMetrics = NotificationMetrics(SimpleMeterRegistry(), manager, clock),
             clock = clock,
+            deliveryProperties = properties,
         )
     }
 

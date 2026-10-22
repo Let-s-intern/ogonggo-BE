@@ -4,7 +4,7 @@ Ogonggo API server is a Kotlin/Spring Boot multi-module project aligned with the
 
 ## Runtime baseline
 
-- Java 17
+- Java 21 for `ogonggo-api-user`; Java 17 for `ogonggo-core` and `ogonggo-api-admin`
 - Kotlin 1.9.23
 - Gradle 8.7
 - Spring Boot 3.2.5
@@ -44,7 +44,7 @@ Read [오공고 레이어와 모듈 아키텍처](docs/architecture/layers-and-m
 
 ## Run tests
 
-Use JDK 17 to run Gradle as well as to compile the applications.
+Install JDK 17 and 21. Run Gradle with JDK 21; module toolchains compile and test the user API on 21 and core/admin on 17.
 
 ```bash
 ./gradlew test
@@ -53,7 +53,7 @@ Use JDK 17 to run Gradle as well as to compile the applications.
 On macOS, when another JDK is the shell default:
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew test
+JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew test
 ```
 
 ## Run locally

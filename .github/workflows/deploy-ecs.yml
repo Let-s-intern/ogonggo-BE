@@ -336,6 +336,13 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Set up JDK 21 for user API
+        if: inputs.module == 'ogonggo-api-user'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
       # setup-java의 cache 옵션은 의존성만 캐시한다. Gradle 공식 액션은
       # 빌드 캐시까지 복원하므로 gradle.properties의 org.gradle.caching=true가 실제로 효과를 낸다.
       - name: Set up Gradle

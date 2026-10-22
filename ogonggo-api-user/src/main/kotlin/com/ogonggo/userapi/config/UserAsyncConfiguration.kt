@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.config
 
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableAsync
@@ -13,6 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor
  */
 @Configuration(proxyBeanMethods = false)
 @EnableAsync
+@EnableConfigurationProperties(NotificationDeliveryProperties::class)
 class UserAsyncConfiguration {
 
     /**
@@ -53,17 +57,19 @@ class UserAsyncConfiguration {
 
     /**
      * 외부 알림 provider 호출을 요청·지표·문의 메일 작업과 분리한다.
-     * dispatcher가 한 번에 최대 4건을 병렬 처리한다. 포화되면 이번 발송 실행을 멈추고 다음 tick에서 다시 읽는다.
+     * 기본 동시성 4는 유지하고 작업마다 가상 스레드를 만든다. 포화 시 다음 tick에서 다시 읽는다.
      */
-    @Bean(name = [NOTIFICATION_DELIVERY_TASK_EXECUTOR])
-    fun notificationDeliveryTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
-        corePoolSize = 4
-        maxPoolSize = 4
-        queueCapacity = 0
-        setThreadNamePrefix("notification-delivery-")
-        setRejectedExecutionHandler(ThreadPoolExecutor.AbortPolicy())
-        setWaitForTasksToCompleteOnShutdown(true)
-        setAwaitTerminationSeconds(5)
+    @Bean(name = [NOTIFICATION_DELIVERY_TASK_EXECUTOR], destroyMethod = "close")
+    fun notificationDeliveryTaskExecutor(
+        properties: NotificationDeliveryProperties,
+        meterRegistry: MeterRegistry,
+    ): NotificationDeliveryTaskExecutor = NotificationDeliveryTaskExecutor(properties).apply {
+        Gauge.builder("executor.active", this) { it.activeCount.toDouble() }
+            .tag("name", NOTIFICATION_DELIVERY_TASK_EXECUTOR)
+            .register(meterRegistry)
+        Gauge.builder("executor.queued", this) { 0.0 }
+            .tag("name", NOTIFICATION_DELIVERY_TASK_EXECUTOR)
+            .register(meterRegistry)
     }
 
     /**

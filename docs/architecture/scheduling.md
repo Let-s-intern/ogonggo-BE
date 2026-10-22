@@ -41,7 +41,7 @@ scheduled_jobs (name, cron, enabled)
 | `letsCareerNicknameSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 닉네임을 렛츠커리어로 전송([인증 문서](authentication.md#닉네임)) |
 | `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 | `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
-| `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
+| `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 기본 4건 병렬 처리 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
 
 2026-10-21 이전에는 `work24DailyCollection` 하나가 채용공고와 부트캠프를 함께 받아, 한쪽만 끌 수 없었다. 지금은 두 작업으로 나눠 따로 켜고 끈다.
@@ -62,7 +62,7 @@ scheduled_jobs (name, cron, enabled)
 - 리마인드 대상 적재는 매분 스크랩 대상 500건씩 조회하고, 대상이 없거나 45초 실행 예산에 도달할 때까지 페이지를 처리한다. 별도 일정 테이블이나 영속 커서는 없다. 커서는 한 번의 실행 안에서만 이동하며, 다음 실행은 처음부터 조회해 이미 적재된 알림을 건너뛴다.
 - 페이지별 알림 적재는 별도 트랜잭션으로 커밋하며 커서와 함께 저장하지 않는다. 45초 예산은 다음 페이지 진입 여부만 제한하고, 진행 중인 페이지를 중단시키는 hard timeout은 아니다. 리마인드 작업의 ShedLock 최대 보유시간은 10분이다.
 - delivery dispatcher는 매초 due `PENDING` 중 `max(scheduled_at, created_at)`이 현재 시각 기준 최근 8분 이내인 행만 조회한다. 지연 적재된 알림은 적재 시각부터 처리 창을 적용하고, 두 시각 모두 8분을 넘긴 행은 `PENDING`으로 남겨 자동 발송하지 않는다. 작업 전체에 최대 90초 ShedLock을 적용해 row claim 상태 없이 한 인스턴스만 읽고 처리한다.
-- provider 발송은 고정 4개 스레드의 전용 실행기로 최대 4건씩 병렬 처리하며 대기열은 두지 않는다. dispatcher는 45초 실행 예산 동안 다음 묶음을 읽지만, 이미 시작한 묶음의 `join()` 대기는 예산을 넘길 수 있어 45초는 hard timeout이 아니다. 실행기 포화면 남은 `PENDING` 행을 다음 tick에 둔다.
+- provider 발송은 Java 21의 작업별 가상 스레드로 실행한다. `ogonggo.notification.delivery.max-concurrency`(기본 4)가 조회 묶음 크기와 동시 발송 상한을 함께 정하며, Semaphore로 상한을 넘는 제출을 거절하고 대기열은 두지 않는다. `virtual-threads=false`이면 같은 상한의 플랫폼 스레드 풀을 사용한다. dispatcher는 45초 실행 예산 동안 다음 묶음을 읽지만, 이미 시작한 묶음의 `join()` 대기는 예산을 넘길 수 있어 45초는 hard timeout이 아니다. 실행기 포화면 남은 `PENDING` 행을 다음 tick에 둔다. 상세 설정과 비교 범위는 [알림 추가 가이드](notification-extension-guide.md#발송-실행기)를 따른다.
 - 요청 결과는 provider 접수면 `SENT`, 명시적 거절이면 `FAILED`, 접수 여부를 확인할 수 없으면 `UNKNOWN`이다. 세 결과 상태는 자동 재발송하지 않는다. 단, 결과 저장 전 종료되어 `PENDING`으로 남은 건은 `max(scheduled_at, created_at)` 기준 8분 이내 조회에서 다시 처리될 수 있다. NHN 멱등성 키는 같은 요청의 중복을 최대 10분간 억제할 뿐, 영구적인 1회 발송 보장은 아니다.
 - provider 접수 후 DB 결과 기록에 실패하면 행은 `PENDING`으로 남는다. `max(scheduled_at, created_at)` 기준 8분 창 안의 다음 실행에서만 재호출될 수 있고, 그 이후에는 자동 발송 대상에서 제외된다. NHN 멱등성 10분보다 2분 짧은 앱 조회 창으로 중복 가능성을 제한하며, 창이 지난 행은 삭제하지 않아 운영 조회가 가능하다.
 - dispatcher 실행이 60초 이상 걸리면 종료 시 경고 로그를 남긴다. ShedLock 만료(90초) 전 지연 신호이므로 반복 발생 시 원인과 lock 시간 상향을 검토한다. 이 로그는 실행 중 실시간 watchdog 경보가 아니며, 작업이 반환된 뒤 기록된다.

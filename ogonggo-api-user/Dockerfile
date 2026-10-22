@@ -6,7 +6,7 @@
 # 로컬에서 이미지를 만들 때는 jar를 먼저 빌드해야 한다.
 #   ./gradlew :ogonggo-api-user:bootJar
 #   docker build -f ogonggo-api-user/Dockerfile -t ogonggo-api-user .
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 ARG JAR_FILE=ogonggo-api-user/build/libs/ogonggo-api-user.jar

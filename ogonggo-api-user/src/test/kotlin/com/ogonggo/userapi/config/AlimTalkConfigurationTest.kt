@@ -2,21 +2,28 @@ package com.ogonggo.userapi.config
 
 import com.ogonggo.userapi.notification.channel.alimtalk.NhnAlimTalkClient
 import com.ogonggo.userapi.notification.channel.alimtalk.NhnAlimTalkProperties
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.DisplayName
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 class AlimTalkConfigurationTest {
 
     @Test
+    @DisplayName("발송은 가상 스레드에서 실행하고 적재 실행기와 분리한다")
     fun `알림 적재 실행기와 provider 발송 실행기가 분리되어 연결된다`() {
+        // given
         val context = AnnotationConfigApplicationContext()
+        context.beanFactory.registerSingleton("meterRegistry", SimpleMeterRegistry())
         context.environment.propertySources.addFirst(
             MapPropertySource(
                 "test-nhn-properties",
@@ -38,7 +45,7 @@ class AlimTalkConfigurationTest {
 
         val deliveryExecutor = context.getBean(
             UserAsyncConfiguration.NOTIFICATION_DELIVERY_TASK_EXECUTOR,
-            ThreadPoolTaskExecutor::class.java,
+            NotificationDeliveryTaskExecutor::class.java,
         )
         val enqueueExecutor = context.getBean(
             UserAsyncConfiguration.NOTIFICATION_ENQUEUE_TASK_EXECUTOR,
@@ -53,14 +60,17 @@ class AlimTalkConfigurationTest {
             ThreadPoolTaskExecutor::class.java,
         )
 
+        // when
+        val deliveryThread = CompletableFuture<Thread>()
+        deliveryExecutor.execute { deliveryThread.complete(Thread.currentThread()) }
+        val actualThread = deliveryThread.get(5, TimeUnit.SECONDS)
+
+        // then
+        assertTrue(actualThread.isVirtual)
+        assertTrue(actualThread.name.startsWith("notification-delivery-"))
         assertNotSame(metricExecutor, deliveryExecutor)
         assertNotSame(advertisementExecutor, deliveryExecutor)
         assertNotSame(deliveryExecutor, enqueueExecutor)
-        assertEquals("notification-delivery-", deliveryExecutor.threadNamePrefix)
-        assertEquals(4, deliveryExecutor.corePoolSize)
-        assertEquals(4, deliveryExecutor.maxPoolSize)
-        assertEquals(0, deliveryExecutor.threadPoolExecutor.queue.remainingCapacity())
-        assertTrue(deliveryExecutor.threadPoolExecutor.rejectedExecutionHandler is ThreadPoolExecutor.AbortPolicy)
         assertEquals("notification-enqueue-", enqueueExecutor.threadNamePrefix)
         assertEquals(1, enqueueExecutor.corePoolSize)
         assertEquals(1, enqueueExecutor.maxPoolSize)

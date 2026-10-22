@@ -231,6 +231,30 @@ Authorization: Bearer {ogonggo-access-token}
 | HTTP `5xx`, 통신·client 예외, 해석 불가 응답 | `UNKNOWN` / 해당 `result_category` | provider 접수 여부를 확인할 수 없음 |
 | 미등록 NHN 코드 | `UNKNOWN` / `UNKNOWN_PROVIDER_ERROR` | 원본 코드는 보존하지만 의미를 확인할 수 없어 재발송하지 않음 |
 
+## 발송 실행기
+
+2026-10-22부터 사용자 API는 Java 21에서 실행한다. 기본값은 알림 한 건마다 가상 스레드를
+생성하는 방식이며, 다른 요청·적재·지표 실행기는 기존 플랫폼 스레드를 유지한다.
+
+```yaml
+ogonggo:
+  notification:
+    delivery:
+      virtual-threads: true
+      max-concurrency: 4
+```
+
+`max-concurrency`는 양수이며 dispatcher 조회 묶음과 실제 발송 동시성 상한에 함께 적용한다.
+기본값 4를 유지하므로 스레드 종류를 바꾸는 것만으로 동시 발송 수가 증가하지 않는다.
+가상 스레드는 풀로 재사용하지 않고 작업마다 생성한다. 별도 Semaphore가 상한 초과 제출을
+즉시 거절하므로 provider 호출을 무제한으로 늘리거나 메모리에 큐를 쌓지 않는다.
+`virtual-threads=false`는 같은 상한의 플랫폼 스레드 풀로 비교·복귀할 때 사용한다.
+종료 시 새 제출을 막고 진행 중인 작업을 최대 5초 기다린 뒤 중단한다.
+
+`executor.active`는 발송 실행기가 수락하고 아직 반환하지 않은 작업 수,
+`executor.queued`는 0이며, 기존 `name=notificationDeliveryTaskExecutor` 태그를 유지한다.
+동시성을 높이는 변경은 provider 할당량·DB 커넥션·실제 부하를 함께 확인해야 한다.
+
 ## 운영상 한계
 
 - `/actuator/metrics`는 `127.0.0.1` 요청만 허용한다. 적재·발송 카운터는 인스턴스별 누적값이고, 대기량 gauge는 공용 DB를 조회한다.

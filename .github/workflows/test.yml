@@ -23,6 +23,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Set up JDK 21 for user API
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
       # 의존성뿐 아니라 Gradle 빌드 캐시까지 복원한다.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

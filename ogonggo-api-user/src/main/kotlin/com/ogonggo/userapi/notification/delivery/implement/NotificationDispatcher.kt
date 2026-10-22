@@ -5,6 +5,7 @@ import com.ogonggo.core.notification.delivery.implement.dto.NotificationDelivery
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.userapi.config.UserAsyncConfiguration
+import com.ogonggo.userapi.config.NotificationDeliveryProperties
 import com.ogonggo.userapi.notification.metrics.NotificationMetrics
 import com.ogonggo.userapi.notification.delivery.implement.dto.NotificationDispatchOutcome
 import com.ogonggo.userapi.notification.delivery.implement.dto.NotificationDispatchSummaryDto
@@ -29,6 +30,7 @@ class NotificationDispatcher internal constructor(
     private val taskExecutor: TaskExecutor,
     private val notificationMetrics: NotificationMetrics,
     private val clock: Clock,
+    private val deliveryProperties: NotificationDeliveryProperties = NotificationDeliveryProperties(),
 ) {
     private val sendersByChannel = senders.associateBy(NotificationSender::channel)
 
@@ -49,7 +51,7 @@ class NotificationDispatcher internal constructor(
                 val dueNotifications = notificationManager.findDue(
                     now = now,
                     notBefore = now.minus(PENDING_DISPATCH_WINDOW),
-                    limit = BATCH_SIZE,
+                    limit = deliveryProperties.maxConcurrency,
                 )
                 if (dueNotifications.isEmpty()) break
 
@@ -240,7 +242,6 @@ class NotificationDispatcher internal constructor(
     companion object {
         /** 모든 채널의 알림을 발송하는 공용 DB 작업 키다. */
         const val SCHEDULER_NAME = "notificationDelivery"
-        private const val BATCH_SIZE = 4
         private const val NANOS_PER_MILLISECOND = 1_000_000
         private const val LONG_RUN_WARNING_MILLIS = 60_000L
         private const val LOCK_AT_MOST_FOR = "PT90S"
