@@ -14,4 +14,6 @@ COPY ${JAR_FILE} app.jar
 ENV TZ=Asia/Seoul
 
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "java -Duser.timezone=${TZ} -jar /app/app.jar"]
+# URLConnection의 목적지별 유휴 keep-alive 연결 한도다. 활성 요청 수는
+# ogonggo.notification.delivery.max-concurrency로 별도 제한한다.
+ENTRYPOINT ["sh", "-c", "java -Duser.timezone=${TZ} -Dhttp.maxConnections=${OGONGGO_HTTP_MAX_CONNECTIONS:-128} -jar /app/app.jar"]

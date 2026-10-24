@@ -312,18 +312,35 @@ ogonggo:
     delivery:
       virtual-threads: true
       max-concurrency: 4
+      db-workers: 4
+      db-queue-capacity: 4
 ```
 
-`max-concurrency`는 양수이며 dispatcher 조회 묶음과 실제 발송 동시성 상한에 함께 적용한다.
-기본값 4를 유지하므로 스레드 종류를 바꾸는 것만으로 동시 발송 수가 증가하지 않는다.
-가상 스레드는 풀로 재사용하지 않고 작업마다 생성한다. 별도 Semaphore가 상한 초과 제출을
-즉시 거절하므로 provider 호출을 무제한으로 늘리거나 메모리에 큐를 쌓지 않는다.
-`virtual-threads=false`는 같은 상한의 플랫폼 스레드 풀로 비교·복귀할 때 사용한다.
-종료 시 새 제출을 막고 진행 중인 작업을 최대 5초 기다린 뒤 중단한다.
+`max-concurrency`는 양수이며 진행 중인 알림 수를 제한한다. 발송용 가상 스레드가 동기
+sender를 호출하고 결과 commit이 끝날 때까지 슬롯을 유지한다. 먼저 끝난 알림의 슬롯은
+다른 알림의 완료를 기다리지 않고 보충하며, 같은 실행에서 이미 시도한 ID는 다시 제출하지 않는다.
 
-`executor.active`는 발송 실행기가 수락하고 아직 반환하지 않은 작업 수,
-`executor.queued`는 0이며, 기존 `name=notificationDeliveryTaskExecutor` 태그를 유지한다.
-동시성을 높이는 변경은 provider 할당량·DB 커넥션·실제 부하를 함께 확인해야 한다.
+`db-workers`는 행별 결과 commit을 실행하는 플랫폼 스레드 수이며 `db-queue-capacity`는 그
+실행기의 유한한 메모리 큐 크기다. 기본값은 각각 4와 `max-concurrency`다. 결과 저장이
+거절되면 해당 건은 미해결로 남기고 신규 발송을 멈춰 이미 시작한 작업을 drain한다.
+가상 스레드 작업이 DB 완료를 기다리므로 진행 중 알림 상한에는 HTTP와 DB 대기가 모두 포함된다.
+`virtual-threads=false`는 같은 상한의 플랫폼 발송 스레드로 비교·복귀할 때 사용한다.
+
+`max-concurrency`는 코드 기본값 4를 유지한다. 운영 설정값은 실제 provider 할당량·호출 지연과
+DB 결과 저장 여력을 확인해 정한다.
+설정은 `OGONGGO_NOTIFICATION_DELIVERY_MAX_CONCURRENCY`,
+`OGONGGO_NOTIFICATION_DELIVERY_DB_WORKERS`, `OGONGGO_NOTIFICATION_DELIVERY_DB_QUEUE_CAPACITY`
+환경변수로 덮어쓸 수 있다. 동기 AlimTalk client의 URLConnection 유휴 keep-alive 한도는
+JVM 전역 `http.maxConnections`이고 컨테이너에서는 `OGONGGO_HTTP_MAX_CONNECTIONS`로 설정한다.
+이 기본 128은 활성 요청 수가 아니라 목적지별 유휴 연결 보관 한도다.
+
+`executor.active`는 발송과 결과 commit이 끝나지 않은 in-flight 수다. 발송 실행기의
+`executor.queued`는 0이고, `name=notificationResultDbTaskExecutor`의 동일 지표는 결과 DB 풀의
+실제 대기 작업 수를 표시한다. 발송 실행기는 종료 시 최대 20초, 결과 DB 실행기는 최대 15초
+진행 작업을 기다린다.
+
+DB 전용 풀은 `NotificationManager.complete`의 결과 저장을 분리한다. FCM sender 내부의 토큰
+확인·회수 JDBC는 여전히 가상 스레드에서 실행되므로 FCM의 모든 JDBC 경계를 분리하는 변경은 아니다.
 
 ## 운영상 한계
 

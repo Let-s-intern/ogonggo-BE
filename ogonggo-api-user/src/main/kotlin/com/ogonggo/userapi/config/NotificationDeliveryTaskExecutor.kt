@@ -12,9 +12,13 @@ import java.util.concurrent.TimeUnit
 data class NotificationDeliveryProperties(
     val virtualThreads: Boolean = true,
     val maxConcurrency: Int = 4,
+    val dbWorkers: Int = 4,
+    val dbQueueCapacity: Int = maxConcurrency,
 ) {
     init {
         require(maxConcurrency > 0) { "알림 발송 동시성은 양수여야 합니다." }
+        require(dbWorkers > 0) { "알림 결과 DB worker 수는 양수여야 합니다." }
+        require(dbQueueCapacity > 0) { "알림 결과 DB queue 용량은 양수여야 합니다." }
     }
 }
 
@@ -53,11 +57,21 @@ class NotificationDeliveryTaskExecutor(properties: NotificationDeliveryPropertie
 
     override fun close() {
         executor.shutdown()
-        try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) executor.shutdownNow()
-        } catch (_: InterruptedException) {
-            executor.shutdownNow()
-            Thread.currentThread().interrupt()
+        var interrupted = false
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20)
+        while (!executor.isTerminated) {
+            val remaining = deadline - System.nanoTime()
+            if (remaining <= 0) {
+                executor.shutdownNow()
+                break
+            }
+            try {
+                executor.awaitTermination(remaining, TimeUnit.NANOSECONDS)
+            } catch (_: InterruptedException) {
+                interrupted = true
+                executor.shutdownNow()
+            }
         }
+        if (interrupted) Thread.currentThread().interrupt()
     }
 }

@@ -18,8 +18,15 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CancellationException
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.Future
+import java.util.LinkedHashMap
 
 /** Due 알림을 채널 sender로 전달하고 provider 결과를 기록한다. */
 @Component
@@ -28,6 +35,8 @@ class NotificationDispatcher internal constructor(
     senders: List<NotificationSender>,
     @Qualifier(UserAsyncConfiguration.NOTIFICATION_DELIVERY_TASK_EXECUTOR)
     private val taskExecutor: TaskExecutor,
+    @Qualifier(UserAsyncConfiguration.NOTIFICATION_RESULT_DB_TASK_EXECUTOR)
+    private val resultDbTaskExecutor: TaskExecutor,
     private val notificationMetrics: NotificationMetrics,
     private val clock: Clock,
     private val deliveryProperties: NotificationDeliveryProperties = NotificationDeliveryProperties(),
@@ -46,21 +55,7 @@ class NotificationDispatcher internal constructor(
         var summary = NotificationDispatchSummaryDto()
 
         try {
-            while (hasTimeRemaining(startedAt)) {
-                val now = LocalDateTime.now(clock)
-                val dueNotifications = notificationManager.findDue(
-                    now = now,
-                    notBefore = now.minus(PENDING_DISPATCH_WINDOW),
-                    limit = deliveryProperties.maxConcurrency,
-                )
-                if (dueNotifications.isEmpty()) break
-
-                val batchResult = dispatchBatch(runId, dueNotifications)
-                summary += batchResult
-
-                // 결과 기록 실패 건은 PENDING으로 남지만, 같은 실행에서는 재발송하지 않는다.
-                if (batchResult.shouldStopNextBatch) break
-            }
+            summary = dispatchWithRollingWindow(runId, startedAt)
         } finally {
             val durationMs = elapsedMillis(startedAt)
             if (shouldWarnLongRun(durationMs)) {
@@ -75,30 +70,123 @@ class NotificationDispatcher internal constructor(
         }
     }
 
-    private fun dispatchBatch(
+    /** 결과 저장까지 끝난 작업의 슬롯만 비워 다음 due 알림으로 보충한다. */
+    private fun dispatchWithRollingWindow(
         runId: String,
-        notifications: List<NotificationMessageDto>,
+        startedAt: Long,
     ): NotificationDispatchSummaryDto {
-        val deliveries = mutableListOf<CompletableFuture<NotificationDispatchOutcome>>()
-        var executorRejected = false
+        val maxConcurrency = deliveryProperties.maxConcurrency
+        val completionQueue = ArrayBlockingQueue<Future<NotificationDispatchOutcome>>(maxConcurrency)
+        val completions = ExecutorCompletionService(taskExecutor, completionQueue)
+        val inFlight = LinkedHashMap<Future<NotificationDispatchOutcome>, NotificationMessageDto>()
+        val attemptedIds = HashSet<Long>()
+        var summary = NotificationDispatchSummaryDto()
+        var accepting = true
+        var interrupted = false
 
-        for (notification in notifications) {
-            try {
-                deliveries += CompletableFuture.supplyAsync(
-                    { deliver(runId, notification) },
-                    taskExecutor,
-                )
-            } catch (_: TaskRejectedException) {
-                executorRejected = true
-                log.warn("알림 전용 실행기가 포화되어 남은 대기 건을 다음 실행으로 넘깁니다. runId={}", runId)
-                break
+        try {
+            while (accepting || inFlight.isNotEmpty()) {
+                if (accepting && !hasTimeRemaining(startedAt)) accepting = false
+
+                if (accepting && inFlight.size < maxConcurrency) {
+                    val activeIds = inFlight.values.mapTo(HashSet()) { it.notificationId }
+                    val now = LocalDateTime.now(clock)
+                    val dueNotifications = notificationManager.findDue(
+                        now = now,
+                        limit = maxConcurrency,
+                    )
+                    val candidates = dueNotifications.asSequence()
+                        .filterNot { it.notificationId in activeIds || it.notificationId in attemptedIds }
+                        .take(maxConcurrency - inFlight.size)
+                        .toList()
+
+                    for (notification in candidates) {
+                        attemptedIds += notification.notificationId
+                        try {
+                            val future = completions.submit(Callable {
+                                deliver(runId, notification)
+                            })
+                            inFlight[future] = notification
+                        } catch (_: TaskRejectedException) {
+                            summary = summary.copy(executorRejected = true)
+                            accepting = false
+                            log.warn("알림 전용 실행기가 포화되어 남은 대기 건을 다음 실행으로 넘깁니다. runId={}", runId)
+                            break
+                        }
+                    }
+                }
+
+                if (inFlight.isEmpty()) break
+
+                val completed = try {
+                    completions.take()
+                } catch (_: InterruptedException) {
+                    // 신규 발송을 멈추되 이미 provider에 보낸 작업은 결과 저장까지 drain한다.
+                    interrupted = true
+                    accepting = false
+                    continue
+                }
+                val notification = inFlight.remove(completed)
+                    ?: error("완료된 알림 작업이 in-flight 목록에 없습니다.")
+                val outcome = completedOutcome(runId, notification, completed)
+                summary = summary.include(outcome)
+                if (outcome == NotificationDispatchOutcome.UNRESOLVED) accepting = false
             }
-        }
 
-        val batchResult = deliveries.fold(NotificationDispatchSummaryDto()) { result, delivery ->
-            result.include(delivery.join())
+            return summary
+        } finally {
+            // due 조회 등 coordinator 단계가 실패해도 이미 시작한 provider 호출의 DB 기록을 기다린다.
+            while (inFlight.isNotEmpty()) {
+                val completed = try {
+                    completions.take()
+                } catch (_: InterruptedException) {
+                    interrupted = true
+                    continue
+                }
+                val notification = inFlight.remove(completed) ?: continue
+                summary = summary.include(completedOutcome(runId, notification, completed))
+            }
+            if (interrupted) Thread.currentThread().interrupt()
         }
-        return batchResult.copy(executorRejected = executorRejected)
+    }
+
+    private fun completedOutcome(
+        runId: String,
+        notification: NotificationMessageDto,
+        completed: Future<NotificationDispatchOutcome>,
+    ): NotificationDispatchOutcome = try {
+        completed.get()
+    } catch (exception: ExecutionException) {
+        val cause = exception.cause ?: exception
+        log.error(
+            "알림 발송 작업이 결과 저장 전에 종료됐습니다. runId={}, notificationId={}, userNotificationId={}, errorType={}",
+            runId,
+            notification.notificationId,
+            notification.userNotificationId,
+            cause::class.simpleName,
+            safeStackTrace(cause),
+        )
+        notificationMetrics.recordUnresolved(notification.channel)
+        NotificationDispatchOutcome.UNRESOLVED
+    } catch (exception: CancellationException) {
+        log.error(
+            "알림 발송 작업이 취소되어 결과를 확인할 수 없습니다. runId={}, notificationId={}, userNotificationId={}",
+            runId,
+            notification.notificationId,
+            notification.userNotificationId,
+        )
+        notificationMetrics.recordUnresolved(notification.channel)
+        NotificationDispatchOutcome.UNRESOLVED
+    } catch (exception: InterruptedException) {
+        Thread.currentThread().interrupt()
+        log.error(
+            "알림 발송 결과 대기가 중단됐습니다. runId={}, notificationId={}, userNotificationId={}",
+            runId,
+            notification.notificationId,
+            notification.userNotificationId,
+        )
+        notificationMetrics.recordUnresolved(notification.channel)
+        NotificationDispatchOutcome.UNRESOLVED
     }
 
     private fun deliver(
@@ -139,11 +227,16 @@ class NotificationDispatcher internal constructor(
         result: NotificationDeliveryResult,
     ): NotificationDispatchOutcome {
         return try {
-            val recorded = notificationManager.complete(
-                notificationId = notification.notificationId,
-                result = result,
-                now = LocalDateTime.now(clock),
-            )
+            val recorded = CompletableFuture.supplyAsync(
+                {
+                    notificationManager.complete(
+                        notificationId = notification.notificationId,
+                        result = result,
+                        now = LocalDateTime.now(clock),
+                    )
+                },
+                resultDbTaskExecutor,
+            ).join()
             if (!recorded) {
                 log.error("알림 발송 결과를 기록하지 못했습니다. runId={}, notificationId={}, userNotificationId={}", runId, notification.notificationId, notification.userNotificationId)
                 notificationMetrics.recordUnresolved(notification.channel)
@@ -234,7 +327,7 @@ class NotificationDispatcher internal constructor(
         is NotificationDeliveryResult.Unknown -> NotificationDispatchOutcome.UNKNOWN
     }
 
-    private fun safeStackTrace(exception: Exception) = RuntimeException("알림 처리 실패").apply {
+    private fun safeStackTrace(exception: Throwable) = RuntimeException("알림 처리 실패").apply {
         // ORM/provider 예외 메시지나 cause에 포함될 수 있는 요청 데이터는 로그에 남기지 않는다.
         stackTrace = exception.stackTrace
     }
@@ -246,7 +339,6 @@ class NotificationDispatcher internal constructor(
         private const val LONG_RUN_WARNING_MILLIS = 60_000L
         private const val LOCK_AT_MOST_FOR = "PT90S"
         private const val LOCK_AT_MOST_FOR_MILLIS = 90_000L
-        private val PENDING_DISPATCH_WINDOW = Duration.ofMinutes(8)
         private val RUN_BUDGET = Duration.ofSeconds(45)
         private val log = LoggerFactory.getLogger(NotificationDispatcher::class.java)
 

@@ -32,6 +32,9 @@ class AlimTalkConfigurationTest {
                     "nhn.secretKey" to "test-secret-key",
                     "nhn.sendKey" to "test-send-key",
                     "nhn.templateCode" to "legacy-template-code",
+                    "ogonggo.notification.delivery.max-concurrency" to "16",
+                    "ogonggo.notification.delivery.db-workers" to "4",
+                    "ogonggo.notification.delivery.db-queue-capacity" to "16",
                 ),
             ),
         )
@@ -46,6 +49,10 @@ class AlimTalkConfigurationTest {
         val deliveryExecutor = context.getBean(
             UserAsyncConfiguration.NOTIFICATION_DELIVERY_TASK_EXECUTOR,
             NotificationDeliveryTaskExecutor::class.java,
+        )
+        val resultDbExecutor = context.getBean(
+            UserAsyncConfiguration.NOTIFICATION_RESULT_DB_TASK_EXECUTOR,
+            ThreadPoolTaskExecutor::class.java,
         )
         val enqueueExecutor = context.getBean(
             UserAsyncConfiguration.NOTIFICATION_ENQUEUE_TASK_EXECUTOR,
@@ -71,11 +78,16 @@ class AlimTalkConfigurationTest {
         assertNotSame(metricExecutor, deliveryExecutor)
         assertNotSame(advertisementExecutor, deliveryExecutor)
         assertNotSame(deliveryExecutor, enqueueExecutor)
+        assertNotSame(deliveryExecutor, resultDbExecutor)
         assertEquals("notification-enqueue-", enqueueExecutor.threadNamePrefix)
         assertEquals(1, enqueueExecutor.corePoolSize)
         assertEquals(1, enqueueExecutor.maxPoolSize)
         assertEquals(1_000, enqueueExecutor.threadPoolExecutor.queue.remainingCapacity())
         assertTrue(enqueueExecutor.threadPoolExecutor.rejectedExecutionHandler is ThreadPoolExecutor.AbortPolicy)
+        assertEquals(4, resultDbExecutor.corePoolSize)
+        assertEquals(4, resultDbExecutor.maxPoolSize)
+        assertEquals(16, resultDbExecutor.threadPoolExecutor.queue.remainingCapacity())
+        assertTrue(resultDbExecutor.threadPoolExecutor.rejectedExecutionHandler is ThreadPoolExecutor.AbortPolicy)
         assertNotNull(context.getBean(NhnAlimTalkClient::class.java))
         context.close()
     }

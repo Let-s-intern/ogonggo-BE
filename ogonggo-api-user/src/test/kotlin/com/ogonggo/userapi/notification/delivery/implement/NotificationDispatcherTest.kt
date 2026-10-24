@@ -9,6 +9,7 @@ import com.ogonggo.userapi.notification.metrics.NotificationMetrics
 import com.ogonggo.userapi.config.NotificationDeliveryProperties
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -17,7 +18,10 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class NotificationDispatcherTest {
 
@@ -47,6 +51,59 @@ class NotificationDispatcherTest {
     }
 
     @Test
+    @DisplayName("먼저 완료된 알림의 슬롯을 느린 알림의 완료 전에 보충한다")
+    fun `빠른 발송 완료 슬롯은 느린 발송을 기다리지 않고 보충한다`() {
+        // given
+        val fast = notification(id = 1)
+        val slow = notification(id = 2)
+        val replacement = notification(id = 3)
+        val manager = Mockito.mock(NotificationManager::class.java)
+        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 2))
+            .thenReturn(listOf(fast, slow), listOf(replacement), emptyList())
+        listOf(fast, slow, replacement).forEach {
+            Mockito.`when`(manager.complete(it.notificationId, NotificationDeliveryResult.Sent("provider"), now))
+                .thenReturn(true)
+        }
+        val slowStarted = CountDownLatch(1)
+        val releaseSlow = CountDownLatch(1)
+        val replacementStarted = CountDownLatch(1)
+        val dispatcher = dispatcher(
+            manager,
+            listOf(sender(NotificationChannel.KAKAO) {
+                when (it.notificationId) {
+                    slow.notificationId -> {
+                        slowStarted.countDown()
+                        check(releaseSlow.await(5, TimeUnit.SECONDS))
+                    }
+                    replacement.notificationId -> replacementStarted.countDown()
+                }
+                NotificationDeliveryResult.Sent("provider")
+            }),
+            NotificationDeliveryProperties(maxConcurrency = 2),
+        )
+        val dispatchThread = Thread(dispatcher::dispatch, "notification-coordinator-test")
+
+        // when
+        dispatchThread.start()
+        try {
+            assertTrue(slowStarted.await(2, TimeUnit.SECONDS))
+            assertTrue(
+                replacementStarted.await(2, TimeUnit.SECONDS),
+                "빠른 알림이 끝난 슬롯은 느린 알림이 끝나기 전에 다음 알림을 받아야 한다.",
+            )
+        } finally {
+            releaseSlow.countDown()
+            dispatchThread.join(5_000)
+        }
+
+        // then
+        assertTrue(!dispatchThread.isAlive, "진행 중 발송을 모두 저장한 뒤 dispatcher가 반환해야 한다.")
+        Mockito.verify(manager).complete(fast.notificationId, NotificationDeliveryResult.Sent("provider"), now)
+        Mockito.verify(manager).complete(slow.notificationId, NotificationDeliveryResult.Sent("provider"), now)
+        Mockito.verify(manager).complete(replacement.notificationId, NotificationDeliveryResult.Sent("provider"), now)
+    }
+
+    @Test
     @DisplayName("due 알림은 전용 실행기에서 sender를 호출하고 provider 접수 결과를 기록한다")
     fun `대기 알림을 보내고 접수 결과를 기록한다`() {
         // given
@@ -67,6 +124,29 @@ class NotificationDispatcherTest {
         // then
         assertEquals("notification-test", sendThreadName)
         Mockito.verify(manager).complete(31, NotificationDeliveryResult.Sent("provider-31"), now)
+    }
+
+    @Test
+    @DisplayName("발송 결과는 전용 플랫폼 풀에서 기록한다")
+    fun `결과 저장은 알림 DB 실행기에서 처리한다`() {
+        // given
+        val notification = notification(id = 41)
+        val manager = Mockito.mock(NotificationManager::class.java)
+        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 4)).thenReturn(listOf(notification), emptyList())
+        val saveThreadName = AtomicReference<String>()
+        Mockito.`when`(manager.complete(41, NotificationDeliveryResult.Sent("provider-41"), now)).thenAnswer {
+            saveThreadName.set(Thread.currentThread().name)
+            true
+        }
+        val dispatcher = dispatcher(manager, listOf(sender(NotificationChannel.KAKAO) {
+            NotificationDeliveryResult.Sent("provider-41")
+        }))
+
+        // when
+        dispatcher.dispatch()
+
+        // then
+        assertEquals("notification-db-test", saveThreadName.get())
     }
 
     @Test
@@ -171,12 +251,16 @@ class NotificationDispatcherTest {
         manager: NotificationManager,
         senders: List<NotificationSender>,
         properties: NotificationDeliveryProperties = NotificationDeliveryProperties(),
+        databaseTaskExecutor: TaskExecutor = TaskExecutor { task ->
+            Thread(task, "notification-db-test").apply { start() }
+        },
     ): NotificationDispatcher {
         val clock = Clock.fixed(Instant.parse("2026-10-06T03:00:00Z"), ZoneId.of("Asia/Seoul"))
         return NotificationDispatcher(
             notificationManager = manager,
             senders = senders,
             taskExecutor = TaskExecutor { task -> Thread(task, "notification-test").apply { start() } },
+            resultDbTaskExecutor = databaseTaskExecutor,
             notificationMetrics = NotificationMetrics(SimpleMeterRegistry(), manager, clock),
             clock = clock,
             deliveryProperties = properties,
