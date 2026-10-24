@@ -14,8 +14,13 @@ import java.time.Duration
 data class SlackProperties(
     /** 기업회원이 채용공고·부트캠프를 등록했을 때 알림을 받을 채널의 웹훅 */
     val companyPosting: String = "",
+    /** 알림 시스템 운영 경고 전용 웹훅. 사용자 알림 발송 대기열을 거치지 않는다. */
+    val notificationAlerts: String = "",
     val connectTimeout: Duration = Duration.ofSeconds(2),
     val readTimeout: Duration = Duration.ofSeconds(5),
-)
+) {
+    override fun toString(): String = "SlackProperties(companyPostingConfigured=${companyPosting.isNotBlank()}, " +
+        "notificationAlertsConfigured=${notificationAlerts.isNotBlank()}, connectTimeout=$connectTimeout, readTimeout=$readTimeout)"
+}
 
 internal const val SLACK_REST_CLIENT = "slackRestClient"

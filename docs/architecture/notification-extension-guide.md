@@ -348,6 +348,23 @@ DB 전용 풀은 `NotificationManager.complete`의 결과 저장을 분리한다
 - 카운터는 재시작 시 초기화되며, 시간대별 대시보드와 자동 경보는 구성되어 있지 않다.
 - 저장된 발송 기한(이전 버전의 null 행은 기존 8분 창)을 지난 `PENDING`은 자동 발송·정리하지 않는다. `UNKNOWN`도 자동 재발송하지 않으므로 결과 확인과 후속 판단은 운영에서 수행한다.
 
+### Slack 운영 경고
+
+`notification/alert`는 정리 적체·실행 실패, 잠금 만료 위험, 발송 중단·기한 초과·결과 기록 실패,
+적재 실패, 감시 이상을 위한 8종 템플릿과 전송기를 제공한다. 자동 감지 조건은 아직 연결하지 않았다.
+감지기는 `NotificationAlertNotifier.notify`에 유형·관측 시각·상태·고정 범위·안전한 집계값을 넘긴다.
+전송은 알림 테이블·dispatcher를 거치지 않고 작업자 1개·대기열 100개의 전용 실행기에서 수행한다.
+
+`OGONGGO_NOTIFICATION_ALERTS_ENABLED=true`와 비밀값 `OGONGGO_NOTIFICATION_ALERT_WEBHOOK`을
+함께 주입해야 전송한다. 기본값은 비활성화이며 환경·인스턴스 표시는 `OGONGGO_ENVIRONMENT`와
+`HOSTNAME`을 사용한다. 주소·토큰·알림 본문·원본 예외는 경고에 넣지 않는다.
+
+같은 유형·상태·범위의 성공한 경고는 기본 15분간 억제하고, 성공한 복구 알림은 이전 발생 억제를 해제한다.
+`TEST`는 억제 기록을 바꾸지 않는다. 요청 간격은 인스턴스별 최소 1초이며,
+`ogonggo.notification.alerts.cooldown`·`min-send-interval`로 조정한다. 억제 기록은 메모리에만 있다.
+HTTP 429의 `Retry-After` 동안 전송을 중단하며 실패 메시지는 영속 보관하거나 자동 재전송하지 않는다.
+전송 결과는 `ogonggo.notification.alerts` 카운터로 기록하고, 프로세스 종료·Slack 경로 단절 감지는 외부 감시가 필요하다.
+
 ## 패키지 컨벤션
 
 - 도메인 대상 조회·projection: 대상 도메인의 core 패키지 (채용공고 리마인드는 `ogonggo-core/job`)
@@ -357,6 +374,7 @@ DB 전용 풀은 `NotificationManager.complete`의 결과 저장을 분리한다
 - 채널별 provider client·요청/응답 DTO·인증 설정·sender 구현: 소유 API의 `notification/channel/<channel>`
 - FCM sender·Firebase 초기화·연동 설정: `notification/channel/fcm`. 토큰 관리·테스트 발송 API와 유스케이스는 `notification/fcm`에 둔다.
 - Actuator 지표: 소유 API의 `notification/metrics`
+- 운영 경고 전송·템플릿: 소유 API의 `notification/alert`
 - scheduler 정의는 소유 API의 `config`, 실행 주기와 활성 상태는 `scheduled_jobs`
 
 ## 새 알림 체크리스트
