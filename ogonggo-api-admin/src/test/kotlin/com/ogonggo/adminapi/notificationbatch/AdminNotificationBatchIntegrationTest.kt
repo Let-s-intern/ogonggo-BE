@@ -3,9 +3,12 @@ package com.ogonggo.adminapi.notificationbatch
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
+import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
+import com.ogonggo.core.notification.intake.implement.NotificationAppender
+import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenManager
@@ -51,6 +54,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
     private val users: UserAppender,
     private val tokens: UserFcmTokenManager,
     private val notifications: NotificationManager,
+    private val notificationAppender: NotificationAppender,
     private val jdbc: JdbcTemplate,
     private val tx: TransactionTemplate,
     private val clock: TestClock,
@@ -245,12 +249,68 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         // when, then
         mvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isUnauthorized)
         mvc.perform(get("$PATH/$id")).andExpect(status().isUnauthorized)
+        mvc.perform(get(RECENT_RESULTS_PATH)).andExpect(status().isUnauthorized)
         val member = UsernamePasswordAuthenticationToken(1L, null, emptyList())
         mvc.perform(post(PATH).with(authentication(member)).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isForbidden)
         mvc.perform(get("$PATH/$id").with(authentication(member))).andExpect(status().isForbidden)
         mvc.perform(admin(get("$PATH/$id"))).andExpect(status().isNotFound)
         mvc.perform(admin(get("$PATH/invalid-uuid"))).andExpect(status().isBadRequest)
+        mvc.perform(admin(get(RECENT_RESULTS_PATH))).andExpect(status().isOk)
         assertEquals(0, jdbc.queryForObject("select count(*) from notification_batches", Int::class.java))
+    }
+
+    @Test
+    @DisplayName("최근 상태 변경 순으로 최대 100건을 반환하고 수신 주소와 payload는 노출하지 않는다")
+    fun `최근 알림 결과는 100건으로 제한하고 최신 수정 순으로 조회한다`() {
+        // given
+        val append = (1..101).map { index ->
+            NotificationAppendDto(
+                deduplicationKey = "recent-result:$index",
+                channel = NotificationChannel.FCM,
+                templateCode = "test-template",
+                recipientAddress = "private-token-$index",
+                payloadJson = "{\"private\":\"payload-$index\"}",
+                scheduledAt = NOW.minusMinutes(1),
+                recipientUserId = 77,
+            )
+        }
+        notificationAppender.appendAll(append)
+        append.forEachIndexed { index, item ->
+            val latest = index == append.lastIndex
+            jdbc.update(
+                """update notifications set updated_at = ?, status = ?, result_code = ?, result_category = ?, result_detail = ?
+                   where deduplication_key = ?""",
+                NOW.plusSeconds(index.toLong()),
+                if (latest) "FAILED" else "SENT",
+                if (latest) "TEST_REJECTED" else null,
+                if (latest) "CLIENT_ERROR" else null,
+                if (latest) "민감정보 없는 테스트 사유" else null,
+                item.deduplicationKey,
+            )
+        }
+        val expectedIds = jdbc.queryForList(
+            "select id from notifications order by updated_at desc, id desc limit 100",
+            Long::class.java,
+        )
+
+        // when
+        val response = mapper.readTree(
+            mvc.perform(admin(get(RECENT_RESULTS_PATH)))
+                .andExpect(status().isOk)
+                .andReturn().response.contentAsByteArray,
+        )["data"]
+
+        // then
+        assertEquals(100, response["items"].size())
+        assertEquals(expectedIds, response["items"].map { it["notificationId"].asLong() })
+        assertEquals("FAILED", response["items"][0]["status"].asText())
+        assertEquals("TEST_REJECTED", response["items"][0]["resultCode"].asText())
+        assertEquals("CLIENT_ERROR", response["items"][0]["resultCategory"].asText())
+        assertEquals("민감정보 없는 테스트 사유", response["items"][0]["resultDetail"].asText())
+        assertFalse(response["items"][0].has("recipientAddress"))
+        assertFalse(response["items"][0].has("payloadJson"))
+        assertFalse(response.toString().contains("private-token-"))
+        assertFalse(response.toString().contains("payload-"))
     }
 
     @Test
@@ -353,6 +413,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
 
     private companion object {
         const val PATH = "/api/v1/admin/notification-batches"
+        const val RECENT_RESULTS_PATH = "/api/v1/admin/notifications/recent-results"
         const val ADMIN_ID = 42L
         const val URL = "https://www.ogonggo.co.kr/announcements/10"
         val START: Instant = Instant.parse("2026-10-22T03:00:00Z")

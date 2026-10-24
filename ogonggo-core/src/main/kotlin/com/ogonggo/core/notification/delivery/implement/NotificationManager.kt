@@ -160,10 +160,20 @@ class NotificationManager internal constructor(
             is NotificationDeliveryResult.Unknown -> NotificationStatus.UNKNOWN
         }
         val sent = result as? NotificationDeliveryResult.Sent
-        val failure = when (result) {
+        val resultCode = when (result) {
             is NotificationDeliveryResult.Sent -> null
-            is NotificationDeliveryResult.Failed -> result
-            is NotificationDeliveryResult.Unknown -> result
+            is NotificationDeliveryResult.Failed -> result.resultCode
+            is NotificationDeliveryResult.Unknown -> result.resultCode
+        }
+        val failureCategory = when (result) {
+            is NotificationDeliveryResult.Sent -> null
+            is NotificationDeliveryResult.Failed -> result.failureCategory
+            is NotificationDeliveryResult.Unknown -> result.failureCategory
+        }
+        val detail = when (result) {
+            is NotificationDeliveryResult.Sent -> null
+            is NotificationDeliveryResult.Failed -> result.detail
+            is NotificationDeliveryResult.Unknown -> result.detail
         }
         return notificationRepository.completeProcessing(
             id = notificationId,
@@ -174,9 +184,9 @@ class NotificationManager internal constructor(
             staleResultCode = STALE_PROCESSING_RESULT_CODE,
             providerMessageId = sent?.providerMessageId,
             sentAt = if (sent == null) null else now,
-            resultCode = failure?.resultCode,
-            failureCategory = failure?.failureCategory,
-            detail = failure?.detail?.trim()?.take(500),
+            resultCode = resultCode,
+            failureCategory = failureCategory,
+            detail = detail?.trim()?.take(500),
             now = now,
         ) == 1
     }
@@ -201,6 +211,7 @@ class NotificationManager internal constructor(
         deduplicationKey = deduplicationKey,
         recipientUserId = recipientUserId,
         userNotificationId = userNotificationId,
+        processingAttemptId = processingAttemptId,
     )
 
     private fun Notification.toMessageDto(attemptId: String) = toMessageDto().copy(processingAttemptId = attemptId)

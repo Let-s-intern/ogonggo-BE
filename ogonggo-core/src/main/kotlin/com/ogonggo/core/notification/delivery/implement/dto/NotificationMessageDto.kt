@@ -14,4 +14,6 @@ data class NotificationMessageDto(
     val recipientUserId: Long? = null,
     val userNotificationId: Long? = null,
     val recipientType: NotificationRecipientType = NotificationRecipientType.DIRECT,
+    /** 현재 provider 요청의 fencing token. 결과 기록 시 같은 attempt인지 확인한다. */
+    val processingAttemptId: String? = null,
 )

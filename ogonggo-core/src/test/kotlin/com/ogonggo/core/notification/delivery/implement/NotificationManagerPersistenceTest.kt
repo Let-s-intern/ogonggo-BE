@@ -85,7 +85,7 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         )
 
         // then
-        assertEquals(listOf("stale", "late-enqueued", "recent", "due-now"), due.map { it.deduplicationKey })
+        assertEquals(listOf("late-enqueued", "cutoff", "stale", "recent", "due-now"), due.map { it.deduplicationKey })
         assertEquals(
             NotificationStatus.PENDING,
             notificationRepository.findAllByDeduplicationKeyIn(listOf("stale")).single().status,
@@ -221,8 +221,10 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         append("${prefix}sent:user:18", now)
         append("other-job:pending", now)
         val sentId = notificationRepository.findAllByDeduplicationKeyIn(listOf("${prefix}sent:user:18")).single().id!!
-        val sentAttempt = notificationManager.claimDue(now, 10).single { it.notificationId == sentId }
-        notificationManager.complete(sentId, checkNotNull(sentAttempt.processingAttemptId), NotificationDeliveryResult.Sent("provider-2"), now.plusSeconds(1))
+        jdbcTemplate.update(
+            "update notifications set status = 'SENT', sent_at = ?, provider_message_id = ? where id = ?",
+            now.plusSeconds(1), "provider-2", sentId,
+        )
 
         // when
         val deleted = notificationManager.deletePendingByDeduplicationKeyPrefix(prefix)

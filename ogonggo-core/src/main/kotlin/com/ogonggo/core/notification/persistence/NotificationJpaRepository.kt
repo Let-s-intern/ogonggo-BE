@@ -4,6 +4,7 @@ import com.ogonggo.core.notification.domain.Notification
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.domain.NotificationStatus
+import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryRecordDto
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
@@ -22,6 +23,21 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
 
     /** 적재 시 중복 키를 미리 거르는 조회. 동시 삽입의 최종 방어는 DB 유일 제약이다. */
     fun findAllByDeduplicationKeyIn(deduplicationKeys: Collection<String>): List<Notification>
+
+    /** 운영 결과 화면에 노출할 최신 기록만 DTO projection으로 읽어 민감한 주소·payload 로딩을 피한다. */
+    @Query(
+        """
+        select new com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryRecordDto(
+            n.id, n.channel, n.status, n.recipientType, n.templateCode,
+            n.recipientUserId, n.userNotificationId, n.batchId, n.scheduledAt,
+            n.processingStartedAt, n.sentAt, n.providerMessageId, n.resultCode,
+            n.resultCategory, n.resultDetail, n.attemptCount, n.createdAt, n.updatedAt
+        )
+        from Notification n
+        order by n.updatedAt desc, n.id desc
+        """,
+    )
+    fun findRecentResults(pageable: Pageable): List<NotificationDeliveryRecordDto>
 
     /** 마감이 변경된 공고의 아직 발송하지 않은 알림을 제거한다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
