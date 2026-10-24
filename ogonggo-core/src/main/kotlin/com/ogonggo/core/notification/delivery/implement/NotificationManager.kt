@@ -8,6 +8,7 @@ import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
 import java.time.LocalDateTime
 
 @Component
@@ -17,7 +18,11 @@ class NotificationManager internal constructor(
 
     /** 전역 delivery 스케줄 잠금 안에서 처리할 due 알림을 작은 묶음으로 읽는다. */
     @Transactional(readOnly = true)
-    fun findDue(now: LocalDateTime, notBefore: LocalDateTime, limit: Int): List<NotificationMessageDto> {
+    fun findDue(
+        now: LocalDateTime,
+        notBefore: LocalDateTime = now.minus(LEGACY_PENDING_DISPATCH_WINDOW),
+        limit: Int,
+    ): List<NotificationMessageDto> {
         require(limit > 0)
         return notificationRepository.findDue(
             now = now,
@@ -31,14 +36,20 @@ class NotificationManager internal constructor(
     @Transactional(readOnly = true)
     fun countPendingTotal(): Long = notificationRepository.countByStatus(NotificationStatus.PENDING)
 
-    /** 기존 8분 창 또는 명시한 발송 기한 안에 있는 due PENDING 건수다. */
+    /** 저장된 발송 기한 안의 due PENDING 건수다. 기한이 없는 기존 행에만 8분 창을 적용한다. */
     @Transactional(readOnly = true)
-    fun countPendingDue(now: LocalDateTime, notBefore: LocalDateTime): Long =
+    fun countPendingDue(
+        now: LocalDateTime,
+        notBefore: LocalDateTime = now.minus(LEGACY_PENDING_DISPATCH_WINDOW),
+    ): Long =
         notificationRepository.countDuePending(now, notBefore, NotificationStatus.PENDING)
 
-    /** 기존 8분 창 또는 명시한 발송 기한을 넘긴 PENDING 건수다. */
+    /** 저장된 발송 기한을 넘긴 PENDING 건수다. 기한이 없는 기존 행에만 8분 창을 적용한다. */
     @Transactional(readOnly = true)
-    fun countPendingExpired(now: LocalDateTime, notBefore: LocalDateTime): Long =
+    fun countPendingExpired(
+        now: LocalDateTime,
+        notBefore: LocalDateTime = now.minus(LEGACY_PENDING_DISPATCH_WINDOW),
+    ): Long =
         notificationRepository.countExpiredPending(now, notBefore, NotificationStatus.PENDING)
 
     /** 예정 시각이 아직 오지 않은 PENDING 건수다. */
@@ -89,4 +100,9 @@ class NotificationManager internal constructor(
         recipientUserId = recipientUserId,
         userNotificationId = userNotificationId,
     )
+
+    private companion object {
+        /** 기한이 저장되지 않은 이전 버전 알림만 사용하는 호환 기준이다. */
+        val LEGACY_PENDING_DISPATCH_WINDOW: Duration = Duration.ofMinutes(8)
+    }
 }

@@ -73,7 +73,7 @@ internal class Notification(
     @Column(name = "batch_id", length = 36)
     val batchId: String? = null,
 
-    /** null이면 기존 8분 정책을 따른다. 어드민 발송은 명시한 시각까지 대기한다. */
+    /** 적재 시 확정한 발송 기한. 이전 버전에서 저장한 null 행만 기존 8분 정책을 따른다. */
     @Column(name = "dispatch_expires_at")
     val dispatchExpiresAt: LocalDateTime? = null,
 

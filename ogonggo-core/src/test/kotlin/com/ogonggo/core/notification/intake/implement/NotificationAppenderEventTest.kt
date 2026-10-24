@@ -7,7 +7,10 @@ import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 class NotificationAppenderEventTest {
     @Test
@@ -15,7 +18,12 @@ class NotificationAppenderEventTest {
         val repository = Mockito.mock(NotificationJpaRepository::class.java)
         val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
         Mockito.`when`(repository.findAllByDeduplicationKeyIn(listOf("key"))).thenReturn(emptyList())
-        val appender = NotificationAppender(repository, eventPublisher)
+        val appender = NotificationAppender(
+            repository,
+            eventPublisher,
+            NotificationDispatchPolicy(NotificationDispatchProperties()),
+            Clock.fixed(Instant.parse("2026-10-07T03:00:00Z"), ZoneId.of("Asia/Seoul")),
+        )
 
         appender.append(
             NotificationAppendDto(

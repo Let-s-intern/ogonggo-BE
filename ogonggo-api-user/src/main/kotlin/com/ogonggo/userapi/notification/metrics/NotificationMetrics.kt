@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 import java.time.Clock
-import java.time.Duration
 import java.time.LocalDateTime
 
 /** 알림 적재량·발송 결과·DB 대기 잔량을 Actuator MeterRegistry에 기록한다. */
@@ -51,17 +50,16 @@ class NotificationMetrics(
     private fun registerPendingGauge(state: PendingState) {
         Gauge.builder(PENDING_METRIC, this) { metrics -> metrics.readPendingCount(state).toDouble() }
             .tag(STATE_TAG, state.tag)
-            .description("notifications의 PENDING 건수. 기본 8분 창 또는 명시한 발송 기한으로 due/expired 구분")
+            .description("notifications의 PENDING 건수. 저장된 발송 기한으로 due/expired 구분하며 기존 null 행만 8분 창 적용")
             .register(meterRegistry)
     }
 
     private fun readPendingCount(state: PendingState): Long {
         val now = LocalDateTime.now(clock)
-        val notBefore = now.minus(PENDING_DISPATCH_WINDOW)
         return when (state) {
             PendingState.TOTAL -> notificationManager.countPendingTotal()
-            PendingState.DUE -> notificationManager.countPendingDue(now, notBefore)
-            PendingState.EXPIRED -> notificationManager.countPendingExpired(now, notBefore)
+            PendingState.DUE -> notificationManager.countPendingDue(now)
+            PendingState.EXPIRED -> notificationManager.countPendingExpired(now)
             PendingState.FUTURE -> notificationManager.countPendingFuture(now)
         }
     }
@@ -98,6 +96,5 @@ class NotificationMetrics(
         const val FAILED = "FAILED"
         const val UNKNOWN = "UNKNOWN"
         const val UNRESOLVED = "UNRESOLVED"
-        val PENDING_DISPATCH_WINDOW: Duration = Duration.ofMinutes(8)
     }
 }

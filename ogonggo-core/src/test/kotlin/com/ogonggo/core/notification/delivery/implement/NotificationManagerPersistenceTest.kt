@@ -1,11 +1,13 @@
 package com.ogonggo.core.notification.delivery.implement
 
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.notification.domain.Notification
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
+import com.ogonggo.core.notification.intake.implement.NotificationDispatchPolicy
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import org.springframework.jdbc.core.JdbcTemplate
@@ -25,7 +27,7 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(NotificationAppender::class, NotificationManager::class)
+@Import(NotificationAppender::class, NotificationDispatchPolicy::class, NotificationManager::class)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 internal class NotificationManagerPersistenceTest @Autowired constructor(
     private val notificationAppender: NotificationAppender,
@@ -40,8 +42,8 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("예정 시각 또는 적재 시각부터 8분 안의 PENDING 알림을 발송 대상으로 읽는다")
-    fun `멱등성 보호 시간 안의 due 알림만 조회한다`() {
+    @DisplayName("기한이 없는 기존 알림은 예정 시각 또는 적재 시각부터 8분 안에만 발송한다")
+    fun `기존 null 기한 알림은 8분 호환 정책으로 조회한다`() {
         // given
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
         append("recent", now.minusMinutes(7).minusSeconds(59))
@@ -238,20 +240,47 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertEquals(4L, notificationManager.countPendingTotal())
     }
 
+    @Test
+    @DisplayName("발송 조회와 대기 지표는 채널에 관계없이 저장된 기한과 동일한 만료 경계를 사용한다")
+    fun `채널별 저장 기한으로 발송 대상과 기한 초과 건수를 구분한다`() {
+        // given
+        val now = LocalDateTime.of(2026, 10, 24, 12, 0)
+        append("kakao-cutoff", now.minusHours(1), channel = NotificationChannel.KAKAO, dispatchExpiresAt = now)
+        append("email-active", now.minusHours(1), channel = NotificationChannel.EMAIL, dispatchExpiresAt = now.plusMinutes(20))
+        append("fcm-expired", now.minusHours(1), channel = NotificationChannel.FCM, dispatchExpiresAt = now.minusSeconds(1))
+        append("future", now.plusHours(1), channel = NotificationChannel.FCM, dispatchExpiresAt = now.plusHours(2))
+
+        // when
+        val due = notificationManager.findDue(now = now, limit = 10)
+        val dueCount = notificationManager.countPendingDue(now)
+        val expiredCount = notificationManager.countPendingExpired(now)
+        val futureCount = notificationManager.countPendingFuture(now)
+
+        // then
+        assertEquals(listOf("email-active"), due.map { it.deduplicationKey })
+        assertEquals(1L, dueCount)
+        assertEquals(2L, expiredCount)
+        assertEquals(1L, futureCount)
+    }
+
     private fun append(
         key: String,
         scheduledAt: LocalDateTime,
         createdAt: LocalDateTime = scheduledAt.minusSeconds(1),
+        channel: NotificationChannel = NotificationChannel.KAKAO,
+        dispatchExpiresAt: LocalDateTime? = null,
     ) {
-        notificationAppender.append(
-            NotificationAppendDto(
+        // 이전 버전의 기한 없는 행을 재현한다. 신규 적재는 Appender가 기한을 채운다.
+        notificationRepository.saveAndFlush(
+            Notification(
                 deduplicationKey = key,
-                channel = NotificationChannel.KAKAO,
+                channel = channel,
                 templateCode = "sign_up_confirm",
                 recipientAddress = "01012345678",
                 payloadJson = "{\"name\":\"홍길동\"}",
                 scheduledAt = scheduledAt,
                 recipientUserId = 17,
+                dispatchExpiresAt = dispatchExpiresAt,
             ),
         )
         jdbcTemplate.update(

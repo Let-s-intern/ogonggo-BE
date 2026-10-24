@@ -3,6 +3,7 @@ package com.ogonggo.core.notification.delivery.implement
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
+import com.ogonggo.core.notification.intake.implement.NotificationDispatchPolicy
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -20,7 +21,7 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(NotificationAppender::class, NotificationCleanupManager::class)
+@Import(NotificationAppender::class, NotificationDispatchPolicy::class, NotificationCleanupManager::class)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 internal class NotificationCleanupManagerPersistenceTest @Autowired constructor(
     private val notificationAppender: NotificationAppender,
