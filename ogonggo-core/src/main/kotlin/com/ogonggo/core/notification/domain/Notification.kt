@@ -76,7 +76,16 @@ internal class Notification(
     /** null이면 기존 8분 정책을 따른다. 어드민 발송은 명시한 시각까지 대기한다. */
     @Column(name = "dispatch_expires_at")
     val dispatchExpiresAt: LocalDateTime? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recipient_type", nullable = false, length = 20)
+    val recipientType: NotificationRecipientType = NotificationRecipientType.DIRECT,
 ) : BaseTimeEntity() {
+    init {
+        require(recipientType != NotificationRecipientType.TOPIC ||
+            (channel == NotificationChannel.FCM && recipientUserId == null && userNotificationId == null))
+    }
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

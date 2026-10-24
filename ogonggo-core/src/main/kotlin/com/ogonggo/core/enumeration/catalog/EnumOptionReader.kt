@@ -31,6 +31,7 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.notification.domain.NotificationChannel
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationProgressStatus
 import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostApplicationSortType
@@ -88,6 +89,7 @@ class EnumOptionReader {
             // 알림
             enumOptionsOf<NotificationChannel>(),
             enumOptionsOf<NotificationStatus>(),
+            enumOptionsOf<NotificationRecipientType>(),
             enumOptionsOf<NotificationBatchTargetType>(),
             enumOptionsOf<UserNotificationType>(),
             enumOptionsOf<UserNotificationPushSkipReason>(),

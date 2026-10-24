@@ -96,6 +96,8 @@ If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07
 
 어드민 FCM 발송과 사용자 알림함을 함께 제공하려면 `docs/schema/2026-10-22-admin-notification-batches.sql`과 `docs/schema/2026-10-24-admin-notification-inbox.sql`을 먼저 적용하고 사용자 API, 관리자 API 순서로 배포합니다. 활성 회원은 토큰이 없어도 알림함에 남습니다. [어드민 발송·운영 기록](docs/architecture/notification-extension-guide.md#어드민-fcm-발송)을 참고합니다.
 
+전체 토픽 발송은 `docs/schema/2026-10-24-notification-broadcast-topic.sql` 적용 뒤 사용자 API의 최초 구독을 완료하고 관리자 `ogonggo.notification.broadcast.enabled=true`로 전환합니다. 공통 공지 1건·토픽 작업 1건을 저장하며 회원별 읽음만 별도로 기록합니다. [설정·응답·배포 절차](docs/architecture/notification-extension-guide.md#전체-토픽-발송과-공통-알림함)를 따릅니다.
+
 다중 기기·댓글 알림·알림함의 정책과 동작 흐름은 [알림 추가 가이드](docs/architecture/notification-extension-guide.md)에서 확인할 수 있습니다.
 
 ## Work24 (고용24) Open API

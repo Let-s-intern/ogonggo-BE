@@ -7,6 +7,7 @@ import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.Notification
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenManager
@@ -42,7 +43,8 @@ internal class FcmNotificationSender(
         }
 
         val userId = notification.recipientUserId
-        if (userId == null || !tokenReader.isDeliverable(userId, notification.recipientAddress)) {
+        val topic = notification.recipientType == NotificationRecipientType.TOPIC
+        if (!topic && (userId == null || !tokenReader.isDeliverable(userId, notification.recipientAddress))) {
             return NotificationDeliveryResult.Failed(
                 resultCode = "FCM_RECIPIENT_INACTIVE",
                 failureCategory = NotificationFailureCategory.CLIENT_ERROR,
@@ -51,7 +53,7 @@ internal class FcmNotificationSender(
         }
 
         val message = Message.builder()
-            .setToken(notification.recipientAddress)
+            .apply { if (topic) setTopic(notification.recipientAddress) else setToken(notification.recipientAddress) }
             .setNotification(
                 Notification.builder()
                     .setTitle(payload.title)
@@ -65,7 +67,7 @@ internal class FcmNotificationSender(
             NotificationDeliveryResult.Sent(firebaseMessaging.send(message))
         } catch (exception: FirebaseMessagingException) {
             val errorCode = exception.messagingErrorCode?.name ?: "FIREBASE_MESSAGING_ERROR"
-            if (exception.messagingErrorCode == com.google.firebase.messaging.MessagingErrorCode.UNREGISTERED) {
+            if (!topic && userId != null && exception.messagingErrorCode == com.google.firebase.messaging.MessagingErrorCode.UNREGISTERED) {
                 tokenManager.revoke(userId, notification.recipientAddress, LocalDateTime.now(clock))
             }
             NotificationDeliveryResult.Failed(

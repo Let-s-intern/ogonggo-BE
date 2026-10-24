@@ -436,6 +436,8 @@ API 버전 변경은 기존 클라이언트가 호환되지 않는 외부 계약
 
 ## 사용자 알림함
 
+- 공통 공지 한 건 읽음은 `PATCH /api/v1/users/me/notifications/broadcasts/{batchId}/read`다. UUID로 개인 알림의 숫자 ID와 구분하며 최초 읽음 시각을 보존한다. 동일한 인증·활성 회원·30일·가입 이후 노출 조건을 적용한다.
+
 - 결정일: 2026-10-21 / 리뷰 상태: 팀 리뷰 필요
 - `/api/v1/users/me/notifications`는 로그인한 활성 회원의 알림함이다. GET 목록과 GET `/unread-count`, PATCH `/{notificationId}/read`, PATCH `/read-all`을 제공한다.
 - 읽음은 알림의 상태 전이이며 본문 없는 명령별 PATCH를 사용한다. 최초 읽은 시각을 보존하고 반복 호출에 성공한다. 모두 읽음은 요청에서 고정한 시각·ID 상한 뒤의 신규 알림을 제외한다.

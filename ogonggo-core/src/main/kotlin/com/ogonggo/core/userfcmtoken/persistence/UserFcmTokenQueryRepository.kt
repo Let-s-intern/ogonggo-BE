@@ -10,6 +10,15 @@ import org.springframework.stereotype.Repository
 
 @Repository
 internal class UserFcmTokenQueryRepository(private val queryFactory: JPAQueryFactory) {
+    fun countActiveAudience(): Pair<Long, Long> {
+        val noTokenId = com.querydsl.core.types.dsl.CaseBuilder().`when`(token.id.isNull)
+            .then(user.id).otherwise(com.querydsl.core.types.dsl.Expressions.nullExpression<Long>())
+        val row = queryFactory.select(user.id.countDistinct(), noTokenId.countDistinct()).from(user)
+            .leftJoin(token).on(token.userId.eq(user.id), token.deletedAt.isNull, token.token.isNotNull)
+            .where(user.status.eq(UserStatus.ACTIVE)).fetchOne()!!
+        return checkNotNull(row.get(user.id.countDistinct())) to checkNotNull(row.get(noTokenId.countDistinct()))
+    }
+
     fun readUpperUserId(): Long = queryFactory.select(user.id.max()).from(user).fetchOne() ?: 0
 
     fun readRecipients(afterUserId: Long, throughUserId: Long, userIds: Set<Long>?, limit: Int): List<UserFcmTokenRecipientDto> {

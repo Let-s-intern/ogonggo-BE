@@ -42,6 +42,7 @@ scheduled_jobs (name, cron, enabled)
 | `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 | `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
 | `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 기본 4건 병렬 처리 |
+| `fcmTopicSync` | 사용자 | `*/30 * * * * *` | 전체 토픽 최초 구독, 토큰·회원 상태 동기화, 구독 실패 재처리. topic 설정 및 Firebase 활성화 시 실행 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
 
 2026-10-21 이전에는 `work24DailyCollection` 하나가 채용공고와 부트캠프를 함께 받아, 한쪽만 끌 수 없었다. 지금은 두 작업으로 나눠 따로 켜고 끈다.

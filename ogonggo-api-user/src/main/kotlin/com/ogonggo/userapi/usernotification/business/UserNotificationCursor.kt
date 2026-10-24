@@ -9,7 +9,7 @@ import java.util.Base64
 
 internal object UserNotificationCursor {
     fun encode(item: UserNotificationDto): String = Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("${item.createdAt}|${item.id}".toByteArray(UTF_8))
+        .encodeToString("${item.createdAt}|${item.id ?: item.broadcastId}".toByteArray(UTF_8))
 
     fun decode(value: String?): UserNotificationCursorDto? {
         if (value == null) return null
@@ -18,9 +18,15 @@ internal object UserNotificationCursor {
             val parts = String(Base64.getUrlDecoder().decode(value), UTF_8).split('|')
             require(parts.size == 2)
             val createdAt = LocalDateTime.parse(parts[0])
-            val id = parts[1].toLong()
-            require(id > 0 && createdAt.year in 1..9999)
-            return UserNotificationCursorDto(createdAt, id)
+            require(createdAt.year in 1..9999)
+            val id = parts[1].toLongOrNull()
+            if (id != null) {
+                require(id > 0)
+                return UserNotificationCursorDto(createdAt, id)
+            }
+            val uuid = java.util.UUID.fromString(parts[1])
+            require(uuid.toString() == parts[1])
+            return UserNotificationCursorDto(createdAt, null, uuid.toString())
         } catch (_: IllegalArgumentException) {
             throw InvalidRequestParameterException("cursor", "올바른 알림 커서가 아닙니다.")
         } catch (_: java.time.format.DateTimeParseException) {

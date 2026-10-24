@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class UserFcmTokenRecipientReader internal constructor(private val repository: UserFcmTokenQueryRepository) {
+    fun countActiveAudience(): Pair<Long, Long> = repository.countActiveAudience()
+
     fun readUpperUserId(): Long = repository.readUpperUserId()
 
     fun readPage(afterUserId: Long, throughUserId: Long, userIds: Set<Long>?, limit: Int): List<UserFcmTokenRecipientDto> {

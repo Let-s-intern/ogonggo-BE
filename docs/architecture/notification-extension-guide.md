@@ -9,7 +9,7 @@
 ## 핵심 규칙
 
 1. 업무 기능은 수신 대상·발송 시각·템플릿 변수를 결정하고 provider를 직접 호출하지 않는다.
-2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 수신 주소 하나·채널 한 개의 발송 기록이다. 다중 기기 FCM은 설치마다 행을 만든다.
+2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 개별 주소 또는 FCM 토픽 하나·채널 한 개의 발송 기록이다. DIRECT 다중 기기 FCM은 설치마다, TOPIC 전체 발송은 토픽에 한 행을 만든다.
 3. `deduplication_key`는 같은 논리 알림의 재처리에도 변하지 않게 만든다. 별도 회차로 다시 보낼 때는 회차 식별자를 포함한다.
 4. 발송 결과 상태는 `PENDING → SENT | FAILED | UNKNOWN`이다. `SENT`는 provider 접수, `FAILED`는 명시적 거절, `UNKNOWN`은 접수 여부를 판단할 수 없는 결과다. `SENT`는 사용자 도착을 뜻하지 않는다.
 5. dispatcher는 기본적으로 `max(scheduled_at, created_at)`이 현재 시각 기준 최근 8분 이내인 due `PENDING`만 조회한다. 어드민 발송처럼 `dispatch_expires_at`이 있으면 그 시각 전까지 조회한다. 지연 적재된 행은 적재 시각부터 창을 적용하고, 그보다 오래된 행은 `PENDING`으로 남겨 자동 발송하지 않는다.
@@ -185,6 +185,8 @@ Authorization: Bearer {ogonggo-access-token}
 
 ## 어드민 FCM 발송
 
+아래의 회원·토큰별 적재 설명은 USER_IDS와 전체 토픽 전환 전 ALL에 해당한다. 토픽 전환 후 ALL은 [전체 토픽 발송과 공통 알림함](#전체-토픽-발송과-공통-알림함)을 따른다.
+
 - `POST /api/v1/admin/notification-batches`: `targetType`, `userIds`, `title`, `body`, `data`를 받는다. `USER_IDS`는 양수 ID 1~1,000개를 중복 제거하고, `ALL`은 `userIds` 없이 전체 활성 회원을 평가한다. 없는 지정 회원이 있으면 404 `USER_NOT_FOUND`로 전체 롤백한다.
 - 제목과 본문은 공백만 있는 값을 거부하며 각각 최대 100자·1,000자다. `data`는 최대 20개의 문자열 맵이며 `url`에 http(s) 이동 주소가 필요하다. FCM 예약 키·문자열이 아닌 값·직렬화한 전체 메시지 4,096바이트 초과는 400 `BAD_REQUEST`다.
 - 500명씩 대상과 토큰을 조회해 기존 `NotificationAppender`로 적재한다. 응답은 적재 완료 후 201이며 `batchId`, `targetUserCount`, `recipientUserCount`, `enqueuedCount`, `skippedNoTokenUserCount`, `skippedInactiveUserCount`를 반환한다. 적재 건수는 활성 토큰별, 나머지는 중복 제거한 회원 수다. 전체 발송은 정지·탈퇴 회원을 처음부터 제외한다.
@@ -195,6 +197,40 @@ Authorization: Bearer {ogonggo-access-token}
 - 알림함은 `batch_id`와 수신자 유니크 제약으로 묶음별 한 건을 보장한다. `actorNickname`은 `오공고`, `postTitle`은 요청 제목, `preview`는 본문의 유니코드 최대 100자, `url`은 `data.url`이다. 관리자 알림의 `postId`·`commentId`는 null이며 댓글 알림은 기존 필수 식별자를 유지한다. 알림함 목록·안 읽은 개수·읽음은 기존 최근 30일 규칙을 따른다. 푸시 data에는 서버가 정한 `notificationId`·`type=ADMIN_NOTIFICATION`을 넣고 이 값까지 FCM 4,096바이트 제한에 포함한다. 푸시 실패나 기한 초과는 알림함과 읽음 상태를 바꾸지 않는다.
 - 결과는 생성 후 30일 미만까지 조회하며 만료·없는 묶음은 404 `NOTIFICATION_BATCH_NOT_FOUND`다. 이후 원본 발송 기록은 기존 정리 작업의 대상이 되고 요청 운영 기록은 남는다. 별도 작업 시스템과 요청 기록 자동 삭제는 추가하지 않았다.
 - 관리자 알림함을 배포할 때는 기존 [`2026-10-22-admin-notification-batches.sql`](../schema/2026-10-22-admin-notification-batches.sql)과 [`2026-10-24-admin-notification-inbox.sql`](../schema/2026-10-24-admin-notification-inbox.sql)을 적용한다. 새 유형·nullable 식별자·URL을 처리하는 사용자 API를 먼저 배포한 뒤 관리자 API를 배포한다. 클라이언트는 `ADMIN_NOTIFICATION`을 표시하고 `url`로 이동해야 한다. 이전 관리자 발송의 알림함은 소급 생성하지 않는다. 새 유형이 저장된 뒤에는 이를 읽지 못하는 구버전 사용자 API로 롤백하지 않는다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
+
+### 전체 토픽 발송과 공통 알림함
+
+- 전환: `ogonggo.notification.broadcast.enabled=true`인 ALL은 공통 공지인 배치 1건과 `recipient_type=TOPIC` 발송 1건을 같은 트랜잭션으로 저장한다. 회원별 알림함·기기별 발송 행은 만들지 않는다. 기본값 false 동안 기존 ALL 직접 발송을 유지하며 USER_IDS의 최대 1,000명 계약도 유지한다.
+- 대상: 토픽 이름은 `ogonggo.notification.broadcast.topic`에 환경별로 고정한다. 200자 이내의 FCM 토픽 이름을 사용하고 두 API의 설정을 맞춘다. 회원·토큰별 대상 집계는 DB 한 번의 COUNT 조회이며 실제 FCM 구독자·도착 수가 아니다.
+- 본문: title 100자·body 1,000자·문자열 data 최대 20개·http(s) data.url 계약을 유지한다. TOPIC 푸시는 Unicode 최대 100자 미리보기와 batchId·type·source=BROADCAST를 보낸다. 요청 notificationId는 제거하며 시스템 식별자는 서버 값으로 덮어쓴다. 실제 직렬화 메시지가 2,048바이트를 넘으면 400이다. 전체 본문은 배치와 공통 알림함 응답 body에 보존한다.
+- 결과: 생성·결과 응답의 `deliveryTargetType`은 DIRECT/TOPIC이다. TOPIC의 enqueuedCount는 1, sentCount·failedCount·unknownCount는 토픽 요청 단위다. 기존 배치는 topic_name=null이어서 DIRECT로 조회한다. `noTokenUserCount`는 토큰 없는 활성 회원 수이며 `skippedNoTokenUserCount`는 호환용 별칭으로 유지한다.
+- 알림함: 기존 개인 알림과 공통 공지를 각각 페이지 크기+1만큼 조회해 `(createdAt DESC, 공통 우선, 각 종류 ID DESC)`로 합친다. 공통 공지는 현재 활성 회원에게 가입 이후 게시된 최근 30일 내용을 표시한다. 과거 개별 배치는 공통 조회에 포함하지 않아 기존 알림함과 중복되지 않는다. 발송 당시의 활성 회원 명단은 저장하지 않으며 현재 활성 상태로 노출을 판단한다.
+- 식별자: 개인 항목은 source=PERSONAL·숫자 id, 공통 항목은 source=BROADCAST·id=null·UUID batchId다. sourceId는 두 종류의 문자열 식별자다. 공통 공지 읽음은 `PATCH /api/v1/users/me/notifications/broadcasts/{batchId}/read`를 사용한다. 기존 개인 읽음 경로와 숫자 커서는 유지하고 공통 UUID 커서를 함께 해석한다.
+- 읽음: `notification_broadcast_reads`에 읽은 회원·배치·최초 시각만 저장한다. `(user_id,batch_id)` 유니크와 회원 잠금으로 단건/전체 읽음의 경합을 직렬화한다. 전체 읽음은 공지 ID 목록을 한 번 고정하고 500개씩 저장하며 이후 추가된 공지를 포함하지 않는다. 목록·미읽음·읽음에 같은 가입/30일/현재 시각 경계를 사용한다. 읽음 기록 자동 정리는 추가하지 않는다.
+- 구독: topic 설정이 있으면 토큰 등록·교체·해제 트랜잭션에서 `fcm_topic_sync_tasks`에 최신 구독 희망 상태를 저장한다. 해제 전에 원문을 작업에 옮기므로 토큰 연결이 지워져도 해제 요청을 수행할 수 있다. topic 설정만 먼저 배포하고 enabled는 나중에 켤 수 있다.
+- 동기화: 사용자 API의 `fcmTopicSync`가 30초마다 실행된다. 기존 토큰 중 작업이 없는 대상과 회원 상태 변경을 1,000개씩 재평가한다. 같은 회원→토큰→작업 잠금 순서로 후보를 다시 확인한다. 이미 기록한 대상을 제외하므로 재기동 후에도 최초 구독을 이어간다. FCM 요청은 1,000개 이내로 나누고 DB 트랜잭션 밖에서 수행한다.
+- 재처리: 구독 성공·실패를 원하는 상태의 revision이 같을 때만 기록한다. 이후 해제·재구독 요청이 있으면 이전 결과를 버린다. 성공 시 작업 token 원문을 지우고 실패 시 코드·횟수·다음 시각을 기록한다. 실패는 5초부터 지수 지연하며 최대 1시간 간격으로 재처리한다. 종료 상태 푸시의 자동 재발송 정책과는 별개다.
+- 실행: 동기화는 45초 동안 새 묶음을 시작하고 개별 SDK 대기는 20초로 제한한다. 진행 중 묶음이 있어 45초는 hard timeout이 아니다. 작업 전체에는 5분 ShedLock을 적용한다. 로그에는 재평가·완료·실패·대기 수만 기록하며 외부 오류 메시지·토큰 원문은 기록하지 않는다.
+- 한계: DB의 희망 상태와 Firebase 구독은 즉시 일치하지 않는다. 구독 해제 지연 중 푸시가 도착할 수 있고 토픽은 접근 제어 수단이 아니므로 공개 공지에 사용한다. Firebase 콘솔 직접 발송은 이 배치·공통 알림함 기록을 만들지 않는다. 토픽·회원 관리 화면, 직무/관심사 분류, 특정 회원 발송 100명 제한은 이번 범위에서 제외한다.
+
+### 전체 토픽 설정
+
+```yaml
+ogonggo:
+  notification:
+    broadcast:
+      topic: ogonggo-all-prod  # 사용자·관리자 API에 동일 값, 개발은 다른 이름
+      enabled: false         # 최초 구독·클라이언트 준비 후 관리자 API에서 true
+```
+
+### 전체 토픽 이관·배포
+
+1. 기존 알림함·배치 SQL 이후 [`2026-10-24-notification-broadcast-topic.sql`](../schema/2026-10-24-notification-broadcast-topic.sql)을 적용한다. 운영 DB 실행·Firebase 변경을 수행한 기록은 아니며 운영 ddl-auto=none을 유지한다.
+2. 새 source·id=null·batchId·body와 공통 읽음 경로를 처리하는 클라이언트를 준비한다. 현재 프론트 저장소에는 이 알림 API 연동이 없어 API 계약을 전달한다.
+3. 사용자 API를 배포하고 구버전 발송기를 종료한다. Firebase를 활성화하고 topic 이름을 설정하되 관리자 broadcast.enabled는 false로 유지한다.
+4. fcmTopicSync의 DB 예약과 실제 실행을 확인한다. SQL의 미생성 구독/대기 조회가 0이 되고 실패 코드를 해결한 뒤 테스트 기기 수신을 확인한다. 등록이 계속 발생하므로 집계는 시점 값이다.
+5. 같은 topic을 설정한 관리자 API의 broadcast.enabled를 true로 바꾸고 배포한다. 새 ALL 배치의 TOPIC/작업 1건과 토큰 없는 회원의 알림함 조회를 확인한다. SQL·실기기 확인은 자동 테스트로 대신하지 않는다.
+6. 되돌릴 때 먼저 관리자 전환 게이트를 끈다. TOPIC 대기열·공통 공지·읽음이 남아 있으므로 이를 읽는 사용자 API와 스키마를 유지한다. 새 테이블/컬럼을 지우거나 TOPIC을 모르는 발송기로 되돌리지 않는다.
 
 ## 구현 규칙
 

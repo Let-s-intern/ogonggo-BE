@@ -7,11 +7,13 @@ import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.MessagingErrorCode
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenManager
 import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.DisplayName
 import org.mockito.Mockito
 import org.junit.jupiter.api.BeforeEach
 import java.time.Clock
@@ -119,6 +121,26 @@ internal class FcmNotificationSenderTest {
         assertEquals("UNREGISTERED", result.resultCode)
         assertEquals("Invalid [REDACTED]", result.detail)
         Mockito.verify(tokenManager).revoke(17L, "fcm-token-1", LocalDateTime.now(clock))
+    }
+
+    @Test
+    @DisplayName("토픽 발송은 회원 소유권 검사 없이 토픽 주소로 요청하고 접수 식별자를 반환한다")
+    fun `토픽 대상으로 발송한다`() {
+        // given
+        var topic: String? = null
+        Mockito.doAnswer { call ->
+            val json = jacksonObjectMapper().readTree(com.google.gson.Gson().toJson(call.getArgument<Message>(0)))
+            topic = json["topic"]?.asText()
+            "message-topic"
+        }.`when`(firebaseMessaging).send(Mockito.any(Message::class.java))
+        val notification = validNotification().copy(recipientUserId = null, recipientAddress = "ogonggo-all-test",
+            recipientType = NotificationRecipientType.TOPIC)
+        // when
+        val result = sender.send(notification)
+        // then
+        assertEquals(NotificationDeliveryResult.Sent("message-topic"), result)
+        assertEquals("ogonggo-all-test", topic)
+        Mockito.verifyNoInteractions(tokenReader, tokenManager)
     }
 
     private fun validNotification() = NotificationMessageDto(

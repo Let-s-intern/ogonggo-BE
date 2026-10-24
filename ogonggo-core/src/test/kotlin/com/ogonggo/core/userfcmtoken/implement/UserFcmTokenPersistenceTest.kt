@@ -32,7 +32,10 @@ import java.util.concurrent.TimeUnit
 
 @DataJpaTest(showSql = false)
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(UserFcmTokenManager::class, UserFcmTokenReader::class, NotificationAppender::class)
+@Import(UserFcmTokenManager::class, UserFcmTokenReader::class, NotificationAppender::class,
+    com.ogonggo.core.fcmtopicsynctask.implement.FcmTopicSyncTaskManager::class,
+    com.ogonggo.core.fcmtopicsynctask.persistence.FcmTopicSyncTaskQueryRepository::class,
+    com.ogonggo.core.notificationbatch.implement.NotificationBroadcastConfiguration::class)
 internal class UserFcmTokenPersistenceTest @Autowired constructor(
     private val manager: UserFcmTokenManager,
     private val reader: UserFcmTokenReader,

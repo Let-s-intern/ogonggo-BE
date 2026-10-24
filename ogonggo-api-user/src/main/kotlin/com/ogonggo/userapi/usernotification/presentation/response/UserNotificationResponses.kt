@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
 data class UserNotificationResponse(
-    val id: Long,
+    @field:Schema(nullable = true, description = "개인 알림 ID. 공통 공지는 null") val id: Long?,
     val type: UserNotificationType,
     val actorNickname: String,
     @field:Schema(nullable = true) val actorProfileImageUrl: String?,
@@ -18,11 +18,16 @@ data class UserNotificationResponse(
     val isRead: Boolean,
     @field:Schema(description = "Asia/Seoul 기준 ISO-8601 시각 (offset 없음)") val createdAt: LocalDateTime,
     @field:Schema(nullable = true, description = "관리자 알림의 이동 URL. 댓글 알림은 null") val url: String?,
+    @field:Schema(nullable = true, description = "공통 공지 식별자. 개인 알림은 null") val batchId: String?,
+    @field:Schema(nullable = true, description = "공통 공지의 전체 본문. 개인 알림은 null") val body: String?,
 ) {
+    val source: String get() = if (batchId == null) "PERSONAL" else "BROADCAST"
+    val sourceId: String get() = batchId ?: checkNotNull(id).toString()
+
     companion object {
         fun from(item: UserNotificationDto) = UserNotificationResponse(
             item.id, item.type, item.actorNickname, item.actorProfileImageUrl, item.postTitle,
-            item.preview, item.postId, item.commentId, item.readAt != null, item.createdAt, item.url,
+            item.preview, item.postId, item.commentId, item.readAt != null, item.createdAt, item.url, item.broadcastId, item.body,
         )
     }
 }

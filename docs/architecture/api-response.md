@@ -573,6 +573,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### 사용자 알림함
 
+- 개인 알림과 가입 이후 공통 공지를 같은 목록으로 제공한다. 개인은 source=PERSONAL·숫자 id, 공통은 source=BROADCAST·id=null·UUID batchId이며 sourceId는 문자열 식별자다. 공통 항목 body는 전체 본문이고 preview는 최대 100자다. 공통 한 건 읽음은 PATCH `/api/v1/users/me/notifications/broadcasts/{batchId}/read`를 사용하며 목록·미읽음·전체 읽음에도 포함한다.
+
 - 결정일: 2026-10-21 / 리뷰 상태: 팀 리뷰 필요
 - `GET /api/v1/users/me/notifications`는 댓글 소식을 `items`, `nextCursor`, `hasNext`로 반환한다. 1부터 시작하는 page 목록의 예외로 커서를 쓰며 기본 `size=20`, 최대 100이다. 생성 시각·ID 내림차순으로 새 소식 삽입 중 페이지 이동을 지원한다.
 - 최근 30일 경계의 본인 미삭제 알림만 반환한다. 목록 항목의 표시 이름·이미지·제목·미리보기는 생성 당시 스냅샷이며 `isRead`는 `readAt` 존재 여부다. 비어 있으면 `items: []`, 다음 페이지가 없으면 `nextCursor: null`, `hasNext: false`다.
@@ -580,6 +582,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 인증·요청·응답·예외는 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)을, 댓글 생성의 알림 적재는 [알림 추가 가이드](notification-extension-guide.md#댓글-자동-알림과-사용자-알림함)를 따른다.
 
 ### 어드민 FCM 발송 묶음
+
+- deliveryTargetType=DIRECT는 기기별 작업, TOPIC은 전체 토픽 작업이다. TOPIC enqueuedCount는 1이며 결과도 요청 한 건 단위다. noTokenUserCount는 DB상 토큰 없는 활성 회원 수이고 기존 skippedNoTokenUserCount는 호환용 별칭이다. 토픽 전환 설정과 알림함 동작은 [알림 가이드](notification-extension-guide.md#전체-토픽-발송과-공통-알림함)를 따른다. 아래 토큰별 설명은 DIRECT에 해당한다.
 
 - 생성은 201이며 `batchId`와 대상 회원 수·실제 수신 회원 수·토큰별 적재 수·토큰 없음/비활성 제외 회원 수를 반환한다. 토큰이 없어 0건이어도 묶음은 생성한다.
 - 조회는 200이며 운영 정보, `sentCount`·`failedCount`·`unknownCount`·`pendingCount`·`expiredCount`, `completed`와 상태·`resultCode`별 사유 건수를 반환한다. 성공은 provider 접수이며 미확정과 기한 초과를 실패에 합치지 않는다.

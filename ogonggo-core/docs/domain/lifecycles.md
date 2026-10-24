@@ -27,6 +27,19 @@
 | 모집글 지원 기록 | 진행 단계 | 북마크와 같이 규칙 없이 옮깁니다. 삭제된 기록만 바꿀 수 없습니다. |
 | 공지, 취준고민 | 노출 / 숨김 | 운영자가 켜고 끄는 값 하나뿐입니다. |
 
+### 전체 토픽 구독 동기화
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: 토큰 등록·변경 / 최초 구독 / 회원 상태 변경
+    Pending --> Synced: 같은 revision의 FCM 성공 / 원문 제거
+    Pending --> Pending: 실패 / 횟수·다음 시각 기록
+    Synced --> Pending: 구독 희망 상태 변경 / revision 증가
+```
+
+- `FcmTopicSyncTask.pending=true/false`를 Pending/Synced로 표시한다. subscribe/unsubscribe는 `desiredSubscribed`로 구분하고 결과는 같은 revision에만 반영한다.
+- 구독 실패 재처리와 `Notification`의 푸시 결과 상태는 독립적이다. 구독 실패는 5초부터 최대 1시간 간격으로 재처리한다.
+
 ## 3. 다이어그램 고치기
 
 다이어그램은 [Archify](https://github.com/tt-a1i/archify)로 만듭니다. 원본은 같은 폴더의 `*.archify.json`이고, HTML은 여기서 만든 결과물입니다.

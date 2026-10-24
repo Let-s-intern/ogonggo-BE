@@ -1,5 +1,6 @@
 package com.ogonggo.core.notification.intake.implement.dto
 
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notification.domain.NotificationChannel
 import java.time.LocalDateTime
 
@@ -13,6 +14,7 @@ data class NotificationAppendDto(
     val scheduledAt: LocalDateTime,
     val recipientUserId: Long? = null,
     val userNotificationId: Long? = null,
+    val recipientType: NotificationRecipientType = NotificationRecipientType.DIRECT,
     val batchId: String? = null,
     val dispatchExpiresAt: LocalDateTime? = null,
 )

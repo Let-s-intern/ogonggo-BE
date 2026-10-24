@@ -12,6 +12,7 @@ class NotificationBatchAppender internal constructor(private val repository: Not
     @Transactional
     fun append(dto: NotificationBatchAppendDto): NotificationBatchDto = repository.saveAndFlush(
         NotificationBatch(
+            topicName = dto.topicName, url = dto.url,
             id = dto.batchId, requestedByUserId = dto.requestedByUserId, targetType = dto.targetType,
             requestedUserIdsJson = dto.requestedUserIdsJson, title = dto.title, body = dto.body, dataJson = dto.dataJson,
             targetUserCount = dto.targetUserCount, recipientUserCount = dto.recipientUserCount,
@@ -22,6 +23,7 @@ class NotificationBatchAppender internal constructor(private val repository: Not
 }
 
 internal fun NotificationBatch.toDto() = NotificationBatchDto(
+    topicName = topicName, url = url,
     batchId = id, requestedByUserId = requestedByUserId, targetType = targetType, title = title, body = body,
     dataJson = dataJson, targetUserCount = targetUserCount, recipientUserCount = recipientUserCount,
     enqueuedCount = enqueuedCount, skippedNoTokenUserCount = skippedNoTokenUserCount,

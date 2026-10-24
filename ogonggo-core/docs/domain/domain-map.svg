@@ -234,7 +234,7 @@
   <line x1="40" y1="930" x2="1660" y2="930" stroke="#eaecf0" stroke-width="1.5"/>
   <text x="40" y="962" font-size="12" fill="#98a2b3">커리큘럼·파트너사, 원문 이동, 반려 사유, 추천 태그, 렛츠커리어 전송 대기, 설치별 FCM 토큰, 발송 묶음, 지표, 공지, 이미지처럼 세부 정보나 운영·저장 방식에 가까운 개념은 domain-map.md의 "개념도에서 뺀 개념"에 있습니다.</text>
   <line x1="40" y1="984" x2="1560" y2="984" stroke="#eaecf0" stroke-width="1.5"/>
-  <text x="40" y="1010" font-size="14" font-weight="800" fill="#6d28d9">댓글·관리자 소식과 기기별 발송</text>
+  <text x="40" y="1010" font-size="14" font-weight="800" fill="#6d28d9">개인 알림·공통 공지와 발송</text>
   <g fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5">
     <rect x="40" y="1030" width="200" height="70" rx="10"/>
     <rect x="490" y="1030" width="360" height="70" rx="10"/>
@@ -247,15 +247,15 @@
   <g font-size="14" font-weight="700" fill="#101828">
     <text x="60" y="1055">회원 (수신자)</text>
     <text x="510" y="1055">사용자 알림함</text>
-    <text x="1140" y="1055">발송 기록 (설치별 FCM 등)</text>
+    <text x="1140" y="1055">발송 기록 (개별 주소·토픽)</text>
   </g>
   <g font-size="12" fill="#667085">
     <text x="60" y="1080">User</text>
-    <text x="510" y="1080">UserNotification · 읽음 상태 · 최근 30일</text>
+    <text x="510" y="1080">UserNotification / 공통 공지 · 최근 30일</text>
     <text x="1140" y="1080">Notification · userNotificationId · 발송 결과</text>
     <text x="365" y="1050" text-anchor="middle">소식 보관</text>
-    <text x="985" y="1050" text-anchor="middle">활성 기기마다 적재</text>
-    <text x="40" y="1130">발생 근거: 모집글 답글 / 취준고민 최상위 댓글 / 관리자 발송 묶음. 관리자 소식은 활성 회원별 한 건이며 댓글은 본인 알림을 제외합니다.</text>
+    <text x="985" y="1050" text-anchor="middle">개별 주소 / 토픽 1건</text>
+    <text x="40" y="1130">개인 알림은 회원별 보관. 전체 토픽 공지는 NotificationBatch 한 건을 함께 조회하고 읽은 회원만 NotificationBroadcastRead에 기록합니다.</text>
     <text x="40" y="1152">토큰이 없으면 알림함만 보관합니다. 푸시 접수·실패는 읽음 상태를 바꾸지 않으며, 기존 일반 발송의 알림함 연결은 선택입니다.</text>
   </g>
   <g font-size="12" font-weight="800" fill="#344054">

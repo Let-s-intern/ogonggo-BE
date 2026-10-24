@@ -1,11 +1,13 @@
 package com.ogonggo.core.notificationbatch.domain
 
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.enumeration.EnumField
 import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.Index
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.LocalDateTime
@@ -17,7 +19,7 @@ enum class NotificationBatchTargetType(override val code: Int, override val desc
 
 /** 요청자·대상·본문·적재 건수를 남기는 운영 기록. 기기별 결과는 Notification이 소유한다. */
 @Entity
-@Table(name = "notification_batches")
+@Table(name = "notification_batches", indexes = [Index(name = "idx_notification_broadcast_created", columnList = "created_at, id")])
 internal class NotificationBatch(
     @Id @Column(length = 36)
     val id: String,
@@ -45,7 +47,14 @@ internal class NotificationBatch(
     val skippedInactiveUserCount: Long,
     @Column(name = "dispatch_expires_at", nullable = false)
     val dispatchExpiresAt: LocalDateTime,
+    @Column(name = "topic_name", length = 200)
+    val topicName: String? = null,
+    @Column(name = "url", length = 2048)
+    val url: String? = null,
 ) : BaseTimeEntity() {
+    val deliveryTargetType: NotificationRecipientType
+        get() = if (topicName == null) NotificationRecipientType.DIRECT else NotificationRecipientType.TOPIC
+
     init {
         require(requestedByUserId > 0)
         require(title.isNotBlank() && title.length <= 100)
@@ -53,6 +62,10 @@ internal class NotificationBatch(
         require(listOf(targetUserCount, recipientUserCount, enqueuedCount,
             skippedNoTokenUserCount, skippedInactiveUserCount).all { it >= 0 })
         require(targetUserCount == recipientUserCount + skippedNoTokenUserCount + skippedInactiveUserCount)
-        require(enqueuedCount >= recipientUserCount)
+        if (topicName == null) require(enqueuedCount >= recipientUserCount)
+        else {
+            require(targetType == NotificationBatchTargetType.ALL && topicName.isNotBlank())
+            require(enqueuedCount == 1L && !url.isNullOrBlank())
+        }
     }
 }

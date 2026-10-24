@@ -81,6 +81,7 @@ class NotificationManager internal constructor(
     private fun Notification.toMessageDto() = NotificationMessageDto(
         notificationId = checkNotNull(id),
         channel = channel,
+        recipientType = recipientType,
         templateCode = templateCode,
         recipientAddress = checkNotNull(recipientAddress),
         payloadJson = checkNotNull(payloadJson),

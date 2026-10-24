@@ -1,5 +1,6 @@
 package com.ogonggo.core.notification.delivery.implement.dto
 
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notification.domain.NotificationChannel
 
 /** 알림 행에서 provider adapter로 전달할 발송 스냅샷. JPA entity는 외부 연동 계층에 노출하지 않는다. */
@@ -12,4 +13,5 @@ data class NotificationMessageDto(
     val deduplicationKey: String,
     val recipientUserId: Long? = null,
     val userNotificationId: Long? = null,
+    val recipientType: NotificationRecipientType = NotificationRecipientType.DIRECT,
 )

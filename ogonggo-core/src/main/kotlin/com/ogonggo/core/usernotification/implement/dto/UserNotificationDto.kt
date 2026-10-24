@@ -19,10 +19,10 @@ data class UserNotificationAppendDto(
     val url: String? = null,
 )
 
-data class UserNotificationCursorDto(val createdAt: LocalDateTime, val id: Long)
+data class UserNotificationCursorDto(val createdAt: LocalDateTime, val id: Long?, val broadcastId: String? = null)
 
 data class UserNotificationDto(
-    val id: Long,
+    val id: Long?,
     val type: UserNotificationType,
     val actorNickname: String,
     val actorProfileImageUrl: String?,
@@ -33,4 +33,6 @@ data class UserNotificationDto(
     val readAt: LocalDateTime?,
     val createdAt: LocalDateTime,
     val url: String? = null,
+    val broadcastId: String? = null,
+    val body: String? = null,
 )

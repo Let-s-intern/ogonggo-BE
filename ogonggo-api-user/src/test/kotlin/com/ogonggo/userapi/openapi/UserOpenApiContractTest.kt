@@ -81,6 +81,7 @@ class UserOpenApiContractTest @Autowired constructor(
             "$base~1unread-count/get" to "getMyNotificationUnreadCount",
             "$base~1{notificationId}~1read/patch" to "readMyNotification",
             "$base~1read-all/patch" to "readAllMyNotifications",
+            "$base~1broadcasts~1{batchId}~1read/patch" to "readMyBroadcastNotification",
         ).forEach { (path, operationId) ->
             val operation = document.at(path)
             assertEquals(operationId, operation.at("/operationId").asText())
@@ -94,10 +95,12 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(document.at("$base~1{notificationId}~1read/patch/responses/404/description").asText().contains("USER_NOTIFICATION_NOT_FOUND"))
         val item = document.at("/components/schemas/UserNotificationResponse/properties")
         assertTrue(item.has("isRead"))
+        assertTrue(item.has("source"))
+        assertTrue(item.has("sourceId"))
         assertTrue(item.at("/actorProfileImageUrl/nullable").asBoolean())
         assertTrue(document.at("/components/schemas/UserNotificationPageResponse/properties/nextCursor/nullable").asBoolean())
         assertEquals(setOf("SIDE_STUDY_COMMENT_REPLY", "CONCERN_COMMENT", "ADMIN_NOTIFICATION"), item.at("/type/enum").map { it.asText() }.toSet())
-        listOf("postId", "commentId", "url").forEach { field ->
+        listOf("id", "postId", "commentId", "url", "batchId", "body").forEach { field ->
             assertTrue(item.at("/$field/nullable").asBoolean(), field)
         }
         assertTrue(item.at("/url/description").asText().contains("관리자 알림"))

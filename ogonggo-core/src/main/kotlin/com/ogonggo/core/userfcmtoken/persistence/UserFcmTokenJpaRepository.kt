@@ -24,6 +24,10 @@ internal interface UserFcmTokenJpaRepository : JpaRepository<UserFcmToken, Long>
     )
     fun findBindingsForUpdate(@Param("slot") slot: String, @Param("hash") hash: String): List<UserFcmToken>
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from UserFcmToken t where t.tokenHash = :hash and t.deletedAt is null")
+    fun findByHashForUpdate(@Param("hash") hash: String): UserFcmToken?
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         """

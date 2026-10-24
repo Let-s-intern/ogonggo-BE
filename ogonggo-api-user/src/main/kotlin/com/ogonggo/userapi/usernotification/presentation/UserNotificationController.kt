@@ -34,6 +34,15 @@ class UserNotificationController(private val service: UserNotificationService) :
         return SuccessResponse.ok()
     }
 
+    @PatchMapping("/broadcasts/{batchId}/read")
+    override fun readMyBroadcastNotification(
+        @AuthenticationPrincipal userId: Long,
+        @PathVariable(name = "batchId") batchId: java.util.UUID,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        service.markBroadcastRead(userId, batchId)
+        return SuccessResponse.ok()
+    }
+
     @PatchMapping("/read-all")
     override fun readAllMyNotifications(@AuthenticationPrincipal userId: Long): ResponseEntity<SuccessResponse<Unit>> {
         service.markAllRead(userId)

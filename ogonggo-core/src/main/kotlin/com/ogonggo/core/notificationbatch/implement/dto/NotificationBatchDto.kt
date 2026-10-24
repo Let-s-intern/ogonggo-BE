@@ -18,6 +18,8 @@ data class NotificationBatchAppendDto(
     val skippedNoTokenUserCount: Long,
     val skippedInactiveUserCount: Long,
     val dispatchExpiresAt: LocalDateTime,
+    val topicName: String? = null,
+    val url: String? = null,
 )
 
 data class NotificationBatchDto(
@@ -33,6 +35,8 @@ data class NotificationBatchDto(
     val skippedNoTokenUserCount: Long,
     val skippedInactiveUserCount: Long,
     val dispatchExpiresAt: LocalDateTime,
+    val topicName: String? = null,
+    val url: String? = null,
     val createdAt: LocalDateTime,
 )
 

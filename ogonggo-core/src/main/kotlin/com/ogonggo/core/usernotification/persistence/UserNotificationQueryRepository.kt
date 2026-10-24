@@ -14,7 +14,8 @@ internal class UserNotificationQueryRepository(private val queryFactory: JPAQuer
                 visible(userId, since),
                 cursor?.let {
                     notification.createdAt.lt(it.createdAt).or(
-                        notification.createdAt.eq(it.createdAt).and(notification.id.lt(it.id)),
+                        notification.createdAt.eq(it.createdAt).and(
+                            if (it.broadcastId != null) notification.id.isNotNull else notification.id.lt(checkNotNull(it.id))),
                     )
                 },
             )

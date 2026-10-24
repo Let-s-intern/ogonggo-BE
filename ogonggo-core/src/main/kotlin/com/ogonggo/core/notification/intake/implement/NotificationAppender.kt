@@ -55,6 +55,7 @@ class NotificationAppender internal constructor(
                 Notification(
                     deduplicationKey = it.deduplicationKey,
                     channel = it.channel,
+                    recipientType = it.recipientType,
                     templateCode = it.templateCode,
                     recipientUserId = it.recipientUserId,
                     userNotificationId = it.userNotificationId,
