@@ -4,6 +4,8 @@ import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.intake.implement.event.NotificationEnqueuedEvent
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
+import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.stereotype.Component
@@ -18,9 +20,10 @@ class NotificationMetrics(
     private val meterRegistry: MeterRegistry,
     private val notificationManager: NotificationManager,
     private val clock: Clock,
+    private val alertNotifier: NotificationAlertNotifier,
 ) {
     init {
-        PendingState.values().forEach(::registerPendingGauge)
+        PendingState.entries.forEach(::registerPendingGauge)
     }
 
     /** 적재 이벤트는 Appender 트랜잭션이 실제 커밋된 뒤에만 누적한다. */
@@ -45,12 +48,13 @@ class NotificationMetrics(
 
     fun recordUnresolved(channel: NotificationChannel) {
         recordDelivery(channel, UNRESOLVED, NO_FAILURE_CATEGORY)
+        alertNotifier.notify(NotificationAlertType.DELIVERY_UNRESOLVED, scope = channel.name)
     }
 
     private fun registerPendingGauge(state: PendingState) {
         Gauge.builder(PENDING_METRIC, this) { metrics -> metrics.readPendingCount(state).toDouble() }
             .tag(STATE_TAG, state.tag)
-            .description("notifications의 PENDING 건수. 저장된 발송 기한으로 due/expired 구분하며 기존 null 행만 8분 창 적용")
+            .description("notifications의 PENDING 또는 PROCESSING 건수. due/expired는 업무상 발송 기한으로 구분")
             .register(meterRegistry)
     }
 
@@ -61,6 +65,7 @@ class NotificationMetrics(
             PendingState.DUE -> notificationManager.countPendingDue(now)
             PendingState.EXPIRED -> notificationManager.countPendingExpired(now)
             PendingState.FUTURE -> notificationManager.countPendingFuture(now)
+            PendingState.PROCESSING -> notificationManager.countProcessingTotal()
         }
     }
 
@@ -81,6 +86,7 @@ class NotificationMetrics(
         DUE("due"),
         EXPIRED("expired"),
         FUTURE("future"),
+        PROCESSING("processing"),
     }
 
     private companion object {

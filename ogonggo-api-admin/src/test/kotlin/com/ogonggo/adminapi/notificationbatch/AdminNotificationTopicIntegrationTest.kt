@@ -83,7 +83,13 @@ class AdminNotificationTopicIntegrationTest @Autowired constructor(
         assertEquals("BROADCAST", payload.at("/data/source").asText())
         assertFalse(payload["data"].has("notificationId"))
         val notificationId = jdbc.queryForObject("select id from notifications", Long::class.java)!!
-        notifications.complete(notificationId, NotificationDeliveryResult.Sent("topic-message"), LocalDateTime.now(clock))
+        val claimed = notifications.claimDue(LocalDateTime.now(clock), 10).single()
+        notifications.complete(
+            notificationId,
+            checkNotNull(claimed.processingAttemptId),
+            NotificationDeliveryResult.Sent("topic-message"),
+            LocalDateTime.now(clock),
+        )
         val read = mvc.perform(get("/api/v1/admin/notification-batches/${result["batchId"].asText()}").with(authentication(auth)))
             .andExpect(status().isOk).andReturn()
         val delivery = mapper.readTree(read.response.contentAsByteArray)["data"]

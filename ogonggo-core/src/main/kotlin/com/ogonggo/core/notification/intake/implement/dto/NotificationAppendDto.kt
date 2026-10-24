@@ -16,6 +16,6 @@ data class NotificationAppendDto(
     val userNotificationId: Long? = null,
     val recipientType: NotificationRecipientType = NotificationRecipientType.DIRECT,
     val batchId: String? = null,
-    /** 명시하면 채널 기본 정책보다 우선한다. null이면 Appender가 기한을 계산해 저장한다. */
+    /** 업무상 발송 기한. null이면 일반 대기열에서 업무 만료를 적용하지 않는다. */
     val dispatchExpiresAt: LocalDateTime? = null,
 )

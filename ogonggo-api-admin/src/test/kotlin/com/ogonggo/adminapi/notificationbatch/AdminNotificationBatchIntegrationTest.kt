@@ -163,9 +163,14 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         val batch = create(request(listOf(user)))["batchId"].asText()
         create(request(listOf(user)))
         val ids = jdbc.queryForList("select id from notifications where batch_id = ? order by id", Long::class.java, batch)
-        notifications.complete(ids[0], NotificationDeliveryResult.Sent("provider"), NOW)
-        notifications.complete(ids[1], NotificationDeliveryResult.Failed("UNREGISTERED", NotificationFailureCategory.CLIENT_ERROR), NOW)
-        notifications.complete(ids[2], NotificationDeliveryResult.Unknown("TRANSPORT_ERROR", NotificationFailureCategory.TRANSPORT_ERROR), NOW)
+        val claimed = notifications.claimDue(NOW, 100).associateBy { it.notificationId }
+        fun complete(id: Long, result: NotificationDeliveryResult) {
+            val delivery = checkNotNull(claimed[id])
+            notifications.complete(id, checkNotNull(delivery.processingAttemptId), result, NOW)
+        }
+        complete(ids[0], NotificationDeliveryResult.Sent("provider"))
+        complete(ids[1], NotificationDeliveryResult.Failed("UNREGISTERED", NotificationFailureCategory.CLIENT_ERROR))
+        complete(ids[2], NotificationDeliveryResult.Unknown("TRANSPORT_ERROR", NotificationFailureCategory.TRANSPORT_ERROR))
 
         // when
         val result = result(batch)
@@ -176,7 +181,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertEquals(setOf("UNREGISTERED", "TRANSPORT_ERROR"), result["failureReasons"].map { it["resultCode"].asText() }.toSet())
         assertTrue(result["failureReasons"].all { it["count"].asInt() == 1 })
         assertFalse(result.has("recipientAddress"))
-        notifications.complete(ids[3], NotificationDeliveryResult.Sent("provider-2"), NOW)
+        complete(ids[3], NotificationDeliveryResult.Sent("provider-2"))
         assertTrue(result(batch)["completed"].asBoolean())
     }
 
@@ -197,7 +202,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertEquals(1, expired["expiredCount"].asInt())
         assertEquals(0, expired["failedCount"].asInt())
         assertTrue(expired["completed"].asBoolean())
-        assertTrue(notifications.findDue(NOW.plusDays(1), NOW.plusDays(1).minusMinutes(8), 10).isEmpty())
+        assertTrue(notifications.findDue(NOW.plusDays(1), 10).isEmpty())
         clock.current = START.plusSeconds(30L * 24 * 3600)
         mvc.perform(admin(get("$PATH/$batch"))).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("NOTIFICATION_BATCH_NOT_FOUND"))

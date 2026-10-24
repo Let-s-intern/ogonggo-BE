@@ -13,7 +13,7 @@ class NotificationAlertConfiguration {
     fun notificationAlertTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
         corePoolSize = 1
         maxPoolSize = 1
-        queueCapacity = 100
+        queueCapacity = NotificationAlertType.entries.size
         setThreadNamePrefix("notification-alert-")
         setRejectedExecutionHandler(ThreadPoolExecutor.AbortPolicy())
         setWaitForTasksToCompleteOnShutdown(true)

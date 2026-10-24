@@ -58,6 +58,7 @@ data class AdminNotificationBatchResultResponse(
             fun count(status: NotificationStatus) = result.counts.filter { it.status == status }.sumOf { it.count }
             val expired = !result.queriedAt.isBefore(batch.dispatchExpiresAt)
             val pending = count(NotificationStatus.PENDING)
+            val processing = count(NotificationStatus.PROCESSING)
             return AdminNotificationBatchResultResponse(
                 deliveryTargetType = if (batch.topicName == null) NotificationRecipientType.DIRECT else NotificationRecipientType.TOPIC,
                 noTokenUserCount = batch.skippedNoTokenUserCount,
@@ -67,8 +68,10 @@ data class AdminNotificationBatchResultResponse(
                 enqueuedCount = batch.enqueuedCount, skippedNoTokenUserCount = batch.skippedNoTokenUserCount,
                 skippedInactiveUserCount = batch.skippedInactiveUserCount,
                 sentCount = count(NotificationStatus.SENT), failedCount = count(NotificationStatus.FAILED),
-                unknownCount = count(NotificationStatus.UNKNOWN), pendingCount = if (expired) 0 else pending,
-                expiredCount = if (expired) pending else 0, completed = pending == 0L || expired,
+                unknownCount = count(NotificationStatus.UNKNOWN),
+                pendingCount = processing + if (expired) 0 else pending,
+                expiredCount = if (expired) pending else 0,
+                completed = processing == 0L && (pending == 0L || expired),
                 dispatchExpiresAt = batch.dispatchExpiresAt, resultsAvailableUntil = batch.createdAt.plusDays(30),
                 failureReasons = result.counts.filter { it.status == NotificationStatus.FAILED || it.status == NotificationStatus.UNKNOWN }
                     .map { AdminNotificationBatchFailureResponse(it.status, it.resultCode ?: "UNSPECIFIED", it.count) },

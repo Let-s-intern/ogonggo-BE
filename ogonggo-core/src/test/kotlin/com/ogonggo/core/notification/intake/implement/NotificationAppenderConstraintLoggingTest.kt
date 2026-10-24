@@ -19,10 +19,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import java.sql.SQLException
-import java.time.Clock
-import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 
 internal class NotificationAppenderConstraintLoggingTest {
 
@@ -35,8 +32,6 @@ internal class NotificationAppenderConstraintLoggingTest {
         val appender = NotificationAppender(
             repository,
             eventPublisher,
-            NotificationDispatchPolicy(NotificationDispatchProperties()),
-            Clock.fixed(Instant.parse("2026-10-07T03:00:00Z"), ZoneId.of("Asia/Seoul")),
         )
         val sensitiveKey = "signup-confirm:user:42:KAKAO"
         val databaseException = SQLException(

@@ -7,6 +7,7 @@ import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.userapi.notification.metrics.NotificationMetrics
 import com.ogonggo.userapi.config.NotificationDeliveryProperties
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -33,10 +34,10 @@ class NotificationDispatcherTest {
         // given
         val notifications = (1L..16L).map { notification(it) }
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 16)).thenReturn(notifications, emptyList())
+        Mockito.`when`(manager.claimDue(now, 16)).thenReturn(notifications, emptyList())
         val delivered = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
         val providerResult = NotificationDeliveryResult.Sent("provider")
-        notifications.forEach { Mockito.`when`(manager.complete(it.notificationId, providerResult, now)).thenReturn(true) }
+        notifications.forEach { Mockito.`when`(manager.complete(it.notificationId, "attempt-${it.notificationId}", providerResult, now)).thenReturn(true) }
         val dispatcher = dispatcher(manager, listOf(sender(NotificationChannel.KAKAO) {
             delivered.add(it.notificationId)
             providerResult
@@ -47,7 +48,7 @@ class NotificationDispatcherTest {
 
         // then
         assertEquals((1L..16L).toSet(), delivered)
-        notifications.forEach { Mockito.verify(manager).complete(it.notificationId, providerResult, now) }
+        notifications.forEach { Mockito.verify(manager).complete(it.notificationId, "attempt-${it.notificationId}", providerResult, now) }
     }
 
     @Test
@@ -58,10 +59,10 @@ class NotificationDispatcherTest {
         val slow = notification(id = 2)
         val replacement = notification(id = 3)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 2))
-            .thenReturn(listOf(fast, slow), listOf(replacement), emptyList())
+        Mockito.`when`(manager.claimDue(now, 2)).thenReturn(listOf(fast, slow))
+        Mockito.`when`(manager.claimDue(now, 1)).thenReturn(listOf(replacement), emptyList())
         listOf(fast, slow, replacement).forEach {
-            Mockito.`when`(manager.complete(it.notificationId, NotificationDeliveryResult.Sent("provider"), now))
+            Mockito.`when`(manager.complete(it.notificationId, "attempt-${it.notificationId}", NotificationDeliveryResult.Sent("provider"), now))
                 .thenReturn(true)
         }
         val slowStarted = CountDownLatch(1)
@@ -98,9 +99,9 @@ class NotificationDispatcherTest {
 
         // then
         assertTrue(!dispatchThread.isAlive, "진행 중 발송을 모두 저장한 뒤 dispatcher가 반환해야 한다.")
-        Mockito.verify(manager).complete(fast.notificationId, NotificationDeliveryResult.Sent("provider"), now)
-        Mockito.verify(manager).complete(slow.notificationId, NotificationDeliveryResult.Sent("provider"), now)
-        Mockito.verify(manager).complete(replacement.notificationId, NotificationDeliveryResult.Sent("provider"), now)
+        Mockito.verify(manager).complete(fast.notificationId, "attempt-${fast.notificationId}", NotificationDeliveryResult.Sent("provider"), now)
+        Mockito.verify(manager).complete(slow.notificationId, "attempt-${slow.notificationId}", NotificationDeliveryResult.Sent("provider"), now)
+        Mockito.verify(manager).complete(replacement.notificationId, "attempt-${replacement.notificationId}", NotificationDeliveryResult.Sent("provider"), now)
     }
 
     @Test
@@ -109,8 +110,8 @@ class NotificationDispatcherTest {
         // given
         val notification = notification(id = 31)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 4)).thenReturn(listOf(notification), emptyList())
-        Mockito.`when`(manager.complete(31, NotificationDeliveryResult.Sent("provider-31"), now)).thenReturn(true)
+        Mockito.`when`(manager.claimDue(now, 4)).thenReturn(listOf(notification), emptyList())
+        Mockito.`when`(manager.complete(31, "attempt-31", NotificationDeliveryResult.Sent("provider-31"), now)).thenReturn(true)
         var sendThreadName: String? = null
         val sender = sender(NotificationChannel.KAKAO) {
             sendThreadName = Thread.currentThread().name
@@ -123,7 +124,7 @@ class NotificationDispatcherTest {
 
         // then
         assertEquals("notification-test", sendThreadName)
-        Mockito.verify(manager).complete(31, NotificationDeliveryResult.Sent("provider-31"), now)
+        Mockito.verify(manager).complete(31, "attempt-31", NotificationDeliveryResult.Sent("provider-31"), now)
     }
 
     @Test
@@ -132,9 +133,9 @@ class NotificationDispatcherTest {
         // given
         val notification = notification(id = 41)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 4)).thenReturn(listOf(notification), emptyList())
+        Mockito.`when`(manager.claimDue(now, 4)).thenReturn(listOf(notification), emptyList())
         val saveThreadName = AtomicReference<String>()
-        Mockito.`when`(manager.complete(41, NotificationDeliveryResult.Sent("provider-41"), now)).thenAnswer {
+        Mockito.`when`(manager.complete(41, "attempt-41", NotificationDeliveryResult.Sent("provider-41"), now)).thenAnswer {
             saveThreadName.set(Thread.currentThread().name)
             true
         }
@@ -155,10 +156,11 @@ class NotificationDispatcherTest {
         // given
         val notification = notification(id = 52)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 4)).thenReturn(listOf(notification), emptyList())
+        Mockito.`when`(manager.claimDue(now, 4)).thenReturn(listOf(notification), emptyList())
         Mockito.`when`(
             manager.complete(
                 52,
+                "attempt-52",
                 NotificationDeliveryResult.Unknown(
                     "UNCLASSIFIED_SENDER_ERROR",
                     NotificationFailureCategory.APPLICATION_ERROR,
@@ -174,6 +176,7 @@ class NotificationDispatcherTest {
         // then
         Mockito.verify(manager).complete(
             52,
+            "attempt-52",
             NotificationDeliveryResult.Unknown(
                 "UNCLASSIFIED_SENDER_ERROR",
                 NotificationFailureCategory.APPLICATION_ERROR,
@@ -188,9 +191,9 @@ class NotificationDispatcherTest {
         // given
         val notification = notification(id = 63)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 4))
+        Mockito.`when`(manager.claimDue(now, 4))
             .thenReturn(listOf(notification), listOf(notification), emptyList())
-        Mockito.`when`(manager.complete(63, NotificationDeliveryResult.Sent("provider-63"), now)).thenReturn(false)
+        Mockito.`when`(manager.complete(63, "attempt-63", NotificationDeliveryResult.Sent("provider-63"), now)).thenReturn(false)
         val sendCount = AtomicInteger()
         val dispatcher = dispatcher(manager, listOf(sender(NotificationChannel.KAKAO) {
             sendCount.incrementAndGet()
@@ -202,7 +205,7 @@ class NotificationDispatcherTest {
 
         // then
         assertEquals(1, sendCount.get())
-        Mockito.verify(manager, Mockito.times(1)).findDue(now, now.minusMinutes(8), 4)
+        Mockito.verify(manager, Mockito.times(1)).claimDue(now, 4)
     }
 
     @Test
@@ -211,10 +214,11 @@ class NotificationDispatcherTest {
         // given
         val notification = notification(id = 72, channel = NotificationChannel.FCM)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.findDue(now, now.minusMinutes(8), 4)).thenReturn(listOf(notification), emptyList())
+        Mockito.`when`(manager.claimDue(now, 4)).thenReturn(listOf(notification), emptyList())
         Mockito.`when`(
             manager.complete(
                 72,
+                "attempt-72",
                 NotificationDeliveryResult.Failed(
                     "CHANNEL_NOT_CONFIGURED",
                     NotificationFailureCategory.CHANNEL_NOT_CONFIGURED,
@@ -231,6 +235,7 @@ class NotificationDispatcherTest {
         // then
         Mockito.verify(manager).complete(
             72,
+            "attempt-72",
             NotificationDeliveryResult.Failed(
                 "CHANNEL_NOT_CONFIGURED",
                 NotificationFailureCategory.CHANNEL_NOT_CONFIGURED,
@@ -261,7 +266,7 @@ class NotificationDispatcherTest {
             senders = senders,
             taskExecutor = TaskExecutor { task -> Thread(task, "notification-test").apply { start() } },
             resultDbTaskExecutor = databaseTaskExecutor,
-            notificationMetrics = NotificationMetrics(SimpleMeterRegistry(), manager, clock),
+            notificationMetrics = NotificationMetrics(SimpleMeterRegistry(), manager, clock, Mockito.mock(NotificationAlertNotifier::class.java)),
             clock = clock,
             deliveryProperties = properties,
         )
@@ -282,5 +287,6 @@ class NotificationDispatcherTest {
         recipientAddress = "01012345678",
         payloadJson = "{}",
         deduplicationKey = "clip-remind:job:7:user:$id:KAKAO",
+        processingAttemptId = "attempt-$id",
     )
 }

@@ -21,7 +21,8 @@ create table notification_batches (
     primary key (id)
 ) engine = InnoDB default character set utf8mb4;
 
--- 기존 발송은 null을 유지하며 기존 8분 정책을 따른다. JPA 관계·FK·cascade는 두지 않는다.
+-- 기존 발송 행은 null을 유지한다. notification-processing-state SQL이 배포 전에 기존 null PENDING에 8분 기한을 고정한다.
+-- 새 일반 알림의 null 기한은 업무상 만료 없음이며, 관리자는 별도 24시간 기한을 지정한다. JPA 관계·FK·cascade는 두지 않는다.
 alter table notifications
     add column batch_id varchar(36) null,
     add column dispatch_expires_at datetime(6) null,

@@ -115,7 +115,9 @@
 | 발송 묶음 | `NotificationBatch` | 어드민의 FCM 요청 운영 기록. 회원별 알림함과 토큰별 발송은 각각 `UserNotification.batchId`·`Notification.batchId`로 묶으며 DIRECT 적재 수는 토큰 수, TOPIC 적재 수는 1건입니다. 토픽 배치는 공통 공지 원문으로 사용하고 회원별 읽음은 NotificationBroadcastRead에 저장합니다. |
 | 공통 공지 읽음 | `NotificationBroadcastRead` | 전체 토픽 공지를 읽은 회원과 배치·최초 읽음 시각. 읽기 전에는 회원별 행을 만들지 않습니다. |
 | 토픽 구독 동기화 | `FcmTopicSyncTask` | 토큰별 최신 구독 희망 상태와 요청 revision, 실패 재처리 정보. FCM 접수 결과와 사용자 읽음 상태와는 별개입니다. |
-| 발송 기록 | `Notification` | 개별 주소 또는 FCM 토픽의 발송 대기·결과. 알림함이 있으면 `userNotificationId`로 연결합니다. |
+| 발송 기록 | `Notification` | 개별 주소 또는 FCM 토픽의 발송 대기·처리 중·결과. `PROCESSING`은 provider 요청 후 결과를 기다리는 상태이며, 알림함이 있으면 `userNotificationId`로 연결합니다. |
+| 알림 처리 중 | `NotificationStatus.PROCESSING` | provider 요청을 시작해 응답 또는 결과 저장을 기다리는 상태. provider별 stale timeout을 넘기면 해당 provider 정책으로 복구합니다. |
+| 알림 provider | `NotificationProvider` | 알림 발송을 맡는 시스템. 현재 NHN 알림톡, SMTP 이메일, Firebase FCM이며 stale 처리 정책을 각각 설정합니다. |
 | 제공자 명시적 발송 거절 | `NotificationFailureCategory.PROVIDER_REJECTED` | NHN `-1031`처럼 전체 수신자의 실패가 확인된 결과. 세부 실패 원인을 모르는 경우에도 접수 여부 미확정인 `UNKNOWN`과 구분해 `FAILED`로 기록합니다. |
 
 ## 8. 운영·기반

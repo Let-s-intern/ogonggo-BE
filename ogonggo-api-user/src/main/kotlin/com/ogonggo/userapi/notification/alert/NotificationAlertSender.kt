@@ -14,7 +14,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-internal enum class NotificationAlertSendResult { SENT, SUPPRESSED, DISABLED, RATE_LIMITED, FAILED }
+internal enum class NotificationAlertSendResult { SENT, DISABLED, RATE_LIMITED, FAILED }
 
 /** DB와 사용자 알림 대기열을 거치지 않는 운영 경고 발송기다. 전용 실행기에서 호출한다. */
 @Component
@@ -26,7 +26,6 @@ internal class NotificationAlertSender(
     private val meterRegistry: MeterRegistry,
     private val clock: Clock,
 ) {
-    private val lastSent = mutableMapOf<AlertKey, Instant>()
     private var lastRequestNanos: Long? = null
     private var rateLimitedUntil: Instant = Instant.MIN
 
@@ -39,12 +38,6 @@ internal class NotificationAlertSender(
             return record(alert, NotificationAlertSendResult.FAILED)
         }
         val now = clock.instant()
-        lastSent.entries.removeIf { !it.value.plus(properties.cooldown).isAfter(now) }
-        // 키는 타입·상태·고정 범위뿐이다. 동적인 알림 ID나 원본 예외를 포함하지 않는다.
-        val key = AlertKey(alert.type, alert.status, alert.scope)
-        if (alert.status != NotificationAlertStatus.TEST && lastSent[key]?.plus(properties.cooldown)?.isAfter(now) == true) {
-            return record(alert, NotificationAlertSendResult.SUPPRESSED)
-        }
         if (now.isBefore(rateLimitedUntil)) return record(alert, NotificationAlertSendResult.RATE_LIMITED)
 
         return try {
@@ -59,11 +52,6 @@ internal class NotificationAlertSender(
                 log.error("알림 운영 경고의 Slack 접수를 확인하지 못했습니다. type={}", alert.type.name)
                 record(alert, NotificationAlertSendResult.FAILED)
             } else {
-                // 발생·복구가 바뀌면 이전 상태의 cooldown을 해제해 재발을 바로 알릴 수 있게 한다.
-                if (alert.status != NotificationAlertStatus.TEST) {
-                    lastSent.keys.removeIf { it.type == alert.type && it.scope == alert.scope }
-                    lastSent[key] = clock.instant()
-                }
                 log.info("알림 운영 경고를 Slack에 전달했습니다. type={}, status={}", alert.type.name, alert.status.name)
                 record(alert, NotificationAlertSendResult.SENT)
             }
@@ -96,5 +84,4 @@ internal class NotificationAlertSender(
         val log = LoggerFactory.getLogger(NotificationAlertSender::class.java)
     }
 
-    private data class AlertKey(val type: NotificationAlertType, val status: NotificationAlertStatus, val scope: String)
 }

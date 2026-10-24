@@ -13,8 +13,8 @@ import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.job.persistence.JobBookmarkReminderQueryRepository
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
+import com.ogonggo.core.notification.delivery.implement.NotificationProcessingPolicy
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
-import com.ogonggo.core.notification.intake.implement.NotificationDispatchPolicy
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import com.ogonggo.core.user.domain.User
@@ -41,7 +41,7 @@ import java.time.LocalDateTime
     JobBookmarkReminderReader::class,
     JobBookmarkReminderNotificationListener::class,
     NotificationAppender::class,
-    NotificationDispatchPolicy::class,
+    NotificationProcessingPolicy::class,
     NotificationManager::class,
     JobBookmarkReminderQueryRepository::class,
     ContentRejectionManager::class,

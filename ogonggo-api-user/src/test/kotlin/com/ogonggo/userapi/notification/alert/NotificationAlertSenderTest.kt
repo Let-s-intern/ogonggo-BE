@@ -48,51 +48,15 @@ internal class NotificationAlertSenderTest {
     }
 
     @Test
-    @DisplayName("같은 경고는 재전송 간격 안에 억제하고 간격 이후 다시 보낸다")
-    fun `성공한 같은 유형과 범위의 경고를 중복 전송하지 않는다`() {
-        // given
-        repeat(2) { server.expect(requestTo(WEBHOOK)).andRespond(withSuccess("ok", MediaType.TEXT_PLAIN)) }
-        val alert = sampleAlert(NotificationAlertType.CLEANUP_BACKLOG).copy(status = NotificationAlertStatus.FIRING)
-        // when
-        val first = sender.send(alert)
-        val duplicate = sender.send(alert)
-        clock.advance(Duration.ofMinutes(16))
-        val repeated = sender.send(alert)
-        // then
-        assertEquals(NotificationAlertSendResult.SENT, first)
-        assertEquals(NotificationAlertSendResult.SUPPRESSED, duplicate)
-        assertEquals(NotificationAlertSendResult.SENT, repeated)
-        server.verify()
-    }
-
-    @Test
-    @DisplayName("복구 후 같은 장애가 재발하면 이전 발생 경고의 재전송 간격에 막히지 않는다")
-    fun `발생 복구 재발을 각각 전송한다`() {
-        // given
-        repeat(3) { server.expect(requestTo(WEBHOOK)).andRespond(withSuccess("ok", MediaType.TEXT_PLAIN)) }
-        val alert = sampleAlert(NotificationAlertType.DELIVERY_STALLED).copy(status = NotificationAlertStatus.FIRING)
-        // when
-        val first = sender.send(alert)
-        val recovered = sender.send(alert.copy(status = NotificationAlertStatus.RESOLVED))
-        val recurrence = sender.send(alert)
-        // then
-        assertEquals(listOf(NotificationAlertSendResult.SENT, NotificationAlertSendResult.SENT, NotificationAlertSendResult.SENT), listOf(first, recovered, recurrence))
-        server.verify()
-    }
-
-    @Test
-    @DisplayName("Slack 전송 실패는 cooldown에 기록하지 않아 다음 감지 때 다시 전송할 수 있다")
-    fun `실패한 경고를 전송 성공으로 취급하지 않는다`() {
+    @DisplayName("Slack 전송 실패는 실패 지표로 기록하고 transport 내부에서 재시도하지 않는다")
+    fun `실패를 기록하고 반환한다`() {
         // given
         server.expect(requestTo(WEBHOOK)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
-        server.expect(requestTo(WEBHOOK)).andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
-        val alert = sampleAlert(NotificationAlertType.ENQUEUE_FAILURE).copy(status = NotificationAlertStatus.FIRING)
         // when
-        val failed = sender.send(alert)
-        val retried = sender.send(alert)
+        val failed = sender.send(sampleAlert(NotificationAlertType.ENQUEUE_FAILURE))
         // then
         assertEquals(NotificationAlertSendResult.FAILED, failed)
-        assertEquals(NotificationAlertSendResult.SENT, retried)
+        assertEquals(1.0, registry.get("ogonggo.notification.alerts").tags("type", "ENQUEUE_FAILURE", "outcome", "FAILED").counter().count())
         server.verify()
     }
 

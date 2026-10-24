@@ -134,7 +134,7 @@ class UserNotificationIntegrationTest @Autowired constructor(
         // when
         val comment = concernComments.create(actor, concern, CreateConcernCommentCommand(null, "답변\n  내용"))
         val item = inbox.list(recipient, null, 20).items.single()
-        val deliveries = notifications.findDue(NOW, NOW.minusMinutes(8), 100).filter { it.userNotificationId == item.id }
+        val deliveries = notifications.findDue(NOW, 100).filter { it.userNotificationId == item.id }
         // then
         assertEquals(UserNotificationType.CONCERN_COMMENT, item.type)
         assertEquals("회원", item.actorNickname)
@@ -157,7 +157,14 @@ class UserNotificationIntegrationTest @Autowired constructor(
         val sender = FcmNotificationSender(firebase, mapper, tokenReader, tokens, CLOCK)
         deliveries.forEach { assertTrue(sender.send(it) is NotificationDeliveryResult.Sent) }
         assertEquals(2, sent)
-        notifications.complete(deliveries.first().notificationId, NotificationDeliveryResult.Failed("TEST_REJECTED", NotificationFailureCategory.CLIENT_ERROR), NOW)
+        val claimed = notifications.claimDue(NOW, 100).associateBy { it.notificationId }
+        val failedDelivery = checkNotNull(claimed[deliveries.first().notificationId])
+        notifications.complete(
+            failedDelivery.notificationId,
+            checkNotNull(failedDelivery.processingAttemptId),
+            NotificationDeliveryResult.Failed("TEST_REJECTED", NotificationFailureCategory.CLIENT_ERROR),
+            NOW,
+        )
         assertEquals(1, inbox.countUnread(recipient))
         assertNull(inbox.list(recipient, null, 20).items.single().readAt)
         assertEquals(item.id, jdbc.queryForObject("select user_notification_id from notifications where id = ?", Long::class.java, deliveries.first().notificationId))
@@ -208,7 +215,7 @@ class UserNotificationIntegrationTest @Autowired constructor(
         val item = inbox.list(parentAuthor, null, 20).items.single()
         assertEquals(UserNotificationType.SIDE_STUDY_COMMENT_REPLY, item.type)
         assertEquals(reply, item.commentId)
-        val delivery = notifications.findDue(NOW, NOW.minusMinutes(8), 100).single { it.userNotificationId == item.id }
+        val delivery = notifications.findDue(NOW, 100).single { it.userNotificationId == item.id }
         assertEquals("내 댓글에 답글이 달렸어요", mapper.readTree(delivery.payloadJson)["title"].asText())
         assertEquals("긴".repeat(255), item.postTitle)
         assertEquals(0, inbox.countUnread(author))

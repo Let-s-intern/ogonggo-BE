@@ -47,7 +47,7 @@ class NotificationDispatcher internal constructor(
         require(sendersByChannel.size == senders.size) { "채널별 알림 발송기는 하나만 등록할 수 있습니다." }
     }
 
-    /** 행별 claim 대신 한 번의 발송 작업을 ShedLock으로 직렬화한다. */
+    /** ShedLock으로 작업 실행을 직렬화하고 행은 DB attempt token으로 조건부 선점한다. */
     @SchedulerLock(name = SCHEDULER_NAME, lockAtMostFor = LOCK_AT_MOST_FOR)
     fun dispatch() {
         val runId = UUID.randomUUID().toString()
@@ -55,6 +55,11 @@ class NotificationDispatcher internal constructor(
         var summary = NotificationDispatchSummaryDto()
 
         try {
+            val recovered = notificationManager.recoverStaleProcessing(
+                now = LocalDateTime.now(clock),
+                limitPerProvider = deliveryProperties.maxConcurrency,
+            )
+            if (recovered > 0) log.warn("stale 알림 처리 복구. runId={}, recovered={}", runId, recovered)
             summary = dispatchWithRollingWindow(runId, startedAt)
         } finally {
             val durationMs = elapsedMillis(startedAt)
@@ -79,7 +84,6 @@ class NotificationDispatcher internal constructor(
         val completionQueue = ArrayBlockingQueue<Future<NotificationDispatchOutcome>>(maxConcurrency)
         val completions = ExecutorCompletionService(taskExecutor, completionQueue)
         val inFlight = LinkedHashMap<Future<NotificationDispatchOutcome>, NotificationMessageDto>()
-        val attemptedIds = HashSet<Long>()
         var summary = NotificationDispatchSummaryDto()
         var accepting = true
         var interrupted = false
@@ -89,25 +93,29 @@ class NotificationDispatcher internal constructor(
                 if (accepting && !hasTimeRemaining(startedAt)) accepting = false
 
                 if (accepting && inFlight.size < maxConcurrency) {
-                    val activeIds = inFlight.values.mapTo(HashSet()) { it.notificationId }
                     val now = LocalDateTime.now(clock)
-                    val dueNotifications = notificationManager.findDue(
+                    val dueNotifications = notificationManager.claimDue(
                         now = now,
-                        limit = maxConcurrency,
+                        limit = maxConcurrency - inFlight.size,
                     )
-                    val candidates = dueNotifications.asSequence()
-                        .filterNot { it.notificationId in activeIds || it.notificationId in attemptedIds }
-                        .take(maxConcurrency - inFlight.size)
-                        .toList()
+                    val candidates = dueNotifications
 
-                    for (notification in candidates) {
-                        attemptedIds += notification.notificationId
+                    for (index in candidates.indices) {
+                        val notification = candidates[index]
                         try {
                             val future = completions.submit(Callable {
                                 deliver(runId, notification)
                             })
                             inFlight[future] = notification
                         } catch (_: TaskRejectedException) {
+                            // claimDue는 후보 전체를 먼저 선점하므로, 이번 후보 뒤에 아직 제출하지 않은 행도 함께 반환한다.
+                            candidates.drop(index).forEach { unsent ->
+                                notificationManager.releaseClaim(
+                                    notificationId = unsent.notificationId,
+                                    attemptId = checkNotNull(unsent.processingAttemptId),
+                                    now = LocalDateTime.now(clock),
+                                )
+                            }
                             summary = summary.copy(executorRejected = true)
                             accepting = false
                             log.warn("알림 전용 실행기가 포화되어 남은 대기 건을 다음 실행으로 넘깁니다. runId={}", runId)
@@ -231,6 +239,7 @@ class NotificationDispatcher internal constructor(
                 {
                     notificationManager.complete(
                         notificationId = notification.notificationId,
+                        attemptId = checkNotNull(notification.processingAttemptId),
                         result = result,
                         now = LocalDateTime.now(clock),
                     )

@@ -1,6 +1,8 @@
 package com.ogonggo.core.notification.persistence
 
 import com.ogonggo.core.notification.domain.Notification
+import com.ogonggo.core.notification.domain.NotificationChannel
+import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.domain.NotificationStatus
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -12,6 +14,9 @@ import java.time.LocalDateTime
 internal interface NotificationJpaRepository : JpaRepository<Notification, Long> {
 
     fun countByStatus(status: NotificationStatus): Long
+
+    /** 정리 인덱스(status, updated_at, id)로 전체 인스턴스의 최근 확정 처리를 확인한다. */
+    fun existsByStatusInAndUpdatedAtGreaterThanEqual(statuses: Collection<NotificationStatus>, since: LocalDateTime): Boolean
 
     fun existsByDeduplicationKey(deduplicationKey: String): Boolean
 
@@ -37,11 +42,7 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         """
         select notification from Notification notification
         where notification.scheduledAt <= :now
-          and (
-            notification.dispatchExpiresAt > :now
-            or (notification.dispatchExpiresAt is null
-                and (notification.scheduledAt > :notBefore or notification.createdAt > :notBefore))
-          )
+          and (notification.dispatchExpiresAt is null or notification.dispatchExpiresAt > :now)
           and notification.status = :pending
         order by case when notification.batchId is null then 0 else 1 end,
           notification.scheduledAt, notification.id
@@ -49,26 +50,162 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
     )
     fun findDue(
         @Param("now") now: LocalDateTime,
-        @Param("notBefore") notBefore: LocalDateTime,
         @Param("pending") pending: NotificationStatus,
         pageable: Pageable,
     ): List<Notification>
+
+    /** 읽은 PENDING을 attempt token으로 원자적으로 선점한다. 네트워크 호출 전 별도 트랜잭션으로 커밋된다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Notification n
+        set n.status = :processing,
+            n.processingAttemptId = :attemptId,
+            n.processingStartedAt = :now,
+            n.firstAttemptAt = coalesce(n.firstAttemptAt, :now),
+            n.attemptCount = n.attemptCount + 1,
+            n.updatedAt = :now
+        where n.id = :id and n.status = :pending
+          and n.scheduledAt <= :now
+          and (n.dispatchExpiresAt is null or n.dispatchExpiresAt > :now)
+        """,
+    )
+    fun claimPending(
+        @Param("id") id: Long,
+        @Param("pending") pending: NotificationStatus,
+        @Param("processing") processing: NotificationStatus,
+        @Param("attemptId") attemptId: String,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    @Query(
+        """
+        select n from Notification n
+        where n.status = :processing and n.channel = :channel
+          and n.processingStartedAt <= :staleBefore
+        order by n.processingStartedAt, n.id
+        """,
+    )
+    fun findStaleProcessing(
+        @Param("processing") processing: NotificationStatus,
+        @Param("channel") channel: NotificationChannel,
+        @Param("staleBefore") staleBefore: LocalDateTime,
+        pageable: Pageable,
+    ): List<Notification>
+
+    @Query(
+        """
+        select count(n) from Notification n
+        where n.status = :processing and n.channel = :channel
+          and n.processingStartedAt <= :staleBefore
+        """,
+    )
+    fun countStaleProcessing(
+        @Param("processing") processing: NotificationStatus,
+        @Param("channel") channel: NotificationChannel,
+        @Param("staleBefore") staleBefore: LocalDateTime,
+    ): Long
+
+    /** 재시도는 기존 firstAttemptAt과 배달 기한을 보존한다. 늦은 provider 응답은 이전 attempt token으로 차단된다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Notification n
+        set n.status = :pending, n.processingAttemptId = null,
+            n.processingStartedAt = null, n.updatedAt = :now
+        where n.id = :id and n.status = :processing and n.processingAttemptId = :attemptId
+        """,
+    )
+    fun requeueStaleProcessing(
+        @Param("id") id: Long,
+        @Param("processing") processing: NotificationStatus,
+        @Param("pending") pending: NotificationStatus,
+        @Param("attemptId") attemptId: String,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** executor reject는 provider 호출 전이므로 attempt 시각과 횟수를 되돌린다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Notification n
+        set n.status = :pending, n.processingAttemptId = null,
+            n.processingStartedAt = null,
+            n.firstAttemptAt = case when n.attemptCount <= 1 then null else n.firstAttemptAt end,
+            n.attemptCount = case when n.attemptCount > 0 then n.attemptCount - 1 else 0 end,
+            n.updatedAt = :now
+        where n.id = :id and n.status = :processing and n.processingAttemptId = :attemptId
+        """,
+    )
+    fun releaseUnsentClaim(
+        @Param("id") id: Long,
+        @Param("processing") processing: NotificationStatus,
+        @Param("pending") pending: NotificationStatus,
+        @Param("attemptId") attemptId: String,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** stale 시간 초과는 provider 실패 증거가 아니므로 보수적으로 UNKNOWN으로 종료한다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Notification n
+        set n.status = :unknown, n.resultCode = :resultCode,
+            n.resultCategory = :failureCategory, n.resultDetail = :detail,
+            n.processingStartedAt = null, n.updatedAt = :now
+        where n.id = :id and n.status = :processing
+          and ((:attemptId is null and n.processingAttemptId is null) or n.processingAttemptId = :attemptId)
+        """,
+    )
+    fun markStaleProcessingUnknown(
+        @Param("id") id: Long,
+        @Param("processing") processing: NotificationStatus,
+        @Param("unknown") unknown: NotificationStatus,
+        @Param("attemptId") attemptId: String?,
+        @Param("resultCode") resultCode: String,
+        @Param("failureCategory") failureCategory: NotificationFailureCategory,
+        @Param("detail") detail: String,
+        @Param("now") now: LocalDateTime,
+    ): Int
+
+    /** 결과 업데이트도 상태와 attempt token을 조건으로 하므로 stale 복구와 늦은 응답이 경합하지 않는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Notification n
+        set n.status = :status, n.providerMessageId = :providerMessageId,
+            n.sentAt = :sentAt, n.resultCode = :resultCode,
+            n.resultCategory = :failureCategory, n.resultDetail = :detail,
+            n.processingAttemptId = null, n.processingStartedAt = null, n.updatedAt = :now
+        where n.id = :id and n.processingAttemptId = :attemptId
+          and (n.status = :processing or (n.status = :unknown and n.resultCode = :staleResultCode))
+        """,
+    )
+    fun completeProcessing(
+        @Param("id") id: Long,
+        @Param("processing") processing: NotificationStatus,
+        @Param("unknown") unknown: NotificationStatus,
+        @Param("status") status: NotificationStatus,
+        @Param("attemptId") attemptId: String,
+        @Param("staleResultCode") staleResultCode: String,
+        @Param("providerMessageId") providerMessageId: String?,
+        @Param("sentAt") sentAt: LocalDateTime?,
+        @Param("resultCode") resultCode: String?,
+        @Param("failureCategory") failureCategory: NotificationFailureCategory?,
+        @Param("detail") detail: String?,
+        @Param("now") now: LocalDateTime,
+    ): Int
 
     @Query(
         """
         select count(notification) from Notification notification
         where notification.status = :pending
           and notification.scheduledAt <= :now
-          and (
-            notification.dispatchExpiresAt > :now
-            or (notification.dispatchExpiresAt is null
-                and (notification.scheduledAt > :notBefore or notification.createdAt > :notBefore))
-          )
+          and (notification.dispatchExpiresAt is null or notification.dispatchExpiresAt > :now)
         """,
     )
     fun countDuePending(
         @Param("now") now: LocalDateTime,
-        @Param("notBefore") notBefore: LocalDateTime,
         @Param("pending") pending: NotificationStatus,
     ): Long
 
@@ -76,16 +213,11 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         """
         select count(notification) from Notification notification
         where notification.status = :pending
-          and (
-            notification.dispatchExpiresAt <= :now
-            or (notification.dispatchExpiresAt is null
-                and notification.scheduledAt <= :notBefore and notification.createdAt <= :notBefore)
-          )
+          and notification.dispatchExpiresAt <= :now
         """,
     )
     fun countExpiredPending(
         @Param("now") now: LocalDateTime,
-        @Param("notBefore") notBefore: LocalDateTime,
         @Param("pending") pending: NotificationStatus,
     ): Long
 

@@ -6,6 +6,8 @@ import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.userapi.auth.business.UserSignedUpEvent
 import com.ogonggo.userapi.config.UserAsyncConfiguration
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
+import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import com.ogonggo.userapi.notification.intake.implement.signup.dto.SignUpAlimTalkPreparationDto
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -26,6 +28,7 @@ internal class UserSignUpAlimTalkEventListener(
     private val objectMapper: ObjectMapper,
     @Qualifier(UserAsyncConfiguration.NOTIFICATION_ENQUEUE_TASK_EXECUTOR)
     private val enqueueTaskExecutor: TaskExecutor,
+    private val alertNotifier: NotificationAlertNotifier,
 ) {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -38,8 +41,10 @@ internal class UserSignUpAlimTalkEventListener(
             // 별도 풀로 제출해 NHN 발송 지연이 가입 처리나 다른 백그라운드 작업을 막지 않게 한다.
             enqueueTaskExecutor.execute { appendNotification(event) }
         } catch (_: TaskRejectedException) {
+            alertFailure("EXECUTOR_REJECTED")
             log.error("가입 알림 적재 실행기가 포화되어 알림을 건너뜁니다. userId={}, reason=EXECUTOR_REJECTED", event.userId)
         } catch (exception: Exception) {
+            alertFailure("SUBMISSION_FAILED")
             log.error(
                 "가입 알림 적재 작업을 등록하지 못했습니다. userId={}, errorType={}",
                 event.userId,
@@ -56,6 +61,7 @@ internal class UserSignUpAlimTalkEventListener(
                 is SignUpAlimTalkPreparationDto.Skipped -> logSkipped(preparation)
             }
         } catch (exception: Exception) {
+            alertFailure("APPEND_FAILED")
             log.error(
                 "가입 알림을 적재하지 못했습니다. userId={}, errorType={}",
                 event.userId,
@@ -87,6 +93,12 @@ internal class UserSignUpAlimTalkEventListener(
     private fun logSkipped(preparation: SignUpAlimTalkPreparationDto.Skipped) {
         log.info("가입 알림 적재를 생략했습니다. reason={}", preparation.reason)
     }
+
+    private fun alertFailure(reason: String) = alertNotifier.notify(
+        NotificationAlertType.ENQUEUE_FAILURE,
+        scope = NotificationChannel.KAKAO.name,
+        measurements = mapOf("reason" to reason),
+    )
 
     private companion object {
         val log = LoggerFactory.getLogger(UserSignUpAlimTalkEventListener::class.java)

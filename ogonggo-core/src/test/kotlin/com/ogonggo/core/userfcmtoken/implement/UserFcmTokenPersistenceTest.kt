@@ -4,7 +4,6 @@ import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
-import com.ogonggo.core.notification.intake.implement.NotificationDispatchPolicy
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import com.ogonggo.core.user.domain.User
@@ -33,7 +32,7 @@ import java.util.concurrent.TimeUnit
 
 @DataJpaTest(showSql = false)
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(UserFcmTokenManager::class, UserFcmTokenReader::class, NotificationAppender::class, NotificationDispatchPolicy::class,
+@Import(UserFcmTokenManager::class, UserFcmTokenReader::class, NotificationAppender::class,
     com.ogonggo.core.fcmtopicsynctask.implement.FcmTopicSyncTaskManager::class,
     com.ogonggo.core.fcmtopicsynctask.persistence.FcmTopicSyncTaskQueryRepository::class,
     com.ogonggo.core.notificationbatch.implement.NotificationBroadcastConfiguration::class)

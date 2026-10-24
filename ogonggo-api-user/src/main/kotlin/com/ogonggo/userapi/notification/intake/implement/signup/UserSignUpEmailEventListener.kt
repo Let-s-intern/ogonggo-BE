@@ -5,6 +5,8 @@ import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.userapi.auth.business.UserSignedUpEvent
 import com.ogonggo.userapi.config.UserAsyncConfiguration
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
+import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import com.ogonggo.userapi.notification.channel.email.EmailTemplate
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -26,6 +28,7 @@ internal class UserSignUpEmailEventListener(
     private val notificationAppender: NotificationAppender,
     @Qualifier(UserAsyncConfiguration.NOTIFICATION_ENQUEUE_TASK_EXECUTOR)
     private val enqueueTaskExecutor: TaskExecutor,
+    private val alertNotifier: NotificationAlertNotifier,
 ) {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -33,8 +36,10 @@ internal class UserSignUpEmailEventListener(
         try {
             enqueueTaskExecutor.execute { appendNotification(event) }
         } catch (_: TaskRejectedException) {
+            alertFailure("EXECUTOR_REJECTED")
             log.error("가입 환영 메일 적재 실행기가 포화되어 메일을 건너뜁니다. userId={}, reason=EXECUTOR_REJECTED", event.userId)
         } catch (exception: Exception) {
+            alertFailure("SUBMISSION_FAILED")
             log.error(
                 "가입 환영 메일 적재 작업을 등록하지 못했습니다. userId={}, errorType={}",
                 event.userId,
@@ -68,6 +73,7 @@ internal class UserSignUpEmailEventListener(
             )
             log.info("가입 환영 메일 적재 결과. result={}", if (inserted) "APPENDED" else "DUPLICATE")
         } catch (exception: Exception) {
+            alertFailure("APPEND_FAILED")
             log.error(
                 "가입 환영 메일을 적재하지 못했습니다. userId={}, errorType={}",
                 event.userId,
@@ -81,6 +87,12 @@ internal class UserSignUpEmailEventListener(
         // DB 예외 메시지에는 SQL 파라미터 등 수신자 정보가 포함될 수 있어 메시지와 cause는 버린다.
         stackTrace = exception.stackTrace
     }
+
+    private fun alertFailure(reason: String) = alertNotifier.notify(
+        NotificationAlertType.ENQUEUE_FAILURE,
+        scope = NotificationChannel.EMAIL.name,
+        measurements = mapOf("reason" to reason),
+    )
 
     private companion object {
         val TEMPLATE = EmailTemplate.SIGN_UP_WELCOME

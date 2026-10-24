@@ -10,15 +10,11 @@ import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
-import java.time.Clock
-import java.time.LocalDateTime
 
 @Component
 class NotificationAppender internal constructor(
     private val notificationRepository: NotificationJpaRepository,
     private val eventPublisher: ApplicationEventPublisher,
-    private val dispatchPolicy: NotificationDispatchPolicy,
-    private val clock: Clock,
 ) {
 
     /** 호출자의 트랜잭션에 참여해 알림 적재를 업무 변경과 함께 커밋한다. */
@@ -51,7 +47,6 @@ class NotificationAppender internal constructor(
         val existingKeys = notificationRepository
             .findAllByDeduplicationKeyIn(notifications.map { it.deduplicationKey }.distinct())
             .mapTo(HashSet()) { it.deduplicationKey }
-        val enqueuedAt = LocalDateTime.now(clock)
         // 입력 배치 안의 같은 키도 한 건으로 줄인 뒤 이미 적재된 키를 제외한다.
         val newNotifications = notifications.asSequence()
             .distinctBy { it.deduplicationKey }
@@ -68,7 +63,7 @@ class NotificationAppender internal constructor(
                     payloadJson = it.payloadJson,
                     scheduledAt = it.scheduledAt,
                     batchId = it.batchId,
-                    dispatchExpiresAt = dispatchPolicy.expiresAt(it, enqueuedAt),
+                    dispatchExpiresAt = it.dispatchExpiresAt,
                 )
             }
             .toList()

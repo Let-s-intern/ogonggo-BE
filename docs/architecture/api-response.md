@@ -586,5 +586,5 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - deliveryTargetType=DIRECT는 기기별 작업, TOPIC은 전체 토픽 작업이다. TOPIC enqueuedCount는 1이며 결과도 요청 한 건 단위다. noTokenUserCount는 DB상 토큰 없는 활성 회원 수이고 기존 skippedNoTokenUserCount는 호환용 별칭이다. 토픽 전환 설정과 알림함 동작은 [알림 가이드](notification-extension-guide.md#전체-토픽-발송과-공통-알림함)를 따른다. 아래 토큰별 설명은 DIRECT에 해당한다.
 
 - 생성은 201이며 `batchId`와 대상 회원 수·실제 수신 회원 수·토큰별 적재 수·토큰 없음/비활성 제외 회원 수를 반환한다. 토큰이 없어 0건이어도 묶음은 생성한다.
-- 조회는 200이며 운영 정보, `sentCount`·`failedCount`·`unknownCount`·`pendingCount`·`expiredCount`, `completed`와 상태·`resultCode`별 사유 건수를 반환한다. 성공은 provider 접수이며 미확정과 기한 초과를 실패에 합치지 않는다.
+- 조회는 200이며 운영 정보, `sentCount`·`failedCount`·`unknownCount`·`pendingCount`·`expiredCount`, `completed`와 상태·`resultCode`별 사유 건수를 반환한다. `pendingCount`는 `PENDING`과 `PROCESSING`을 포함하며, 24시간 뒤 `PENDING`은 `expiredCount`로 이동하지만 아직 처리 중인 `PROCESSING`이 있으면 `completed=false`다. 성공은 provider 접수이며 미확정과 기한 초과를 실패에 합치지 않는다.
 - `dispatchExpiresAt`은 발송 대기 종료 시각, `resultsAvailableUntil`은 조회 종료 시각이다. 생성 후 정확히 30일부터 404이며 관련 정책은 [어드민 FCM 발송](notification-extension-guide.md#어드민-fcm-발송)을 따른다.

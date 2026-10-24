@@ -7,7 +7,7 @@ import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.domain.NotificationFailureCategory
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
-import com.ogonggo.core.notification.intake.implement.NotificationDispatchPolicy
+import com.ogonggo.core.notification.delivery.implement.NotificationProcessingPolicy
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.notification.persistence.NotificationJpaRepository
 import org.springframework.jdbc.core.JdbcTemplate
@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
@@ -27,7 +29,7 @@ import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(NotificationAppender::class, NotificationDispatchPolicy::class, NotificationManager::class)
+@Import(NotificationAppender::class, NotificationProcessingPolicy::class, NotificationManager::class)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 internal class NotificationManagerPersistenceTest @Autowired constructor(
     private val notificationAppender: NotificationAppender,
@@ -41,9 +43,26 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         notificationRepository.deleteAllInBatch()
     }
 
+    @ParameterizedTest
+    @EnumSource(value = NotificationStatus::class, names = ["SENT", "FAILED", "UNKNOWN"])
+    @DisplayName("최근 SENT·FAILED·UNKNOWN 저장만 전역 발송 진행으로 보고 최근 PENDING 적재는 제외한다")
+    fun `확정 상태의 수정 시각으로 전역 진행을 확인한다`(status: NotificationStatus) {
+        // given
+        val now = LocalDateTime.of(2026, 10, 24, 12, 0)
+        val cutoff = now.minusMinutes(2)
+        append("recent-pending", now)
+        append("terminal", now.minusMinutes(3))
+        jdbcTemplate.update("update notifications set updated_at = ? where deduplication_key = ?", now, "recent-pending")
+        jdbcTemplate.update("update notifications set status = ?, updated_at = ? where deduplication_key = ?", status.name, cutoff, "terminal")
+
+        // when / then
+        assertTrue(notificationManager.hasDeliveryProgressSince(cutoff))
+        assertFalse(notificationManager.hasDeliveryProgressSince(cutoff.plusSeconds(1)))
+    }
+
     @Test
-    @DisplayName("기한이 없는 기존 알림은 예정 시각 또는 적재 시각부터 8분 안에만 발송한다")
-    fun `기존 null 기한 알림은 8분 호환 정책으로 조회한다`() {
+    @DisplayName("업무 기한이 없는 대기 알림은 지연 시간과 무관하게 발송 대상이다")
+    fun `null 업무 기한은 대기 알림을 만료시키지 않는다`() {
         // given
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
         append("recent", now.minusMinutes(7).minusSeconds(59))
@@ -57,18 +76,16 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         append("due-now", now)
         append("future", now.plusMinutes(1))
         append("sent", now.minusMinutes(2))
-        val sentId = notificationRepository.findAllByDeduplicationKeyIn(listOf("sent")).single().id!!
-        notificationManager.complete(sentId, NotificationDeliveryResult.Sent("provider-1"), now)
+        jdbcTemplate.update("update notifications set status = 'SENT' where deduplication_key = ?", "sent")
 
         // when
         val due = notificationManager.findDue(
             now = now,
-            notBefore = now.minusMinutes(8),
             limit = 10,
         )
 
         // then
-        assertEquals(listOf("late-enqueued", "recent", "due-now"), due.map { it.deduplicationKey })
+        assertEquals(listOf("stale", "late-enqueued", "recent", "due-now"), due.map { it.deduplicationKey })
         assertEquals(
             NotificationStatus.PENDING,
             notificationRepository.findAllByDeduplicationKeyIn(listOf("stale")).single().status,
@@ -76,20 +93,19 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("PENDING 잔량을 전체·발송 가능·기한 초과·미래 건수로 나눈다")
-    fun `대기 잔량을 발송 창 기준으로 집계한다`() {
+    @DisplayName("PENDING 잔량을 전체·발송 가능·업무 기한 초과·미래 건수로 나눈다")
+    fun `대기 잔량을 업무 기한 기준으로 집계한다`() {
         val now = LocalDateTime.of(2026, 10, 6, 12, 0)
         append("due", now.minusMinutes(1))
         append("expired", now.minusMinutes(9))
         append("late-enqueued", now.minusMinutes(20), createdAt = now.minusMinutes(1))
         append("future", now.plusMinutes(1))
         append("sent", now.minusMinutes(1))
-        val sent = notificationRepository.findAllByDeduplicationKeyIn(listOf("sent")).single()
-        notificationManager.complete(sent.id!!, NotificationDeliveryResult.Sent("provider"), now)
+        jdbcTemplate.update("update notifications set status = 'SENT' where deduplication_key = ?", "sent")
 
         assertEquals(4L, notificationManager.countPendingTotal())
-        assertEquals(2L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
-        assertEquals(1L, notificationManager.countPendingExpired(now, now.minusMinutes(8)))
+        assertEquals(3L, notificationManager.countPendingDue(now))
+        assertEquals(0L, notificationManager.countPendingExpired(now))
         assertEquals(1L, notificationManager.countPendingFuture(now))
     }
 
@@ -103,8 +119,10 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         val sentAt = now.plusSeconds(1)
 
         // when
+        val claimed = notificationManager.claimDue(now, 10).single()
         val recorded = notificationManager.complete(
             notificationId = notification.id!!,
+            attemptId = checkNotNull(claimed.processingAttemptId),
             result = NotificationDeliveryResult.Sent("provider-message-1"),
             now = sentAt,
         )
@@ -128,8 +146,10 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         val notification = notificationRepository.findAll().single()
 
         // when
+        val claimed = notificationManager.claimDue(now, 10).single()
         val recorded = notificationManager.complete(
             notificationId = notification.id!!,
+            attemptId = checkNotNull(claimed.processingAttemptId),
             result = NotificationDeliveryResult.Failed(
                 "-3005",
                 NotificationFailureCategory.TEMPLATE_CONFIGURATION,
@@ -150,7 +170,6 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertTrue(
             notificationManager.findDue(
                 now = nextDay,
-                notBefore = nextDay.minusMinutes(8),
                 limit = 10,
             ).isEmpty(),
         )
@@ -165,8 +184,10 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         val notification = notificationRepository.findAll().single()
 
         // when
+        val claimed = notificationManager.claimDue(now, 10).single()
         val recorded = notificationManager.complete(
             notificationId = notification.id!!,
+            attemptId = checkNotNull(claimed.processingAttemptId),
             result = NotificationDeliveryResult.Unknown(
                 "-1005",
                 NotificationFailureCategory.DUPLICATE_REQUEST,
@@ -185,7 +206,6 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertTrue(
             notificationManager.findDue(
                 now = now.plusDays(1),
-                notBefore = now.plusDays(1).minusMinutes(8),
                 limit = 10,
             ).isEmpty(),
         )
@@ -201,7 +221,8 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         append("${prefix}sent:user:18", now)
         append("other-job:pending", now)
         val sentId = notificationRepository.findAllByDeduplicationKeyIn(listOf("${prefix}sent:user:18")).single().id!!
-        notificationManager.complete(sentId, NotificationDeliveryResult.Sent("provider-2"), now.plusSeconds(1))
+        val sentAttempt = notificationManager.claimDue(now, 10).single { it.notificationId == sentId }
+        notificationManager.complete(sentId, checkNotNull(sentAttempt.processingAttemptId), NotificationDeliveryResult.Sent("provider-2"), now.plusSeconds(1))
 
         // when
         val deleted = notificationManager.deletePendingByDeduplicationKeyPrefix(prefix)
@@ -215,8 +236,8 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("어드민 발송은 지정 기한까지 처리하고 기존 알림을 먼저 발송한다")
-    fun `어드민 대기 기한은 기존 8분 창과 독립적이다`() {
+    @DisplayName("어드민 발송은 지정 기한까지 처리하고 일반 알림은 업무 기한 없이 대기한다")
+    fun `어드민 대기 기한은 일반 알림과 독립적이다`() {
         // given
         val now = LocalDateTime.of(2026, 10, 22, 12, 0)
         append("old-comment", now.minusMinutes(9))
@@ -231,12 +252,12 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         }
 
         // when
-        val due = notificationManager.findDue(now, now.minusMinutes(8), 10)
+        val due = notificationManager.findDue(now, 10)
 
         // then
-        assertEquals(listOf("new-comment", "admin-due"), due.map { it.deduplicationKey })
-        assertEquals(2L, notificationManager.countPendingDue(now, now.minusMinutes(8)))
-        assertEquals(2L, notificationManager.countPendingExpired(now, now.minusMinutes(8)))
+        assertEquals(listOf("old-comment", "new-comment", "admin-due"), due.map { it.deduplicationKey })
+        assertEquals(3L, notificationManager.countPendingDue(now))
+        assertEquals(1L, notificationManager.countPendingExpired(now))
         assertEquals(4L, notificationManager.countPendingTotal())
     }
 

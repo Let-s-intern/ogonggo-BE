@@ -11,10 +11,10 @@
 1. 업무 기능은 수신 대상·발송 시각·템플릿 변수를 결정하고 provider를 직접 호출하지 않는다.
 2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 개별 주소 또는 FCM 토픽 하나·채널 한 개의 발송 기록이다. DIRECT 다중 기기 FCM은 설치마다, TOPIC 전체 발송은 토픽에 한 행을 만든다.
 3. `deduplication_key`는 같은 논리 알림의 재처리에도 변하지 않게 만든다. 별도 회차로 다시 보낼 때는 회차 식별자를 포함한다.
-4. 발송 결과 상태는 `PENDING → SENT | FAILED | UNKNOWN`이다. `SENT`는 provider 접수, `FAILED`는 명시적 거절, `UNKNOWN`은 접수 여부를 판단할 수 없는 결과다. `SENT`는 사용자 도착을 뜻하지 않는다.
-5. 신규 알림은 적재 시 `dispatch_expires_at`을 확정한다. 호출자가 명시한 기한을 우선하고, 없으면 예정 시각과 적재 시각 중 늦은 시각에 채널별 발송 창을 더한다. dispatcher는 이 기한 전의 due `PENDING`만 조회한다. 기한이 없는 이전 버전의 행에는 `max(scheduled_at, created_at)` 기준 8분 정책을 유지한다. 기한을 넘긴 행은 `PENDING`으로 남겨 자동 발송하지 않는다.
+4. 발송 상태는 `PENDING → PROCESSING → SENT | FAILED | UNKNOWN`이다. `SENT`는 provider 접수, `FAILED`는 명시적 거절, `UNKNOWN`은 접수 여부를 판단할 수 없는 결과다. `SENT`는 사용자 도착을 뜻하지 않는다.
+5. `dispatch_expires_at`은 업무가 지정한 발송 기한만 저장한다. null 일반 알림은 업무 만료 없이 대기하며 provider별 stale timeout은 `PROCESSING` 시작 시각에 적용한다. stale 복구는 provider 정책에 따라 제한 재시도하거나 `UNKNOWN`으로 남긴다.
 6. provider 호출·요청/응답 변환은 채널 sender가 맡고, dispatcher에는 채널별 분기 로직을 추가하지 않는다.
-7. `SENT`·`FAILED`·`UNKNOWN`은 terminal 상태로 자동 재발송하지 않고 30일 후 정리한다. `PENDING`은 자동 정리하지 않는다. 삭제된 행의 중복 키는 다시 사용할 수 있다.
+7. `SENT`·`FAILED`·`UNKNOWN`은 자동 재발송하지 않고 30일 후 정리한다. 단, stale timeout으로 남은 `UNKNOWN`은 새 시도가 시작되지 않았다면 같은 요청의 늦은 결과로 정정할 수 있다. `PENDING`과 `PROCESSING`은 자동 정리하지 않는다. 삭제된 행의 중복 키는 다시 사용할 수 있다.
 
 ```mermaid
 flowchart LR
@@ -25,38 +25,42 @@ flowchart LR
     Sender --> Provider[외부 provider]
 ```
 
-## 채널별 발송 기한
+## provider별 PROCESSING stale 처리
 
-사용자·관리자 API가 공유하는 core의 `NotificationDispatchPolicy`가 적재 시 발송 기한을 계산한다.
-각 API의 설정은 다음 키를 사용하며, 지정하지 않으면 모든 채널의 기본 발송 창은 기존처럼 8분이다.
-아래 예시는 초기 기본값을 명시한 것이다.
+일반 알림은 업무상 발송 기한을 저장하지 않는다. dispatcher는 due `PENDING`을 `PROCESSING`으로 원자적으로 선점하고, `processing_attempt_id`와 `processing_started_at`을 기록한 트랜잭션을 provider 호출 전에 끝낸다. stale timeout은 적재 시각이 아니라 provider 처리 시작 시각부터 계산한다. 관리자 일괄 발송의 명시적인 24시간 `dispatchExpiresAt`은 업무 기한으로 계속 유지한다.
+
+초기 provider별 설정은 다음과 같다.
 
 ```yaml
 ogonggo:
   notification:
-    dispatch:
-      default-window: 8m
-      windows:
-        kakao: 8m
-        email: 8m
-        fcm: 8m
+    processing:
+      nhn-alim-talk:
+        stale-timeout: 8m
+        stale-action: RETRY_WITH_IDEMPOTENCY
+        idempotency-window: 10m
+        max-recovery-retries: 1
+      email-smtp:
+        stale-timeout: 8m
+        stale-action: MARK_UNKNOWN
+      firebase-fcm:
+        stale-timeout: 8m
+        stale-action: MARK_UNKNOWN
 ```
 
-- 적용 순서는 호출자가 지정한 `dispatchExpiresAt` → `windows`의 해당 채널 값 → `default-window`다.
-- `windows`는 필요한 채널만 지정할 수 있으며, 발송 창은 양수의 Duration(`8m`, `1h` 등)이어야 한다. 0 이하이거나 해석할 수 없는 설정은 기동 시 거부한다.
-- 예정 시각이 미래면 예정 시각부터, 늦게 적재하면 적재 시각부터 발송 창을 적용한다. 계산 결과는 기존 `dispatch_expires_at` 컬럼에 저장하므로 스키마 변경은 없다.
-- 설정 변경은 재기동 후 새로 적재하는 알림에만 적용한다. 기존 기한·중복 적재된 행은 갱신하지 않는다. 기한이 없는 이전 버전 행도 채널 설정으로 소급 계산하지 않고 기존 8분 기준을 유지한다.
-- 관리자 일괄 발송이 명시하는 24시간 기한은 채널 기본값보다 우선한다. 발송 조회와 due/expired 지표는 같은 저장 기한과 만료 경계를 사용한다.
-- 발송 기한과 재시도는 별도 정책이다. `FAILED`·`UNKNOWN`의 자동 재시도는 추가하지 않는다. KAKAO의 초기 8분은 NHN의 단기 멱등성 창을 고려한 값이며, 채널별 값을 늘리면 해당 provider의 중복 억제 보장도 함께 검토한다.
+- stale timeout·행동은 provider마다 따로 설정하며 timeout과 멱등성 창은 양수 Duration이어야 한다. 설정하지 않은 action은 `MARK_UNKNOWN`이다.
+- NHN은 stale 8분이 지난 뒤 최초 처리 시각 기준 10분 멱등성 창 안이고 복구 재시도 1회를 넘지 않은 경우, 기존 deduplication key 그대로 한 번 재시도한다. 첫 시도 시각은 재시도해도 갱신하지 않는다. NHN 멱등성 응답도 end-to-end exactly-once를 뜻하지 않는다.
+- 이메일 SMTP와 FCM은 현재 stale 결과 조회 연동이 없으므로 stale 행을 `UNKNOWN`으로 끝내고 자동 재발송하지 않는다. timeout은 provider가 실패했다는 증거가 아니다. 업무 상태를 오도하지 않도록 stale 자체를 `FAILED`로 기록하지 않는다.
+- 재시도와 결과 저장은 attempt token을 조건으로 갱신한다. 재시도 뒤 도착한 이전 요청은 새 시도의 상태를 덮지 못하고, 재시도하지 않은 stale `UNKNOWN`은 같은 시도의 늦은 provider 응답으로 정정할 수 있다. 이 token은 이미 시작한 외부 요청을 취소하지는 않는다.
+- 기존 null 기한 `PENDING` 행은 배포 SQL에서 기존 8분 기한을 고정한다. 새 일반 알림은 `dispatch_expires_at`을 null로 두고, 관리자 알림처럼 업무 기한이 있는 경우에만 값을 저장한다.
 
-### 새 채널의 발송 창을 정하는 기준
+### 새 provider의 stale timeout을 정하는 기준
 
-발송 창은 대기 알림을 언제까지 발송 대상으로 조회할지 정하는 기간이다. 너무 짧으면 정상적인 대기 중에도 기한이 지나고, 너무 길면 오래된 알림이나 결과 저장에 실패한 알림이 뒤늦게 발송될 수 있다. 채널마다 provider의 중복 억제 보장과 처리 지연이 다르므로 기본값을 그대로 써도 되는지 확인한다.
+stale timeout은 `PROCESSING`을 복구 대상으로 볼 때까지 기다리는 시간이다. 정상 provider 요청과 결과 DB 저장에 걸리는 시간을 반영해야 하며, 업무상 발송 기한이나 재시도 안전성을 대신하지 않는다.
 
-1. 업무에서 허용하는 지연을 정한다. 늦으면 의미가 없는 알림은 짧게 잡고, 같은 채널에서도 별도 기한이 필요한 알림은 `dispatchExpiresAt`으로 지정한다.
-2. provider의 멱등성 키 지원 여부와 보장 기간을 확인한다. 중복 억제에 의존한다면 그 기간보다 짧게 여유를 두며, 멱등성이 없으면 발송 창만으로 중복을 막을 수 없음을 기록한다.
-3. 피크 대기 시간과 외부 호출·결과 저장 지연을 확인한다. 정상 처리 시간이 허용 기한을 넘으면 처리량을 개선하며, 창을 늘리는 것만으로 해결하지 않는다.
-4. `windows.<채널>`에 양수의 기간을 설정하고 선택 근거를 남긴다. 짧은 창은 미발송 가능성, 긴 창은 지연·재호출 가능성을 높인다는 점을 함께 판단한다.
+1. provider 요청과 결과 저장의 정상 지연을 확인해 stale timeout을 정한다.
+2. timeout 후 사실 조회 API가 있으면 조회를 우선하고, 없으면 `UNKNOWN` 또는 provider 멱등성 보장 안의 제한된 재시도만 선택한다.
+3. 중복 발송과 미발송 중 어느 쪽을 더 줄일지 정하고 provider 보장과 운영 결과를 근거로 남긴다.
 
 ## 알림 유형별 적재 방식
 
@@ -202,7 +206,7 @@ Authorization: Bearer {ogonggo-access-token}
 - 한 건 읽음은 `read_at is null` 조건으로 최초 시각만 저장한다. 모두 읽음은 요청 시각과 그 시점 조회된 ID 상한을 고정하고 같은 조건으로 갱신한다. 경계 뒤에 삽입된 새 알림은 읽지 않는다. 요청 전에 시작돼 아직 커밋하지 않은 삽입까지 엄밀한 스냅샷으로 구분하는 계약은 아니다.
 - 삭제·비공개 글의 권한은 기존 상세 API가 판단한다. 알림 스냅샷을 바꾸거나 원문 접근 권한을 우회하지 않는다.
 - dispatcher 로그에 발송 기록 ID와 `userNotificationId`를 함께 남긴다. 적재 실패 로그는 알림 종류·원글 ID·댓글 ID·예외 타입·안전한 스택만 포함하며 원본 예외 메시지와 cause를 전달하지 않는다. DB의 안전한 결과 필드로 실패를 확인한다.
-- 기존 `PENDING → SENT | FAILED | UNKNOWN`, 자동 재시도 없음 정책을 유지한다. 댓글 알림의 발송 창은 적재 당시 FCM 채널 설정을 따르며 초기 기본값은 8분이다. 기한을 지난 `PENDING`은 DB에 남고 자동 전송되지 않는다. 관리자 일괄발송의 24시간 정책은 적용하지 않는다.
+- 댓글 알림은 `PENDING → PROCESSING → SENT | FAILED | UNKNOWN`으로 처리한다. FCM의 stale timeout은 초기 기본 8분이며 provider 결과가 미확정이면 `UNKNOWN`으로 남겨 자동 재발송하지 않는다. 업무 만료는 적용하지 않고 관리자 일괄발송의 24시간 정책도 적용하지 않는다.
 
 외부 요청·응답과 오류는 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)에서 확인한다. 운영 확인용 조회 예시는 [알림함 SQL](../schema/2026-10-21-user-notifications.sql)에 있다.
 
@@ -214,7 +218,7 @@ Authorization: Bearer {ogonggo-access-token}
 4. 개발 환경에서 두 설치 수신, 알림함 1건·발송 2건, 토큰 없는 수신자와 조회·읽음 동작을 확인한다. Firebase 설정과 기존 `notificationDelivery` 활성화 상태를 확인하고 알림함 ID로 결과를 조회한다. SQL 실행·실제 기기 수신은 자동 테스트로 대체하지 않는다.
 5. 같은 core를 포함하는 관리자 API도 통상 절차로 배포한다. 관리자용 알림함 API는 추가하지 않는다.
 
-코드 롤백은 작업 1 버전으로 되돌리고 새 테이블·컬럼·행을 유지한다. 롤백 이후 댓글은 새 알림을 만들지 않고 알림함 API가 없어지므로 클라이언트 배포도 맞춰야 한다. 기존 대기열은 작업 1 발송기에서 발송될 수 있으므로 발송까지 멈추려면 기존 delivery 작업을 중지한다. 이때 미처리 건의 8분 창 경과를 확인한다. 작업 1 이전 버전으로의 롤백은 토큰 역이관 제약까지 별도로 검토한다.
+코드 롤백은 작업 1 버전으로 되돌리고 새 테이블·컬럼·행을 유지한다. 롤백 이후 댓글은 새 알림을 만들지 않고 알림함 API가 없어지므로 클라이언트 배포도 맞춰야 한다. 새 PROCESSING 상태를 모르는 이전 사용자 API로 되돌리면 해당 행을 처리하지 못하므로, 알림 dispatcher를 중지하고 현재 PROCESSING 요청을 종료하거나 stale 복구한 뒤 호환 버전으로 전환한다. UNKNOWN을 PENDING으로 일괄 변경하면 중복 발송 위험이 있으므로 수행하지 않는다. 작업 1 이전 버전으로의 롤백은 토큰 역이관 제약까지 별도로 검토한다.
 
 ## 어드민 FCM 발송
 
@@ -224,9 +228,9 @@ Authorization: Bearer {ogonggo-access-token}
 - 제목과 본문은 공백만 있는 값을 거부하며 각각 최대 100자·1,000자다. `data`는 최대 20개의 문자열 맵이며 `url`에 http(s) 이동 주소가 필요하다. FCM 예약 키·문자열이 아닌 값·직렬화한 전체 메시지 4,096바이트 초과는 400 `BAD_REQUEST`다.
 - 500명씩 대상과 토큰을 조회해 기존 `NotificationAppender`로 적재한다. 응답은 적재 완료 후 201이며 `batchId`, `targetUserCount`, `recipientUserCount`, `enqueuedCount`, `skippedNoTokenUserCount`, `skippedInactiveUserCount`를 반환한다. 적재 건수는 활성 토큰별, 나머지는 중복 제거한 회원 수다. 전체 발송은 정지·탈퇴 회원을 처음부터 제외한다.
 - `notification_batches`에 요청 관리자·시각·대상 유형·지정 ID·제목·본문·data·건수를 남긴다. 기록과 대기열은 같은 트랜잭션으로 저장하고, 0건도 기록한다. 요청 성공 로그에는 묶음 ID·관리자·대상 유형·건수만 남긴다.
-- 실제 발송은 사용자 API의 기존 FCM sender가 맡는다. 어드민은 적재 시점부터 24시간 동안 대기하고, 기존 8분 정책의 알림을 먼저 발송한다. 어드민 요청은 활성 회원마다 `ADMIN_NOTIFICATION` 알림함 한 건을 생성하고, 토큰이 없으면 `NO_ACTIVE_TOKEN`으로 푸시만 생략한다. 알림함·대기열·요청 기록은 같은 트랜잭션으로 저장하며 정지·탈퇴 회원은 알림함도 생성하지 않는다. POST마다 새 묶음을 만들며 요청 멱등 키·자동 재발송·예약 발송은 제공하지 않는다.
+- 실제 발송은 사용자 API의 기존 FCM sender가 맡는다. 어드민은 적재 시점부터 24시간 동안 대기하고, 일반 알림을 먼저 발송한다. 어드민 요청은 활성 회원마다 `ADMIN_NOTIFICATION` 알림함 한 건을 생성하고, 토큰이 없으면 `NO_ACTIVE_TOKEN`으로 푸시만 생략한다. 알림함·대기열·요청 기록은 같은 트랜잭션으로 저장하며 정지·탈퇴 회원은 알림함도 생성하지 않는다. POST마다 새 묶음을 만들며 요청 멱등 키·업무 재예약은 제공하지 않는다. stale FCM 결과는 `UNKNOWN`으로 남고 자동 재발송하지 않는다.
 - `GET /api/v1/admin/notification-batches/{batchId}`: 운영 정보와 `sentCount`, `failedCount`, `unknownCount`, `pendingCount`, `expiredCount`, `completed`, `failureReasons`를 반환한다. 사유는 `status`, `resultCode`, `count`이며 토큰·provider 응답 원문을 노출하지 않는다. `SENT`는 FCM 접수이고 단말 도착은 아니다.
-- 24시간 경계부터 남은 PENDING은 DB 상태를 바꾸지 않고 `expiredCount`로 구분한다. `completed`는 발송 대기가 없거나 대기 기한이 끝났다는 뜻이다. 직전에 시작한 provider 요청의 결과는 이후 바뀔 수 있다. UNKNOWN·기한 초과는 실패와 합치거나 자동 재시도하지 않는다.
+- 24시간 경계부터 남은 `PENDING`은 DB 상태를 바꾸지 않고 `expiredCount`로 구분한다. 아직 provider 요청 중인 `PROCESSING`은 `pendingCount`에 포함하며, 처리 중인 행이 남으면 `completed=false`다. `UNKNOWN`·기한 초과는 실패와 합치거나 자동 재발송하지 않는다.
 - 알림함은 `batch_id`와 수신자 유니크 제약으로 묶음별 한 건을 보장한다. `actorNickname`은 `오공고`, `postTitle`은 요청 제목, `preview`는 본문의 유니코드 최대 100자, `url`은 `data.url`이다. 관리자 알림의 `postId`·`commentId`는 null이며 댓글 알림은 기존 필수 식별자를 유지한다. 알림함 목록·안 읽은 개수·읽음은 기존 최근 30일 규칙을 따른다. 푸시 data에는 서버가 정한 `notificationId`·`type=ADMIN_NOTIFICATION`을 넣고 이 값까지 FCM 4,096바이트 제한에 포함한다. 푸시 실패나 기한 초과는 알림함과 읽음 상태를 바꾸지 않는다.
 - 결과는 생성 후 30일 미만까지 조회하며 만료·없는 묶음은 404 `NOTIFICATION_BATCH_NOT_FOUND`다. 이후 원본 발송 기록은 기존 정리 작업의 대상이 되고 요청 운영 기록은 남는다. 별도 작업 시스템과 요청 기록 자동 삭제는 추가하지 않았다.
 - 관리자 알림함을 배포할 때는 기존 [`2026-10-22-admin-notification-batches.sql`](../schema/2026-10-22-admin-notification-batches.sql)과 [`2026-10-24-admin-notification-inbox.sql`](../schema/2026-10-24-admin-notification-inbox.sql)을 적용한다. 새 유형·nullable 식별자·URL을 처리하는 사용자 API를 먼저 배포한 뒤 관리자 API를 배포한다. 클라이언트는 `ADMIN_NOTIFICATION`을 표시하고 `url`로 이동해야 한다. 이전 관리자 발송의 알림함은 소급 생성하지 않는다. 새 유형이 저장된 뒤에는 이를 읽지 못하는 구버전 사용자 API로 롤백하지 않는다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
@@ -358,25 +362,56 @@ DB 전용 풀은 `NotificationManager.complete`의 결과 저장을 분리한다
 ## 운영상 한계
 
 - `/actuator/metrics`는 `127.0.0.1` 요청만 허용한다. 적재·발송 카운터는 인스턴스별 누적값이고, 대기량 gauge는 공용 DB를 조회한다.
-- 카운터는 재시작 시 초기화되며, 시간대별 대시보드와 자동 경보는 구성되어 있지 않다.
-- 저장된 발송 기한(이전 버전의 null 행은 기존 8분 창)을 지난 `PENDING`은 자동 발송·정리하지 않는다. `UNKNOWN`도 자동 재발송하지 않으므로 결과 확인과 후속 판단은 운영에서 수행한다.
+- 카운터는 재시작 시 초기화된다. 아래 Slack 경고 외의 시간대별 대시보드·외부 생존 감시는 구성되어 있지 않다.
+- 업무 기한을 지난 `PENDING`과 stale 복구가 보류한 `UNKNOWN`은 자동 발송·정리하지 않는다. 결과 확인과 후속 판단은 운영에서 수행한다.
+- 이 상태 전이를 배포할 때는 `dispatch_expires_at` 컬럼이 있는 기존 알림 스키마(관리자 배치 SQL 포함)를 먼저 확인한 뒤 [`2026-10-24-notification-processing-state.sql`](../schema/2026-10-24-notification-processing-state.sql)을 사용자 API 배포 전에 적용한다. DDL과 기존 null `PENDING`의 8분 기한 backfill은 자동 롤백되지 않으므로 사전 백업·적용 여부 확인이 필요하다.
 
 ### Slack 운영 경고
 
 `notification/alert`는 정리 적체·실행 실패, 잠금 만료 위험, 발송 중단·기한 초과·결과 기록 실패,
-적재 실패, 감시 이상을 위한 8종 템플릿과 전송기를 제공한다. 자동 감지 조건은 아직 연결하지 않았다.
-감지기는 `NotificationAlertNotifier.notify`에 유형·관측 시각·상태·고정 범위·안전한 집계값을 넘긴다.
-전송은 알림 테이블·dispatcher를 거치지 않고 작업자 1개·대기열 100개의 전용 실행기에서 수행한다.
+적재 실패, 감시 이상을 위한 8종 템플릿과 전송기를 제공한다. 자동 감지는 아래 경로에 연결한다.
+
+- 결과 기록 실패: dispatcher의 `recordUnresolved` 지표 기록 시 `DELIVERY_UNRESOLVED` 경고를 제출한다.
+- 가입 적재 실패: 알림톡·환영 메일의 실행기 제출 거절·등록 실패·적재 실패 시 `ENQUEUE_FAILURE`를 제출한다. 필수 정보 누락에 따른 정상 생략은 경고하지 않는다.
+- 발송 진행 중단: `NotificationDeliveryMonitor`가 기본 30초마다 공용 DB를 확인한다. due 대기가 2분 이상 유지되고 최근 2분의 `SENT`·`FAILED`·`UNKNOWN` 수정 기록이 없거나 provider별 stale timeout을 넘긴 `PROCESSING`이 남으면 `DELIVERY_STALLED`를 제출한다. 다른 인스턴스의 확정 처리도 진행으로 인정하며 의도적으로 비활성화한 발송 작업은 제외한다.
+- 감시 조회 실패: 예외 원문 없이 `MONITORING_FAILURE`를 제출한다. 다음 감시 주기는 계속 실행한다.
+
+정리 적체·실행 누락, 실행 중 잠금 만료 위험, 새 기한 초과는 템플릿만 제공하며 자동 감지는 아직 연결하지 않았다.
+감지기는 `NotificationAlertNotifier.notify`를 통해 전송한다. 알림 테이블·dispatcher를 거치지 않고
+작업자 1개·대기열 최대 8개의 전용 실행기를 사용한다.
+
+```mermaid
+flowchart LR
+    Event[실패·진행 중단 감지] --> Gate[유형·상태별 억제 시각 확인]
+    Gate -->|최초 한 건| Queue[메모리 큐 최대 8개]
+    Gate -->|15분 내 중복| Drop[버림]
+    Queue --> Worker[전용 작업자 1개]
+    Worker --> Slack[Slack]
+    Queue -->|포화| Drop
+```
 
 `OGONGGO_NOTIFICATION_ALERTS_ENABLED=true`와 비밀값 `OGONGGO_NOTIFICATION_ALERT_WEBHOOK`을
 함께 주입해야 전송한다. 기본값은 비활성화이며 환경·인스턴스 표시는 `OGONGGO_ENVIRONMENT`와
 `HOSTNAME`을 사용한다. 주소·토큰·알림 본문·원본 예외는 경고에 넣지 않는다.
 
-같은 유형·상태·범위의 성공한 경고는 기본 15분간 억제하고, 성공한 복구 알림은 이전 발생 억제를 해제한다.
-`TEST`는 억제 기록을 바꾸지 않는다. 요청 간격은 인스턴스별 최소 1초이며,
-`ogonggo.notification.alerts.cooldown`·`min-send-interval`로 조정한다. 억제 기록은 메모리에만 있다.
-HTTP 429의 `Retry-After` 동안 전송을 중단하며 실패 메시지는 영속 보관하거나 자동 재전송하지 않는다.
-전송 결과는 `ogonggo.notification.alerts` 카운터로 기록하고, 프로세스 종료·Slack 경로 단절 감지는 외부 감시가 필요하다.
+중복 억제는 큐 제출 **전**에 수행한다. 키는 유형·상태뿐이며 범위·채널·개별 알림 ID는 키에 넣지 않는다.
+8유형 × 3상태의 고정 배열에 다음 허용 시각 24개만 보관하므로 1만 건이 몰려도 상태 크기는 증가하지 않는다.
+같은 유형·상태는 기본 15분 동안 최초 한 건만 제출하고 나머지는 버린다. 첫 경고의 범위·관측값만 남는다.
+제출 거절·전송 실패에도 억제 시각을 유지한다. 경고 유실을 허용하며 별도 저장·재시도·누적 목록은 두지 않는다.
+`FIRING`·`RESOLVED`·`TEST`는 각자 억제하고 복구가 발생 억제를 해제하지 않아 상태 반복으로 인한 폭주를 막는다.
+자동 복구 알림은 추가하지 않았다. 필요할 때 호출자가 `RESOLVED`를 명시한다.
+
+요청 간격은 인스턴스별 최소 1초이며 HTTP 429의 `Retry-After` 동안 전송을 중단한다.
+`ogonggo.notification.alerts.cooldown`·`min-send-interval`로 전송 간격을,
+`check-interval`·`stalled-after`로 감시 간격·중단 기준을 조정한다.
+감시기는 경고 활성화 시에만 전용 플랫폼 스레드 1개를 시작하고 종료 시 중단한다. 업무 스케줄러가
+막힌 경우에도 관측할 수 있도록 업무 cron과 분리하며 감시 상태는 대기 최초 관측 시각 한 개만 둔다.
+최근 확정 처리 확인은 기존 정리 인덱스(`status, updated_at, id`)를 활용하는 존재 조회다.
+
+억제는 인스턴스 메모리에만 있으므로 인스턴스 수만큼 경고가 올 수 있고 재기동 시 초기화된다.
+15분 이후에도 장애가 지속되면 새 한 건을 허용한다. 클러스터 전체 단일 전송을 보장하지 않는다.
+억제·거절·전송 결과는 `ogonggo.notification.alerts` 카운터로 기록한다.
+프로세스 종료·전체 감시기 정지·Slack 경로 단절 감지는 외부 감시가 필요하다.
 
 ## 패키지 컨벤션
 
@@ -395,7 +430,7 @@ HTTP 429의 `Retry-After` 동안 전송을 중단하며 실패 메시지는 영�
 - [ ] 유실 허용 여부와 적재 방식(커밋 후 / 업무 트랜잭션 / 예약형)을 정했는가?
 - [ ] 수신 대상·예정 시각·취소/변경 규칙을 업무 기능에 두었는가?
 - [ ] 안정적인 `deduplication_key`, 채널, template code, payload, 수신 주소를 준비했는가?
-- [ ] 새 채널의 발송 창을 허용 지연·provider 멱등성·처리 시간에 근거해 정했는가?
+- [ ] 새 provider의 stale timeout과 stale 복구 action을 정상 처리 지연·조회 API·멱등성 보장에 근거해 정했는가?
 - [ ] 대상 선정·payload·중복 실행·트랜잭션 경계 테스트를 작성했는가?
 - [ ] provider 성공/실패와 미등록 채널 처리를 테스트했는가?
 - [ ] scheduler나 스키마가 필요하면 작업 행·enabled 상태·SQL 배포 순서를 확인했는가?
@@ -409,13 +444,13 @@ HTTP 429의 `Retry-After` 동안 전송을 중단하며 실패 메시지는 영�
 - 스크랩 리마인드 scheduler는 템플릿 승인 전까지 코드 등록이 보류되어 있어 현재 실행되지 않는다.
 - 템플릿 코드는 알림 행의 `template_code`를 사용한다. `nhn.templateCode`는 호환용 설정이다.
 - NHN 멱등성은 provider의 단기 중복 억제일 뿐 애플리케이션 재시도 정책이 아니다. provider 접수 이후 사용자 도착 여부도 현재 추적하지 않는다.
-- 신규 알림은 적재 시 채널 설정으로 확정한 `dispatch_expires_at` 전까지 dispatcher가 읽고, 어드민 발송은 명시한 24시간 기한을 따른다. 기본 8분은 NHN 멱등성 10분보다 2분 짧게 잡았던 기존 값을 유지한 것이다. 늦게 적재된 D-1 알림은 적재 시각부터 처리 창을 적용한다. 기한이 없는 이전 버전 행만 `max(scheduled_at, created_at)` 기준 8분을 사용하며, 기한이 지난 행은 상태를 바꾸거나 삭제하지 않고 남겨 운영 조회 대상으로 둔다.
-- dispatcher 전체 ShedLock은 최대 90초다. 실행이 끝날 때 60초 이상 걸렸으면 경고 로그를 남기며, 반복되면 lock 시간을 늘릴 운영 신호로 본다. 행별 claim은 없으므로 만료된 lock과 장시간 정지 상황까지 수학적으로 중복 발송을 막는 보장은 아니다.
+- 일반 알림은 업무 기한 없이 due `PENDING`으로 대기한다. 어드민 발송은 명시한 24시간 `dispatch_expires_at`을 유지한다. provider 요청을 시작할 때 `PROCESSING`으로 선점하고, 초기 설정은 세 provider 모두 8분 stale timeout을 적용한다. stale 상태는 provider 요청이 실패했다는 증거가 아니다.
+- dispatcher 전체 ShedLock은 최대 90초다. DB의 상태 전이는 별도 attempt ID로 fencing하므로 만료된 lock 중복 claim과 새 시도 상태의 덮어쓰기를 막는다. 재시도 없는 stale `UNKNOWN`은 같은 요청의 늦은 결과로 정정할 수 있다. 이미 진행 중인 외부 요청을 취소하거나 NHN 외 provider의 end-to-end exactly-once를 보장하지는 않는다.
 
 ## 기준 코드
 
 - 적재 계약: [NotificationAppender](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/intake/implement/NotificationAppender.kt), [NotificationAppendDto](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/intake/implement/dto/NotificationAppendDto.kt)
-- 발송 기한: [NotificationDispatchPolicy](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/intake/implement/NotificationDispatchPolicy.kt), [NotificationDispatchProperties](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/intake/implement/NotificationDispatchProperties.kt)
+- provider stale 복구: [NotificationManager](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/delivery/implement/NotificationManager.kt), [NotificationProcessingProperties](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/delivery/implement/NotificationProcessingProperties.kt), [NotificationProcessingPolicy](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/notification/delivery/implement/NotificationProcessingPolicy.kt)
 - 가입 이벤트: [UserSignUpAlimTalkEventListener](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/signup/UserSignUpAlimTalkEventListener.kt), [UserSignUpEmailEventListener](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/signup/UserSignUpEmailEventListener.kt)
 - 예약형 적재: [JobBookmarkReminderEnqueueService](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/business/JobBookmarkReminderEnqueueService.kt), [JobBookmarkReminderScheduler](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/reminder/JobBookmarkReminderScheduler.kt)
 - 발송 확장: [NotificationDispatcher](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationDispatcher.kt), [NotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationSender.kt), [KakaoNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/alimtalk/KakaoNotificationSender.kt), [EmailNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/email/EmailNotificationSender.kt)
