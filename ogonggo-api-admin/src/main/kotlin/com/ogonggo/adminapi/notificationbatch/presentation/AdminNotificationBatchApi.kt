@@ -24,8 +24,9 @@ interface AdminNotificationBatchApi {
     @Operation(operationId = "createNotificationBatch", summary = "FCM 발송 요청", description = """
         USER_IDS는 최대 1000개 ID의 중복을 제거하며 없는 회원이 있으면 전체 요청을 거부합니다. ALL은 전체 활성 회원을 대상으로 하며 userIds를 보내지 않습니다.
         활성 토큰마다 발송 한 건을 적재합니다. enqueuedCount는 토큰별 발송 건수이고 나머지 건수는 회원 수입니다. data.url은 http(s) URL이어야 합니다.
-        적재와 요청 기록을 함께 커밋한 뒤 응답합니다. 실제 발송은 사용자 API의 기존 발송 작업이 24시간 안에 처리합니다.
-        POST마다 새로운 발송을 생성하며 자동 재시도·중복 클릭 방지는 제공하지 않습니다. 사용자 알림함에는 추가하지 않습니다.
+        활성 회원마다 토큰 유무와 관계없이 사용자 알림함 한 건을 생성합니다. 알림함·발송 적재·요청 기록을 함께 커밋한 뒤 응답합니다.
+        알림함은 ADMIN_NOTIFICATION으로 제목·본문 미리보기 최대 100자·data.url을 보관합니다. 실제 발송은 사용자 API의 기존 발송 작업이 24시간 안에 처리합니다.
+        푸시 data의 notificationId·type은 서버가 설정하며 payload 크기 제한에 포함합니다. POST마다 새로운 알림을 생성하며 자동 재시도·중복 클릭 방지는 제공하지 않습니다.
     """)
     @ApiResponses(value = [
         ApiResponse(responseCode = "201", description = "적재 및 운영 기록 저장 완료", useReturnTypeSchema = true),

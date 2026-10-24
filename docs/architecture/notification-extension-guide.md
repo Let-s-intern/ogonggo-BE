@@ -189,11 +189,12 @@ Authorization: Bearer {ogonggo-access-token}
 - 제목과 본문은 공백만 있는 값을 거부하며 각각 최대 100자·1,000자다. `data`는 최대 20개의 문자열 맵이며 `url`에 http(s) 이동 주소가 필요하다. FCM 예약 키·문자열이 아닌 값·직렬화한 전체 메시지 4,096바이트 초과는 400 `BAD_REQUEST`다.
 - 500명씩 대상과 토큰을 조회해 기존 `NotificationAppender`로 적재한다. 응답은 적재 완료 후 201이며 `batchId`, `targetUserCount`, `recipientUserCount`, `enqueuedCount`, `skippedNoTokenUserCount`, `skippedInactiveUserCount`를 반환한다. 적재 건수는 활성 토큰별, 나머지는 중복 제거한 회원 수다. 전체 발송은 정지·탈퇴 회원을 처음부터 제외한다.
 - `notification_batches`에 요청 관리자·시각·대상 유형·지정 ID·제목·본문·data·건수를 남긴다. 기록과 대기열은 같은 트랜잭션으로 저장하고, 0건도 기록한다. 요청 성공 로그에는 묶음 ID·관리자·대상 유형·건수만 남긴다.
-- 실제 발송은 사용자 API의 기존 FCM sender가 맡는다. 어드민은 적재 시점부터 24시간 동안 대기하고, 기존 8분 정책의 알림을 먼저 발송한다. 어드민 요청은 사용자 알림함에 추가하지 않는다. POST마다 새 묶음을 만들며 요청 멱등 키·자동 재발송·예약 발송은 제공하지 않는다.
+- 실제 발송은 사용자 API의 기존 FCM sender가 맡는다. 어드민은 적재 시점부터 24시간 동안 대기하고, 기존 8분 정책의 알림을 먼저 발송한다. 어드민 요청은 활성 회원마다 `ADMIN_NOTIFICATION` 알림함 한 건을 생성하고, 토큰이 없으면 `NO_ACTIVE_TOKEN`으로 푸시만 생략한다. 알림함·대기열·요청 기록은 같은 트랜잭션으로 저장하며 정지·탈퇴 회원은 알림함도 생성하지 않는다. POST마다 새 묶음을 만들며 요청 멱등 키·자동 재발송·예약 발송은 제공하지 않는다.
 - `GET /api/v1/admin/notification-batches/{batchId}`: 운영 정보와 `sentCount`, `failedCount`, `unknownCount`, `pendingCount`, `expiredCount`, `completed`, `failureReasons`를 반환한다. 사유는 `status`, `resultCode`, `count`이며 토큰·provider 응답 원문을 노출하지 않는다. `SENT`는 FCM 접수이고 단말 도착은 아니다.
 - 24시간 경계부터 남은 PENDING은 DB 상태를 바꾸지 않고 `expiredCount`로 구분한다. `completed`는 발송 대기가 없거나 대기 기한이 끝났다는 뜻이다. 직전에 시작한 provider 요청의 결과는 이후 바뀔 수 있다. UNKNOWN·기한 초과는 실패와 합치거나 자동 재시도하지 않는다.
+- 알림함은 `batch_id`와 수신자 유니크 제약으로 묶음별 한 건을 보장한다. `actorNickname`은 `오공고`, `postTitle`은 요청 제목, `preview`는 본문의 유니코드 최대 100자, `url`은 `data.url`이다. 관리자 알림의 `postId`·`commentId`는 null이며 댓글 알림은 기존 필수 식별자를 유지한다. 알림함 목록·안 읽은 개수·읽음은 기존 최근 30일 규칙을 따른다. 푸시 data에는 서버가 정한 `notificationId`·`type=ADMIN_NOTIFICATION`을 넣고 이 값까지 FCM 4,096바이트 제한에 포함한다. 푸시 실패나 기한 초과는 알림함과 읽음 상태를 바꾸지 않는다.
 - 결과는 생성 후 30일 미만까지 조회하며 만료·없는 묶음은 404 `NOTIFICATION_BATCH_NOT_FOUND`다. 이후 원본 발송 기록은 기존 정리 작업의 대상이 되고 요청 운영 기록은 남는다. 별도 작업 시스템과 요청 기록 자동 삭제는 추가하지 않았다.
-- 배포 전에 [`2026-10-22-admin-notification-batches.sql`](../schema/2026-10-22-admin-notification-batches.sql)을 적용하고, 24시간 정책을 읽는 사용자 API를 먼저 교체한 뒤 관리자 API를 배포한다. 구버전으로 롤백하면 어드민 대기 건도 8분 제한을 받으므로 신규 요청을 중단하고 남은 대기 건을 확인한다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
+- 관리자 알림함을 배포할 때는 기존 [`2026-10-22-admin-notification-batches.sql`](../schema/2026-10-22-admin-notification-batches.sql)과 [`2026-10-24-admin-notification-inbox.sql`](../schema/2026-10-24-admin-notification-inbox.sql)을 적용한다. 새 유형·nullable 식별자·URL을 처리하는 사용자 API를 먼저 배포한 뒤 관리자 API를 배포한다. 클라이언트는 `ADMIN_NOTIFICATION`을 표시하고 `url`로 이동해야 한다. 이전 관리자 발송의 알림함은 소급 생성하지 않는다. 새 유형이 저장된 뒤에는 이를 읽지 못하는 구버전 사용자 API로 롤백하지 않는다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
 
 ## 구현 규칙
 

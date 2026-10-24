@@ -92,6 +92,7 @@ internal class CommentNotificationEventListener(
             val title = when (type) {
                 UserNotificationType.SIDE_STUDY_COMMENT_REPLY -> "내 댓글에 답글이 달렸어요"
                 UserNotificationType.CONCERN_COMMENT -> "내 고민에 댓글이 달렸어요"
+                UserNotificationType.ADMIN_NOTIFICATION -> error("댓글 이벤트는 관리자 알림을 생성하지 않습니다.")
             }
             val payload = objectMapper.writeValueAsString(
                 mapOf(

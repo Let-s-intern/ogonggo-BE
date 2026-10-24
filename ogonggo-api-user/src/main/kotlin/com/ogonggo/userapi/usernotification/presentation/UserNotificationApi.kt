@@ -22,7 +22,7 @@ import org.springframework.http.ResponseEntity
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
 interface UserNotificationApi {
 
-    @Operation(operationId = "listMyNotifications", summary = "내 알림 목록 조회", description = "최근 30일 알림을 생성 시각·ID 내림차순으로 조회합니다. nextCursor를 그대로 다음 요청에 사용합니다. 기본 20건, 최대 100건입니다.")
+    @Operation(operationId = "listMyNotifications", summary = "내 알림 목록 조회", description = "최근 30일 댓글·관리자 알림을 생성 시각·ID 내림차순으로 조회합니다. 관리자 알림은 ADMIN_NOTIFICATION이며 postId·commentId는 null, 이동 주소는 url입니다. 토큰·푸시 결과와 무관하게 보관합니다. nextCursor를 그대로 다음 요청에 사용합니다. 기본 20건, 최대 100건입니다.")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
         ApiResponse(responseCode = "400", description = "BAD_REQUEST: 잘못된 cursor·size 또는 식별자", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),

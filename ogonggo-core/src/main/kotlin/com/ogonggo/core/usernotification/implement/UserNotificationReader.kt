@@ -16,6 +16,7 @@ class UserNotificationReader internal constructor(private val repository: UserNo
                 actorProfileImageUrl = it.actorProfileImageUrl, postTitle = it.postTitle,
                 preview = it.preview, postId = it.postId, commentId = it.commentId,
                 readAt = it.readAt, createdAt = it.createdAt,
+                url = it.url,
             )
         }
     }

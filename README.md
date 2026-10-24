@@ -94,7 +94,7 @@ If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07
 다중 기기 FCM 토큰으로 전환할 때는 토큰 등록·해제와 기존 알림 발송을 잠시 중단하고 `docs/schema/2026-10-21-user-fcm-tokens.sql`을 적용한 뒤 사용자 API를 배포합니다. 기존 토큰의 중복 소유는 이관하지 않으며, 이전 `users.fcm_token`은 이관 원본으로 유지합니다. 쓰기 재개 후에는 원본이 최신 상태가 아니므로 단순 버전 롤백을 할 수 없습니다. [이관·배포 절차](docs/architecture/notification-extension-guide.md#다중-기기-토큰-이관배포)를 따릅니다.
 댓글 자동 알림·알림함을 배포할 때는 작업 1 이후 `docs/schema/2026-10-21-user-notifications.sql`을 먼저 적용합니다. 최근 30일 조회·읽음 API와 같은 트랜잭션의 알림 적재를 제공합니다. [알림함 배포 절차](docs/architecture/notification-extension-guide.md#댓글-알림-이관배포)를 참고합니다.
 
-어드민 FCM 발송 기능은 `docs/schema/2026-10-22-admin-notification-batches.sql`을 먼저 적용하고 사용자 API, 관리자 API 순서로 배포합니다. [어드민 발송·운영 기록](docs/architecture/notification-extension-guide.md#어드민-fcm-발송)을 참고합니다.
+어드민 FCM 발송과 사용자 알림함을 함께 제공하려면 `docs/schema/2026-10-22-admin-notification-batches.sql`과 `docs/schema/2026-10-24-admin-notification-inbox.sql`을 먼저 적용하고 사용자 API, 관리자 API 순서로 배포합니다. 활성 회원은 토큰이 없어도 알림함에 남습니다. [어드민 발송·운영 기록](docs/architecture/notification-extension-guide.md#어드민-fcm-발송)을 참고합니다.
 
 다중 기기·댓글 알림·알림함의 정책과 동작 흐름은 [알림 추가 가이드](docs/architecture/notification-extension-guide.md)에서 확인할 수 있습니다.
 

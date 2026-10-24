@@ -1,6 +1,7 @@
 package com.ogonggo.core.usernotification.implement
 
 import com.ogonggo.core.usernotification.domain.UserNotification
+import com.ogonggo.core.usernotification.domain.UserNotificationType
 import com.ogonggo.core.usernotification.implement.dto.UserNotificationAppendDto
 import com.ogonggo.core.usernotification.persistence.UserNotificationJpaRepository
 import org.springframework.stereotype.Component
@@ -11,7 +12,12 @@ class UserNotificationAppender internal constructor(private val repository: User
     /** 재처리면 null. 동시 insert 경합은 DB 제약으로 전체 업무 트랜잭션을 롤백한다. */
     @Transactional
     fun append(dto: UserNotificationAppendDto): Long? {
-        if (repository.existsByTypeAndCommentIdAndRecipientUserId(dto.type, dto.commentId, dto.recipientUserId)) return null
+        val exists = if (dto.type == UserNotificationType.ADMIN_NOTIFICATION) {
+            repository.existsByBatchIdAndRecipientUserId(checkNotNull(dto.batchId), dto.recipientUserId)
+        } else {
+            repository.existsByTypeAndCommentIdAndRecipientUserId(dto.type, checkNotNull(dto.commentId), dto.recipientUserId)
+        }
+        if (exists) return null
         val notification = repository.saveAndFlush(
             UserNotification(
                 recipientUserId = dto.recipientUserId,
@@ -24,6 +30,8 @@ class UserNotificationAppender internal constructor(private val repository: User
                 postTitle = dto.postTitle,
                 preview = dto.preview,
                 pushSkipReason = dto.pushSkipReason,
+                batchId = dto.batchId,
+                url = dto.url,
             ),
         )
         return checkNotNull(notification.id)

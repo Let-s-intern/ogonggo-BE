@@ -11,6 +11,7 @@ import com.ogonggo.core.usernotification.persistence.UserNotificationQueryReposi
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -186,6 +187,35 @@ internal class UserNotificationPersistenceTest @Autowired constructor(
         // when, then
         assertThrows(DataIntegrityViolationException::class.java) {
             repository.saveAndFlush(UserNotification(10, UserNotificationType.CONCERN_COMMENT, 30, 100, 1, "회원", null, "제목", "미리보기", null))
+        }
+    }
+
+    @Test
+    @DisplayName("관리자 알림은 발송 묶음과 수신자별 한 건이며 다른 묶음·회원은 독립적이다")
+    fun `댓글이 없는 관리자 알림의 중복도 저장소가 방지한다`() {
+        // given
+        val dto = UserNotificationAppendDto(
+            10, UserNotificationType.ADMIN_NOTIFICATION, 42, null, null, "오공고", null, "제목", "본문", null,
+            "00000000-0000-0000-0000-000000000001", "https://www.ogonggo.co.kr",
+        )
+        val id = checkNotNull(appender.append(dto))
+
+        // when
+        val duplicate = appender.append(dto)
+        val anotherBatch = appender.append(dto.copy(batchId = "00000000-0000-0000-0000-000000000002"))
+        val anotherUser = appender.append(dto.copy(recipientUserId = 20))
+
+        // then
+        assertNull(duplicate)
+        assertNotNull(anotherBatch)
+        assertNotNull(anotherUser)
+        assertEquals(3, repository.count())
+        assertEquals(dto.url, reader.readPage(10, SINCE, null, 20).single { it.id == id }.url)
+        assertThrows(DataIntegrityViolationException::class.java) {
+            repository.saveAndFlush(UserNotification(
+                dto.recipientUserId, dto.type, dto.actorUserId, null, null, dto.actorNickname,
+                null, dto.postTitle, dto.preview, null, dto.batchId, dto.url,
+            ))
         }
     }
 

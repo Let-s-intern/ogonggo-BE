@@ -58,7 +58,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
     @BeforeEach
     fun reset() {
         clock.current = START
-        listOf("notifications", "notification_batches", "user_fcm_tokens", "users").forEach { jdbc.update("delete from $it") }
+        listOf("notifications", "user_notifications", "notification_batches", "user_fcm_tokens", "users").forEach { jdbc.update("delete from $it") }
     }
 
     @Test
@@ -91,7 +91,15 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertEquals(URL, mapper.readTree(record["data_json"].toString())["url"].asText())
         val rows = jdbc.queryForList("select * from notifications where batch_id = ?", id)
         assertEquals(setOf("desktop", "mobile"), rows.map { it["recipient_address"] }.toSet())
-        assertTrue(rows.all { it["user_notification_id"] == null })
+        val inboxRows = jdbc.queryForList("select * from user_notifications where batch_id = ?", id)
+        assertEquals(setOf(receiver, noToken), inboxRows.map { (it["recipient_user_id"] as Number).toLong() }.toSet())
+        val inboxId = (inboxRows.single { (it["recipient_user_id"] as Number).toLong() == receiver }["id"] as Number).toLong()
+        assertTrue(rows.all { (it["user_notification_id"] as Number).toLong() == inboxId })
+        assertTrue(rows.all { mapper.readTree(it["payload_json"].toString()).at("/data/notificationId").asText() == inboxId.toString() })
+        assertTrue(rows.all { mapper.readTree(it["payload_json"].toString()).at("/data/type").asText() == "ADMIN_NOTIFICATION" })
+        assertTrue(inboxRows.all { it["type"] == "ADMIN_NOTIFICATION" && it["post_id"] == null && it["comment_id"] == null })
+        assertTrue(inboxRows.all { it["actor_nickname"] == "오공고" && it["post_title"] == "제목" && it["preview"] == "본문" && it["url"] == URL })
+        assertEquals("NO_ACTIVE_TOKEN", inboxRows.single { (it["recipient_user_id"] as Number).toLong() == noToken }["push_skip_reason"])
         assertTrue(rows.all { mapper.readTree(it["payload_json"].toString()).at("/data/url").asText() == URL })
         val result = result(id)
         assertEquals(2, result["pendingCount"].asInt())
@@ -121,6 +129,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertEquals(500, batch["skippedNoTokenUserCount"].asInt())
         assertEquals(0, batch["skippedInactiveUserCount"].asInt())
         assertEquals(setOf(ids.first(), ids.last()), jdbc.queryForList("select recipient_user_id from notifications", Long::class.java).toSet())
+        assertEquals(ids.toSet(), jdbc.queryForList("select recipient_user_id from user_notifications", Long::class.java).toSet())
     }
 
     @Test
@@ -138,6 +147,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertEquals(1, result["skippedNoTokenUserCount"].asInt())
         assertTrue(result["completed"].asBoolean())
         assertEquals(0, result["pendingCount"].asInt())
+        assertEquals(1, jdbc.queryForObject("select count(*) from user_notifications where recipient_user_id = ?", Int::class.java, user))
         jdbc.update("delete from users")
         val empty = create(request(null, "ALL"))
         assertEquals(0, empty["targetUserCount"].asInt())
@@ -206,6 +216,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
             .content(mapper.writeValueAsBytes(request(listOf(user, Long.MAX_VALUE)))))
             .andExpect(status().isNotFound).andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
         assertEquals(0, jdbc.queryForObject("select count(*) from notifications", Int::class.java))
+        assertEquals(0, jdbc.queryForObject("select count(*) from user_notifications", Int::class.java))
         jdbc.execute("alter table notification_batches add constraint reject_test_title check (title <> 'rollback-fixture')")
         try {
             mvc.perform(admin(post(PATH)).contentType(MediaType.APPLICATION_JSON)
@@ -213,6 +224,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
                 .andExpect(status().isInternalServerError)
             assertEquals(0, jdbc.queryForObject("select count(*) from notifications", Int::class.java))
             assertEquals(0, jdbc.queryForObject("select count(*) from notification_batches", Int::class.java))
+            assertEquals(0, jdbc.queryForObject("select count(*) from user_notifications", Int::class.java))
         } finally {
             jdbc.execute("alter table notification_batches drop constraint reject_test_title")
         }
@@ -259,6 +271,52 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         }
         assertEquals(0, jdbc.queryForObject("select count(*) from notification_batches", Int::class.java))
         assertEquals(0, jdbc.queryForObject("select count(*) from notifications", Int::class.java))
+    }
+
+    @Test
+    @DisplayName("같은 내용을 다시 발송해도 새 묶음의 알림함을 만들고 미리보기는 유니코드 100자로 보관한다")
+    fun `관리자 메시지는 묶음별로 알림함에 남고 푸시 식별자를 덮어쓸 수 없다`() {
+        // given
+        val receiver = user()
+        register(receiver, "receiver-token")
+        val body = "가".repeat(110)
+        val request = request(listOf(receiver)) + mapOf("body" to body, "data" to mapOf("url" to URL, "notificationId" to "fake", "type" to "fake"))
+
+        // when
+        val batches = List(2) { create(request)["batchId"].asText() }
+
+        // then
+        val rows = jdbc.queryForList("select * from user_notifications where recipient_user_id = ?", receiver)
+        assertEquals(batches.toSet(), rows.map { it["batch_id"].toString() }.toSet())
+        assertTrue(rows.all { it["preview"] == "가".repeat(100) })
+        val deliveries = jdbc.queryForList("select * from notifications where recipient_user_id = ?", receiver)
+        assertEquals(2, deliveries.size)
+        deliveries.forEach { delivery ->
+            val payload = mapper.readTree(delivery["payload_json"].toString())
+            assertEquals(body, payload["body"].asText())
+            assertEquals(delivery["user_notification_id"].toString(), payload.at("/data/notificationId").asText())
+            assertEquals("ADMIN_NOTIFICATION", payload.at("/data/type").asText())
+        }
+    }
+
+    @Test
+    @DisplayName("알림함 식별자로 FCM 크기 제한을 넘으면 알림함과 발송 요청을 모두 롤백한다")
+    fun `시스템이 추가한 데이터도 FCM payload 크기에 포함한다`() {
+        // given
+        val receiver = user()
+        register(receiver, "receiver-token")
+        val emptyData = mapOf("url" to URL, "padding" to "")
+        val size = mapper.writeValueAsBytes(mapOf("notification" to mapOf("title" to "제목", "body" to "본문"), "data" to emptyData)).size
+        val request = request(listOf(receiver)) + ("data" to (emptyData + ("padding" to "x".repeat(4096 - size))))
+
+        // when
+        val response = mvc.perform(admin(post(PATH)).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(request)))
+
+        // then
+        response.andExpect(status().isBadRequest)
+        listOf("user_notifications", "notifications", "notification_batches").forEach {
+            assertEquals(0, jdbc.queryForObject("select count(*) from $it", Int::class.java))
+        }
     }
 
     private fun request(userIds: List<Long>?, type: String = "USER_IDS"): Map<String, Any> = buildMap {

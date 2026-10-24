@@ -96,7 +96,11 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(item.has("isRead"))
         assertTrue(item.at("/actorProfileImageUrl/nullable").asBoolean())
         assertTrue(document.at("/components/schemas/UserNotificationPageResponse/properties/nextCursor/nullable").asBoolean())
-        assertEquals(setOf("SIDE_STUDY_COMMENT_REPLY", "CONCERN_COMMENT"), item.at("/type/enum").map { it.asText() }.toSet())
+        assertEquals(setOf("SIDE_STUDY_COMMENT_REPLY", "CONCERN_COMMENT", "ADMIN_NOTIFICATION"), item.at("/type/enum").map { it.asText() }.toSet())
+        listOf("postId", "commentId", "url").forEach { field ->
+            assertTrue(item.at("/$field/nullable").asBoolean(), field)
+        }
+        assertTrue(item.at("/url/description").asText().contains("관리자 알림"))
     }
 
     @Test

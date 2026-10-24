@@ -17,6 +17,7 @@ import java.time.LocalDateTime
 enum class UserNotificationType(override val code: Int, override val desc: String) : EnumField {
     SIDE_STUDY_COMMENT_REPLY(1, "모집글 댓글의 새 답글"),
     CONCERN_COMMENT(2, "취준고민의 새 댓글"),
+    ADMIN_NOTIFICATION(3, "관리자 알림"),
 }
 
 enum class UserNotificationPushSkipReason(override val code: Int, override val desc: String) : EnumField {
@@ -32,6 +33,7 @@ enum class UserNotificationPushSkipReason(override val code: Int, override val d
             name = "uk_user_notification_event",
             columnNames = ["type", "comment_id", "recipient_user_id"],
         ),
+        UniqueConstraint(name = "uk_user_notification_batch_recipient", columnNames = ["batch_id", "recipient_user_id"]),
     ],
     indexes = [
         Index(name = "idx_user_notification_recipient_created_id", columnList = "recipient_user_id, created_at, id"),
@@ -45,10 +47,10 @@ internal class UserNotification(
     val type: UserNotificationType,
     @Column(name = "actor_user_id", nullable = false)
     val actorUserId: Long,
-    @Column(name = "post_id", nullable = false)
-    val postId: Long,
-    @Column(name = "comment_id", nullable = false)
-    val commentId: Long,
+    @Column(name = "post_id")
+    val postId: Long?,
+    @Column(name = "comment_id")
+    val commentId: Long?,
     @Column(name = "actor_nickname", nullable = false, length = 100)
     val actorNickname: String,
     @Column(name = "actor_profile_image_url", length = 2048)
@@ -60,9 +62,24 @@ internal class UserNotification(
     @Enumerated(EnumType.STRING)
     @Column(name = "push_skip_reason", length = 30)
     val pushSkipReason: UserNotificationPushSkipReason?,
+    @Column(name = "batch_id", length = 36)
+    val batchId: String? = null,
+    @Column(columnDefinition = "text")
+    val url: String? = null,
 ) : BaseTimeEntity() {
     init {
-        require(recipientUserId > 0 && actorUserId > 0 && postId > 0 && commentId > 0)
+        require(recipientUserId > 0 && actorUserId > 0)
+        when (type) {
+            UserNotificationType.ADMIN_NOTIFICATION -> {
+                require(!batchId.isNullOrBlank() && batchId.length <= 36)
+                require(postId == null && commentId == null)
+                require(!url.isNullOrBlank())
+            }
+            UserNotificationType.SIDE_STUDY_COMMENT_REPLY, UserNotificationType.CONCERN_COMMENT -> {
+                require(postId != null && postId > 0 && commentId != null && commentId > 0)
+                require(batchId == null && url == null)
+            }
+        }
         require(actorNickname.isNotBlank() && actorNickname.length <= 100)
         require(postTitle.isNotBlank() && postTitle.length <= 255)
         require(preview.codePointCount(0, preview.length) <= 100)

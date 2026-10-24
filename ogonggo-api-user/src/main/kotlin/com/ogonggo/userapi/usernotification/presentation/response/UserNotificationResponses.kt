@@ -11,17 +11,18 @@ data class UserNotificationResponse(
     val type: UserNotificationType,
     val actorNickname: String,
     @field:Schema(nullable = true) val actorProfileImageUrl: String?,
-    val postTitle: String,
-    val preview: String,
-    val postId: Long,
-    val commentId: Long,
+    @field:Schema(description = "댓글 알림의 원글 제목 또는 관리자 메시지 제목") val postTitle: String,
+    @field:Schema(description = "댓글 또는 관리자 메시지 본문의 미리보기. 유니코드 최대 100자") val preview: String,
+    @field:Schema(nullable = true, description = "댓글 알림의 원글 ID. 관리자 알림은 null") val postId: Long?,
+    @field:Schema(nullable = true, description = "댓글 알림의 댓글 ID. 관리자 알림은 null") val commentId: Long?,
     val isRead: Boolean,
     @field:Schema(description = "Asia/Seoul 기준 ISO-8601 시각 (offset 없음)") val createdAt: LocalDateTime,
+    @field:Schema(nullable = true, description = "관리자 알림의 이동 URL. 댓글 알림은 null") val url: String?,
 ) {
     companion object {
         fun from(item: UserNotificationDto) = UserNotificationResponse(
             item.id, item.type, item.actorNickname, item.actorProfileImageUrl, item.postTitle,
-            item.preview, item.postId, item.commentId, item.readAt != null, item.createdAt,
+            item.preview, item.postId, item.commentId, item.readAt != null, item.createdAt, item.url,
         )
     }
 }

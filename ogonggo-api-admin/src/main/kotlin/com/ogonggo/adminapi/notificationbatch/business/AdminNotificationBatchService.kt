@@ -15,6 +15,10 @@ import com.ogonggo.core.notificationbatch.implement.dto.NotificationBatchResultD
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.userfcmtoken.implement.UserFcmTokenRecipientReader
+import com.ogonggo.core.usernotification.domain.UserNotificationPushSkipReason
+import com.ogonggo.core.usernotification.domain.UserNotificationType
+import com.ogonggo.core.usernotification.implement.UserNotificationAppender
+import com.ogonggo.core.usernotification.implement.dto.UserNotificationAppendDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.net.URI
@@ -28,22 +32,18 @@ class AdminNotificationBatchService(
     private val notifications: NotificationAppender,
     private val batches: NotificationBatchAppender,
     private val batchReader: NotificationBatchReader,
+    private val inbox: UserNotificationAppender,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
 ) {
-    /** 적재와 요청 기록을 함께 커밋한다. provider 호출은 사용자 API의 기존 dispatcher가 맡는다. */
+    /** 알림함·발송 적재·요청 기록을 함께 커밋한다. provider 호출은 사용자 API의 기존 dispatcher가 맡는다. */
     @Transactional
     fun create(adminUserId: Long, command: CreateNotificationBatchCommand): NotificationBatchDto {
         val userIds = validateTargets(command)
         validateData(command.data)
-        val payload = objectMapper.writeValueAsString(mapOf(
-            "title" to command.title, "body" to command.body, "data" to command.data,
-        ))
-        // 문자열 길이와 별개로 한글·이모지와 data를 포함한 발송 payload 크기도 제한한다.
-        val messageBytes = objectMapper.writeValueAsBytes(mapOf(
-            "notification" to mapOf("title" to command.title, "body" to command.body), "data" to command.data,
-        ))
-        if (messageBytes.size > 4096) throw InvalidRequestFieldException("data", "제목·본문·data를 합친 FCM payload는 4096바이트 이하여야 합니다.")
+        notificationPayload(command, command.data)
+        val previewLength = minOf(100, command.body.codePointCount(0, command.body.length))
+        val preview = command.body.substring(0, command.body.offsetByCodePoints(0, previewLength))
 
         val now = LocalDateTime.now(clock)
         val expiresAt = now.plusHours(24)
@@ -62,14 +62,26 @@ class AdminNotificationBatchService(
             val pending = page.flatMap { recipient ->
                 when {
                     recipient.status != UserStatus.ACTIVE -> { inactiveCount++; emptyList() }
-                    recipient.tokens.isEmpty() -> { noTokenCount++; emptyList() }
                     else -> {
-                        recipientCount++
+                        val inboxId = checkNotNull(inbox.append(UserNotificationAppendDto(
+                            recipientUserId = recipient.userId,
+                            type = UserNotificationType.ADMIN_NOTIFICATION,
+                            actorUserId = adminUserId, postId = null, commentId = null,
+                            actorNickname = "오공고", actorProfileImageUrl = null,
+                            postTitle = command.title, preview = preview,
+                            pushSkipReason = if (recipient.tokens.isEmpty()) UserNotificationPushSkipReason.NO_ACTIVE_TOKEN else null,
+                            batchId = batchId, url = command.data.getValue("url"),
+                        )))
+                        // 요청 data가 시스템의 알림함 ID·종류를 덮어쓰지 못하게 한다.
+                        val data = command.data + mapOf("notificationId" to inboxId.toString(), "type" to UserNotificationType.ADMIN_NOTIFICATION.name)
+                        val payload = notificationPayload(command, data)
+                        if (recipient.tokens.isEmpty()) noTokenCount++ else recipientCount++
                         recipient.tokens.map { token -> NotificationAppendDto(
                             deduplicationKey = "admin-batch:$batchId:token:${token.id}",
                             channel = NotificationChannel.FCM, templateCode = "admin_notification",
                             recipientUserId = recipient.userId, recipientAddress = token.token,
                             payloadJson = payload, scheduledAt = now, batchId = batchId, dispatchExpiresAt = expiresAt,
+                            userNotificationId = inboxId,
                         ) }
                     }
                 }
@@ -91,6 +103,14 @@ class AdminNotificationBatchService(
     }
 
     fun get(batchId: UUID): NotificationBatchResultDto = batchReader.readResult(batchId.toString(), LocalDateTime.now(clock))
+
+    private fun notificationPayload(command: CreateNotificationBatchCommand, data: Map<String, String>): String {
+        val messageBytes = objectMapper.writeValueAsBytes(mapOf(
+            "notification" to mapOf("title" to command.title, "body" to command.body), "data" to data,
+        ))
+        if (messageBytes.size > 4096) throw InvalidRequestFieldException("data", "알림함 식별자를 포함한 FCM payload는 4096바이트 이하여야 합니다.")
+        return objectMapper.writeValueAsString(mapOf("title" to command.title, "body" to command.body, "data" to data))
+    }
 
     private fun validateTargets(command: CreateNotificationBatchCommand): Set<Long>? = when (command.targetType) {
         NotificationBatchTargetType.ALL -> {

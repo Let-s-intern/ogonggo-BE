@@ -32,6 +32,7 @@ import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentServic
 import com.ogonggo.userapi.usernotification.business.UserNotificationService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.Mockito
@@ -86,6 +87,41 @@ class UserNotificationIntegrationTest @Autowired constructor(
     @MockBean private lateinit var dispatcher: NotificationDispatcher
     @SpyBean private lateinit var deliveryAppender: NotificationAppender
     @SpyBean private lateinit var inboxAppender: UserNotificationAppender
+
+    @Test
+    @DisplayName("관리자 알림은 토큰과 댓글 없이 목록·안 읽은 개수에 포함되고 URL 조회와 읽음 처리가 가능하다")
+    fun `관리자 알림도 본인 알림함 API로 조회하고 읽는다`() {
+        // given
+        val recipient = user()
+        val another = user()
+        val url = "https://www.ogonggo.co.kr/announcements/10"
+        val id = checkNotNull(inboxAppender.append(UserNotificationAppendDto(
+            recipientUserId = recipient, type = UserNotificationType.ADMIN_NOTIFICATION,
+            actorUserId = 42, postId = null, commentId = null,
+            actorNickname = "오공고", actorProfileImageUrl = null, postTitle = "운영 안내", preview = "새 소식입니다",
+            pushSkipReason = com.ogonggo.core.usernotification.domain.UserNotificationPushSkipReason.NO_ACTIVE_TOKEN,
+            batchId = UUID.randomUUID().toString(), url = url,
+        )))
+
+        // when
+        val response = mvc.perform(get(PATH).with(auth(recipient)))
+
+        // then
+        response.andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].id").value(id))
+            .andExpect(jsonPath("$.data.items[0].type").value("ADMIN_NOTIFICATION"))
+            .andExpect(jsonPath("$.data.items[0].postTitle").value("운영 안내"))
+            .andExpect(jsonPath("$.data.items[0].preview").value("새 소식입니다"))
+            .andExpect(jsonPath("$.data.items[0].url").value(url))
+            .andExpect(jsonPath("$.data.items[0].postId").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].commentId").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].isRead").value(false))
+        assertEquals(1, inbox.countUnread(recipient))
+        mvc.perform(patch("$PATH/$id/read").with(auth(another))).andExpect(status().isNotFound)
+        mvc.perform(patch("$PATH/$id/read").with(auth(recipient))).andExpect(status().isOk)
+        assertEquals(0, inbox.countUnread(recipient))
+        assertEquals(NOW, inbox.list(recipient, null, 20).items.single().readAt)
+    }
 
     @Test
     fun `취준고민 댓글 하나는 알림함 하나와 두 설치의 동일 알림 payload를 만들고 발송 실패와 독립적이다`() {

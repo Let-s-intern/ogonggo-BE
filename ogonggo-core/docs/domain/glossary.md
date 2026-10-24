@@ -1,6 +1,6 @@
 # 오공고 용어 사전
 
-- 최종 변경일: 2026-10-22
+- 최종 변경일: 2026-10-24
 - 예상 독자: 오공고를 처음 맡는 개발자, 기획·디자인과 대화하는 개발자
 - 리뷰 상태: 팀 리뷰 필요
 
@@ -109,10 +109,10 @@
 
 | 용어 | 코드 | 설명 |
 | --- | --- | --- |
-| 사용자 알림함 | `UserNotification` | 수신자에게 보관하는 댓글 소식 한 건. 읽음은 `readAt`으로 표시하며, 토큰·푸시 결과와 독립적으로 최근 30일을 조회합니다. |
-| 알림 종류 | `UserNotificationType` | 모집글 부모 댓글의 답글(`SIDE_STUDY_COMMENT_REPLY`), 취준고민 최상위 댓글(`CONCERN_COMMENT`) |
+| 사용자 알림함 | `UserNotification` | 수신자에게 보관하는 댓글 소식 또는 관리자 메시지 한 건. 읽음은 `readAt`으로 표시하며, 토큰·푸시 결과와 독립적으로 최근 30일을 조회합니다. |
+| 알림 종류 | `UserNotificationType` | 모집글 부모 댓글의 답글(`SIDE_STUDY_COMMENT_REPLY`), 취준고민 최상위 댓글(`CONCERN_COMMENT`), 관리자 메시지(`ADMIN_NOTIFICATION`) |
 | 푸시 생략 사유 | `UserNotificationPushSkipReason` | 생성 시 활성 토큰이 없는 `NO_ACTIVE_TOKEN`. 이후 토큰 등록 때 재발송하지 않습니다. |
-| 발송 묶음 | `NotificationBatch` | 어드민의 FCM 요청 운영 기록. 토큰별 발송은 `Notification.batchId`로 묶으며 적재 수는 토큰 수, 제외 수는 회원 수입니다. |
+| 발송 묶음 | `NotificationBatch` | 어드민의 FCM 요청 운영 기록. 회원별 알림함과 토큰별 발송은 각각 `UserNotification.batchId`·`Notification.batchId`로 묶으며 적재 수는 토큰 수, 제외 수는 회원 수입니다. |
 | 발송 기록 | `Notification` | 설치별 FCM 또는 채널별 발송 대기·결과. 알림함이 있으면 `userNotificationId`로 연결합니다. |
 
 ## 8. 운영·기반
