@@ -26,7 +26,7 @@ import com.ogonggo.userapi.concern.business.ConcernCommentService
 import com.ogonggo.userapi.concern.business.ConcernCommentCreatedEvent
 import com.ogonggo.userapi.concern.business.CreateConcernCommentCommand
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
-import com.ogonggo.userapi.notification.fcm.implement.FcmNotificationSender
+import com.ogonggo.userapi.notification.channel.fcm.FcmNotificationSender
 import com.ogonggo.userapi.recruitmentpost.business.CreateRecruitmentPostCommentCommand
 import com.ogonggo.userapi.recruitmentpost.business.RecruitmentPostCommentService
 import com.ogonggo.userapi.usernotification.business.UserNotificationService

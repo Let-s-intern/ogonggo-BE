@@ -1,4 +1,4 @@
-package com.ogonggo.userapi.notification.fcm.implement
+package com.ogonggo.userapi.notification.channel.fcm
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.firebase.messaging.FirebaseMessaging
