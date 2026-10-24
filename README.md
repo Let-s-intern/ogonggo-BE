@@ -86,19 +86,11 @@ Users sign in by exchanging a LetsCareer access token at `POST /api/v1/auth/lets
 
 Administrator console endpoints (`/api/v1/admin/**`) accept a user API access token whose account has `UserRole.ADMIN`, granted directly in the database. `ogonggo-api-admin` must be configured with the same `ogonggo.auth.jwt.secret` as the user API. Read section 7-3 of [오공고 사용자 인증과 렛츠커리어 연동](docs/architecture/authentication.md) before changing it.
 
-Before deploying this branch's notifications, verify the production schema and apply `docs/schema/2026-10-06-notifications.sql` once before the user API rollout. It adds `job_bookmarks.active_since` and creates `notifications` including `result_category`; it does not add a reminder timestamp or separate reminder schedule/cursor table. The D-1 time is calculated from `jobs.recruitment_end_at` during each candidate query. Existing eligible bookmarks can be processed after D-1 as long as the posting deadline has not passed; bookmarks activated after D-1 are excluded. The migration seeds the reminder and delivery jobs disabled and terminal-notification cleanup enabled. The reminder scheduler is currently not registered pending template approval. Pause bookmark writes from migration through user API rollout because the old version does not populate `active_since`. See the notification extension guide for activation policy and implementation limitations.
-일반적인 기존 스키마 변경 SQL은 main의 배포 절차를 따르며, 이 브랜치의 알림 기능에 필요한 SQL만 위 파일로 관리합니다.
+이 브랜치의 알림 기능은 기존 알림·FCM 배포가 완료된 DB에 [통합 마이그레이션](docs/schema/2026-10-24-lc-3489-notifications.sql)을 한 번 적용합니다. 다중 기기 토큰 이관, 댓글·관리자 알림함, 관리자 발송 묶음, 토픽 구독, PROCESSING 복구 스키마를 포함하며 기존 개별 SQL 6개를 대체합니다. 이전 초기 배포 SQL은 다시 실행하지 않습니다.
 
-If the FCM token registration feature is deployed, apply `docs/schema/2026-10-07-fcm-token.sql` once before the user API rollout. The FCM sender remains disabled until Firebase credentials and `ogonggo.firebase.enabled` are configured. Firebase service-account values are external secrets; do not commit them. The FCM configuration format is documented in [알림 추가 가이드](docs/architecture/notification-extension-guide.md#fcm-설정과-payload).
+전환 중 토큰 변경 누락·알림 실패를 허용하는 소규모 초기 배포에서는 SQL 선적용 후 기존 워크플로로 두 API를 병렬 배포하고, 구버전 종료·토큰 등록·알림 발송을 확인합니다. 변경 유실을 막아야 하는 배포는 토큰 쓰기·발송 중단과 사용자 API 우선 전환 절차를 따릅니다. 기존 중복 토큰은 이관하지 않으며 `users.fcm_token`은 이관 원본으로 유지합니다. 새 버전에서 토큰을 변경한 뒤에는 구버전으로 단순 롤백할 수 없습니다. 기존 개별 SQL을 일부라도 적용한 DB에는 통합 파일을 그대로 실행하지 않습니다. [브랜치 최초 배포](docs/architecture/notification-extension-guide.md#브랜치-최초-배포)를 따릅니다.
 
-다중 기기 FCM 토큰으로 전환할 때는 토큰 등록·해제와 기존 알림 발송을 잠시 중단하고 `docs/schema/2026-10-21-user-fcm-tokens.sql`을 적용한 뒤 사용자 API를 배포합니다. 기존 토큰의 중복 소유는 이관하지 않으며, 이전 `users.fcm_token`은 이관 원본으로 유지합니다. 쓰기 재개 후에는 원본이 최신 상태가 아니므로 단순 버전 롤백을 할 수 없습니다. [이관·배포 절차](docs/architecture/notification-extension-guide.md#다중-기기-토큰-이관배포)를 따릅니다.
-댓글 자동 알림·알림함을 배포할 때는 작업 1 이후 `docs/schema/2026-10-21-user-notifications.sql`을 먼저 적용합니다. 최근 30일 조회·읽음 API와 같은 트랜잭션의 알림 적재를 제공합니다. [알림함 배포 절차](docs/architecture/notification-extension-guide.md#댓글-알림-이관배포)를 참고합니다.
-
-어드민 FCM 발송과 사용자 알림함을 함께 제공하려면 `docs/schema/2026-10-22-admin-notification-batches.sql`과 `docs/schema/2026-10-24-admin-notification-inbox.sql`을 먼저 적용하고 사용자 API, 관리자 API 순서로 배포합니다. 활성 회원은 토큰이 없어도 알림함에 남습니다. [어드민 발송·운영 기록](docs/architecture/notification-extension-guide.md#어드민-fcm-발송)을 참고합니다.
-
-전체 토픽 발송은 `docs/schema/2026-10-24-notification-broadcast-topic.sql` 적용 뒤 사용자 API의 최초 구독을 완료하고 관리자 `ogonggo.notification.broadcast.enabled=true`로 전환합니다. 공통 공지 1건·토픽 작업 1건을 저장하며 회원별 읽음만 별도로 기록합니다. [설정·응답·배포 절차](docs/architecture/notification-extension-guide.md#전체-토픽-발송과-공통-알림함)를 따릅니다.
-
-다중 기기·댓글 알림·알림함의 정책과 동작 흐름은 [알림 추가 가이드](docs/architecture/notification-extension-guide.md)에서 확인할 수 있습니다.
+FCM은 Firebase 설정과 `ogonggo.firebase.enabled`로 활성화합니다. 서비스 계정은 외부 Secret으로 관리합니다. 전체 토픽 발송은 최초 구독·실기기 수신·클라이언트 준비를 확인한 뒤 관리자 `ogonggo.notification.broadcast.enabled=true`로 전환합니다. 설정·정책·동작 흐름은 [알림 추가 가이드](docs/architecture/notification-extension-guide.md)에서 확인합니다.
 
 ## Work24 (고용24) Open API
 

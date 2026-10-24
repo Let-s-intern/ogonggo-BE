@@ -6,6 +6,30 @@
 
 다중 기기·댓글 알림·알림함의 정책과 동작 흐름, 기존 알림 체계의 구현·확장·운영 기준을 다룬다.
 
+## 브랜치 최초 배포
+
+`LC-3489` 이전 알림·FCM 배포가 끝난 DB에는 [`2026-10-24-lc-3489-notifications.sql`](../schema/2026-10-24-lc-3489-notifications.sql) 하나를 한 번 실행한다. 다중 기기 토큰부터 댓글·관리자 알림함, 관리자 발송 묶음, 전체 토픽, PROCESSING 복구까지 기존 개별 SQL 6개의 적용 순서를 유지한 통합 파일이다. 이후 각 기능 절의 스키마 확인은 이 파일의 적용 여부를 확인하는 뜻이며 같은 파일을 다시 실행하는 절차가 아니다.
+
+- 전제: 기존 `users.fcm_token`과 `notifications`의 초기 배포·후속 변경이 적용된 DB. 이전 초기 배포 SQL은 다시 실행하지 않는다.
+- 제외: 개별 SQL을 일부라도 적용한 DB, 통합 파일을 적용한 DB, Hibernate `update`·`create-drop`으로 이미 새 스키마를 만든 DB. 실제 스키마와 적용 내역을 확인해 필요한 변경만 별도로 적용한다.
+- MySQL DDL은 자동 커밋된다. 실패 시 파일 전체가 롤백되지 않으므로 `--force` 없이 오류에서 중단하고, 적용 내역 확인 없이 처음부터 재실행하지 않는다. 운영 DB에 실행한 기록을 뜻하지 않는다.
+
+소규모 초기 배포에서 전환 중 토큰 변경 누락·알림 실패를 허용한다면 **백업·스키마 확인 → 통합 SQL 실행 → 기존 워크플로의 두 API 병렬 배포 → 구버전 종료·토큰 등록·알림 발송 확인**으로 진행할 수 있다. 이 경우 아래 1번의 유지보수 차단과 3번의 순차 배포를 생략한다. 토픽 전체 발송은 최초 구독 확인 전까지 비활성으로 유지한다.
+
+전환 중 변경 유실을 막아야 할 때는 다음 절차를 따른다.
+
+1. 운영 스키마와 백업을 확인한다. 토큰 PUT·DELETE와 기존 `notificationDelivery`를 중단하고 진행 중 요청·발송 종료를 확인한다. 기존 enabled 값을 기록한다. 배포 중 댓글 알림 누락도 막아야 한다면 댓글 쓰기를 중단한다.
+2. 대상 DB를 지정해 통합 파일을 실행하고 이관 건수·중복 제외 건수를 확인한다. 토큰·수신 주소·payload 원문은 출력하지 않는다.
+
+   ```bash
+   mysql --default-character-set=utf8mb4 --host="$DB_HOST" --user="$DB_USER" --password "$DB_NAME" \
+     < docs/schema/2026-10-24-lc-3489-notifications.sql
+   ```
+
+3. 사용자 API를 먼저 배포하고 구버전 인스턴스가 모두 종료됐는지 확인한 뒤 관리자 API를 배포한다. 현재 `main` 푸시·수동 `target=all`은 병렬 배포이므로 최초 전환에서는 이 순서를 별도로 보장한다. 수동 배포는 `target=user` 완료 후 `target=admin`을 실행할 수 있다.
+4. 토큰 등록·해제, 댓글·관리자 알림함, 발송 결과를 확인하고 중단한 쓰기와 기존 발송 enabled 값을 복원한다. 새 토큰 쓰기 재개 뒤에는 `users.fcm_token`이 최신이 아니므로 구버전으로 단순 롤백하지 않는다. 새 컬럼·테이블·저장된 행을 제거하지 않는다.
+5. 전체 토픽 전환은 [전체 토픽 이관·배포](#전체-토픽-이관배포)를 따른다. 최초 구독·실기기 수신·클라이언트 준비 확인 전까지 관리자 `broadcast.enabled=false`를 유지한다.
+
 ## 핵심 규칙
 
 1. 업무 기능은 수신 대상·발송 시각·템플릿 변수를 결정하고 provider를 직접 호출하지 않는다.
@@ -177,7 +201,7 @@ Authorization: Bearer {ogonggo-access-token}
 
 1. 운영 스키마와 백업을 확인한다. 기존 초기 SQL의 `users.fcm_token`·`notifications`가 필요하다.
 2. 토큰 PUT·DELETE 요청을 유지보수 응답으로 막고 진행 중 요청을 마친다. DB의 기존 `notificationDelivery` 작업을 비활성화하고 진행 중 발송을 마친다. 기존 enabled 값을 기록해 재개할 때 복원한다.
-3. [`2026-10-21-user-fcm-tokens.sql`](../schema/2026-10-21-user-fcm-tokens.sql)을 한 번 적용한다. 새 테이블 생성·수신 주소 4,096자 확장·기존 토큰 이관을 수행한다. 여러 회원에게 같은 토큰이 있으면 모두 제외하며 원문은 출력하지 않는다. DDL은 MySQL에서 자동 커밋되므로 트랜잭션으로 되돌릴 수 없다.
+3. [브랜치 최초 배포](#브랜치-최초-배포)의 통합 SQL을 한 번 적용한다. 새 테이블 생성·수신 주소 4,096자 확장·기존 토큰 이관과 나머지 알림 스키마를 함께 적용한다. 여러 회원에게 같은 토큰이 있으면 모두 제외하며 원문은 출력하지 않는다. DDL은 MySQL에서 자동 커밋되므로 트랜잭션으로 되돌릴 수 없다.
 4. 새 사용자 API를 배포하고 이전 인스턴스를 모두 내린다. 관리자 API도 새 core를 포함해 통상 배포하되, 토큰 API·발송기의 소유권은 사용자 API에 있다.
 5. 이관 건수·중복 제외 건수와 새 API 동작을 확인하고 토큰 등록·해제와 기존 발송 작업을 재개한다. 대기열의 이전 토큰도 발송 전 확인을 받는다. 유지보수 중 8분 창을 지난 대기 알림은 자동 재발송하지 않는다.
 
@@ -208,12 +232,12 @@ Authorization: Bearer {ogonggo-access-token}
 - dispatcher 로그에 발송 기록 ID와 `userNotificationId`를 함께 남긴다. 적재 실패 로그는 알림 종류·원글 ID·댓글 ID·예외 타입·안전한 스택만 포함하며 원본 예외 메시지와 cause를 전달하지 않는다. DB의 안전한 결과 필드로 실패를 확인한다.
 - 댓글 알림은 `PENDING → PROCESSING → SENT | FAILED | UNKNOWN`으로 처리한다. FCM의 stale timeout은 초기 기본 8분이며 provider 결과가 미확정이면 `UNKNOWN`으로 남겨 자동 재발송하지 않는다. 업무 만료는 적용하지 않고 관리자 일괄발송의 24시간 정책도 적용하지 않는다.
 
-외부 요청·응답과 오류는 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)에서 확인한다. 운영 확인용 조회 예시는 [알림함 SQL](../schema/2026-10-21-user-notifications.sql)에 있다.
+외부 요청·응답과 오류는 [알림함 API 계약](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/usernotification/presentation/UserNotificationApi.kt)에서 확인한다. 운영 확인용 조회 예시는 [통합 SQL](../schema/2026-10-24-lc-3489-notifications.sql) 하단에 있다.
 
 ### 댓글 알림 이관·배포
 
 1. 작업 1의 토큰 테이블·수신 주소 확장과 기존 `notifications` 스키마가 적용돼 있는지 확인한다. 백업과 DDL 잠금 영향도 확인한다.
-2. [`2026-10-21-user-notifications.sql`](../schema/2026-10-21-user-notifications.sql)을 사용자 API 배포 전에 한 번 적용한다. 새 테이블·nullable 연결 컬럼·인덱스만 추가하며 기존 데이터는 변경하지 않는다. MySQL DDL은 자동 커밋되므로 트랜잭션 롤백 대상이 아니다.
+2. [브랜치 최초 배포](#브랜치-최초-배포)의 통합 SQL에 포함된 `user_notifications`와 `notifications.user_notification_id` 적용 여부를 확인한다. 기존 댓글·알림을 소급 생성하지 않는다. 통합 파일을 이미 적용했다면 다시 실행하지 않는다.
 3. 사용자 API를 배포하고 이전 인스턴스를 종료한다. 이전 인스턴스가 처리한 댓글은 소급 알림을 만들지 않으므로 모든 댓글의 알림이 필요한 배포 구간에는 댓글 쓰기를 잠시 중단한다. 스키마 적용 중 발송 작업도 중단한다면 기존 enabled 값을 기록하고 복원한다.
 4. 개발 환경에서 두 설치 수신, 알림함 1건·발송 2건, 토큰 없는 수신자와 조회·읽음 동작을 확인한다. Firebase 설정과 기존 `notificationDelivery` 활성화 상태를 확인하고 알림함 ID로 결과를 조회한다. SQL 실행·실제 기기 수신은 자동 테스트로 대체하지 않는다.
 5. 같은 core를 포함하는 관리자 API도 통상 절차로 배포한다. 관리자용 알림함 API는 추가하지 않는다.
@@ -233,7 +257,7 @@ Authorization: Bearer {ogonggo-access-token}
 - 24시간 경계부터 남은 `PENDING`은 DB 상태를 바꾸지 않고 `expiredCount`로 구분한다. 아직 provider 요청 중인 `PROCESSING`은 `pendingCount`에 포함하며, 처리 중인 행이 남으면 `completed=false`다. `UNKNOWN`·기한 초과는 실패와 합치거나 자동 재발송하지 않는다.
 - 알림함은 `batch_id`와 수신자 유니크 제약으로 묶음별 한 건을 보장한다. `actorNickname`은 `오공고`, `postTitle`은 요청 제목, `preview`는 본문의 유니코드 최대 100자, `url`은 `data.url`이다. 관리자 알림의 `postId`·`commentId`는 null이며 댓글 알림은 기존 필수 식별자를 유지한다. 알림함 목록·안 읽은 개수·읽음은 기존 최근 30일 규칙을 따른다. 푸시 data에는 서버가 정한 `notificationId`·`type=ADMIN_NOTIFICATION`을 넣고 이 값까지 FCM 4,096바이트 제한에 포함한다. 푸시 실패나 기한 초과는 알림함과 읽음 상태를 바꾸지 않는다.
 - 결과는 생성 후 30일 미만까지 조회하며 만료·없는 묶음은 404 `NOTIFICATION_BATCH_NOT_FOUND`다. 이후 원본 발송 기록은 기존 정리 작업의 대상이 되고 요청 운영 기록은 남는다. 별도 작업 시스템과 요청 기록 자동 삭제는 추가하지 않았다.
-- 관리자 알림함을 배포할 때는 기존 [`2026-10-22-admin-notification-batches.sql`](../schema/2026-10-22-admin-notification-batches.sql)과 [`2026-10-24-admin-notification-inbox.sql`](../schema/2026-10-24-admin-notification-inbox.sql)을 적용한다. 새 유형·nullable 식별자·URL을 처리하는 사용자 API를 먼저 배포한 뒤 관리자 API를 배포한다. 클라이언트는 `ADMIN_NOTIFICATION`을 표시하고 `url`로 이동해야 한다. 이전 관리자 발송의 알림함은 소급 생성하지 않는다. 새 유형이 저장된 뒤에는 이를 읽지 못하는 구버전 사용자 API로 롤백하지 않는다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
+- 관리자 발송 묶음과 알림함 확장 스키마는 [브랜치 최초 배포](#브랜치-최초-배포)의 통합 SQL에 포함된다. 새 유형·nullable 식별자·URL을 처리하는 사용자 API를 먼저 배포한 뒤 관리자 API를 배포한다. 클라이언트는 `ADMIN_NOTIFICATION`을 표시하고 `url`로 이동해야 한다. 이전 관리자 발송의 알림함은 소급 생성하지 않는다. 새 유형이 저장된 뒤에는 이를 읽지 못하는 구버전 사용자 API로 롤백하지 않는다. SQL 실행과 실기기 수신은 자동 테스트로 대체하지 않는다.
 
 ### 전체 토픽 발송과 공통 알림함
 
@@ -262,12 +286,29 @@ ogonggo:
 
 ### 전체 토픽 이관·배포
 
-1. 기존 알림함·배치 SQL 이후 [`2026-10-24-notification-broadcast-topic.sql`](../schema/2026-10-24-notification-broadcast-topic.sql)을 적용한다. 운영 DB 실행·Firebase 변경을 수행한 기록은 아니며 운영 ddl-auto=none을 유지한다.
+1. [브랜치 최초 배포](#브랜치-최초-배포)의 통합 SQL에 포함된 `recipient_type`, `topic_name`, 공통 읽음·토픽 동기화 테이블 적용 여부를 확인한다. 통합 파일을 다시 실행하지 않으며 운영 ddl-auto=none을 유지한다.
 2. 새 source·id=null·batchId·body와 공통 읽음 경로를 처리하는 클라이언트를 준비한다. 현재 프론트 저장소에는 이 알림 API 연동이 없어 API 계약을 전달한다.
 3. 사용자 API를 배포하고 구버전 발송기를 종료한다. Firebase를 활성화하고 topic 이름을 설정하되 관리자 broadcast.enabled는 false로 유지한다.
 4. fcmTopicSync의 DB 예약과 실제 실행을 확인한다. SQL의 미생성 구독/대기 조회가 0이 되고 실패 코드를 해결한 뒤 테스트 기기 수신을 확인한다. 등록이 계속 발생하므로 집계는 시점 값이다.
 5. 같은 topic을 설정한 관리자 API의 broadcast.enabled를 true로 바꾸고 배포한다. 새 ALL 배치의 TOPIC/작업 1건과 토큰 없는 회원의 알림함 조회를 확인한다. SQL·실기기 확인은 자동 테스트로 대신하지 않는다.
 6. 되돌릴 때 먼저 관리자 전환 게이트를 끈다. TOPIC 대기열·공통 공지·읽음이 남아 있으므로 이를 읽는 사용자 API와 스키마를 유지한다. 새 테이블/컬럼을 지우거나 TOPIC을 모르는 발송기로 되돌리지 않는다.
+
+최초 구독 확인은 사용자 API 배포·동기화 뒤 수행한다. 아래 변수에 두 API의 `ogonggo.notification.broadcast.topic`과 같은 실제 운영 토픽을 넣는다. 두 결과가 0이고 실기기 수신을 확인한 뒤 관리자 전환 게이트를 켠다. 등록이 계속 발생하므로 집계는 조회 시점 값이며, 마이그레이션 직후 0을 보장하는 검사가 아니다.
+
+```sql
+set @notification_broadcast_topic = 'REPLACE_WITH_ENV_TOPIC';
+
+select count(*) as missing_active_subscriptions
+from user_fcm_tokens t join users u on u.id = t.user_id
+left join fcm_topic_sync_tasks s
+    on s.token_hash = t.token_hash and s.topic = @notification_broadcast_topic
+where t.deleted_at is null and t.token is not null and u.status = 'ACTIVE'
+  and (s.id is null or s.desired_subscribed = false or s.pending = true);
+
+select count(*) as pending_sync_count
+from fcm_topic_sync_tasks
+where topic = @notification_broadcast_topic and pending = true;
+```
 
 ## 구현 규칙
 
@@ -364,7 +405,7 @@ DB 전용 풀은 `NotificationManager.complete`의 결과 저장을 분리한다
 - `/actuator/metrics`는 `127.0.0.1` 요청만 허용한다. 적재·발송 카운터는 인스턴스별 누적값이고, 대기량 gauge는 공용 DB를 조회한다.
 - 카운터는 재시작 시 초기화된다. 아래 Slack 경고 외의 시간대별 대시보드·외부 생존 감시는 구성되어 있지 않다.
 - 업무 기한을 지난 `PENDING`과 stale 복구가 보류한 `UNKNOWN`은 자동 발송·정리하지 않는다. 결과 확인과 후속 판단은 운영에서 수행한다.
-- 이 상태 전이를 배포할 때는 `dispatch_expires_at` 컬럼이 있는 기존 알림 스키마(관리자 배치 SQL 포함)를 먼저 확인한 뒤 [`2026-10-24-notification-processing-state.sql`](../schema/2026-10-24-notification-processing-state.sql)을 사용자 API 배포 전에 적용한다. DDL과 기존 null `PENDING`의 8분 기한 backfill은 자동 롤백되지 않으므로 사전 백업·적용 여부 확인이 필요하다.
+- PROCESSING 컬럼·인덱스와 기존 null `PENDING`의 8분 기한 backfill은 [통합 SQL](../schema/2026-10-24-lc-3489-notifications.sql)의 마지막 단계에 포함된다. 사용자 API 배포 전에 [브랜치 최초 배포](#브랜치-최초-배포) 절차로 한 번 적용하며, DDL과 backfill은 자동 롤백되지 않으므로 사전 백업·적용 여부 확인이 필요하다.
 
 ### Slack 운영 경고
 
