@@ -30,12 +30,6 @@ class UserReader internal constructor(
             userRepository.findAllById(userIds.toSet()).associate { user -> user.requiredId() to user.role }
         }
 
-    fun readFcmToken(userId: Long): String? {
-        val user = userRepository.findByIdOrNull(userId)
-            ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
-        return user.fcmToken
-    }
-
     /** 기업 회원 로그인용 조회. 자격증명이 없는 일반 회원 계정은 반환하지 않는다. */
 
     fun readCredentialByEmail(email: String): UserCredentialDto? {

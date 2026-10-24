@@ -25,6 +25,10 @@ internal object NhnAlimTalkErrorCode {
             NotificationFailureCategory.SENDER_PROFILE_CONFIGURATION,
             "발신 프로필이 차단 상태",
         ),
+        -1031 to Entry(
+            NotificationFailureCategory.PROVIDER_REJECTED,
+            "전체 수신자 발송 실패",
+        ),
         -2017 to Entry(
             NotificationFailureCategory.SENDER_PROFILE_CONFIGURATION,
             "발신 프로필을 찾을 수 없음",

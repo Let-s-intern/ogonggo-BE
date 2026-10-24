@@ -18,10 +18,11 @@ import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.user.implement.requireActive
-import java.time.Clock
-import java.time.LocalDateTime
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
+import java.time.LocalDateTime
 
 data class CreateRecruitmentPostCommentCommand(
     val parentId: Long?,
@@ -39,6 +40,7 @@ class RecruitmentPostCommentService(
     private val recruitmentPostMetricManager: RecruitmentPostMetricManager,
     private val reportAppender: RecruitmentPostCommentReportAppender,
     private val clock: Clock,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     fun readComments(
@@ -107,8 +109,8 @@ class RecruitmentPostCommentService(
     @Transactional
     fun create(userId: Long, postId: Long, command: CreateRecruitmentPostCommentCommand): Long {
         verifyActiveUser(userId)
-        postReader.readPublishedForUpdate(postId)
-        command.parentId?.let { parentId -> readValidParent(parentId, postId) }
+        val post = postReader.readPublishedForUpdate(postId)
+        val parent = command.parentId?.let { parentId -> readValidParent(parentId, postId) }
 
         val comment = commentAppender.append(
             RecruitmentPostCommentAppendDto(
@@ -118,8 +120,22 @@ class RecruitmentPostCommentService(
                 content = command.content,
             ),
         )
-        recruitmentPostMetricManager.increaseCommentCount(postId, LocalDateTime.now(clock))
-        return checkNotNull(comment.id) { "저장된 댓글 식별자가 없습니다." }
+        val now = LocalDateTime.now(clock)
+        recruitmentPostMetricManager.increaseCommentCount(postId, now)
+        val commentId = checkNotNull(comment.id) { "저장된 댓글 식별자가 없습니다." }
+        eventPublisher.publishEvent(
+            RecruitmentPostCommentCreatedEvent(
+                postId = postId,
+                postTitle = post.title,
+                commentId = commentId,
+                parentId = command.parentId,
+                parentAuthorUserId = parent?.userId,
+                authorUserId = userId,
+                content = command.content,
+                occurredAt = now,
+            ),
+        )
+        return commentId
     }
 
     @Transactional

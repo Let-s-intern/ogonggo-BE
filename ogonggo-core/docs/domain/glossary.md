@@ -1,6 +1,6 @@
 # 오공고 용어 사전
 
-- 최종 변경일: 2026-10-10
+- 최종 변경일: 2026-10-24
 - 예상 독자: 오공고를 처음 맡는 개발자, 기획·디자인과 대화하는 개발자
 - 리뷰 상태: 팀 리뷰 필요
 
@@ -79,6 +79,9 @@
 | 관리자 | `UserRole.ADMIN` | 관리자 콘솔을 쓰는 운영자. 댓글에는 멘토보다 위 등급으로 표시됩니다. |
 | 회원 프로필 | `UserProfile` | 렛츠커리어 프로필의 사본과 학년·희망 조건 같은 오공고 정보 |
 | 기업 프로필 | `CompanyProfile` | 기관명, 로고, 담당자 정보 |
+| FCM 토큰 | `UserFcmToken` | 회원의 설치별 푸시 수신 토큰. 해제하면 원문·활성 해시·활성 슬롯을 비우고 행과 해제 시각을 남깁니다. |
+| 설치 식별자 | `UserFcmToken.deviceId` | 클라이언트가 설치별로 생성·유지하는 UUID. 같은 설치의 토큰 갱신과 계정 전환을 식별합니다. 기존 클라이언트는 null입니다. |
+| 활성 토큰 슬롯 | `UserFcmToken.activeSlot` | 설치 UUID 또는 `legacy:{userId}`인 DB 중복 방지 키. 활성 토큰 해시와 각각 유니크 제약을 가집니다. |
 | 학년 | `UserGrade` | 1~4학년, 5학년 이상, 졸업생 |
 | 렛츠커리어 | | 오공고와 연결된 외부 서비스. 일반 회원의 로그인과 프로필을 소유합니다. |
 | 렛츠커리어 전송 대기 | `LetsCareerJobProfileOutbox` | 렛츠커리어로 보낼 학력·희망 조건 변경. 회원마다 한 행이고 스케줄 작업이 최신 값을 보냅니다. |
@@ -102,7 +105,22 @@
 | 공고별 렛츠커리어 콘텐츠 추천 | `LetsCareerContentRecommendPolicy` | 오공고 | 채용공고 상세에서 그 공고에 맞는 콘텐츠 3개. 모집 기간인 콘텐츠 중 직무 일치 +5, 직군 일치 +3, 준비 단계 일치 하나에 +2(최대 두 개)로 점수를 매기고, 한 갈래가 두 개를 넘지 않게 섞습니다. 저장하지 않고 공고를 열 때마다 계산하며, 같은 공고는 늘 같은 결과가 나옵니다. |
 | 추천 챌린지 | `challenge` 패키지 | 렛츠커리어 (무작위) | 렛츠커리어에서 모집 중인 챌린지 최대 3개. 지금은 렛츠커리어 서버가 회원과 상관없이 무작위로 고릅니다. 로그인한 일반 회원이면 렛츠커리어 회원 식별자를 함께 넘기지만 아직 고르는 데 쓰지 않습니다. 오공고는 저장하지 않고 화면을 열 때마다 받아 와 그대로 보여 주며, 실패하면 빈 목록으로 응답합니다. |
 
-## 7. 운영·기반
+## 7. 알림
+
+| 용어 | 코드 | 설명 |
+| --- | --- | --- |
+| 사용자 알림함 | `UserNotification` | 수신자에게 보관하는 댓글 소식 또는 관리자 메시지 한 건. 읽음은 `readAt`으로 표시하며, 토큰·푸시 결과와 독립적으로 최근 30일을 조회합니다. |
+| 알림 종류 | `UserNotificationType` | 모집글 부모 댓글의 답글(`SIDE_STUDY_COMMENT_REPLY`), 취준고민 최상위 댓글(`CONCERN_COMMENT`), 관리자 메시지(`ADMIN_NOTIFICATION`) |
+| 푸시 생략 사유 | `UserNotificationPushSkipReason` | 생성 시 활성 토큰이 없는 `NO_ACTIVE_TOKEN`. 이후 토큰 등록 때 재발송하지 않습니다. |
+| 발송 묶음 | `NotificationBatch` | 어드민의 FCM 요청 운영 기록. 회원별 알림함과 토큰별 발송은 각각 `UserNotification.batchId`·`Notification.batchId`로 묶으며 DIRECT 적재 수는 토큰 수, TOPIC 적재 수는 1건입니다. 토픽 배치는 공통 공지 원문으로 사용하고 회원별 읽음은 NotificationBroadcastRead에 저장합니다. |
+| 공통 공지 읽음 | `NotificationBroadcastRead` | 전체 토픽 공지를 읽은 회원과 배치·최초 읽음 시각. 읽기 전에는 회원별 행을 만들지 않습니다. |
+| 토픽 구독 동기화 | `FcmTopicSyncTask` | 토큰별 최신 구독 희망 상태와 요청 revision, 실패 재처리 정보. FCM 접수 결과와 사용자 읽음 상태와는 별개입니다. |
+| 발송 기록 | `Notification` | 개별 주소 또는 FCM 토픽의 발송 대기·처리 중·결과. `PROCESSING`은 provider 요청 후 결과를 기다리는 상태이며, 알림함이 있으면 `userNotificationId`로 연결합니다. |
+| 알림 처리 중 | `NotificationStatus.PROCESSING` | provider 요청을 시작해 응답 또는 결과 저장을 기다리는 상태. provider별 stale timeout을 넘기면 해당 provider 정책으로 복구합니다. |
+| 알림 provider | `NotificationProvider` | 알림 발송을 맡는 시스템. 현재 NHN 알림톡, SMTP 이메일, Firebase FCM이며 stale 처리 정책을 각각 설정합니다. |
+| 제공자 명시적 발송 거절 | `NotificationFailureCategory.PROVIDER_REJECTED` | NHN `-1031`처럼 전체 수신자의 실패가 확인된 결과. 세부 실패 원인을 모르는 경우에도 접수 여부 미확정인 `UNKNOWN`과 구분해 `FAILED`로 기록합니다. |
+
+## 8. 운영·기반
 
 | 용어 | 코드 | 설명 |
 | --- | --- | --- |

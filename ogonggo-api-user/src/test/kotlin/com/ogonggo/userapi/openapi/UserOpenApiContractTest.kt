@@ -71,6 +71,61 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다`() {
+        // given
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1users~1me~1notifications"
+        // when, then
+        listOf(
+            "$base/get" to "listMyNotifications",
+            "$base~1unread-count/get" to "getMyNotificationUnreadCount",
+            "$base~1{notificationId}~1read/patch" to "readMyNotification",
+            "$base~1read-all/patch" to "readAllMyNotifications",
+            "$base~1broadcasts~1{batchId}~1read/patch" to "readMyBroadcastNotification",
+        ).forEach { (path, operationId) ->
+            val operation = document.at(path)
+            assertEquals(operationId, operation.at("/operationId").asText())
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(operation.at("/responses/403/description").asText().contains("USER_SUSPENDED"))
+        }
+        val list = document.at("$base/get")
+        assertPageParameter(list, "size", defaultValue = "20", minimum = 1, maximum = 100)
+        assertTrue(list.at("/parameters").any { it.at("/name").asText() == "cursor" && !it.at("/required").asBoolean() })
+        assertTrue(document.at("$base~1{notificationId}~1read/patch/responses/404/description").asText().contains("USER_NOTIFICATION_NOT_FOUND"))
+        val item = document.at("/components/schemas/UserNotificationResponse/properties")
+        assertTrue(item.has("isRead"))
+        assertTrue(item.has("source"))
+        assertTrue(item.has("sourceId"))
+        assertTrue(item.at("/actorProfileImageUrl/nullable").asBoolean())
+        assertTrue(document.at("/components/schemas/UserNotificationPageResponse/properties/nextCursor/nullable").asBoolean())
+        assertEquals(setOf("SIDE_STUDY_COMMENT_REPLY", "CONCERN_COMMENT", "ADMIN_NOTIFICATION"), item.at("/type/enum").map { it.asText() }.toSet())
+        listOf("id", "postId", "commentId", "url", "batchId", "body").forEach { field ->
+            assertTrue(item.at("/$field/nullable").asBoolean(), field)
+        }
+        assertTrue(item.at("/url/description").asText().contains("관리자 알림"))
+    }
+
+    @Test
+    fun `FCM 토큰 계약은 설치 UUID와 해제 및 충돌 응답을 명시한다`() {
+        // given
+        val document = openApiDocument()
+        // when
+        val operations = document.at("/paths/~1api~1v1~1users~1me~1fcm-token")
+        val request = document.at("/components/schemas/ReplaceFcmTokenRequest")
+        // then
+        assertEquals("deleteMyFcmToken", operations.at("/delete/operationId").asText())
+        assertTrue(operations.at("/delete/security/0/BearerAuth").isArray)
+        assertTrue(operations.at("/delete/responses/200/content/application~1json/schema").isObject)
+        assertTrue(operations.at("/put/responses/409/description").asText().contains("FCM_TOKEN_CONFLICT"))
+        assertEquals(4096, request.at("/properties/token/maxLength").asInt())
+        assertEquals("uuid", request.at("/properties/deviceId/format").asText())
+        assertTrue(request.at("/required").any { it.asText() == "token" })
+        assertFalse(request.at("/required").any { it.asText() == "deviceId" })
+        assertEquals(4096, document.at("/components/schemas/DeleteFcmTokenRequest/properties/token/maxLength").asInt())
+    }
+
+    @Test
     fun `사용자 OpenAPI는 인터페이스의 경로와 인증과 오류 명세를 노출한다`() {
         val document = openApiDocument()
 

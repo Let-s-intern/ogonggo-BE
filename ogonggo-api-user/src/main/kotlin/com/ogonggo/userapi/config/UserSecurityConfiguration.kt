@@ -89,10 +89,13 @@ class UserSecurityConfiguration {
                     HttpMethod.PUT,
                     "/api/v1/users/me/fcm-token",
                 ).authenticated()
+                it.requestMatchers(HttpMethod.DELETE, "/api/v1/users/me/fcm-token").authenticated()
                 it.requestMatchers(
                     HttpMethod.POST,
                     "/api/v1/users/me/notifications/fcm/test",
                 ).authenticated()
+                it.requestMatchers(HttpMethod.GET, "/api/v1/users/me/notifications", "/api/v1/users/me/notifications/unread-count").authenticated()
+                it.requestMatchers(HttpMethod.PATCH, "/api/v1/users/me/notifications/*/read", "/api/v1/users/me/notifications/broadcasts/*/read", "/api/v1/users/me/notifications/read-all").authenticated()
                 it.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/profile").authenticated()
                 it.requestMatchers(
                     HttpMethod.PUT,

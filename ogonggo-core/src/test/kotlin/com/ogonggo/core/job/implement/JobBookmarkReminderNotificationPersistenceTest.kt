@@ -8,6 +8,7 @@ import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
+import com.ogonggo.core.notification.delivery.implement.NotificationProcessingPolicy
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
@@ -30,6 +31,7 @@ import java.time.LocalDateTime
     JobManager::class,
     JobBookmarkReminderNotificationListener::class,
     NotificationAppender::class,
+    NotificationProcessingPolicy::class,
     NotificationManager::class,
     ContentRejectionManager::class,
 )

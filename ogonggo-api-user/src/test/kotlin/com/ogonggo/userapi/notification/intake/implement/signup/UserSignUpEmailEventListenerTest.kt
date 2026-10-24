@@ -8,6 +8,8 @@ import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.userapi.auth.business.UserSignedUpEvent
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
+import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -21,7 +23,8 @@ class UserSignUpEmailEventListenerTest {
 
     private val appender = Mockito.mock(NotificationAppender::class.java)
     private val taskExecutor = CapturingTaskExecutor()
-    private val listener = UserSignUpEmailEventListener(appender, taskExecutor)
+    private val alertNotifier = Mockito.mock(NotificationAlertNotifier::class.java)
+    private val listener = UserSignUpEmailEventListener(appender, taskExecutor, alertNotifier)
 
     @Test
     fun `가입한 일반 회원의 렛츠커리어 이메일로 환영 메일을 적재한다`() {
@@ -91,6 +94,7 @@ class UserSignUpEmailEventListenerTest {
         assertTrue(logAppender.list.any { it.formattedMessage.contains("userId=17") })
         val output = logAppender.list.joinToString { it.formattedMessage + (it.throwableProxy?.message ?: "") }
         assertFalse(output.contains("lets@career.co.kr"))
+        Mockito.verify(alertNotifier).notify(NotificationAlertType.ENQUEUE_FAILURE, "EMAIL", mapOf("reason" to "APPEND_FAILED"))
     }
 
     private fun signUpEvent() = UserSignedUpEvent(

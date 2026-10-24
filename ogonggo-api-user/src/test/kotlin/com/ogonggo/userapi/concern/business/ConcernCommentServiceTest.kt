@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -40,6 +41,11 @@ class ConcernCommentServiceTest {
     private val likeManager = Mockito.mock(ConcernCommentLikeManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-10-08T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val now = LocalDateTime.now(clock)
+    private val events = mutableListOf<Any>()
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java) { invocation ->
+        events += invocation.arguments.single()
+        null
+    }
     private val service = ConcernCommentService(
         userReader,
         userProfileReader,
@@ -51,6 +57,7 @@ class ConcernCommentServiceTest {
         likeReader,
         likeManager,
         clock,
+        eventPublisher,
     )
 
     @Test
@@ -59,7 +66,10 @@ class ConcernCommentServiceTest {
         val dto = appendDto(parentId = null, official = true)
         val saved = comment(parentId = null)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(account(UserRole.ADMIN))
-        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
+        val targetConcern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(targetConcern.title).thenReturn("고민 제목")
+        Mockito.`when`(targetConcern.authorUserId).thenReturn(OTHER_USER_ID)
+        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(targetConcern)
         Mockito.`when`(commentAppender.append(dto)).thenReturn(saved)
 
         // when
@@ -69,6 +79,9 @@ class ConcernCommentServiceTest {
         assertEquals(COMMENT_ID, commentId)
         Mockito.verify(commentAppender).append(dto)
         Mockito.verify(concernMetricManager).increaseCommentCount(CONCERN_ID, now)
+        assertEquals(listOf(ConcernCommentCreatedEvent(
+            CONCERN_ID, OTHER_USER_ID, "고민 제목", COMMENT_ID, null, USER_ID, CONTENT, now,
+        )), events)
     }
 
     @Test
@@ -78,7 +91,10 @@ class ConcernCommentServiceTest {
         val parent = comment(parentId = null)
         val saved = comment(parentId = PARENT_ID)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(account(UserRole.USER))
-        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
+        val targetConcern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(targetConcern.title).thenReturn("고민 제목")
+        Mockito.`when`(targetConcern.authorUserId).thenReturn(OTHER_USER_ID)
+        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(targetConcern)
         Mockito.`when`(commentReader.readParent(CONCERN_ID, PARENT_ID)).thenReturn(parent)
         Mockito.`when`(commentAppender.append(dto)).thenReturn(saved)
 
@@ -87,6 +103,9 @@ class ConcernCommentServiceTest {
 
         // then
         Mockito.verifyNoInteractions(concernMetricManager)
+        assertEquals(listOf(ConcernCommentCreatedEvent(
+            CONCERN_ID, OTHER_USER_ID, "고민 제목", 102L, PARENT_ID, USER_ID, CONTENT, now,
+        )), events)
     }
 
     @Test
@@ -94,7 +113,9 @@ class ConcernCommentServiceTest {
         // given
         val reply = comment(parentId = 1L)
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(account(UserRole.USER))
-        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
+        val targetConcern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(targetConcern.title).thenReturn("고민 제목")
+        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(targetConcern)
         Mockito.`when`(commentReader.readParent(CONCERN_ID, PARENT_ID)).thenReturn(reply)
 
         // when
@@ -132,7 +153,9 @@ class ConcernCommentServiceTest {
     fun `남의 댓글은 지울 수 없다`() {
         // given
         val comment = comment(parentId = null, userId = OTHER_USER_ID)
-        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
+        val targetConcern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(targetConcern.title).thenReturn("고민 제목")
+        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(targetConcern)
         Mockito.`when`(commentReader.readForUpdate(CONCERN_ID, COMMENT_ID)).thenReturn(comment)
 
         // when
@@ -147,7 +170,9 @@ class ConcernCommentServiceTest {
     fun `답변을 지우면 답변 수를 줄인다`() {
         // given
         val comment = comment(parentId = null)
-        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(Mockito.mock(Concern::class.java))
+        val targetConcern = Mockito.mock(Concern::class.java)
+        Mockito.`when`(targetConcern.title).thenReturn("고민 제목")
+        Mockito.`when`(concernReader.readForUpdate(CONCERN_ID)).thenReturn(targetConcern)
         Mockito.`when`(commentReader.readForUpdate(CONCERN_ID, COMMENT_ID)).thenReturn(comment)
 
         // when

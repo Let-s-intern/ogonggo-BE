@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -38,6 +39,11 @@ class RecruitmentPostCommentServiceTest {
     private val recruitmentPostMetricManager = Mockito.mock(RecruitmentPostMetricManager::class.java)
     private val reportAppender = Mockito.mock(RecruitmentPostCommentReportAppender::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-12T00:00:00Z"), ZONE)
+    private val events = mutableListOf<Any>()
+    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java) { invocation ->
+        events += invocation.arguments.single()
+        null
+    }
     private val service = RecruitmentPostCommentService(
         userReader,
         postReader,
@@ -48,6 +54,7 @@ class RecruitmentPostCommentServiceTest {
         recruitmentPostMetricManager,
         reportAppender,
         clock,
+        eventPublisher,
     )
 
     @Test
@@ -91,8 +98,10 @@ class RecruitmentPostCommentServiceTest {
         // given
         val command = command()
         val savedComment = Mockito.mock(RecruitmentPostComment::class.java)
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(post.title).thenReturn("모집글 제목")
         Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
-        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(Mockito.mock(RecruitmentPost::class.java))
+        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(post)
         Mockito.`when`(commentAppender.append(normalizedCommand())).thenReturn(savedComment)
         Mockito.`when`(savedComment.id).thenReturn(COMMENT_ID)
 
@@ -199,6 +208,33 @@ class RecruitmentPostCommentServiceTest {
 
         assertEquals("USER_SUSPENDED", exception.errorCode.code)
         Mockito.verifyNoInteractions(postReader, commentReader, reportAppender)
+    }
+
+    @Test
+    fun `댓글 작성 사실에는 원글과 부모 댓글 작성 시점의 값을 담는다`() {
+        // given
+        val post = Mockito.mock(RecruitmentPost::class.java)
+        Mockito.`when`(post.title).thenReturn("모집글 제목")
+        Mockito.`when`(userReader.read(USER_ID)).thenReturn(activeUser())
+        Mockito.`when`(postReader.readPublishedForUpdate(POST_ID)).thenReturn(post)
+        val parent = RecruitmentPostComment.create(POST_ID, null, 42L, "부모 댓글")
+        Mockito.`when`(commentReader.readForUpdate(90L)).thenReturn(parent)
+        val saved = Mockito.mock(RecruitmentPostComment::class.java)
+        Mockito.`when`(saved.id).thenReturn(COMMENT_ID)
+        listOf(null, 90L).forEach { parentId ->
+            Mockito.`when`(commentAppender.append(RecruitmentPostCommentAppendDto(
+                POST_ID, parentId, USER_ID, "참여하고 싶습니다.",
+            ))).thenReturn(saved)
+        }
+
+        // when
+        listOf(null, 90L).forEach { service.create(USER_ID, POST_ID, command(it)) }
+
+        // then
+        assertEquals(listOf(
+            RecruitmentPostCommentCreatedEvent(POST_ID, "모집글 제목", COMMENT_ID, null, null, USER_ID, "참여하고 싶습니다.", NOW),
+            RecruitmentPostCommentCreatedEvent(POST_ID, "모집글 제목", COMMENT_ID, 90L, 42L, USER_ID, "참여하고 싶습니다.", NOW),
+        ), events)
     }
 
     private fun activeUser(): UserAccountDto = UserAccountDto(

@@ -17,6 +17,7 @@ import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.user.implement.requireActive
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -38,6 +39,7 @@ class ConcernCommentService(
     private val likeReader: ConcernCommentLikeReader,
     private val likeManager: ConcernCommentLikeManager,
     private val clock: Clock,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     fun readComments(viewerUserId: Long?, concernId: Long, page: Int, size: Int): ConcernCommentPageResult {
@@ -79,7 +81,7 @@ class ConcernCommentService(
     fun create(userId: Long, concernId: Long, command: CreateConcernCommentCommand): Long {
         val account = userReader.read(userId)
         account.status.requireActive()
-        concernReader.readForUpdate(concernId)
+        val concern = concernReader.readForUpdate(concernId)
         command.parentId?.let { parentId ->
             if (commentReader.readParent(concernId, parentId).isReply()) {
                 throw InvalidValueException(ConcernCommentErrorCode.CONCERN_COMMENT_NESTING_NOT_ALLOWED)
@@ -95,9 +97,22 @@ class ConcernCommentService(
                 official = account.role == UserRole.ADMIN,
             ),
         )
+        val now = LocalDateTime.now(clock)
         if (!comment.isReply()) {
-            concernMetricManager.increaseCommentCount(concernId, LocalDateTime.now(clock))
+            concernMetricManager.increaseCommentCount(concernId, now)
         }
+        eventPublisher.publishEvent(
+            ConcernCommentCreatedEvent(
+                concernId = concernId,
+                concernAuthorUserId = concern.authorUserId,
+                concernTitle = concern.title,
+                commentId = comment.requiredId(),
+                parentId = command.parentId,
+                authorUserId = userId,
+                content = command.content,
+                occurredAt = now,
+            ),
+        )
         return comment.requiredId()
     }
 

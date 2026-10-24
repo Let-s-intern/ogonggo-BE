@@ -10,6 +10,8 @@ import com.ogonggo.core.notification.intake.implement.NotificationAppender
 import com.ogonggo.core.notification.intake.implement.dto.NotificationAppendDto
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.userapi.auth.business.UserSignedUpEvent
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
+import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -26,11 +28,13 @@ class UserSignUpAlimTalkEventListenerTest {
 
     private val appender = Mockito.mock(NotificationAppender::class.java)
     private val taskExecutor = CapturingTaskExecutor()
+    private val alertNotifier = Mockito.mock(NotificationAlertNotifier::class.java)
     private val listener = UserSignUpAlimTalkEventListener(
         UserSignUpAlimTalkPreparer(),
         appender,
         ObjectMapper().findAndRegisterModules(),
         taskExecutor,
+        alertNotifier,
     )
 
     @ParameterizedTest
@@ -171,6 +175,7 @@ class UserSignUpAlimTalkEventListenerTest {
         // then
         assertTrue(logAppender.list.any { it.level == Level.ERROR && it.throwableProxy != null })
         assertTrue(logAppender.list.any { it.formattedMessage.contains("userId=17") })
+        Mockito.verify(alertNotifier).notify(NotificationAlertType.ENQUEUE_FAILURE, "KAKAO", mapOf("reason" to "APPEND_FAILED"))
     }
 
     private fun signUpEvent() = UserSignedUpEvent(

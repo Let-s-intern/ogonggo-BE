@@ -22,6 +22,14 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration(proxyBeanMethods = false)
 class UserScheduledJobConfiguration {
+    @Bean
+    fun fcmTopicSyncJob(scheduler: com.ogonggo.userapi.notification.fcm.presentation.FcmTopicSyncScheduler) = ScheduledJobDefinition(
+        name = com.ogonggo.userapi.notification.fcm.presentation.FcmTopicSyncScheduler.SCHEDULER_NAME,
+        defaultCron = "*/30 * * * * *",
+        description = "전체 토픽 최초 구독·토큰/회원 상태 변경 동기화 및 실패 재처리",
+        action = scheduler::sync,
+    )
+
 
     @Bean
     fun recruitmentPostAutoCloseJob(scheduler: RecruitmentPostAutoCloseScheduler) = ScheduledJobDefinition(

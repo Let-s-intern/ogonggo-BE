@@ -4,13 +4,14 @@ import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.intake.implement.event.NotificationEnqueuedEvent
+import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
+import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 import java.time.Clock
-import java.time.Duration
 import java.time.LocalDateTime
 
 /** 알림 적재량·발송 결과·DB 대기 잔량을 Actuator MeterRegistry에 기록한다. */
@@ -19,9 +20,10 @@ class NotificationMetrics(
     private val meterRegistry: MeterRegistry,
     private val notificationManager: NotificationManager,
     private val clock: Clock,
+    private val alertNotifier: NotificationAlertNotifier,
 ) {
     init {
-        PendingState.values().forEach(::registerPendingGauge)
+        PendingState.entries.forEach(::registerPendingGauge)
     }
 
     /** 적재 이벤트는 Appender 트랜잭션이 실제 커밋된 뒤에만 누적한다. */
@@ -46,23 +48,24 @@ class NotificationMetrics(
 
     fun recordUnresolved(channel: NotificationChannel) {
         recordDelivery(channel, UNRESOLVED, NO_FAILURE_CATEGORY)
+        alertNotifier.notify(NotificationAlertType.DELIVERY_UNRESOLVED, scope = channel.name)
     }
 
     private fun registerPendingGauge(state: PendingState) {
         Gauge.builder(PENDING_METRIC, this) { metrics -> metrics.readPendingCount(state).toDouble() }
             .tag(STATE_TAG, state.tag)
-            .description("notifications의 PENDING 건수. due/expired는 max(scheduled_at, created_at) 기준 dispatcher 8분 창")
+            .description("notifications의 PENDING 또는 PROCESSING 건수. due/expired는 업무상 발송 기한으로 구분")
             .register(meterRegistry)
     }
 
     private fun readPendingCount(state: PendingState): Long {
         val now = LocalDateTime.now(clock)
-        val notBefore = now.minus(PENDING_DISPATCH_WINDOW)
         return when (state) {
             PendingState.TOTAL -> notificationManager.countPendingTotal()
-            PendingState.DUE -> notificationManager.countPendingDue(now, notBefore)
-            PendingState.EXPIRED -> notificationManager.countPendingExpired(notBefore)
+            PendingState.DUE -> notificationManager.countPendingDue(now)
+            PendingState.EXPIRED -> notificationManager.countPendingExpired(now)
             PendingState.FUTURE -> notificationManager.countPendingFuture(now)
+            PendingState.PROCESSING -> notificationManager.countProcessingTotal()
         }
     }
 
@@ -83,6 +86,7 @@ class NotificationMetrics(
         DUE("due"),
         EXPIRED("expired"),
         FUTURE("future"),
+        PROCESSING("processing"),
     }
 
     private companion object {
@@ -98,6 +102,5 @@ class NotificationMetrics(
         const val FAILED = "FAILED"
         const val UNKNOWN = "UNKNOWN"
         const val UNRESOLVED = "UNRESOLVED"
-        val PENDING_DISPATCH_WINDOW: Duration = Duration.ofMinutes(8)
     }
 }

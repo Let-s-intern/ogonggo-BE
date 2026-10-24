@@ -1,4 +1,4 @@
-package com.ogonggo.userapi.notification.fcm.implement
+package com.ogonggo.userapi.notification.channel.fcm
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

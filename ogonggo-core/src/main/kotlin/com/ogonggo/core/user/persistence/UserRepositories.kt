@@ -6,12 +6,18 @@ import com.ogonggo.core.user.domain.LetsCareerNicknameOutbox
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserProfile
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
 
 internal interface UserJpaRepository : JpaRepository<User, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :userId")
+    fun findForFcmTokenUpdate(@Param("userId") userId: Long): User?
+
     fun findByLetsCareerUserId(letsCareerUserId: Long): User?
     fun findByEmail(email: String): User?
 }

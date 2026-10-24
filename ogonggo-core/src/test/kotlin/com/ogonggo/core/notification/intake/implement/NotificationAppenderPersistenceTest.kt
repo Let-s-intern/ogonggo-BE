@@ -74,6 +74,50 @@ internal class NotificationAppenderPersistenceTest @Autowired constructor(
         )
     }
 
+    @Test
+    @DisplayName("일반 알림에는 업무 기한을 만들지 않고 명시한 관리자 기한만 저장한다")
+    fun `명시한 업무 기한만 저장한다`() {
+        // given
+        val notifications = NotificationChannel.entries.map { channel ->
+            notification("channel:$channel").copy(channel = channel, scheduledAt = NOW.minusHours(1))
+        } + notification("admin").copy(
+            channel = NotificationChannel.FCM,
+            dispatchExpiresAt = NOW.plusHours(24),
+        )
+
+        // when
+        notificationAppender.appendAll(notifications)
+
+        // then
+        val saved = notificationRepository.findAll().associateBy { it.deduplicationKey }
+        assertEquals(null, saved.getValue("channel:KAKAO").dispatchExpiresAt)
+        assertEquals(null, saved.getValue("channel:EMAIL").dispatchExpiresAt)
+        assertEquals(null, saved.getValue("channel:FCM").dispatchExpiresAt)
+        assertEquals(NOW.plusHours(24), saved.getValue("admin").dispatchExpiresAt)
+    }
+
+    @Test
+    @DisplayName("중복 적재는 기존 알림 기한을 보존하고 새 알림의 null 기한도 유지한다")
+    fun `새 일반 알림에는 기한을 자동으로 추가하지 않는다`() {
+        // given
+        val original = notification("original").copy(scheduledAt = NOW, dispatchExpiresAt = NOW.plusHours(1))
+        notificationAppender.append(original)
+
+        // when
+        val duplicate = notificationAppender.append(original.copy(dispatchExpiresAt = NOW.plusHours(2)))
+        notificationAppender.append(original.copy(deduplicationKey = "new", dispatchExpiresAt = null))
+
+        // then
+        assertFalse(duplicate)
+        val saved = notificationRepository.findAll().associateBy { it.deduplicationKey }
+        assertEquals(NOW.plusHours(1), saved.getValue("original").dispatchExpiresAt)
+        assertEquals(null, saved.getValue("new").dispatchExpiresAt)
+    }
+
+    private companion object {
+        val NOW: LocalDateTime = LocalDateTime.of(2026, 10, 6, 12, 0)
+    }
+
     private fun notification(deduplicationKey: String) = NotificationAppendDto(
         deduplicationKey = deduplicationKey,
         channel = NotificationChannel.KAKAO,

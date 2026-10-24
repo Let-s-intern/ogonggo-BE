@@ -48,6 +48,7 @@ internal class KakaoNotificationSender(
             NotificationFailureCategory.TEMPLATE_CONFIGURATION,
             NotificationFailureCategory.RATE_LIMITED,
             NotificationFailureCategory.HTTP_ERROR,
+            NotificationFailureCategory.PROVIDER_REJECTED,
             NotificationFailureCategory.CHANNEL_NOT_CONFIGURED ->
                 NotificationDeliveryResult.Failed(resultCode, failureCategory, description)
 

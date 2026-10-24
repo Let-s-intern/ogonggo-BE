@@ -14,6 +14,11 @@ GitHub 시크릿 `APPLICATION_SECRET_USER` / `APPLICATION_SECRET_ADMIN`의 내�
 
 ## 검증 순서
 
+사용자 API는 가상 스레드를 위해 Java 21로 빌드·실행한다. core와 관리자 API는 Java 17을
+유지하므로 PR 러너는 JDK 17·21을 함께 설치하고, 사용자 API 배포 러너도 두 JDK를 설치한다.
+각 모듈의 Gradle toolchain이 컴파일·테스트 JVM을 선택한다. 사용자 API Docker 이미지도
+Java 21을 사용하며, 이 변경만으로 운영 서비스에 배포하지 않는다.
+
 되돌리기 어려운 단계일수록 뒤에 둡니다. 앞 단계가 실패하면 ECR에 이미지를 올리지도,
 ECS를 건드리지도 않습니다.
 

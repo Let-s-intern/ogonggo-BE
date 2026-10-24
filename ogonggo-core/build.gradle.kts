@@ -45,3 +45,8 @@ tasks.withType<KotlinCompile>().configureEach {
         jvmTarget = "17"
     }
 }
+
+tasks.test {
+    // 서로 다른 JPA 컨텍스트·H2 스키마를 한꺼번에 보관하지 않도록 캐시 크기를 제한한다.
+    systemProperty("spring.test.context.cache.maxSize", "8")
+}

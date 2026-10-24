@@ -55,11 +55,15 @@ class NotificationAppender internal constructor(
                 Notification(
                     deduplicationKey = it.deduplicationKey,
                     channel = it.channel,
+                    recipientType = it.recipientType,
                     templateCode = it.templateCode,
                     recipientUserId = it.recipientUserId,
+                    userNotificationId = it.userNotificationId,
                     recipientAddress = it.recipientAddress,
                     payloadJson = it.payloadJson,
                     scheduledAt = it.scheduledAt,
+                    batchId = it.batchId,
+                    dispatchExpiresAt = it.dispatchExpiresAt,
                 )
             }
             .toList()

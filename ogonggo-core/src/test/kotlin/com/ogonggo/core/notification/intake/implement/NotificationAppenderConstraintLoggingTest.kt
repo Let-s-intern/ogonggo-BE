@@ -29,7 +29,10 @@ internal class NotificationAppenderConstraintLoggingTest {
         // given
         val repository = Mockito.mock(NotificationJpaRepository::class.java)
         val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
-        val appender = NotificationAppender(repository, eventPublisher)
+        val appender = NotificationAppender(
+            repository,
+            eventPublisher,
+        )
         val sensitiveKey = "signup-confirm:user:42:KAKAO"
         val databaseException = SQLException(
             "Duplicate entry '$sensitiveKey' for key 'notifications.uk_notification_deduplication_key'",

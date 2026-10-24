@@ -15,7 +15,10 @@ class NotificationAppenderEventTest {
         val repository = Mockito.mock(NotificationJpaRepository::class.java)
         val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
         Mockito.`when`(repository.findAllByDeduplicationKeyIn(listOf("key"))).thenReturn(emptyList())
-        val appender = NotificationAppender(repository, eventPublisher)
+        val appender = NotificationAppender(
+            repository,
+            eventPublisher,
+        )
 
         appender.append(
             NotificationAppendDto(

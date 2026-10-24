@@ -41,7 +41,8 @@ scheduled_jobs (name, cron, enabled)
 | `letsCareerNicknameSync` | 사용자 | `*/30 * * * * *` | 오공고에서 고친 닉네임을 렛츠커리어로 전송([인증 문서](authentication.md#닉네임)) |
 | `letsCareerContentSync` | 사용자 | `0 10 * * * *` | 공고 상세 추천에 쓰는 렛츠커리어 콘텐츠 사본을 렛츠커리어 목록으로 덮어씀([API 성공 응답](api-response.md#채용공고별-렛츠커리어-콘텐츠-추천)) |
 | `jobBookmarkAlimTalkReminder` | 사용자 | 임시 미등록 (복구 시 `0 * * * * *`) | NHN `clip_remind` 템플릿 승인 대기 중. 코드에 `ScheduledJobDefinition`을 등록하지 않아 실행되지 않음. 승인 후 등록 복구 및 DB 행 활성화 필요 |
-| `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 최대 4건 병렬 처리 |
+| `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 기본 4건 병렬 처리. 결과 commit이 끝난 슬롯부터 보충 |
+| `fcmTopicSync` | 사용자 | `*/30 * * * * *` | 전체 토픽 최초 구독, 토큰·회원 상태 동기화, 구독 실패 재처리. topic 설정 및 Firebase 활성화 시 실행 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
 
 2026-10-21 이전에는 `work24DailyCollection` 하나가 채용공고와 부트캠프를 함께 받아, 한쪽만 끌 수 없었다. 지금은 두 작업으로 나눠 따로 켜고 끈다.
@@ -61,11 +62,12 @@ scheduled_jobs (name, cron, enabled)
 - **임시 비활성:** NHN `clip_remind` 템플릿이 승인될 때까지 `jobBookmarkAlimTalkReminder`의 `ScheduledJobDefinition` 등록을 보류한다. 이 상태에서는 리마인드 notification을 새로 적재하지 않는다. 승인 후 코드 등록을 복구하고 `scheduled_jobs.enabled`를 확인해 활성화한다.
 - 리마인드 대상 적재는 매분 스크랩 대상 500건씩 조회하고, 대상이 없거나 45초 실행 예산에 도달할 때까지 페이지를 처리한다. 별도 일정 테이블이나 영속 커서는 없다. 커서는 한 번의 실행 안에서만 이동하며, 다음 실행은 처음부터 조회해 이미 적재된 알림을 건너뛴다.
 - 페이지별 알림 적재는 별도 트랜잭션으로 커밋하며 커서와 함께 저장하지 않는다. 45초 예산은 다음 페이지 진입 여부만 제한하고, 진행 중인 페이지를 중단시키는 hard timeout은 아니다. 리마인드 작업의 ShedLock 최대 보유시간은 10분이다.
-- delivery dispatcher는 매초 due `PENDING` 중 `max(scheduled_at, created_at)`이 현재 시각 기준 최근 8분 이내인 행만 조회한다. 지연 적재된 알림은 적재 시각부터 처리 창을 적용하고, 두 시각 모두 8분을 넘긴 행은 `PENDING`으로 남겨 자동 발송하지 않는다. 작업 전체에 최대 90초 ShedLock을 적용해 row claim 상태 없이 한 인스턴스만 읽고 처리한다.
-- provider 발송은 고정 4개 스레드의 전용 실행기로 최대 4건씩 병렬 처리하며 대기열은 두지 않는다. dispatcher는 45초 실행 예산 동안 다음 묶음을 읽지만, 이미 시작한 묶음의 `join()` 대기는 예산을 넘길 수 있어 45초는 hard timeout이 아니다. 실행기 포화면 남은 `PENDING` 행을 다음 tick에 둔다.
-- 요청 결과는 provider 접수면 `SENT`, 명시적 거절이면 `FAILED`, 접수 여부를 확인할 수 없으면 `UNKNOWN`이다. 세 결과 상태는 자동 재발송하지 않는다. 단, 결과 저장 전 종료되어 `PENDING`으로 남은 건은 `max(scheduled_at, created_at)` 기준 8분 이내 조회에서 다시 처리될 수 있다. NHN 멱등성 키는 같은 요청의 중복을 최대 10분간 억제할 뿐, 영구적인 1회 발송 보장은 아니다.
-- provider 접수 후 DB 결과 기록에 실패하면 행은 `PENDING`으로 남는다. `max(scheduled_at, created_at)` 기준 8분 창 안의 다음 실행에서만 재호출될 수 있고, 그 이후에는 자동 발송 대상에서 제외된다. NHN 멱등성 10분보다 2분 짧은 앱 조회 창으로 중복 가능성을 제한하며, 창이 지난 행은 삭제하지 않아 운영 조회가 가능하다.
+- delivery dispatcher는 매초 due `PENDING`을 `PROCESSING`으로 조건부 선점하고 attempt ID·처리 시작 시각을 커밋한 뒤 provider를 호출한다. `dispatch_expires_at`은 명시된 업무 기한에만 사용하며 null 일반 알림에는 만료를 적용하지 않는다. 지난 버전의 null `PENDING`은 [통합 마이그레이션](../schema/2026-10-24-lc-3489-notifications.sql)에서 기존 8분 기준의 기한을 고정해 배포 뒤 오래된 대기열을 재발송하지 않는다. 업무 전체에는 최대 90초 ShedLock도 적용한다.
+- provider 발송은 Java 21의 작업별 가상 스레드로 동기 sender를 실행한다. `ogonggo.notification.delivery.max-concurrency`(기본 4)가 진행 중 알림 수를 제한하며 각 결과 commit까지 같은 슬롯을 유지한다. 먼저 완료된 슬롯부터 새 due 알림을 보충한다. 결과 commit은 `db-workers`(기본 4)의 전용 플랫폼 풀에서 실행하고, `db-queue-capacity`(기본 max-concurrency)의 bounded queue가 포화되면 새 발송을 멈추고 진행 중 요청을 drain한다. `virtual-threads=false`이면 같은 상한의 플랫폼 발송 스레드를 사용한다. 45초 실행 예산은 신규 수락만 멈추는 기준이며 이미 시작한 HTTP·DB 작업을 강제 취소하지 않는다. 상세 설정과 비교 범위는 [알림 추가 가이드](notification-extension-guide.md#발송-실행기)를 따른다.
+- stale 기준은 provider 처리 시작 시각이다. 초기에는 세 provider 모두 8분을 사용한다. NHN 알림톡은 최초 시각 기준 10분 멱등성 창 안에서 같은 키로 한 번 재시도하고, 이메일 SMTP·FCM은 현재 결과 조회 연동이 없어 `UNKNOWN`으로 끝내며 자동 재발송하지 않는다. provider별 설정은 `ogonggo.notification.processing` 아래에서 조정한다.
+- provider 접수 후 DB 결과 기록에 실패하면 행은 `PROCESSING`으로 남는다. stale 복구는 NHN의 제한된 재시도 외에는 `UNKNOWN`으로 마감한다. 재시도와 완료 UPDATE는 attempt ID까지 일치해야 하므로 이전 요청의 늦은 응답이 새 시도 상태를 덮지 못한다. 재시도하지 않은 stale `UNKNOWN`은 같은 요청의 늦은 결과로 정정할 수 있다. stale timeout 자체는 provider 실패 증거가 아니며, 실행 중인 HTTP 호출을 취소하지 않는다.
 - dispatcher 실행이 60초 이상 걸리면 종료 시 경고 로그를 남긴다. ShedLock 만료(90초) 전 지연 신호이므로 반복 발생 시 원인과 lock 시간 상향을 검토한다. 이 로그는 실행 중 실시간 watchdog 경보가 아니며, 작업이 반환된 뒤 기록된다.
+- Slack 경고를 활성화하면 `NotificationDeliveryMonitor`가 업무 스케줄러와 별도의 플랫폼 스레드 1개에서 기본 30초마다 발송 대기·공용 DB의 최근 확정 처리 유무를 확인한다. due 대기가 2분 이상 지속되고 최근 2분 처리도 없거나 provider별 stale timeout을 넘긴 `PROCESSING`이 남으면 진행 중단을 경고한다. `scheduled_jobs.enabled=false`인 발송은 제외한다. 감시 주기는 업무 cron이 아닌 `ogonggo.notification.alerts.check-interval`로 설정하며, 업무 예약 풀 정체도 감시하기 위해 분리한다. 잠금 만료 임박을 실시간 감시하는 기능은 아니다.
 - 공고 마감 변경으로 새 D-1 회차가 만들어지는 것은 이전 회차와 다른 논리 알림이다. 이미 시작된 이전 회차 발송과 새 회차 발송이 모두 이뤄지는 경우는 중복 발송으로 분류하지 않는다.
 - 작업을 완전히 중지하려면 두 발송 작업 모두 `enabled=false`로 설정한다. 이미 실행 중인 dispatcher는 진행 중인 외부 요청·DB 기록이 끝나야 반환될 수 있다. 45초 예산은 강제 중단 시간이 아니다. 적재만 끄면 기존 대기열은 계속 발송된다.
 - MAU 5만 기준의 실제 처리량은 DB·NHN 지연과 provider 한도에 따라 달라지며 부하 검증 전에는 보장하지 않는다.

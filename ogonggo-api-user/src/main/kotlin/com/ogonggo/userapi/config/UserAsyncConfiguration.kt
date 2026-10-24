@@ -1,7 +1,11 @@
 package com.ogonggo.userapi.config
 
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.DependsOn
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import java.util.concurrent.ThreadPoolExecutor
@@ -13,6 +17,7 @@ import java.util.concurrent.ThreadPoolExecutor
  */
 @Configuration(proxyBeanMethods = false)
 @EnableAsync
+@EnableConfigurationProperties(NotificationDeliveryProperties::class)
 class UserAsyncConfiguration {
 
     /**
@@ -53,17 +58,45 @@ class UserAsyncConfiguration {
 
     /**
      * 외부 알림 provider 호출을 요청·지표·문의 메일 작업과 분리한다.
-     * dispatcher가 한 번에 최대 4건을 병렬 처리한다. 포화되면 이번 발송 실행을 멈추고 다음 tick에서 다시 읽는다.
+     * 기본 동시성 4는 유지하고 작업마다 가상 스레드를 만든다. 포화 시 다음 tick에서 다시 읽는다.
      */
-    @Bean(name = [NOTIFICATION_DELIVERY_TASK_EXECUTOR])
-    fun notificationDeliveryTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
-        corePoolSize = 4
-        maxPoolSize = 4
-        queueCapacity = 0
-        setThreadNamePrefix("notification-delivery-")
+    @Bean(name = [NOTIFICATION_DELIVERY_TASK_EXECUTOR], destroyMethod = "close")
+    @DependsOn(NOTIFICATION_RESULT_DB_TASK_EXECUTOR)
+    fun notificationDeliveryTaskExecutor(
+        properties: NotificationDeliveryProperties,
+        meterRegistry: MeterRegistry,
+    ): NotificationDeliveryTaskExecutor = NotificationDeliveryTaskExecutor(properties).apply {
+        Gauge.builder("executor.active", this) { it.activeCount.toDouble() }
+            .tag("name", NOTIFICATION_DELIVERY_TASK_EXECUTOR)
+            .register(meterRegistry)
+        Gauge.builder("executor.queued", this) { 0.0 }
+            .tag("name", NOTIFICATION_DELIVERY_TASK_EXECUTOR)
+            .register(meterRegistry)
+    }
+
+    /**
+     * 발송 결과의 행별 트랜잭션을 실행하는 플랫폼 스레드 풀이다.
+     * HTTP 응답을 기다리는 발송 작업과 JDBC 실행을 분리하고, 큐 용량을 동시 발송 상한으로 제한한다.
+     */
+    @Bean(name = [NOTIFICATION_RESULT_DB_TASK_EXECUTOR])
+    fun notificationResultDbTaskExecutor(
+        properties: NotificationDeliveryProperties,
+        meterRegistry: MeterRegistry,
+    ): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        corePoolSize = properties.dbWorkers
+        maxPoolSize = properties.dbWorkers
+        queueCapacity = properties.dbQueueCapacity
+        setThreadNamePrefix("notification-db-")
         setRejectedExecutionHandler(ThreadPoolExecutor.AbortPolicy())
         setWaitForTasksToCompleteOnShutdown(true)
-        setAwaitTerminationSeconds(5)
+        setAwaitTerminationSeconds(15)
+        val executor = this
+        Gauge.builder("executor.active", executor) { it.activeCount.toDouble() }
+            .tag("name", NOTIFICATION_RESULT_DB_TASK_EXECUTOR)
+            .register(meterRegistry)
+        Gauge.builder("executor.queued", executor) { it.threadPoolExecutor.queue.size.toDouble() }
+            .tag("name", NOTIFICATION_RESULT_DB_TASK_EXECUTOR)
+            .register(meterRegistry)
     }
 
     /**
@@ -102,6 +135,7 @@ class UserAsyncConfiguration {
         const val METRIC_TASK_EXECUTOR = "metricTaskExecutor"
         const val ADVERTISEMENT_TASK_EXECUTOR = "advertisementTaskExecutor"
         const val NOTIFICATION_DELIVERY_TASK_EXECUTOR = "notificationDeliveryTaskExecutor"
+        const val NOTIFICATION_RESULT_DB_TASK_EXECUTOR = "notificationResultDbTaskExecutor"
         const val NOTIFICATION_ENQUEUE_TASK_EXECUTOR = "notificationEnqueueTaskExecutor"
         const val COMPANY_POSTING_TASK_EXECUTOR = "companyPostingTaskExecutor"
     }

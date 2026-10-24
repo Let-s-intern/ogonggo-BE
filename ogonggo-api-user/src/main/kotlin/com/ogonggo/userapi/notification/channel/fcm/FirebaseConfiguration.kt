@@ -1,4 +1,4 @@
-package com.ogonggo.userapi.notification.fcm.implement
+package com.ogonggo.userapi.notification.channel.fcm
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.auth.oauth2.ServiceAccountCredentials

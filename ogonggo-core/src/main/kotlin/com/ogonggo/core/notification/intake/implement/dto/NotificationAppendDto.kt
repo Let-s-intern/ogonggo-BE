@@ -1,5 +1,6 @@
 package com.ogonggo.core.notification.intake.implement.dto
 
+import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notification.domain.NotificationChannel
 import java.time.LocalDateTime
 
@@ -12,4 +13,9 @@ data class NotificationAppendDto(
     val payloadJson: String,
     val scheduledAt: LocalDateTime,
     val recipientUserId: Long? = null,
+    val userNotificationId: Long? = null,
+    val recipientType: NotificationRecipientType = NotificationRecipientType.DIRECT,
+    val batchId: String? = null,
+    /** 업무상 발송 기한. null이면 일반 대기열에서 업무 만료를 적용하지 않는다. */
+    val dispatchExpiresAt: LocalDateTime? = null,
 )

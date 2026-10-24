@@ -136,6 +136,7 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)를 고친다 |
 | `PUT /api/v1/users/me/notification-email` | 필수 | 일반 회원이 오늘의 공고 수신 이메일을 고친다 |
 | `PUT /api/v1/users/me/nickname` | 필수 | 일반 회원이 닉네임을 고친다. 아웃박스로 렛츠커리어에 보낸다 |
+| `PATCH /api/v1/users/me/notifications/broadcasts/{batchId}/read` | 필수 | 최근 30일·가입 이후 공통 공지의 회원별 최초 읽음 처리 |
 | `PATCH /api/v1/users/me/password` | 필수 | 자기 비밀번호를 바꾼다 |
 
 `anyRequest().denyAll()`은 그대로 둡니다. 여는 경로는 메서드와 함께 하나씩 명시하며, 목록이 아닌 것은 열리지 않습니다. 브라우저 preflight(`OPTIONS`)만 예외로, 인가 규칙 첫 줄의 `CorsUtils::isPreFlightRequest`가 먼저 허용합니다([브라우저 CORS 허용 오리진](#7-2-브라우저-cors-허용-오리진) 참고).
