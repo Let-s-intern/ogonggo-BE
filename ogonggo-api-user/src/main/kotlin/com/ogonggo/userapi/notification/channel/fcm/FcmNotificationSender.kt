@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.Message
+import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.Notification
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
@@ -52,29 +53,48 @@ internal class FcmNotificationSender(
             )
         }
 
-        val message = Message.builder()
-            .apply { if (topic) setTopic(notification.recipientAddress) else setToken(notification.recipientAddress) }
-            .setNotification(
-                Notification.builder()
-                    .setTitle(payload.title)
-                    .setBody(payload.body)
-                    .build(),
+        val message = try {
+            Message.builder()
+                .apply { if (topic) setTopic(notification.recipientAddress) else setToken(notification.recipientAddress) }
+                .setNotification(
+                    Notification.builder()
+                        .setTitle(payload.title)
+                        .setBody(payload.body)
+                        .build(),
+                )
+                .putAllData(payload.data)
+                .build()
+        } catch (_: IllegalArgumentException) {
+            return NotificationDeliveryResult.Failed(
+                resultCode = "INVALID_FCM_MESSAGE",
+                failureCategory = NotificationFailureCategory.INVALID_REQUEST,
+                detail = "FCM 메시지 형식이 유효하지 않습니다.",
             )
-            .putAllData(payload.data)
-            .build()
+        }
 
         return try {
             NotificationDeliveryResult.Sent(firebaseMessaging.send(message))
         } catch (exception: FirebaseMessagingException) {
-            val errorCode = exception.messagingErrorCode?.name ?: "FIREBASE_MESSAGING_ERROR"
-            if (!topic && userId != null && exception.messagingErrorCode == com.google.firebase.messaging.MessagingErrorCode.UNREGISTERED) {
+            if (!topic && userId != null && exception.messagingErrorCode == MessagingErrorCode.UNREGISTERED) {
                 tokenManager.revoke(userId, notification.recipientAddress, LocalDateTime.now(clock))
             }
-            NotificationDeliveryResult.Failed(
-                resultCode = errorCode,
-                failureCategory = errorCode.toFailureCategory(),
-                detail = exception.message.toSafeDetail(notification.recipientAddress),
-            )
+            exception.toDeliveryResult(notification.recipientAddress)
+        }
+    }
+
+    private fun FirebaseMessagingException.toDeliveryResult(token: String): NotificationDeliveryResult {
+        // 통신 오류에는 messagingErrorCode가 없으므로 DEADLINE_EXCEEDED 등 SDK 공통 코드도 확인한다.
+        val resultCode = messagingErrorCode?.name ?: errorCode?.name ?: "FIREBASE_MESSAGING_ERROR"
+        val category = resultCode.toFailureCategory()
+        val detail = message.toSafeDetail(token)
+        return when (category) {
+            NotificationFailureCategory.CLIENT_ERROR,
+            NotificationFailureCategory.INVALID_REQUEST,
+            NotificationFailureCategory.AUTHENTICATION_CONFIGURATION,
+            NotificationFailureCategory.RATE_LIMITED,
+            NotificationFailureCategory.HTTP_ERROR -> NotificationDeliveryResult.Failed(resultCode, category, detail)
+
+            else -> NotificationDeliveryResult.Unknown(resultCode, category, detail)
         }
     }
 
@@ -89,11 +109,15 @@ internal class FcmNotificationSender(
         ?.take(RESULT_DETAIL_MAX_LENGTH)
 
     private fun String.toFailureCategory(): NotificationFailureCategory = when (this) {
-        "UNREGISTERED", "INVALID_ARGUMENT" -> NotificationFailureCategory.CLIENT_ERROR
-        "SENDER_ID_MISMATCH", "THIRD_PARTY_AUTH_ERROR" -> NotificationFailureCategory.AUTHENTICATION_CONFIGURATION
-        "QUOTA_EXCEEDED" -> NotificationFailureCategory.RATE_LIMITED
-        "UNAVAILABLE" -> NotificationFailureCategory.PROVIDER_UNAVAILABLE
-        else -> NotificationFailureCategory.HTTP_ERROR
+        "UNREGISTERED" -> NotificationFailureCategory.CLIENT_ERROR
+        "INVALID_ARGUMENT", "FAILED_PRECONDITION", "OUT_OF_RANGE" -> NotificationFailureCategory.INVALID_REQUEST
+        "SENDER_ID_MISMATCH", "THIRD_PARTY_AUTH_ERROR", "UNAUTHENTICATED", "PERMISSION_DENIED" ->
+            NotificationFailureCategory.AUTHENTICATION_CONFIGURATION
+        "QUOTA_EXCEEDED", "RESOURCE_EXHAUSTED" -> NotificationFailureCategory.RATE_LIMITED
+        "INTERNAL", "UNAVAILABLE" -> NotificationFailureCategory.PROVIDER_UNAVAILABLE
+        "DEADLINE_EXCEEDED", "CANCELLED" -> NotificationFailureCategory.TRANSPORT_ERROR
+        "NOT_FOUND", "CONFLICT", "ALREADY_EXISTS" -> NotificationFailureCategory.HTTP_ERROR
+        else -> NotificationFailureCategory.UNKNOWN_PROVIDER_ERROR
     }
 
     private companion object {

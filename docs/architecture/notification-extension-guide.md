@@ -290,16 +290,29 @@ ogonggo:
 - sender 미등록 채널은 `CHANNEL_NOT_CONFIGURED`로 실패한다. enum 값만 추가해도 발송되지는 않는다.
 - provider 결과는 원본 `result_code`, 공통 의미 `result_category`, 민감정보를 제거한 `result_detail`을 함께 저장한다. 의미가 확인된 명시적 거절은 `FAILED`, 접수 여부가 불명확한 응답은 `UNKNOWN`으로 기록하며 둘 다 자동 재발송하지 않는다. provider 응답 원문은 저장하지 않고, 채널 sender가 정규화한 안전한 상세만 최대 500자로 보존한다.
 - NHN의 현재 코드표는 API 요청 응답 코드만 분류한다. `SENT`는 NHN 접수이며, NHN→카카오 실제 전달 결과 코드는 조회하지 않는다.
+- NHN `-1031`은 전체 수신자의 확정 실패이므로 `FAILED / PROVIDER_REJECTED`로 기록한다. 헤더의 `result_code=-1031`을 보존하고, 단일 수신자의 실패 코드가 있으면 코드와 내부 코드표의 안전한 설명만 `result_detail`에 덧붙인다. 상세가 없거나 미등록 코드여도 전체 실패 판정은 유지하며 provider 원문 메시지는 저장하지 않는다.
+- FCM은 `messagingErrorCode`를 우선하고, 없으면 SDK 공통 `errorCode`를 보존한다. `FirebaseMessagingException` 전체를 확정 실패로 취급하지 않는다. 코드가 없거나 의미를 확인할 수 없으면 `UNKNOWN / UNKNOWN_PROVIDER_ERROR`로 남긴다. 메시지 생성 단계에서 거부된 형식은 provider 호출 전 `FAILED / INVALID_REQUEST / INVALID_FCM_MESSAGE`로 기록한다.
 - 채널의 멱등성·재시도 정책은 해당 provider 특성으로 검토한다. 현재 공통 자동 재시도는 없다.
 
 | 코드/응답 | 저장 분류 | 해석 |
 | --- | --- | --- |
 | NHN `-1005` | `UNKNOWN` / `DUPLICATE_REQUEST` | 같은 멱등성 키 응답만으로는 최초 요청의 접수 여부를 확인할 수 없음 |
 | NHN `-1000`, `-1001` | `FAILED` / `AUTHENTICATION_CONFIGURATION` | 앱키·비밀 키 설정 오류로 명시적 거절 |
+| NHN `-1031` | `FAILED` / `PROVIDER_REJECTED` | 요청한 전체 수신자 발송 실패. 수신자별 상세 코드는 안전한 설명과 함께 보존 |
 | NHN `-3003` ~ `-3005` | `FAILED` / `TEMPLATE_CONFIGURATION` | 템플릿 없음·파라미터·승인 상태 오류로 명시적 거절 |
 | HTTP `429` / 일반 `4xx` | `FAILED` / `RATE_LIMITED`·`HTTP_ERROR` | provider의 명시적 요청 거절 |
 | HTTP `5xx`, 통신·client 예외, 해석 불가 응답 | `UNKNOWN` / 해당 `result_category` | provider 접수 여부를 확인할 수 없음 |
 | 미등록 NHN 코드 | `UNKNOWN` / `UNKNOWN_PROVIDER_ERROR` | 원본 코드는 보존하지만 의미를 확인할 수 없어 재발송하지 않음 |
+| FCM `UNREGISTERED` | `FAILED` / `CLIENT_ERROR` | 현재 회원·토큰의 연결만 조건부 해제 |
+| FCM `INVALID_ARGUMENT`, 공통 `FAILED_PRECONDITION`·`OUT_OF_RANGE` | `FAILED` / `INVALID_REQUEST` | 요청 형식·조건 오류로 명시적 거절 |
+| FCM `SENDER_ID_MISMATCH`·`THIRD_PARTY_AUTH_ERROR`, 공통 `UNAUTHENTICATED`·`PERMISSION_DENIED` | `FAILED` / `AUTHENTICATION_CONFIGURATION` | 인증·권한·프로젝트 설정 오류 |
+| FCM `QUOTA_EXCEEDED`, 공통 `RESOURCE_EXHAUSTED` | `FAILED` / `RATE_LIMITED` | 발송 한도 초과로 명시적 거절 |
+| FCM 공통 `NOT_FOUND`·`CONFLICT`·`ALREADY_EXISTS` | `FAILED` / `HTTP_ERROR` | 리소스 없음·충돌로 명시적 거절 |
+| FCM `INTERNAL`·`UNAVAILABLE` | `UNKNOWN` / `PROVIDER_UNAVAILABLE` | 서버·서비스 오류로 접수 여부 미확정 |
+| FCM 공통 `DEADLINE_EXCEEDED`·`CANCELLED` | `UNKNOWN` / `TRANSPORT_ERROR` | 시간 초과·중단으로 접수 여부 미확정 |
+| FCM 공통 `UNKNOWN`·`ABORTED`·`DATA_LOSS`, 코드 없음 | `UNKNOWN` / `UNKNOWN_PROVIDER_ERROR` | 접수 여부를 판단할 근거가 없음 |
+
+2026-10-24 오류 분류 보완: [NHN 오류 코드](https://docs.nhncloud.com/ko/Notification/KakaoTalk%20Bizmessage/ko/error-code/), [FCM 오류 코드](https://firebase.google.com/docs/cloud-messaging/error-codes), [사용 중인 Firebase Admin SDK 9.11.0의 통신 오류 변환](https://github.com/firebase/firebase-admin-java/blob/v9.11.0/src/main/java/com/google/firebase/internal/AbstractHttpErrorHandler.java)을 기준으로 위 분류를 적용한다. 기존에 저장된 terminal 행은 이 변경으로 다시 분류하거나 재발송하지 않는다. 팀 리뷰 필요.
 
 ## 발송 실행기
 

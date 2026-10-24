@@ -141,7 +141,20 @@ private data class NhnAlimTalkResponse(
         // 접수 여부를 확인할 필드가 빠졌거나 수신자 결과가 하나로 결정되지 않으면 성공으로 추정하지 않는다.
         val successful = header?.isSuccessful ?: return NhnAlimTalkResult.InvalidResponse
         if (!successful) {
-            return rejected(header.resultCode)
+            val result = rejected(header.resultCode)
+            // -1031은 확정 실패다. 헤더 코드는 보존하고 단일 수신자의 원인을 안전한 설명으로 덧붙인다.
+            val recipientCode = message?.sendResults?.singleOrNull()?.resultCode
+            return if (
+                header.resultCode == ALL_RECIPIENTS_FAILED &&
+                recipientCode != null && recipientCode != SUCCESS_RESULT_CODE
+            ) {
+                val recipientError = NhnAlimTalkErrorCode.resolve(recipientCode)
+                result.copy(
+                    description = "${result.description} (수신자 결과 코드: $recipientCode, ${recipientError.description})",
+                )
+            } else {
+                result
+            }
         }
 
         val resultCode = message?.sendResults?.singleOrNull()?.resultCode
@@ -164,6 +177,7 @@ private data class NhnAlimTalkResponse(
 
     private companion object {
         const val SUCCESS_RESULT_CODE = 0
+        const val ALL_RECIPIENTS_FAILED = -1031
     }
 }
 

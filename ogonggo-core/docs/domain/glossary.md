@@ -116,6 +116,7 @@
 | 공통 공지 읽음 | `NotificationBroadcastRead` | 전체 토픽 공지를 읽은 회원과 배치·최초 읽음 시각. 읽기 전에는 회원별 행을 만들지 않습니다. |
 | 토픽 구독 동기화 | `FcmTopicSyncTask` | 토큰별 최신 구독 희망 상태와 요청 revision, 실패 재처리 정보. FCM 접수 결과와 사용자 읽음 상태와는 별개입니다. |
 | 발송 기록 | `Notification` | 개별 주소 또는 FCM 토픽의 발송 대기·결과. 알림함이 있으면 `userNotificationId`로 연결합니다. |
+| 제공자 명시적 발송 거절 | `NotificationFailureCategory.PROVIDER_REJECTED` | NHN `-1031`처럼 전체 수신자의 실패가 확인된 결과. 세부 실패 원인을 모르는 경우에도 접수 여부 미확정인 `UNKNOWN`과 구분해 `FAILED`로 기록합니다. |
 
 ## 8. 운영·기반
 

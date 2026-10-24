@@ -8,9 +8,51 @@ import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageD
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
+import org.springframework.http.MediaType
+import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
+import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
+import org.springframework.web.client.RestClient
 
 class KakaoNotificationSenderTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "",
+        """, "message": {"sendResults": [{"resultCode": -3004, "resultMessage": "private@example.com 01012345678"}]}""",
+        """, "message": {"sendResults": [{"resultCode": -9999, "resultMessage": "private@example.com 01012345678"}]}""",
+    ])
+    @DisplayName("NHN 전체 수신자 실패는 수신자 상세 유무와 관계없이 FAILED로 기록한다")
+    fun `전체 수신자 실패 응답을 확정 실패로 변환한다`(messageJson: String) {
+        // given
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val client = NhnAlimTalkClient(builder.build(), NhnAlimTalkProperties("app", "secret", "sender"))
+        val sender = KakaoNotificationSender(client, ObjectMapper())
+        server.expect(requestTo("https://api-alimtalk.cloud.toast.com/alimtalk/v2.3/appkeys/app/messages"))
+            .andRespond(withSuccess(
+                """{"header":{"resultCode":-1031,"isSuccessful":false}$messageJson}""",
+                MediaType.APPLICATION_JSON,
+            ))
+
+        // when
+        val result = sender.send(notification())
+
+        // then
+        val expectedDetail = when {
+            messageJson.contains("-3004") -> "전체 수신자 발송 실패 (수신자 결과 코드: -3004, 템플릿 파라미터 오류)"
+            messageJson.contains("-9999") -> "전체 수신자 발송 실패 (수신자 결과 코드: -9999, 매핑되지 않은 NHN API 오류 코드)"
+            else -> "전체 수신자 발송 실패"
+        }
+        assertEquals(
+            NotificationDeliveryResult.Failed("-1031", NotificationFailureCategory.PROVIDER_REJECTED, expectedDetail),
+            result,
+        )
+        server.verify()
+    }
 
     @Test
     @DisplayName("분류되지 않은 NHN 오류는 접수 여부 미확정으로 남긴다")
