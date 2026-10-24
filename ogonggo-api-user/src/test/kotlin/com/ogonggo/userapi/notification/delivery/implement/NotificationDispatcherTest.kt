@@ -59,7 +59,7 @@ class NotificationDispatcherTest {
         val slow = notification(id = 2)
         val replacement = notification(id = 3)
         val manager = Mockito.mock(NotificationManager::class.java)
-        Mockito.`when`(manager.claimDue(now, 2)).thenReturn(listOf(fast, slow))
+        Mockito.`when`(manager.claimDue(now, 2)).thenReturn(listOf(fast, slow), emptyList())
         Mockito.`when`(manager.claimDue(now, 1)).thenReturn(listOf(replacement), emptyList())
         listOf(fast, slow, replacement).forEach {
             Mockito.`when`(manager.complete(it.notificationId, "attempt-${it.notificationId}", NotificationDeliveryResult.Sent("provider"), now))

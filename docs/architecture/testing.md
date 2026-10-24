@@ -78,4 +78,6 @@ env -u CI ./gradlew :ogonggo-api-user:test --tests '*RecruitmentPostBookmarkConc
 
 변경한 테스트는 먼저 가장 좁은 Gradle 테스트 대상으로 실행한다. 공통 모듈, 공개 API 계약, 영속성 동작을 바꿨다면 영향 모듈까지 검증 범위를 넓힌다. 실행하지 못한 검증은 성공한 것처럼 기록하지 않고, 이유와 남은 위험을 남긴다.
 
+`ogonggo-core`는 기본 힙에서 전체 테스트 후반에 `OutOfMemoryError`가 재현되어 테스트 JVM의 최대 힙을 `1536m`으로 지정한다. 설정은 해당 모듈의 `build.gradle.kts`에 두며 로컬·CI에 동일하게 적용한다. 운영 API JVM의 힙 설정은 바꾸지 않는다.
+
 Controller·OpenAPI 계약 변경은 [OpenAPI와 API 계약](openapi.md)의 검증 기준을 함께 따른다. 시간 기반 동작은 [시간 처리](time-handling.md)의 Clock·시간대 규칙을 함께 따른다.

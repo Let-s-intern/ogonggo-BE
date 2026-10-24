@@ -45,3 +45,8 @@ tasks.withType<KotlinCompile>().configureEach {
         jvmTarget = "17"
     }
 }
+
+tasks.test {
+    // 여러 JPA 컨텍스트·H2 스키마를 사용하는 전체 테스트가 기본 힙에서 OOM으로 실패한다.
+    maxHeapSize = "1536m"
+}
