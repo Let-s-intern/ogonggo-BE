@@ -7,6 +7,7 @@ import com.ogonggo.adminapi.ingestion.work24.presentation.pathName
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -189,6 +190,30 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertEquals("string", request.at("/properties/data/additionalProperties/type").asText())
         assertEquals("uuid", result.at("/parameters").first { it.at("/name").asText() == "batchId" }.at("/schema/format").asText())
         assertTrue(result.at("/responses/404/description").asText().contains("NOTIFICATION_BATCH_NOT_FOUND"))
+    }
+
+    @Test
+    @DisplayName("이메일 재발송은 관리자 인증·양수 회원 ID·적재 응답과 수신자 오류를 명세한다")
+    fun `가입 환영 이메일 재발송 계약을 제공한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1admin~1general-members~1{userId}~1welcome-email-resends/post")
+        val userId = operation.at("/parameters").first { it["name"].asText() == "userId" }
+        val response = document.at("/components/schemas/AdminWelcomeEmailResendResponse/properties")
+
+        // then
+        assertEquals("createWelcomeEmailResend", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security/0/BearerAuth").isArray)
+        assertTrue(userId.at("/schema/minimum").asDouble() > 0)
+        assertTrue(operation.at("/requestBody").isMissingNode)
+        assertTrue(operation.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(operation.at("/responses/409/description").asText().contains("WELCOME_EMAIL_RECIPIENT_UNAVAILABLE"))
+        assertTrue(response.has("notificationId"))
+        assertTrue(response.has("recipientUserId"))
+        assertTrue(response.has("scheduledAt"))
+        assertFalse(response.has("recipientAddress"))
     }
 
     private fun openApiDocument() = objectMapper.readTree(

@@ -128,6 +128,14 @@ ogonggo:
 | SMTP 서버의 수신자 거절(`SendFailedException`) | `FAILED` / `CLIENT_ERROR` |
 | 연결 실패·중단 등 그 밖의 SMTP 오류 | `UNKNOWN` / `TRANSPORT_ERROR` |
 
+### 관리자 가입 환영 이메일 재발송
+
+- `POST /api/v1/admin/general-members/{userId}/welcome-email-resends`는 오공고 수신 회원 ID로 가입 환영 메일을 수동 재발송한다. 관리자 Bearer 인증과 양수 `userId`가 필요하며 요청 본문은 없다.
+- 활성 일반 회원(USER·MENTOR·ADMIN)의 현재 `user_profiles.email`을 사용한다. 기업 회원은 403 `GENERAL_MEMBER_REQUIRED`, 정지·탈퇴 회원은 403 `USER_SUSPENDED`·`USER_WITHDRAWN`, 없는 회원은 404 `USER_NOT_FOUND`, 프로필 또는 비어 있지 않은 가입 이메일이 없으면 409 `WELCOME_EMAIL_RECIPIENT_UNAVAILABLE`이다.
+- `sign_up_welcome`·빈 변수 객체(`{}`)로 기존 사용자 API 이메일 sender를 재사용한다. 최초 발송 기록이 없어도 적재할 수 있고, 기존 성공·실패·미확정 기록은 바꾸지 않는다. 요청마다 관리자 ID와 UUID 회차를 포함한 새 중복 방지 키로 별도 EMAIL 기록을 만든다. 요청 자체의 멱등성·중복 클릭 방지는 제공하지 않는다.
+- 조회·적재는 관리자 Business Service의 한 트랜잭션으로 처리한다. `NotificationAppender.appendAndGetId`는 기존 적재·이벤트 발행 규칙을 유지하고 새 기록 ID를 반환한다. 관리자 요청은 24시간 발송 기한을 가지며 `batchId`·알림함은 생성하지 않는다.
+- 201과 `notificationId`, `recipientUserId`, `templateCode`, `scheduledAt`을 반환한다. 응답은 적재 완료이며 실제 SMTP 접수 성공을 의미하지 않는다. 사용자 API dispatcher가 발송하고 최근 결과 조회의 같은 `notificationId`에서 `status`·`sentAt`·실패 사유를 확인한다. 로그에는 기록 ID·관리자 ID·수신 회원 ID만 남긴다.
+
 ### FCM 설정과 payload
 
 FCM sender를 활성화하려면 사용자 API 설정에 Firebase 서비스 계정 정보를 넣는다. 모든 값을 생략하면 Google Application Default Credentials를 사용한다. 일부 값만 설정하면 기동 시 실패한다.

@@ -19,7 +19,7 @@ interface AdminNotificationResultApi {
     @Operation(
         operationId = "getRecentNotificationResults",
         summary = "최근 알림 발송 결과 조회",
-        description = "발송 상태가 최근 변경된 알림 최대 100건을 수정 시각·ID 내림차순으로 반환합니다. 수신 주소와 발송 payload는 포함하지 않습니다.",
+        description = "최근 생성된 알림 최대 100건을 생성 시각·ID 내림차순으로 반환합니다. 상태가 바뀌어도 생성 순서를 유지하며 수신 주소와 발송 payload는 포함하지 않습니다.",
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),

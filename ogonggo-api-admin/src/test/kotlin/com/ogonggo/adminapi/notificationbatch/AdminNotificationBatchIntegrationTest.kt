@@ -260,8 +260,8 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("최근 상태 변경 순으로 최대 100건을 반환하고 수신 주소와 payload는 노출하지 않는다")
-    fun `최근 알림 결과는 100건으로 제한하고 최신 수정 순으로 조회한다`() {
+    @DisplayName("수정 시각과 무관하게 생성 시각·ID 내림차순으로 최대 100건을 반환하고 수신 주소와 payload는 노출하지 않는다")
+    fun `최근 알림 결과는 100건으로 제한하고 최신 생성 순으로 조회한다`() {
         // given
         val append = (1..101).map { index ->
             NotificationAppendDto(
@@ -278,9 +278,10 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         append.forEachIndexed { index, item ->
             val latest = index == append.lastIndex
             jdbc.update(
-                """update notifications set updated_at = ?, status = ?, result_code = ?, result_category = ?, result_detail = ?
+                """update notifications set created_at = ?, updated_at = ?, status = ?, result_code = ?, result_category = ?, result_detail = ?
                    where deduplication_key = ?""",
-                NOW.plusSeconds(index.toLong()),
+                NOW.plusSeconds(index.toLong() / 2),
+                NOW.plusSeconds((append.size - index).toLong()),
                 if (latest) "FAILED" else "SENT",
                 if (latest) "TEST_REJECTED" else null,
                 if (latest) "CLIENT_ERROR" else null,
@@ -289,7 +290,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
             )
         }
         val expectedIds = jdbc.queryForList(
-            "select id from notifications order by updated_at desc, id desc limit 100",
+            "select id from notifications order by created_at desc, id desc limit 100",
             Long::class.java,
         )
 
