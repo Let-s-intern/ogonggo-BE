@@ -588,3 +588,9 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 생성은 201이며 `batchId`와 대상 회원 수·실제 수신 회원 수·토큰별 적재 수·토큰 없음/비활성 제외 회원 수를 반환한다. 토큰이 없어 0건이어도 묶음은 생성한다.
 - 조회는 200이며 운영 정보, `sentCount`·`failedCount`·`unknownCount`·`pendingCount`·`expiredCount`, `completed`와 상태·`resultCode`별 사유 건수를 반환한다. `pendingCount`는 `PENDING`과 `PROCESSING`을 포함하며, 24시간 뒤 `PENDING`은 `expiredCount`로 이동하지만 아직 처리 중인 `PROCESSING`이 있으면 `completed=false`다. 성공은 provider 접수이며 미확정과 기한 초과를 실패에 합치지 않는다.
 - `dispatchExpiresAt`은 발송 대기 종료 시각, `resultsAvailableUntil`은 조회 종료 시각이다. 생성 후 정확히 30일부터 404이며 관련 정책은 [어드민 FCM 발송](notification-extension-guide.md#어드민-fcm-발송)을 따른다.
+
+### 관리자 가입 환영 이메일 재발송
+
+- `POST /api/v1/admin/general-members/{userId}/welcome-email-resends`는 요청 본문 없이 수신 회원 ID로 새 발송 기록을 생성한다. 201 응답의 `data`는 `notificationId`, `recipientUserId`, `templateCode`(`sign_up_welcome`), `scheduledAt`이다.
+- `notificationId`는 새 발송 기록, `recipientUserId`는 수신 회원을 가리킨다. `scheduledAt`은 서울 기준 적재·발송 예정 시각이며 실제 접수 시각이 아니다. `sentAt`은 실제 처리가 끝난 뒤 최근 알림 결과 조회에서 확인한다.
+- 수신 이메일·본문·배치 ID는 반환하지 않는다. 실패와 반복 호출 규칙은 [관리자 이메일 재발송](notification-extension-guide.md#관리자-가입-환영-이메일-재발송)을 따른다.

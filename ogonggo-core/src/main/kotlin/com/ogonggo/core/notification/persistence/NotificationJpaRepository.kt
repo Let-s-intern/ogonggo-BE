@@ -34,7 +34,7 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
             n.resultCategory, n.resultDetail, n.attemptCount, n.createdAt, n.updatedAt
         )
         from Notification n
-        order by n.updatedAt desc, n.id desc
+        order by n.createdAt desc, n.id desc
         """,
     )
     fun findRecentResults(pageable: Pageable): List<NotificationDeliveryRecordDto>

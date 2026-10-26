@@ -447,3 +447,14 @@ API 버전 변경은 기존 클라이언트가 호환되지 않는 외부 계약
 
 - `POST /api/v1/admin/notification-batches`는 대기열과 운영 기록을 함께 생성하고 적재 완료 후 201로 응답한다. POST마다 새 발송이며 요청 멱등성은 제공하지 않는다.
 - `GET /api/v1/admin/notification-batches/{batchId}`는 30일 미만의 묶음별 처리 현황을 제공한다. 관리자 권한이 필요하며 자세한 요청·응답은 `AdminNotificationBatchApi`가 소유한다.
+
+## 관리자 가입 환영 이메일 재발송
+
+- `POST /api/v1/admin/general-members/{userId}/welcome-email-resends`는 지정한 일반 회원의 새 재발송 기록을 생성하므로 201을 반환한다. 요청 본문 없이 오공고 수신 회원 ID를 경로로 받는다. 발송 기록 ID(`notificationId`)와 혼용하지 않는다.
+- 활성 일반 회원의 현재 가입 이메일로 기존 `sign_up_welcome` 템플릿을 적재하며 수신 주소·본문은 입력받지 않는다. 이전 발송 기록이 없어도 요청할 수 있고 반복 POST는 각각 별도 발송이다. 기존 결과를 다시 PENDING으로 바꾸지 않는다.
+- 새 `notificationId`와 수신 회원·템플릿·예정 시각을 반환한다. 적재·대상 검증·24시간 발송 기한은 [알림 추가 가이드](notification-extension-guide.md#관리자-가입-환영-이메일-재발송)를 따른다.
+
+## 관리자 최근 알림 결과
+
+- `GET /api/v1/admin/notifications/recent-results`는 전체 채널의 최근 생성 기록을 `createdAt DESC, id DESC` 순으로 최대 100건 반환한다. 이전 기록의 처리 결과가 나중에 바뀌어도 생성 순서는 바뀌지 않는다.
+- 채널 필터와 페이지 이동은 제공하지 않는다. FE가 응답에서 이메일만 추리면 이메일 100건이 아니라 전체 100건 중 이메일 일부가 보인다.

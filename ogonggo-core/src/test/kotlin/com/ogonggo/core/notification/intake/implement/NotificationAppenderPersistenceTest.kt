@@ -114,6 +114,23 @@ internal class NotificationAppenderPersistenceTest @Autowired constructor(
         assertEquals(null, saved.getValue("new").dispatchExpiresAt)
     }
 
+    @Test
+    @DisplayName("새 알림의 생성 ID를 반환하고 중복 요청은 기존 기록을 변경하지 않는다")
+    fun `식별자가 필요한 적재도 중복 키 규칙을 지킨다`() {
+        // given
+        val request = notification("return-id")
+
+        // when
+        val id = notificationAppender.appendAndGetId(request)
+        val duplicate = notificationAppender.appendAndGetId(request)
+
+        // then
+        val saved = notificationRepository.findAll().single()
+        assertEquals(saved.id, id)
+        assertEquals(null, duplicate)
+        assertEquals(request.deduplicationKey, saved.deduplicationKey)
+    }
+
     private companion object {
         val NOW: LocalDateTime = LocalDateTime.of(2026, 10, 6, 12, 0)
     }

@@ -20,22 +20,28 @@ class NotificationAppender internal constructor(
     /** 호출자의 트랜잭션에 참여해 알림 적재를 업무 변경과 함께 커밋한다. */
     @Transactional
     fun append(notification: NotificationAppendDto): Boolean {
-        return appendAllInternal(listOf(notification)) == 1
+        return appendAllInternal(listOf(notification)).isNotEmpty()
+    }
+
+    /** 새 발송 기록의 식별자를 반환한다. 이미 적재된 중복 키이면 null이다. */
+    @Transactional
+    fun appendAndGetId(notification: NotificationAppendDto): Long? {
+        return appendAllInternal(listOf(notification)).singleOrNull()?.id
     }
 
     /** AFTER_COMMIT처럼 호출자 트랜잭션과 분리해 적재해야 하는 경로에서만 사용한다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun appendInNewTransaction(notification: NotificationAppendDto): Boolean {
-        return appendAllInternal(listOf(notification)) == 1
+        return appendAllInternal(listOf(notification)).isNotEmpty()
     }
 
     @Transactional
     fun appendAll(notifications: Collection<NotificationAppendDto>): Int {
-        return appendAllInternal(notifications)
+        return appendAllInternal(notifications).size
     }
 
-    private fun appendAllInternal(notifications: Collection<NotificationAppendDto>): Int {
-        if (notifications.isEmpty()) return 0
+    private fun appendAllInternal(notifications: Collection<NotificationAppendDto>): List<Notification> {
+        if (notifications.isEmpty()) return emptyList()
         // 잘못된 입력은 DB 쓰기 전에 거부해 불완전한 알림 행이 대기열에 들어오지 않게 한다.
         notifications.forEach {
             require(it.deduplicationKey.isNotBlank())
@@ -68,7 +74,7 @@ class NotificationAppender internal constructor(
             }
             .toList()
 
-        if (newNotifications.isEmpty()) return 0
+        if (newNotifications.isEmpty()) return emptyList()
 
         try {
             // Flush here so a concurrent unique-key violation is logged before the transaction exits.
@@ -87,7 +93,7 @@ class NotificationAppender internal constructor(
         newNotifications.groupingBy(Notification::channel).eachCount().forEach { (channel, count) ->
             eventPublisher.publishEvent(NotificationEnqueuedEvent(channel, count))
         }
-        return newNotifications.size
+        return newNotifications
     }
 
     private fun DataIntegrityViolationException.isDeduplicationKeyConflict(): Boolean {
