@@ -1,7 +1,7 @@
 package com.ogonggo.userapi.advertisement.presentation.request
 
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.business.CreateAdvertisementInquiryCommand
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank

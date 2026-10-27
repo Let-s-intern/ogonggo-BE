@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.advertisement.business
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryMailer
 import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryNotifier
 import org.slf4j.LoggerFactory

@@ -371,7 +371,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - `parent`는 다른 enum 값에 속하는 값(`HierarchicalEnumField`)의 상위 값 이름이고, 그 밖에는 `null`입니다. 시·군·구(`SubRegion`)의 `parent`는 시·도(`Region`)입니다.
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
 - 목록은 core의 `EnumOptionReader`가 한 곳에서 관리합니다. core에 업무 enum을 새로 만들면 이 목록에 추가하며, 빠뜨리면 core 테스트가 실패합니다.
-- core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(사용자: 광고 문의 유형·홍보 채널, 관리자: 관리 목록 정렬·노출). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
+- core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(관리자: 관리 목록 정렬·노출. 사용자 API는 지금 전용 enum이 없습니다. 광고 문의 유형·홍보 채널은 2026-10-27 저장하는 값이 되면서 core로 옮겼습니다). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
 - 2026-10-06에 enum 이름에 루트 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`, `EmploymentType` → `JobEmploymentType`). 프런트 전환 기간에 내려 주던 예전 키는 2026-10-12에 제거했습니다.
 
 #### 목록을 한 곳에서 관리하는 이유

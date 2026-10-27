@@ -2,8 +2,8 @@ package com.ogonggo.userapi.advertisement.presentation
 
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryService
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.business.CreateAdvertisementInquiryCommand
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider

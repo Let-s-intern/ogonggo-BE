@@ -2,8 +2,8 @@ package com.ogonggo.userapi.advertisement.implement
 
 import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

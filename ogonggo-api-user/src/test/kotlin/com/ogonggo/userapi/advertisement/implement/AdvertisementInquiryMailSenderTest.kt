@@ -1,8 +1,8 @@
 package com.ogonggo.userapi.advertisement.implement
 
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.mail.OgonggoMailProperties
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart

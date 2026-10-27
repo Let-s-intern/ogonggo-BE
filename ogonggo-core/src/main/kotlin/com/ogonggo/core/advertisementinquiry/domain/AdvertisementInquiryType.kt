@@ -1,4 +1,4 @@
-package com.ogonggo.userapi.advertisement.business
+package com.ogonggo.core.advertisementinquiry.domain
 
 import com.ogonggo.core.enumeration.EnumField
 

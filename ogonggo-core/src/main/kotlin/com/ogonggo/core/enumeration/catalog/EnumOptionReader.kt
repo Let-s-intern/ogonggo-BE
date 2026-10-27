@@ -1,5 +1,10 @@
 package com.ogonggo.core.enumeration.catalog
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
@@ -144,6 +149,12 @@ class EnumOptionReader {
             enumOptionsOf<UserInflowSource>(),
             enumOptionsOf<UserGrade>(),
             enumOptionsOf<LetsCareerAuthProvider>(),
+            // 광고 문의
+            enumOptionsOf<AdvertisementInquiryType>(),
+            enumOptionsOf<AdvertisementInquiryPromotionChannel>(),
+            enumOptionsOf<AdvertisementInquiryStatus>(),
+            enumOptionsOf<AdvertisementInquiryMemberType>(),
+            enumOptionsOf<AdvertisementInquiryInflowChannel>(),
         )
     }
 }
