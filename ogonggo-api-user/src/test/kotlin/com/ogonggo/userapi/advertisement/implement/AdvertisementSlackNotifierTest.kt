@@ -1,14 +1,10 @@
 package com.ogonggo.userapi.advertisement.implement
 
-import com.ogonggo.core.error.InternalServerException
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
-import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.client.MockRestServiceServer
 import org.springframework.test.web.client.match.MockRestRequestMatchers.content
@@ -18,6 +14,7 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.request
 import org.springframework.test.web.client.response.MockRestResponseCreators.withServerError
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
 
 class AdvertisementSlackNotifierTest {
 
@@ -85,29 +82,24 @@ class AdvertisementSlackNotifierTest {
     }
 
     @Test
-    fun `웹훅이 실패로 응답하면 접수 실패로 바꾼다`() {
+    fun `웹훅이 실패로 응답하면 예외를 던진다`() {
+        // 접수를 실패로 만들지는 서비스가 정한다. 여기서 삼키면 서비스가 실패를 로그로 남길 수 없다.
         val builder = RestClient.builder()
         val server = MockRestServiceServer.bindTo(builder).build()
         val notifier = AdvertisementSlackNotifier(builder.build(), properties(WEBHOOK_URL))
 
         server.expect(requestTo(WEBHOOK_URL)).andRespond(withServerError())
 
-        val exception = assertThrows(InternalServerException::class.java) { notifier.notify(NOTIFICATION) }
-
-        assertEquals(AdvertisementErrorCode.ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED, exception.errorCode)
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.errorCode.httpStatus)
+        assertThrows(RestClientException::class.java) { notifier.notify(NOTIFICATION) }
     }
 
     @Test
-    fun `웹훅 주소가 비어 있으면 보내지 않고 접수 실패로 응답한다`() {
-        // 값이 없다고 조용히 넘어가면 문의가 사라진 채 성공 응답만 나간다.
+    fun `웹훅 주소가 비어 있으면 보내지 않고 예외를 던진다`() {
         val builder = RestClient.builder()
         val server = MockRestServiceServer.bindTo(builder).build()
         val notifier = AdvertisementSlackNotifier(builder.build(), properties(""))
 
-        val exception = assertThrows(InternalServerException::class.java) { notifier.notify(NOTIFICATION) }
-
-        assertEquals(AdvertisementErrorCode.ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED, exception.errorCode)
+        assertThrows(IllegalStateException::class.java) { notifier.notify(NOTIFICATION) }
         server.verify()
     }
 

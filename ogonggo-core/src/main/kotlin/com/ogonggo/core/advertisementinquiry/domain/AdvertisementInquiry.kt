@@ -152,7 +152,7 @@ class AdvertisementInquiry internal constructor(
     companion object {
         const val MAX_MEMO_LENGTH = 2000
         const val MAX_UTM_LENGTH = 100
-        const val MAX_URL_LENGTH = 1000
+        const val MAX_URL_LENGTH = 2000
     }
 }
 

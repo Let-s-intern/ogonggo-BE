@@ -2,8 +2,10 @@ package com.ogonggo.userapi.advertisement.presentation
 
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryService
 import com.ogonggo.userapi.advertisement.presentation.request.CreateAdvertisementInquiryRequest
+import com.ogonggo.userapi.advertisement.presentation.response.CreateAdvertisementInquiryResponse
 import com.ogonggo.userapi.response.SuccessResponse
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -17,9 +19,10 @@ class AdvertisementInquiryController(
 
     @PostMapping
     override fun createInquiry(
+        @AuthenticationPrincipal userId: Long?,
         @RequestBody request: CreateAdvertisementInquiryRequest,
-    ): ResponseEntity<SuccessResponse<Unit>> {
-        advertisementInquiryService.createInquiry(request.toCommand())
-        return SuccessResponse.ok()
-    }
+    ): ResponseEntity<SuccessResponse<CreateAdvertisementInquiryResponse>> =
+        SuccessResponse.created(
+            CreateAdvertisementInquiryResponse(advertisementInquiryService.createInquiry(userId, request.toCommand())),
+        )
 }

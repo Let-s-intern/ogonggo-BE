@@ -72,7 +72,7 @@ class AdvertisementInquiryMailSenderTest {
 
     @Test
     fun `메일 발송이 실패해도 예외를 밖으로 던지지 않는다`() {
-        // 문의는 이미 슬랙으로 전달된 뒤다. 확인 메일 실패로 접수를 되돌리지 않는다.
+        // 문의는 이미 저장된 뒤다. 확인 메일 실패로 접수를 되돌리지 않는다.
         val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
         Mockito.doThrow(MailSendException("SMTP 연결 실패"))
             .`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))

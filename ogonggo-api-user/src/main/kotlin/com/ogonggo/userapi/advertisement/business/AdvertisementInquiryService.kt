@@ -1,7 +1,13 @@
 package com.ogonggo.userapi.advertisement.business
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflow
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.implement.AdvertisementInquiryAppender
+import com.ogonggo.core.advertisementinquiry.implement.dto.AdvertisementInquiryAppendDto
+import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryMailer
 import com.ogonggo.userapi.advertisement.implement.AdvertisementInquiryNotifier
 import org.slf4j.LoggerFactory
@@ -10,36 +16,72 @@ import org.springframework.stereotype.Service
 /**
  * B2B 광고 문의 접수.
  *
- * 문의를 저장하지 않고 영업 슬랙 채널로만 전달한다. 저장하지 않기로 한 결정에 따라
- * @Transactional을 두지 않는다. DB를 쓰지 않는 흐름에 트랜잭션을 열면 커넥션만 점유한다.
+ * 문의를 저장한 뒤 영업 슬랙 채널과 담당자 확인 메일로 알린다. 저장이 곧 접수 결과이고 알림은 부가 작업이다.
+ * 슬랙 실패는 로그만 남기고 접수를 실패로 만들지 않는다. 문의는 어드민에서 다시 볼 수 있다.
  *
- * 알림을 비동기로 두지 않는다. 저장소가 없어 알림이 곧 접수 결과이므로,
- * 발송 실패를 성공 응답 뒤에 숨기면 접수됐다는 응답만 남고 문의는 사라진다.
+ * 저장은 한 행이라 Repository의 트랜잭션으로 충분하다. 유스케이스 전체에 트랜잭션을 열면
+ * 슬랙 응답을 기다리는 동안 커넥션을 붙잡고, 커밋 전에 알림이 나간다.
  */
 @Service
 class AdvertisementInquiryService(
+    private val userReader: UserReader,
+    private val advertisementInquiryAppender: AdvertisementInquiryAppender,
     private val advertisementInquiryNotifier: AdvertisementInquiryNotifier,
     private val advertisementInquiryMailer: AdvertisementInquiryMailer,
 ) {
 
-    fun createInquiry(command: CreateAdvertisementInquiryCommand) {
-        // 알림이 유일한 기록이라 접수 사실만이라도 서버에 남긴다.
-        // 이메일과 전화번호는 여기 남기지 않는다. 발송에 실패한 경우에만 어댑터가 원문을 남긴다.
+    /**
+     * 회원 식별자와 회원 구분은 토큰으로만 정한다. 비로그인이면 userId가 없다.
+     * 저장한 문의의 식별자를 돌려준다.
+     */
+    fun createInquiry(userId: Long?, command: CreateAdvertisementInquiryCommand): Long {
+        // 토큰은 유효한데 회원 행이 없으면 비회원으로 받는다. 공개 폼이라 문의를 거절하지 않는다.
+        val role = userId?.let { userReader.readRoles(setOf(it))[it] }
+        val memberType = AdvertisementInquiryMemberType.of(role)
+        val inflow = command.inflow.toDomain()
+
+        val inquiryId = advertisementInquiryAppender.append(
+            AdvertisementInquiryAppendDto(
+                inquiryType = command.inquiryType,
+                // 지금 이 API를 부르는 진입 페이지는 출시 기념 무료 홍보(`/biz`) 하나뿐이다.
+                campaignCode = LAUNCH_FREE_PROMO_CAMPAIGN,
+                companyName = command.companyName,
+                managerName = command.managerName,
+                managerTitle = command.managerTitle,
+                email = command.email,
+                phoneNumber = command.phoneNumber,
+                promotionChannel = command.promotionChannel,
+                hiringJobName = command.hiringJobName,
+                jobPostingUrl = command.jobPostingUrl,
+                promotionAnswer = command.promotionAnswer,
+                marketingConsent = command.marketingConsent,
+                userId = if (role == null) null else userId,
+                memberType = memberType,
+                inflow = inflow,
+            ),
+        )
         log.info(
-            "B2B 광고 문의를 접수했습니다. companyName={}, managerName={}, inquiryType={}",
-            command.companyName,
-            command.managerName,
+            "B2B 광고 문의를 저장했습니다. inquiryId={}, inquiryType={}, memberType={}, inflowChannel={}",
+            inquiryId,
             command.inquiryType,
+            memberType,
+            inflow.channel,
         )
 
         val notification = AdvertisementInquiryNotification.from(command)
-
-        // 슬랙을 먼저 보낸다. 순서를 바꾸면 접수 실패(503)로 응답한 문의에도 확인 메일이 나간다.
-        advertisementInquiryNotifier.notify(notification)
+        try {
+            advertisementInquiryNotifier.notify(notification)
+        } catch (exception: RuntimeException) {
+            log.error("광고 문의 슬랙 알림 발송에 실패했습니다. 문의는 저장돼 있습니다. inquiryId={}", inquiryId, exception)
+        }
         advertisementInquiryMailer.sendConfirmation(notification)
+        return inquiryId
     }
 
     companion object {
+        /** 출시 기념 무료 홍보 이벤트 페이지(`/biz`)의 캠페인 코드 */
+        const val LAUNCH_FREE_PROMO_CAMPAIGN = "launch_free_promo"
+
         private val log = LoggerFactory.getLogger(AdvertisementInquiryService::class.java)
     }
 }
@@ -47,12 +89,39 @@ class AdvertisementInquiryService(
 data class CreateAdvertisementInquiryCommand(
     val companyName: String,
     val managerName: String,
+    val managerTitle: String?,
     val email: String,
     val phoneNumber: String,
     val inquiryType: AdvertisementInquiryType,
     val promotionChannel: AdvertisementInquiryPromotionChannel,
+    val hiringJobName: String?,
+    val jobPostingUrl: String?,
     val promotionAnswer: String,
+    val marketingConsent: Boolean,
+    val inflow: AdvertisementInquiryInflowCommand,
 )
+
+/** 페이지에 처음 들어온 순간에 잡은 원본 값이다. 유입 경로는 서버가 이 값으로 판정한다. */
+data class AdvertisementInquiryInflowCommand(
+    val utmSource: String?,
+    val utmMedium: String?,
+    val utmCampaign: String?,
+    val utmContent: String?,
+    val referrer: String?,
+    val entryHost: String?,
+    val landingPath: String?,
+) {
+    fun toDomain(): AdvertisementInquiryInflow = AdvertisementInquiryInflow(
+        utmSource = utmSource,
+        utmMedium = utmMedium,
+        utmCampaign = utmCampaign,
+        utmContent = utmContent,
+        referrer = referrer,
+        entryHost = entryHost,
+        landingPath = landingPath,
+        channel = AdvertisementInquiryInflowChannel.classify(utmSource, referrer),
+    )
+}
 
 /** 알림 어댑터에 전달하는 값이다. Command와 필드가 같아도 변경 이유가 달라 따로 둔다. */
 data class AdvertisementInquiryNotification(

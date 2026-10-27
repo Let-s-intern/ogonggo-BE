@@ -1,5 +1,6 @@
 package com.ogonggo.core.advertisementinquiry.domain
 
+import com.ogonggo.core.user.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -52,6 +53,15 @@ class AdvertisementInquiryDomainTest {
         assertThrows(IllegalArgumentException::class.java) {
             inquiry(userId = null, memberType = AdvertisementInquiryMemberType.COMPANY)
         }
+    }
+
+    @Test
+    fun `회원 구분은 역할로 정하고 멘토·관리자는 일반 회원, 회원이 아니면 비회원이다`() {
+        assertEquals(AdvertisementInquiryMemberType.COMPANY, AdvertisementInquiryMemberType.of(UserRole.COMPANY))
+        listOf(UserRole.USER, UserRole.MENTOR, UserRole.ADMIN).forEach { role ->
+            assertEquals(AdvertisementInquiryMemberType.USER, AdvertisementInquiryMemberType.of(role))
+        }
+        assertEquals(AdvertisementInquiryMemberType.GUEST, AdvertisementInquiryMemberType.of(null))
     }
 
     private fun inquiry(
