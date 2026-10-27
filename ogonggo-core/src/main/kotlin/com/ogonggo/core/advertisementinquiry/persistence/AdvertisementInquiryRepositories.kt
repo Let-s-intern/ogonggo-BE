@@ -6,14 +6,22 @@ import com.ogonggo.core.advertisementinquiry.domain.QAdvertisementInquiry.advert
 import com.ogonggo.core.jpa.pageOf
 import com.ogonggo.core.jpa.paged
 import com.querydsl.jpa.impl.JPAQueryFactory
+import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
 internal interface AdvertisementInquiryJpaRepository : JpaRepository<AdvertisementInquiry, Long> {
     fun countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from: LocalDateTime, to: LocalDateTime): Long
+
+    /** 상태와 메모를 동시에 바꿔도 한쪽 변경이 다른 쪽의 낡은 값으로 덮이지 않도록 잠근다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from AdvertisementInquiry a where a.id = :id")
+    fun findForUpdate(id: Long): AdvertisementInquiry?
 }
 
 /** 관리자 콘솔 광고 문의 목록이다. 접수 순서와 식별자 순서가 같으므로 최신순은 `id DESC`다. */

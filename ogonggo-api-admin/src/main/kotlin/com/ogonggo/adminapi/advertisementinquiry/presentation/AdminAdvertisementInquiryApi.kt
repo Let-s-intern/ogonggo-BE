@@ -1,5 +1,7 @@
 package com.ogonggo.adminapi.advertisementinquiry.presentation
 
+import com.ogonggo.adminapi.advertisementinquiry.presentation.request.ChangeAdvertisementInquiryMemoRequest
+import com.ogonggo.adminapi.advertisementinquiry.presentation.request.ChangeAdvertisementInquiryStatusRequest
 import com.ogonggo.adminapi.advertisementinquiry.presentation.response.AdminAdvertisementInquiryResponse
 import com.ogonggo.adminapi.advertisementinquiry.presentation.response.AdminAdvertisementInquiryTodayCountResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
@@ -18,8 +20,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 import java.time.LocalDate
@@ -69,4 +73,61 @@ interface AdminAdvertisementInquiryApi {
         """,
     )
     fun getTodayCount(): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryTodayCountResponse>>
+
+    @Operation(
+        operationId = "updateAdvertisementInquiryStatus",
+        summary = "광고 문의 처리 상태 변경",
+        description = """
+            영업이 문의를 어디까지 처리했는지 바꿉니다(RECEIVED 접수, CONTACTED 연락함, EXECUTED 집행 완료, REJECTED 반려).
+            잘못 바꾼 상태를 되돌릴 수 있도록 어느 상태로든 바꿀 수 있고, 같은 상태를 보내면 그대로 성공합니다.
+            변경 이력은 남기지 않습니다. 바뀐 문의 전체를 반환합니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "변경 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: status가 없거나 정의되지 않은 값입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "ADVERTISEMENT_INQUIRY_NOT_FOUND: 광고 문의가 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun changeStatus(
+        @Positive inquiryId: Long,
+        @Valid request: ChangeAdvertisementInquiryStatusRequest,
+    ): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryResponse>>
+
+    @Operation(
+        operationId = "updateAdvertisementInquiryMemo",
+        summary = "광고 문의 메모 저장",
+        description = """
+            영업 담당자가 적는 메모를 통째로 바꿉니다. 2000자 이하이며 null이거나 공백만 있으면 메모를 지웁니다.
+            바뀐 문의 전체를 반환합니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "저장 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 메모가 2000자를 넘습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "ADVERTISEMENT_INQUIRY_NOT_FOUND: 광고 문의가 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun changeMemo(
+        @Positive inquiryId: Long,
+        @Valid request: ChangeAdvertisementInquiryMemoRequest,
+    ): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryResponse>>
 }

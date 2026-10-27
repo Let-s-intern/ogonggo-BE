@@ -13,6 +13,8 @@ import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotio
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.error.AdvertisementInquiryErrorCode
+import com.ogonggo.core.error.EntityNotFoundException
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -23,7 +25,9 @@ import org.springframework.context.annotation.Import
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -158,6 +162,86 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.count").value(3))
             .andExpect(jsonPath("$.data.length()").value(1))
+    }
+
+    @Test
+    fun `처리 상태를 바꾸면 바뀐 문의 전체를 준다`() {
+        Mockito.`when`(adminAdvertisementInquiryService.changeStatus(5L, AdvertisementInquiryStatus.CONTACTED))
+            .thenReturn(SUMMARY.copy(status = AdvertisementInquiryStatus.CONTACTED))
+
+        mockMvc.perform(
+            patch("$PATH/5/status").with(admin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"status":"CONTACTED"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.id").value(5))
+            .andExpect(jsonPath("$.data.status").value("CONTACTED"))
+            .andExpect(jsonPath("$.data.companyName").value("렛츠커리어"))
+    }
+
+    @Test
+    fun `메모를 저장하면 바뀐 문의 전체를 주고 null을 보내면 지운다`() {
+        Mockito.`when`(adminAdvertisementInquiryService.changeMemo(5L, "10월 30일 통화"))
+            .thenReturn(SUMMARY.copy(memo = "10월 30일 통화"))
+        Mockito.`when`(adminAdvertisementInquiryService.changeMemo(5L, null)).thenReturn(SUMMARY)
+
+        mockMvc.perform(
+            patch("$PATH/5/memo").with(admin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"memo":"10월 30일 통화"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.memo").value("10월 30일 통화"))
+
+        mockMvc.perform(
+            patch("$PATH/5/memo").with(admin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"memo":null}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.memo").doesNotExist())
+    }
+
+    @Test
+    fun `없는 문의는 404 ADVERTISEMENT_INQUIRY_NOT_FOUND로 응답한다`() {
+        Mockito.`when`(adminAdvertisementInquiryService.changeStatus(999L, AdvertisementInquiryStatus.EXECUTED))
+            .thenThrow(EntityNotFoundException(AdvertisementInquiryErrorCode.ADVERTISEMENT_INQUIRY_NOT_FOUND))
+        Mockito.`when`(adminAdvertisementInquiryService.changeMemo(999L, "메모"))
+            .thenThrow(EntityNotFoundException(AdvertisementInquiryErrorCode.ADVERTISEMENT_INQUIRY_NOT_FOUND))
+
+        listOf(
+            "$PATH/999/status" to """{"status":"EXECUTED"}""",
+            "$PATH/999/memo" to """{"memo":"메모"}""",
+        ).forEach { (path, body) ->
+            mockMvc.perform(patch(path).with(admin()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.code").value("ADVERTISEMENT_INQUIRY_NOT_FOUND"))
+        }
+    }
+
+    @Test
+    fun `잘못된 상태 값, 빠진 상태, 너무 긴 메모, 양수가 아닌 식별자는 400으로 응답한다`() {
+        listOf(
+            "$PATH/5/status" to """{"status":"DONE"}""",
+            "$PATH/5/status" to """{}""",
+            "$PATH/5/memo" to """{"memo":"${"가".repeat(2001)}"}""",
+            "$PATH/0/status" to """{"status":"CONTACTED"}""",
+        ).forEach { (path, body) ->
+            mockMvc.perform(patch(path).with(admin()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(adminAdvertisementInquiryService)
+    }
+
+    @Test
+    fun `관리자 토큰이 없으면 상태와 메모를 바꿀 수 없다`() {
+        mockMvc.perform(patch("$PATH/5/status").contentType(MediaType.APPLICATION_JSON).content("""{"status":"CONTACTED"}"""))
+            .andExpect(status().isUnauthorized)
+
+        Mockito.verifyNoInteractions(adminAdvertisementInquiryService)
     }
 
     private fun admin() = user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY))

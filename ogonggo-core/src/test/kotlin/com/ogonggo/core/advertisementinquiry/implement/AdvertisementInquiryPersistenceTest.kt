@@ -8,11 +8,14 @@ import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCo
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.implement.dto.AdvertisementInquiryAppendDto
+import com.ogonggo.core.advertisementinquiry.error.AdvertisementInquiryErrorCode
 import com.ogonggo.core.advertisementinquiry.persistence.AdvertisementInquiryJpaRepository
 import com.ogonggo.core.advertisementinquiry.persistence.AdvertisementInquiryQueryRepository
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -127,6 +130,28 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         assertEquals(2, reader(at(2026, 10, 27, 10, 0)).countToday())
         // 하루 전 23:59의 시점에서 보면 그날의 문의 하나뿐이다.
         assertEquals(1, reader(at(2026, 10, 26, 23, 59, 30)).countToday())
+    }
+
+    @Test
+    fun `잠가 읽은 문의의 상태와 메모 변경이 저장되고 없는 문의는 찾을 수 없다`() {
+        // given
+        val id = append()
+        val reader = reader(at(2026, 10, 27, 12, 0))
+
+        // when
+        reader.readForUpdate(id).apply {
+            changeStatus(AdvertisementInquiryStatus.CONTACTED)
+            changeMemo("10월 30일 통화")
+        }
+        entityManager.flush()
+        entityManager.clear()
+
+        // then
+        val saved = repository.findById(id).get()
+        assertEquals(AdvertisementInquiryStatus.CONTACTED, saved.status)
+        assertEquals("10월 30일 통화", saved.memo)
+        val exception = assertThrows(EntityNotFoundException::class.java) { reader.readForUpdate(id + 1000) }
+        assertEquals(AdvertisementInquiryErrorCode.ADVERTISEMENT_INQUIRY_NOT_FOUND, exception.errorCode)
     }
 
     private fun reader(now: LocalDateTime) = AdvertisementInquiryReader(

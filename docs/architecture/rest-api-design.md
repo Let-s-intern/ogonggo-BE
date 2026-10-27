@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-08
+- 최종 변경일: 2026-10-27
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -253,6 +253,24 @@ GET  /api/v1/admin/service-feedbacks          관리자 콘솔
 - 한 사용자가 여러 번 남길 수 있어 유니크 제약을 두지 않고 409도 쓰지 않습니다.
 - 수정·삭제 경로는 두지 않습니다. 운영자는 관리자 콘솔에서 목록을 읽기만 합니다.
 - 응답 계약은 [API 성공 응답의 서비스 개선 의견](api-response.md#서비스-개선-의견)을 따릅니다.
+
+### 광고 문의
+
+```text
+POST  /api/v1/advertisement-inquiries                          사용자 API, 로그인 선택
+GET   /api/v1/admin/advertisement-inquiries                    관리자 콘솔 목록
+GET   /api/v1/admin/advertisement-inquiries/today-count        관리자 메뉴 숫자
+PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/status 처리 상태 변경
+PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/memo   메모 저장
+```
+
+- 결정일: 2026-10-27 (LC-3514) / 리뷰 상태: 팀 리뷰 필요
+- 제출할 때마다 새 행이 생기므로 201과 `data.id`로 응답합니다. 한 기업이 여러 번 남길 수 있어 유니크 제약과 409를 두지 않습니다. 토큰은 서비스 개선 의견처럼 선택입니다.
+- 처리 상태(`RECEIVED`·`CONTACTED`·`EXECUTED`·`REJECTED`)는 값 사이의 전이를 막지 않습니다. 영업이 잘못 바꾼 상태를 되돌려야 하기 때문입니다. 전이 규칙이 값마다 다르지 않으므로 4절의 명령별 엔드포인트로 나누지 않고, [관리자 회원 역할 변경](#관리자-회원-조회와-역할-변경)처럼 본문 `{ "status": "CONTACTED" }` 값 하나를 받는 PATCH로 둡니다. 같은 값을 보내면 바꾸지 않고 200입니다.
+- 메모는 본문 `{ "memo": "..." }`로 통째로 바꿉니다. 2000자 이하이고 `null`이거나 공백만 있으면 지웁니다. 상태와 메모 변경 이력은 남기지 않습니다.
+- 두 PATCH는 콘솔의 부분 수정처럼 바뀐 문의 전체를 `data`로 돌려줍니다. 없는 문의는 404 `ADVERTISEMENT_INQUIRY_NOT_FOUND`입니다. 상태와 메모를 동시에 바꿔도 서로 덮지 않도록 행을 잠가 읽습니다.
+- 수정·삭제 경로는 두지 않습니다. 문의 내용은 남긴 그대로 둡니다.
+- 응답 계약은 [API 성공 응답의 B2B 광고 문의](api-response.md#b2b-광고-문의)를 따릅니다.
 
 ### AI 서버 채용공고
 

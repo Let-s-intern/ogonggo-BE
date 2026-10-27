@@ -1,6 +1,8 @@
 package com.ogonggo.adminapi.advertisementinquiry.presentation
 
 import com.ogonggo.adminapi.advertisementinquiry.business.AdminAdvertisementInquiryService
+import com.ogonggo.adminapi.advertisementinquiry.presentation.request.ChangeAdvertisementInquiryMemoRequest
+import com.ogonggo.adminapi.advertisementinquiry.presentation.request.ChangeAdvertisementInquiryStatusRequest
 import com.ogonggo.adminapi.advertisementinquiry.presentation.response.AdminAdvertisementInquiryResponse
 import com.ogonggo.adminapi.advertisementinquiry.presentation.response.AdminAdvertisementInquiryTodayCountResponse
 import com.ogonggo.adminapi.error.InvalidRequestParameterException
@@ -15,6 +17,9 @@ import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -71,4 +76,22 @@ class AdminAdvertisementInquiryController(
     @GetMapping("/today-count")
     override fun getTodayCount(): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryTodayCountResponse>> =
         SuccessResponse.ok(AdminAdvertisementInquiryTodayCountResponse(adminAdvertisementInquiryService.getTodayCount()))
+
+    @PatchMapping("/{inquiryId}/status")
+    override fun changeStatus(
+        @PathVariable("inquiryId") inquiryId: Long,
+        @RequestBody request: ChangeAdvertisementInquiryStatusRequest,
+    ): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryResponse>> =
+        SuccessResponse.ok(
+            AdminAdvertisementInquiryResponse.from(adminAdvertisementInquiryService.changeStatus(inquiryId, request.status)),
+        )
+
+    @PatchMapping("/{inquiryId}/memo")
+    override fun changeMemo(
+        @PathVariable("inquiryId") inquiryId: Long,
+        @RequestBody request: ChangeAdvertisementInquiryMemoRequest,
+    ): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryResponse>> =
+        SuccessResponse.ok(
+            AdminAdvertisementInquiryResponse.from(adminAdvertisementInquiryService.changeMemo(inquiryId, request.memo)),
+        )
 }
