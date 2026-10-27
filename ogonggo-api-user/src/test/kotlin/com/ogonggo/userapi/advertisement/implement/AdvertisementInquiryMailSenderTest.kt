@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.advertisement.implement
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
@@ -110,6 +112,12 @@ class AdvertisementInquiryMailSenderTest {
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            memberType = AdvertisementInquiryMemberType.GUEST,
+            inflowChannel = AdvertisementInquiryInflowChannel.DIRECT,
+            utmSource = null,
+            utmCampaign = null,
+            utmContent = null,
+            referrer = null,
         )
     }
 }

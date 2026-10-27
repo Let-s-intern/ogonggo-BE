@@ -257,6 +257,12 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            memberType = AdvertisementInquiryMemberType.GUEST,
+            inflowChannel = AdvertisementInquiryInflowChannel.COLDMAIL,
+            utmSource = "coldmail",
+            utmCampaign = "free_promo",
+            utmContent = "templateA",
+            referrer = "",
         )
 
         private val SAMPLE_APPEND_DTO = AdvertisementInquiryAppendDto(

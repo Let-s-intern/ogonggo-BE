@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.advertisement.implement
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
@@ -42,6 +44,63 @@ class AdvertisementSlackNotifierTest {
         notifier.notify(NOTIFICATION)
 
         server.verify()
+    }
+
+    @Test
+    fun `회원 구분과 유입 경로를 UTM 값과 함께 한 줄로 싣는다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val notifier = AdvertisementSlackNotifier(builder.build(), properties(WEBHOOK_URL))
+
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(
+                jsonPath("$.blocks[3].text.text")
+                    .value("*회원 구분 · 유입 경로*\n기업 회원 · 콜드메일 · utm_campaign=free_promo · utm_content=templateA"),
+            )
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        notifier.notify(NOTIFICATION)
+
+        server.verify()
+    }
+
+    @Test
+    fun `정해 두지 않은 utm_source는 원문을, 외부 사이트는 referrer 호스트를 보인다`() {
+        listOf(
+            NOTIFICATION.copy(
+                memberType = AdvertisementInquiryMemberType.GUEST,
+                inflowChannel = AdvertisementInquiryInflowChannel.UTM_OTHER,
+                utmSource = "linkedin",
+                utmCampaign = null,
+                utmContent = null,
+            ) to "*회원 구분 · 유입 경로*\n비회원 · linkedin",
+            NOTIFICATION.copy(
+                memberType = AdvertisementInquiryMemberType.USER,
+                inflowChannel = AdvertisementInquiryInflowChannel.EXTERNAL_SITE,
+                utmSource = null,
+                utmCampaign = null,
+                utmContent = null,
+                referrer = "https://blog.example.com/post/1",
+            ) to "*회원 구분 · 유입 경로*\n일반 회원 · 외부 사이트 · blog.example.com",
+            NOTIFICATION.copy(
+                memberType = AdvertisementInquiryMemberType.GUEST,
+                inflowChannel = AdvertisementInquiryInflowChannel.DIRECT,
+                utmSource = null,
+                utmCampaign = null,
+                utmContent = null,
+            ) to "*회원 구분 · 유입 경로*\n비회원 · 직접 접속",
+        ).forEach { (notification, expected) ->
+            val builder = RestClient.builder()
+            val server = MockRestServiceServer.bindTo(builder).build()
+            val notifier = AdvertisementSlackNotifier(builder.build(), properties(WEBHOOK_URL))
+            server.expect(requestTo(WEBHOOK_URL))
+                .andExpect(jsonPath("$.blocks[3].text.text").value(expected))
+                .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+            notifier.notify(notification)
+
+            server.verify()
+        }
     }
 
     /**
@@ -117,6 +176,12 @@ class AdvertisementSlackNotifierTest {
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            memberType = AdvertisementInquiryMemberType.COMPANY,
+            inflowChannel = AdvertisementInquiryInflowChannel.COLDMAIL,
+            utmSource = "coldmail",
+            utmCampaign = "free_promo",
+            utmContent = "templateA",
+            referrer = null,
         )
     }
 }

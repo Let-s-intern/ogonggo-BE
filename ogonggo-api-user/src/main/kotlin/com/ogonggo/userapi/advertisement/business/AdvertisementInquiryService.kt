@@ -68,7 +68,7 @@ class AdvertisementInquiryService(
             inflow.channel,
         )
 
-        val notification = AdvertisementInquiryNotification.from(command)
+        val notification = AdvertisementInquiryNotification.from(command, memberType, inflow)
         try {
             advertisementInquiryNotifier.notify(notification)
         } catch (exception: RuntimeException) {
@@ -132,9 +132,19 @@ data class AdvertisementInquiryNotification(
     val inquiryType: AdvertisementInquiryType,
     val promotionChannel: AdvertisementInquiryPromotionChannel,
     val promotionAnswer: String,
+    val memberType: AdvertisementInquiryMemberType,
+    val inflowChannel: AdvertisementInquiryInflowChannel,
+    val utmSource: String?,
+    val utmCampaign: String?,
+    val utmContent: String?,
+    val referrer: String?,
 ) {
     companion object {
-        fun from(command: CreateAdvertisementInquiryCommand): AdvertisementInquiryNotification =
+        fun from(
+            command: CreateAdvertisementInquiryCommand,
+            memberType: AdvertisementInquiryMemberType,
+            inflow: AdvertisementInquiryInflow,
+        ): AdvertisementInquiryNotification =
             AdvertisementInquiryNotification(
                 companyName = command.companyName,
                 managerName = command.managerName,
@@ -143,6 +153,12 @@ data class AdvertisementInquiryNotification(
                 inquiryType = command.inquiryType,
                 promotionChannel = command.promotionChannel,
                 promotionAnswer = command.promotionAnswer,
+                memberType = memberType,
+                inflowChannel = inflow.channel,
+                utmSource = inflow.utmSource,
+                utmCampaign = inflow.utmCampaign,
+                utmContent = inflow.utmContent,
+                referrer = inflow.referrer,
             )
     }
 }

@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.implement
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.slack.SlackBlock
 import com.ogonggo.userapi.slack.SlackMessage
@@ -57,7 +58,29 @@ private fun AdvertisementInquiryNotification.toSlackMessage(): SlackMessage =
                 ),
             ),
             SlackBlock.text(SlackText.labeled("현재 홍보 채널 · 어려운 점", promotionAnswer)),
+            // 영업이 슬랙만 보고도 어디서 온 신청인지 알 수 있게 한다.
+            SlackBlock.text(SlackText.labeled("회원 구분 · 유입 경로", "${memberType.desc} · ${inflowLabel()}")),
         ),
     )
+
+/**
+ * 판정한 유입 경로 이름 뒤에 영업이 링크를 나눠 쓴 UTM 값을 붙인다.
+ * 정해 두지 않은 utm_source는 원문을, 외부 사이트는 referrer 호스트를 이름 자리에 쓴다.
+ */
+private fun AdvertisementInquiryNotification.inflowLabel(): String {
+    val name = when (inflowChannel) {
+        AdvertisementInquiryInflowChannel.UTM_OTHER -> utmSource?.trim().orEmpty()
+        AdvertisementInquiryInflowChannel.EXTERNAL_SITE ->
+            AdvertisementInquiryInflowChannel.referrerHost(referrer)
+                ?.let { "${inflowChannel.desc} · $it" }
+                ?: inflowChannel.desc
+        else -> inflowChannel.desc
+    }
+    val details = listOfNotNull(
+        utmCampaign?.takeIf { it.isNotBlank() }?.let { "utm_campaign=$it" },
+        utmContent?.takeIf { it.isNotBlank() }?.let { "utm_content=$it" },
+    )
+    return (listOf(name) + details).joinToString(" · ")
+}
 
 internal const val ADVERTISEMENT_SLACK_REST_CLIENT = "advertisementSlackRestClient"
