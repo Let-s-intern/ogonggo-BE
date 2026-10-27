@@ -259,6 +259,10 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 슬랙 알림은 저장한 뒤 동기로 보내고, 실패하면 `error` 로그만 남기고 성공으로 응답합니다. 문의는 저장돼 어드민에서 다시 볼 수 있으므로 알림 실패로 접수를 실패로 만들 이유가 없습니다. 이전의 503 `ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED`는 없앴습니다.
 - 저장은 한 행이라 유스케이스에 트랜잭션을 열지 않습니다. 열면 슬랙 응답을 기다리는 동안 커넥션을 붙잡고 커밋 전에 알림이 나갑니다.
 
+관리자 콘솔은 `GET /api/v1/admin/advertisement-inquiries`로 목록을 봅니다. 최근에 들어온 순(`id DESC`)이고 정렬은 고를 수 없으며, 항목에 문의의 모든 값(유입 원본 포함)과 처리 상태·메모·접수 일시(`registeredAt`)를 싣습니다. 카드에 모든 값을 보이므로 상세 조회는 두지 않습니다. 접수 기간 `createdFrom`·`createdTo`(`YYYY-MM-DD`)는 두 날짜를 모두 포함하고, 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[createdFrom]`으로 시작합니다. 현재 조건의 건수는 `pageInfo.totalElements`입니다.
+
+메뉴 숫자용 `GET /api/v1/admin/advertisement-inquiries/today-count`는 `{ "count": 3 }`만 줍니다. 한국 시간 오늘 0시부터 들어온 문의 수이며 문의 유형과 처리 상태를 가리지 않습니다. 목록을 크기 1로 불러 총 건수를 쓰면 클라이언트가 시간대까지 맞춰 기간을 보내야 해서 따로 둡니다.
+
 슬랙 알림과 함께 문의를 남긴 담당자에게 접수 확인 메일을 보냅니다. 이 메일은 실패해도 접수를 되돌리지 않고 `warn` 로그만 남깁니다. 슬랙 알림이 실패해도 메일은 보냅니다.
 
 메일은 응답의 정확성에 필요하지 않고 SMTP 응답이 늦어질 수 있어 전용 실행기에서 비동기로 보냅니다. 지표 실행기는 스레드가 하나뿐이고 큐가 차면 버리도록 되어 있어 함께 쓰지 않습니다. 확인 메일은 버리면 담당자가 접수 여부를 알 수 없으므로 큐가 차면 호출한 스레드가 직접 보냅니다. 공통 발신 주소(`ogonggo.mail.from`)가 비어 있으면 발송을 건너뜁니다.
@@ -297,6 +301,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 | `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`, `role`(`USER`·`MENTOR`·`ADMIN`). `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
 | `GET /api/v1/admin/company-members` | `status`, `joinedFrom`, `joinedTo` | 회사명, 담당자 이름 |
+| `GET /api/v1/admin/advertisement-inquiries` | `inquiryType`, `campaignCode`, `status`, `memberType`, `inflowChannel`, `createdFrom`, `createdTo`. `sort`는 받지 않습니다([B2B 광고 문의](#b2b-광고-문의) 참고) | 없음 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - 사이드·스터디 모집글 목록은 임시저장을 싣지 않으므로 `HIDDEN`은 운영자가 숨긴 모집글입니다. 항목에는 작성자 `authorUserId`와 프로필 닉네임 `authorNickname`(프로필이 없으면 `null`)을 싣고, 조회·북마크·댓글 수를 함께 줍니다. 상세·수정·삭제 API는 아직 두지 않았습니다.
