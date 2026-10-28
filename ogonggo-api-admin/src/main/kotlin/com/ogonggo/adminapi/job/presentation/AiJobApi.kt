@@ -193,6 +193,34 @@ interface AiJobApi {
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
+        operationId = "closeAiJob",
+        summary = "AI 서버 채용공고 마감",
+        description = """
+            모집을 마감합니다. 마감일이 없는 상시 채용 공고가 원래 사이트 목록에서 사라졌을 때 씁니다.
+            게시 상태는 바꾸지 않아 사용자 화면에 모집 마감으로 보입니다. AI 서버가 등록한 크롤링 공고만 마감합니다.
+            이미 마감한 공고를 다시 마감해도 처음 마감 일시를 그대로 두고 성공합니다. 삭제한 공고, 고용24 공고, 기업회원 공고는 찾지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "마감 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "401",
+                description = UNAUTHORIZED_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "JOB_NOT_FOUND: 크롤링 공고가 없습니다. 고용24 공고와 기업회원 공고도 찾지 않습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun closeJob(
+        @Positive jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
         operationId = "deleteAiJob",
         summary = "AI 서버 채용공고 삭제",
         description = """

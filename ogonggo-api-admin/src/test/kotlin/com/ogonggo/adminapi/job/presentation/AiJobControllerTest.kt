@@ -214,6 +214,22 @@ class AiJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `공고를 마감하고 데이터 없이 200으로 응답한다`() {
+        mockMvc.perform(post("/api/v1/internal/jobs/7/close").header(INTERNAL_API_KEY_HEADER, API_KEY))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").doesNotExist())
+
+        Mockito.verify(aiJobService).close(7L)
+    }
+
+    @Test
+    fun `내부 API 키가 없으면 마감하지 않고 401로 응답한다`() {
+        mockMvc.perform(post("/api/v1/internal/jobs/7/close")).andExpect(status().isUnauthorized)
+
+        Mockito.verifyNoInteractions(aiJobService)
+    }
+
+    @Test
     fun `공고를 삭제하고 데이터 없이 200으로 응답한다`() {
         mockMvc.perform(delete("/api/v1/internal/jobs/7").header(INTERNAL_API_KEY_HEADER, API_KEY))
             .andExpect(status().isOk)
