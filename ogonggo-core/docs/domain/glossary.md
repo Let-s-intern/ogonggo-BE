@@ -132,6 +132,7 @@
 | 홍보 채널 | `AdvertisementInquiryPromotionChannel` | 무료 홍보를 원하는 렛츠커리어 채널. 인스타그램, 직무별 오픈채팅방 6개, 추천 요청 |
 | 광고 문의 처리 상태 | `AdvertisementInquiryStatus` | 접수(`RECEIVED`), 연락함(`CONTACTED`), 집행 완료(`EXECUTED`), 반려(`REJECTED`). 영업이 바꾸며 값 사이의 전이를 막지 않습니다. |
 | 광고 문의 회원 구분 | `AdvertisementInquiryMemberType` | 기업 회원(`COMPANY`), 일반 회원(`USER`), 비회원(`GUEST`). 저장할 때 토큰으로 정한 문의 시점의 값입니다. |
+| 광고 문의 회사명 입력 방식 | `AdvertisementInquiryCompanyNameSource` | 검색(`SEARCH`, 오공고 회사명 검색에서 고름), 직접 입력(`MANUAL`), 회원 정보(`MEMBER_PROFILE`, 기업 회원 정보로 채움). 클라이언트가 보낸 값을 그대로 저장하며 보내지 않으면 직접 입력입니다. 영업이 표기를 정리할 행을 고르는 표시입니다. |
 | 광고 문의 유입 경로 | `AdvertisementInquiryInflowChannel` | 콜드메일·인스타그램·카카오톡·뉴스레터·기타 UTM·오공고 사이트·렛츠커리어·검색·외부 사이트·직접 접속. UTM과 referrer 원본으로 저장할 때 한 번 판정합니다. 회원의 유입 구분(`UserInflowSource`)과 다릅니다. |
 | 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. |
 | 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |

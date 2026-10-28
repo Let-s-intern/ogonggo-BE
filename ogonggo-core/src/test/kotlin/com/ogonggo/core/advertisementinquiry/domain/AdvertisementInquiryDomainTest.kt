@@ -17,6 +17,13 @@ class AdvertisementInquiryDomainTest {
     }
 
     @Test
+    fun `회사명 입력 방식은 받은 값 그대로 남긴다`() {
+        AdvertisementInquiryCompanyNameSource.entries.forEach { source ->
+            assertEquals(source, inquiry(companyNameSource = source).companyNameSource)
+        }
+    }
+
+    @Test
     fun `처리 상태는 어느 상태로든 바꾸고 되돌릴 수 있다`() {
         val inquiry = inquiry()
 
@@ -67,10 +74,12 @@ class AdvertisementInquiryDomainTest {
     private fun inquiry(
         userId: Long? = null,
         memberType: AdvertisementInquiryMemberType = AdvertisementInquiryMemberType.GUEST,
+        companyNameSource: AdvertisementInquiryCompanyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
     ) = AdvertisementInquiry(
         inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
         campaignCode = "launch_free_promo",
         companyName = "렛츠커리어",
+        companyNameSource = companyNameSource,
         managerName = "김담당",
         managerTitle = "매니저",
         email = "manager@ogonggo.co.kr",

@@ -1,5 +1,6 @@
 package com.ogonggo.core.advertisementinquiry.implement
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflow
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
@@ -55,6 +56,16 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
             reader(at(2026, 10, 27, 12, 0)).readPage(AdvertisementInquirySearchCondition(), page = 1, size = 2)
                 .advertisementInquiries.map { it.id },
         )
+    }
+
+    @Test
+    fun `회사명 입력 방식을 저장하고 다시 읽는다`() {
+        // given
+        val ids = AdvertisementInquiryCompanyNameSource.entries.associateWith { append(companyNameSource = it) }
+        entityManager.clear()
+
+        // when & then
+        ids.forEach { (source, id) -> assertEquals(source, repository.findById(id).get().companyNameSource) }
     }
 
     @Test
@@ -167,12 +178,14 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         memberType: AdvertisementInquiryMemberType = AdvertisementInquiryMemberType.GUEST,
         channel: AdvertisementInquiryInflowChannel = AdvertisementInquiryInflowChannel.COLDMAIL,
         createdAt: LocalDateTime? = null,
+        companyNameSource: AdvertisementInquiryCompanyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
     ): Long {
         val id = appender.append(
             AdvertisementInquiryAppendDto(
                 inquiryType = inquiryType,
                 campaignCode = campaignCode,
                 companyName = "렛츠커리어",
+                companyNameSource = companyNameSource,
                 managerName = "김담당",
                 managerTitle = "매니저",
                 email = "manager@ogonggo.co.kr",

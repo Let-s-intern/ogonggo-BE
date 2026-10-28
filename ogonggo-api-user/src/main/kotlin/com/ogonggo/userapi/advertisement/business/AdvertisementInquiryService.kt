@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.business
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflow
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
@@ -46,6 +47,7 @@ class AdvertisementInquiryService(
                 // 지금 이 API를 부르는 진입 페이지는 출시 기념 무료 홍보(`/biz`) 하나뿐이다.
                 campaignCode = LAUNCH_FREE_PROMO_CAMPAIGN,
                 companyName = command.companyName,
+                companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
                 managerName = command.managerName,
                 managerTitle = command.managerTitle,
                 email = command.email,

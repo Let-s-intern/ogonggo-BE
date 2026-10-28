@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.presentation
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflow
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
@@ -269,6 +270,7 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             campaignCode = null,
             companyName = "",
+            companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
             managerName = "",
             managerTitle = null,
             email = "",

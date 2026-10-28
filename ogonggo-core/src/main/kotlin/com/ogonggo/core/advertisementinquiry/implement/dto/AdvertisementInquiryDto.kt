@@ -1,6 +1,7 @@
 package com.ogonggo.core.advertisementinquiry.implement.dto
 
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflow
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
@@ -10,6 +11,7 @@ data class AdvertisementInquiryAppendDto(
     val inquiryType: AdvertisementInquiryType,
     val campaignCode: String?,
     val companyName: String,
+    val companyNameSource: AdvertisementInquiryCompanyNameSource,
     val managerName: String,
     val managerTitle: String?,
     val email: String,

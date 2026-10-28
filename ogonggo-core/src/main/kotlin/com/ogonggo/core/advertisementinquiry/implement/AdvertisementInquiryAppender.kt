@@ -17,6 +17,7 @@ class AdvertisementInquiryAppender internal constructor(
                 inquiryType = dto.inquiryType,
                 campaignCode = dto.campaignCode,
                 companyName = dto.companyName,
+                companyNameSource = dto.companyNameSource,
                 managerName = dto.managerName,
                 managerTitle = dto.managerTitle,
                 email = dto.email,

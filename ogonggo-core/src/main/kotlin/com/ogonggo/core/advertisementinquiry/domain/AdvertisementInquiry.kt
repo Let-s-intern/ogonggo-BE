@@ -29,6 +29,7 @@ class AdvertisementInquiry internal constructor(
     inquiryType: AdvertisementInquiryType,
     campaignCode: String?,
     companyName: String,
+    companyNameSource: AdvertisementInquiryCompanyNameSource,
     managerName: String,
     managerTitle: String?,
     email: String,
@@ -68,6 +69,10 @@ class AdvertisementInquiry internal constructor(
 
     @Column(name = "company_name", nullable = false, length = 100)
     val companyName: String = companyName /* 회사명 */
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "company_name_source", nullable = false, length = 20)
+    val companyNameSource: AdvertisementInquiryCompanyNameSource = companyNameSource /* 회사명 입력 방식 */
 
     @Column(name = "manager_name", nullable = false, length = 50)
     val managerName: String = managerName /* 담당자 이름 */
