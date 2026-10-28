@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
         "ogonggo.letscareer.internal-api-key=test-internal-api-key",
         // spring.mail.host가 있어야 Spring Boot가 JavaMailSender를 만든다. 헬스 체크는 메일을 보지 않는다.
         "spring.mail.host=localhost",
-        "ogonggo.advertisement.slack.inquiry-url=https://hooks.slack.com/services/T000/B000/test",
+        "ogonggo.slack.advertisement-inquiry=https://hooks.slack.com/services/T000/B000/test",
     ],
 )
 @AutoConfigureMockMvc

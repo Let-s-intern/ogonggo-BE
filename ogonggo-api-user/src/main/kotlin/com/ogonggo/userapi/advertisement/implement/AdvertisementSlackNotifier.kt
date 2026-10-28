@@ -3,7 +3,9 @@ package com.ogonggo.userapi.advertisement.implement
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.slack.SlackBlock
+import com.ogonggo.userapi.slack.SLACK_REST_CLIENT
 import com.ogonggo.userapi.slack.SlackMessage
+import com.ogonggo.userapi.slack.SlackProperties
 import com.ogonggo.userapi.slack.SlackText
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
@@ -21,17 +23,17 @@ interface AdvertisementInquiryNotifier {
  */
 @Component
 internal class AdvertisementSlackNotifier(
-    @Qualifier(ADVERTISEMENT_SLACK_REST_CLIENT)
-    private val advertisementSlackRestClient: RestClient,
-    private val properties: AdvertisementSlackProperties,
+    @Qualifier(SLACK_REST_CLIENT)
+    private val slackRestClient: RestClient,
+    private val properties: SlackProperties,
 ) : AdvertisementInquiryNotifier {
 
     override fun notify(notification: AdvertisementInquiryNotification) {
         // 값이 없어도 애플리케이션은 기동하도록 두었으므로 보낼 때 실패로 알린다.
-        check(properties.inquiryUrl.isNotBlank()) { "ogonggo.advertisement.slack.inquiry-url이 설정되지 않았습니다." }
+        check(properties.advertisementInquiry.isNotBlank()) { "ogonggo.slack.advertisement-inquiry가 설정되지 않았습니다." }
 
-        advertisementSlackRestClient.post()
-            .uri(properties.inquiryUrl)
+        slackRestClient.post()
+            .uri(properties.advertisementInquiry)
             .body(notification.toSlackMessage())
             .retrieve()
             .toBodilessEntity()
@@ -82,5 +84,3 @@ private fun AdvertisementInquiryNotification.inflowLabel(): String {
     )
     return (listOf(name) + details).joinToString(" · ")
 }
-
-internal const val ADVERTISEMENT_SLACK_REST_CLIENT = "advertisementSlackRestClient"
