@@ -1,6 +1,10 @@
 package com.ogonggo.userapi.auth.business
 
 import com.ogonggo.core.error.UnauthorizedException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.implement.CompanyProfileAppender
@@ -54,6 +58,17 @@ class CompanyAuthService(
                 userId = account.userId,
                 organizationName = command.organizationName,
                 managerName = command.managerName,
+                managerPhone = command.managerPhone,
+                businessNumberType = command.businessNumberType,
+                businessNumber = command.businessNumber,
+                companyType = command.companyType,
+                employeeCountRange = command.employeeCountRange,
+                industry = command.industry,
+                address = command.address,
+                homepageUrl = command.homepageUrl,
+                managerTitle = command.managerTitle,
+                managerDuty = command.managerDuty,
+                recommender = command.recommender,
             ),
         )
 
@@ -85,11 +100,23 @@ class CompanyAuthService(
     }
 }
 
+/** 기관명 아래의 기업·담당자 정보는 이 값을 받기 전에 배포된 가입 화면이 보내지 않으므로 null일 수 있다. */
 data class CompanySignUpCommand(
     val email: String,
     val password: String,
     val organizationName: String,
     val managerName: String,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
+    val companyType: CompanyType? = null,
+    val employeeCountRange: CompanyEmployeeCountRange? = null,
+    val industry: String? = null,
+    val address: String? = null,
+    val homepageUrl: String? = null,
+    val managerTitle: String? = null,
+    val managerDuty: CompanyManagerDuty? = null,
+    val managerPhone: String? = null,
+    val recommender: String? = null,
 )
 
 data class CompanySignInCommand(

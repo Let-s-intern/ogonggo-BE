@@ -7,6 +7,10 @@ import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
 import com.ogonggo.core.user.implement.CompanyProfileAppender
 import com.ogonggo.core.user.implement.dto.UserAccountDto
@@ -74,6 +78,17 @@ class CompanyAuthServiceTest {
                 userId = USER_ID,
                 organizationName = "렛츠커리어",
                 managerName = "김담당",
+                managerPhone = "010-1234-5678",
+                businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+                businessNumber = "1234567890",
+                companyType = CompanyType.SMALL,
+                employeeCountRange = CompanyEmployeeCountRange.RANGE_10_49,
+                industry = "IT·정보통신",
+                address = "서울특별시 마포구 양화로 1",
+                homepageUrl = "https://www.letscareer.co.kr",
+                managerTitle = "인사팀 매니저",
+                managerDuty = CompanyManagerDuty.HR,
+                recommender = "홍길동",
             ),
         )
         Mockito.verify(refreshTokenStore).save(USER_ID, "og-refresh", JWT_PROPERTIES.refreshTokenValidity)
@@ -171,6 +186,17 @@ class CompanyAuthServiceTest {
             password = RAW_PASSWORD,
             organizationName = "렛츠커리어",
             managerName = "김담당",
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
+            companyType = CompanyType.SMALL,
+            employeeCountRange = CompanyEmployeeCountRange.RANGE_10_49,
+            industry = "IT·정보통신",
+            address = "서울특별시 마포구 양화로 1",
+            homepageUrl = "https://www.letscareer.co.kr",
+            managerTitle = "인사팀 매니저",
+            managerDuty = CompanyManagerDuty.HR,
+            managerPhone = "010-1234-5678",
+            recommender = "홍길동",
         )
         private val JWT_PROPERTIES = JwtProperties(
             secret = "b2dvbmdnby1sb2NhbC10ZXN0LXNlY3JldC1rZXktcGxlYXNlLXJlcGxhY2UtaW4tcmVhbC1lbnZzISEwMDAwMDAwMA==",

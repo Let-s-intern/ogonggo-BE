@@ -506,6 +506,16 @@ class UserOpenApiContractTest @Autowired constructor(
         assertFalse(companySignUp.has("security"))
         assertTrue(companySignUp.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(companySignUp.at("/responses/409/description").asText().startsWith("EMAIL_ALREADY_EXISTS"))
+        assertTrue(companySignUp.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        // 기업·담당자 정보는 이 값을 받기 전의 가입 화면이 보내지 않으므로 모두 선택이다.
+        val companySignUpRequest = document.at("/components/schemas/CompanySignUpRequest")
+        val companySignUpRequired = companySignUpRequest.at("/required").map { it.asText() }.toSet()
+        assertEquals(setOf("email", "password", "organizationName", "managerName"), companySignUpRequired)
+        listOf(
+            "businessNumberType", "businessNumber", "companyType", "employeeCountRange", "industry", "address",
+            "homepageUrl", "managerTitle", "managerDuty", "managerPhone", "recommender",
+        ).forEach { field -> assertTrue(companySignUpRequest.at("/properties/$field").isObject, field) }
+        assertEquals(13, companySignUpRequest.at("/properties/businessNumber/maxLength").asInt())
 
         val companySignIn = document.at("/paths/~1api~1v1~1auth~1company~1signin/post")
         assertFalse(companySignIn.has("security"))
