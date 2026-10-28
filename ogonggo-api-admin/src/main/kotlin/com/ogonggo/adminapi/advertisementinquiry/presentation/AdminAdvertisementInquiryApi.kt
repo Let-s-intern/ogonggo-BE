@@ -40,6 +40,8 @@ interface AdminAdvertisementInquiryApi {
             기업 담당자가 남긴 광고 문의를 최근에 들어온 순으로 반환합니다. 정렬은 고를 수 없습니다.
             문의 유형·캠페인 코드·처리 상태·회원 구분·유입 경로·회사명 입력 방식으로 거를 수 있고 필터는 모두 AND로 묶입니다.
             createdFrom·createdTo는 접수일(YYYY-MM-DD, 한국 시간) 범위이며 두 날짜를 모두 포함합니다.
+            status는 status=RECEIVED&status=CONTACTED&status=EXECUTED처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나인 문의가 걸립니다.
+            반려를 뺀 목록은 반려 외의 세 상태를, 반려한 문의 목록은 status=REJECTED를 보냅니다.
             값을 보내지 않거나 빈 값을 보내면 그 조건을 적용하지 않습니다. 현재 조건의 건수는 pageInfo.totalElements입니다.
         """,
     )
@@ -58,7 +60,7 @@ interface AdminAdvertisementInquiryApi {
         @Min(1) @Max(100) size: Int,
         inquiryType: AdvertisementInquiryType?,
         @Parameter(description = "캠페인 코드. 일치하는 값만 거릅니다.", example = "launch_free_promo") @Size(max = 50) campaignCode: String?,
-        status: AdvertisementInquiryStatus?,
+        statuses: List<AdvertisementInquiryStatus>?,
         memberType: AdvertisementInquiryMemberType?,
         inflowChannel: AdvertisementInquiryInflowChannel?,
         companyNameSource: AdvertisementInquiryCompanyNameSource?,

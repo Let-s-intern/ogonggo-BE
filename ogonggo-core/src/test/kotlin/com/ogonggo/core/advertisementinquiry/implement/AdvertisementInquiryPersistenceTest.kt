@@ -106,7 +106,7 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
 
         assertEquals(listOf(companyAlert), ids(AdvertisementInquirySearchCondition(inquiryType = AdvertisementInquiryType.LAUNCH_ALERT)))
         assertEquals(listOf(rejected, coldmailGuest), ids(AdvertisementInquirySearchCondition(campaignCode = CAMPAIGN)))
-        assertEquals(listOf(rejected), ids(AdvertisementInquirySearchCondition(status = AdvertisementInquiryStatus.REJECTED)))
+        assertEquals(listOf(rejected), ids(AdvertisementInquirySearchCondition(statuses = setOf(AdvertisementInquiryStatus.REJECTED))))
         assertEquals(listOf(companyAlert), ids(AdvertisementInquirySearchCondition(memberType = AdvertisementInquiryMemberType.COMPANY)))
         assertEquals(
             listOf(coldmailGuest),
@@ -122,6 +122,38 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
                 ),
             ),
         )
+    }
+
+    @Test
+    fun `처리 상태를 여러 개 고르면 그중 하나인 문의를 거르고 비어 있으면 전체를 준다`() {
+        // given
+        val received = append()
+        val contacted = append()
+        val executed = append()
+        val rejected = append()
+        changeStatus(contacted, AdvertisementInquiryStatus.CONTACTED)
+        changeStatus(executed, AdvertisementInquiryStatus.EXECUTED)
+        changeStatus(rejected, AdvertisementInquiryStatus.REJECTED)
+        val reader = reader(at(2026, 10, 28, 12, 0))
+
+        // when
+        val notRejected = reader.readPage(
+            AdvertisementInquirySearchCondition(
+                statuses = setOf(
+                    AdvertisementInquiryStatus.RECEIVED,
+                    AdvertisementInquiryStatus.CONTACTED,
+                    AdvertisementInquiryStatus.EXECUTED,
+                ),
+            ),
+            0,
+            20,
+        )
+        val all = reader.readPage(AdvertisementInquirySearchCondition(statuses = emptySet()), 0, 20)
+
+        // then
+        assertEquals(listOf(executed, contacted, received), notRejected.advertisementInquiries.map { it.id })
+        assertEquals(3, notRejected.totalElements)
+        assertEquals(listOf(rejected, executed, contacted, received), all.advertisementInquiries.map { it.id })
     }
 
     @Test

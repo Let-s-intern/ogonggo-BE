@@ -260,7 +260,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 슬랙 알림은 저장한 뒤 동기로 보내고, 실패하면 `error` 로그만 남기고 성공으로 응답합니다. 문의는 저장돼 어드민에서 다시 볼 수 있으므로 알림 실패로 접수를 실패로 만들 이유가 없습니다. 이전의 503 `ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED`는 없앴습니다.
 - 저장은 한 행이라 유스케이스에 트랜잭션을 열지 않습니다. 열면 슬랙 응답을 기다리는 동안 커넥션을 붙잡고 커밋 전에 알림이 나갑니다.
 
-관리자 콘솔은 `GET /api/v1/admin/advertisement-inquiries`로 목록을 봅니다. 최근에 들어온 순(`id DESC`)이고 정렬은 고를 수 없으며, 항목에 문의의 모든 값(유입 원본 포함)과 처리 상태·메모·접수 일시(`registeredAt`)를 싣습니다. 카드에 모든 값을 보이므로 상세 조회는 두지 않습니다. 접수 기간 `createdFrom`·`createdTo`(`YYYY-MM-DD`)는 두 날짜를 모두 포함하고, 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[createdFrom]`으로 시작합니다. 현재 조건의 건수는 `pageInfo.totalElements`입니다.
+관리자 콘솔은 `GET /api/v1/admin/advertisement-inquiries`로 목록을 봅니다. 최근에 들어온 순(`id DESC`)이고 정렬은 고를 수 없으며, 항목에 문의의 모든 값(유입 원본 포함)과 처리 상태·메모·접수 일시(`registeredAt`)를 싣습니다. 카드에 모든 값을 보이므로 상세 조회는 두지 않습니다. 접수 기간 `createdFrom`·`createdTo`(`YYYY-MM-DD`)는 두 날짜를 모두 포함하고, 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[createdFrom]`으로 시작합니다. 처리 상태 `status`는 `status=RECEIVED&status=CONTACTED&status=EXECUTED`처럼 여러 번 보내 그중 하나인 문의를 고릅니다(2026-10-28, LC-3525). 콘솔의 `광고 문의` 탭은 반려 외의 세 상태를, `반려한 문의` 탭은 `status=REJECTED`를 보냅니다. 반려 제외 전용 파라미터는 두지 않습니다. 값을 하나만 보내면 이전과 같습니다. 현재 조건의 건수는 `pageInfo.totalElements`입니다.
 
 메뉴 숫자용 `GET /api/v1/admin/advertisement-inquiries/today-count`는 `{ "count": 3 }`만 줍니다. 한국 시간 오늘 0시부터 들어온 문의 중 반려(`REJECTED`)하지 않은 문의 수이며 문의 유형은 가리지 않습니다. 반려로 바꾸면 바로 줄고, 접수·연락함·집행 완료 사이를 오가면 그대로입니다(2026-10-28 변경, LC-3525. 이전에는 처리 상태를 가리지 않았습니다). 목록을 크기 1로 불러 총 건수를 쓰면 클라이언트가 시간대까지 맞춰 기간을 보내야 해서 따로 둡니다.
 
@@ -312,7 +312,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 | `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`, `role`(`USER`·`MENTOR`·`ADMIN`). `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
 | `GET /api/v1/admin/company-members` | `status`, `joinedFrom`, `joinedTo` | 회사명, 담당자 이름 |
-| `GET /api/v1/admin/advertisement-inquiries` | `inquiryType`, `campaignCode`, `status`, `memberType`, `inflowChannel`, `companyNameSource`, `createdFrom`, `createdTo`. `sort`는 받지 않습니다([B2B 광고 문의](#b2b-광고-문의) 참고) | 없음 |
+| `GET /api/v1/admin/advertisement-inquiries` | `inquiryType`, `campaignCode`, `status`(여러 값), `memberType`, `inflowChannel`, `companyNameSource`, `createdFrom`, `createdTo`. `sort`는 받지 않습니다([B2B 광고 문의](#b2b-광고-문의) 참고) | 없음 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - 사이드·스터디 모집글 목록은 임시저장을 싣지 않으므로 `HIDDEN`은 운영자가 숨긴 모집글입니다. 항목에는 작성자 `authorUserId`와 프로필 닉네임 `authorNickname`(프로필이 없으면 `null`)을 싣고, 조회·북마크·댓글 수를 함께 줍니다. 상세·수정·삭제 API는 아직 두지 않았습니다.

@@ -39,7 +39,7 @@ internal class AdvertisementInquiryQueryRepository(
         val predicates = arrayOf(
             condition.inquiryType?.let(advertisementInquiry.inquiryType::eq),
             condition.campaignCode?.takeIf { it.isNotBlank() }?.let(advertisementInquiry.campaignCode::eq),
-            condition.status?.let(advertisementInquiry.status::eq),
+            condition.statuses.takeIf { it.isNotEmpty() }?.let { advertisementInquiry.status.`in`(it) },
             condition.memberType?.let(advertisementInquiry.memberType::eq),
             condition.inflowChannel?.let(advertisementInquiry.inflowChannel::eq),
             condition.companyNameSource?.let(advertisementInquiry.companyNameSource::eq),
