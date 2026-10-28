@@ -11,7 +11,7 @@ data class UserManagementSearchCondition(
     val joinedTo: LocalDate? = null,
     /**
      * 대소문자를 가리지 않고 부분 일치로 찾는다.
-     * 일반 회원은 닉네임·이메일, 기업 회원은 회사명·담당자 이름에서 찾는다.
+     * 일반 회원은 이름·닉네임·이메일, 기업 회원은 회사명·담당자 이름·계정 이메일에서 찾는다.
      */
     val keyword: String? = null,
     /** 일반 회원 목록에서만 쓴다. 기업 회원 목록은 역할이 하나뿐이다. */

@@ -119,11 +119,12 @@ internal class UserManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `일반 회원은 닉네임이나 이메일로 대소문자를 가리지 않고 찾는다`() {
+    fun `일반 회원은 이름이나 닉네임이나 이메일로 대소문자를 가리지 않고 찾는다`() {
         // given
         val byNickname = generalMember(letsCareerUserId = 1L, nickname = "CareerKim", email = "a@test.com")
         val byEmail = generalMember(letsCareerUserId = 2L, nickname = "렛츠", email = "career@test.com")
         generalMember(letsCareerUserId = 3L, nickname = "오공고", email = "b@test.com")
+        val byName = generalMember(letsCareerUserId = 4L, name = "Career Lee")
 
         // when
         val result = userManagementReader.readGeneralMemberPage(
@@ -133,7 +134,7 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         )
 
         // then
-        assertEquals(listOf(byEmail, byNickname), result.members.map { it.userId })
+        assertEquals(listOf(byName, byEmail, byNickname), result.members.map { it.userId })
     }
 
     @Test
@@ -197,12 +198,13 @@ internal class UserManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `기업 회원은 회사명이나 담당자 이름으로 찾는다`() {
+    fun `기업 회원은 회사명이나 담당자 이름이나 계정 이메일로 찾는다`() {
         // given
         val byOrganization = companyMember(email = "a@test.com", organizationName = "오공고랩스", managerName = "김담당")
         val byManager = companyMember(email = "b@test.com", organizationName = "렛츠커리어", managerName = "오공고")
         companyMember(email = "c@test.com", organizationName = "다른회사", managerName = "이담당")
         generalMember(letsCareerUserId = 1L, nickname = "오공고")
+        val byEmail = companyMember(email = "recruit@ogonggo.co.kr", organizationName = "채용회사", managerName = "박담당")
 
         // when
         val result = userManagementReader.readCompanyMemberPage(
@@ -210,14 +212,21 @@ internal class UserManagementPersistenceTest @Autowired constructor(
             page = 0,
             size = 20,
         )
+        val byEmailResult = userManagementReader.readCompanyMemberPage(
+            UserManagementSearchCondition(keyword = "RECRUIT@"),
+            page = 0,
+            size = 20,
+        )
 
         // then
         assertEquals(listOf(byManager, byOrganization), result.members.map { it.userId })
         assertEquals("오공고랩스", result.members.last().companyProfile?.organizationName)
+        assertEquals(listOf(byEmail), byEmailResult.members.map { it.userId })
     }
 
     private fun generalMember(
         letsCareerUserId: Long,
+        name: String = "회원$letsCareerUserId",
         nickname: String? = null,
         email: String? = null,
         joinedAt: LocalDateTime = NOW,
@@ -226,7 +235,7 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         userProfileManager.sync(
             UserProfileSyncDto(
                 userId = userId,
-                name = "회원$letsCareerUserId",
+                name = name,
                 email = email,
                 phoneNum = null,
                 letsCareerAuthProvider = null,
