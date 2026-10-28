@@ -3,6 +3,8 @@ package com.ogonggo.core.user.domain
 import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -20,12 +22,28 @@ internal class CompanyProfile(
     logoUrl: String? = null,
     managerPhone: String? = null,
     notificationEmail: String? = null,
+    businessNumberType: CompanyBusinessNumberType? = null,
+    businessNumber: String? = null,
+    companyType: CompanyType? = null,
+    employeeCountRange: CompanyEmployeeCountRange? = null,
+    industry: String? = null,
+    address: String? = null,
+    homepageUrl: String? = null,
+    managerTitle: String? = null,
+    managerDuty: CompanyManagerDuty? = null,
+    recommender: String? = null,
 ) : BaseTimeEntity() {
 
     init {
         require(userId > 0) { "사용자 식별자는 양수여야 합니다." }
         validateBasicInfo(organizationName, logoImageId, logoUrl)
         validateManagerInfo(managerName, managerPhone, notificationEmail)
+        validateBusinessNumber(businessNumberType, businessNumber)
+        requireNotBlankIfPresent(industry, "산업")
+        requireNotBlankIfPresent(address, "주소")
+        requireNotBlankIfPresent(homepageUrl, "홈페이지")
+        requireNotBlankIfPresent(managerTitle, "담당자 직책")
+        requireNotBlankIfPresent(recommender, "추천인")
     }
 
     @Id
@@ -55,6 +73,52 @@ internal class CompanyProfile(
 
     @Column(name = "notification_email", length = 320)
     var notificationEmail: String? = notificationEmail /* 로그인 이메일과 따로 받는 정보 수신용 이메일 */
+        protected set
+
+    // 아래는 가입할 때 받는 기업·담당자 정보다. 이 칼럼을 더하기 전에 가입한 회원은 모두 null이다.
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "business_number_type", length = 30)
+    var businessNumberType: CompanyBusinessNumberType? = businessNumberType /* 번호 종류. 해외 기업이면 OVERSEAS */
+        protected set
+
+    @Column(name = "business_number", length = 13)
+    var businessNumber: String? = businessNumber /* 숫자만. 한 회사에 담당자 계정이 여럿일 수 있어 유니크가 아니다 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "company_type", length = 30)
+    var companyType: CompanyType? = companyType /* 기업 형태 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "employee_count_range", length = 30)
+    var employeeCountRange: CompanyEmployeeCountRange? = employeeCountRange /* 직원 수 구간 */
+        protected set
+
+    @Column(name = "industry", length = 100)
+    var industry: String? = industry /* 산업. 공고의 industry와 같은 문자열 */
+        protected set
+
+    @Column(name = "address", length = 255)
+    var address: String? = address /* 주소 */
+        protected set
+
+    @Column(name = "homepage_url", length = 2048)
+    var homepageUrl: String? = homepageUrl /* 홈페이지 */
+        protected set
+
+    @Column(name = "manager_title", length = 50)
+    var managerTitle: String? = managerTitle /* 담당자 직책 */
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "manager_duty", length = 30)
+    var managerDuty: CompanyManagerDuty? = managerDuty /* 담당 업무 */
+        protected set
+
+    @Column(name = "recommender", length = 100)
+    var recommender: String? = recommender /* 추천인 */
         protected set
 
     /**
@@ -90,4 +154,17 @@ private fun validateManagerInfo(managerName: String, managerPhone: String?, noti
     require(managerName.isNotBlank()) { "담당자 이름은 비어 있을 수 없습니다." }
     require(managerPhone == null || managerPhone.isNotBlank()) { "담당자 연락처는 비어 있을 수 없습니다." }
     require(notificationEmail == null || notificationEmail.isNotBlank()) { "정보 수신용 이메일은 비어 있을 수 없습니다." }
+}
+
+/** 번호는 종류가 있어야 뜻이 있고, 종류가 정해지면 그 종류의 형식을 따라야 한다. */
+private fun validateBusinessNumber(type: CompanyBusinessNumberType?, number: String?) {
+    if (type == null) {
+        require(number == null) { "번호 종류 없이 사업자 번호를 둘 수 없습니다." }
+        return
+    }
+    require(type.accepts(number)) { "${type.desc}의 형식이 아닙니다." }
+}
+
+private fun requireNotBlankIfPresent(value: String?, label: String) {
+    require(value == null || value.isNotBlank()) { "${label}은(는) 비어 있을 수 없습니다." }
 }

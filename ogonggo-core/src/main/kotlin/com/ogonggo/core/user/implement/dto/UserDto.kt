@@ -1,6 +1,10 @@
 package com.ogonggo.core.user.implement.dto
 
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
 import com.ogonggo.core.user.domain.CompanyProfile
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserGrade
@@ -40,10 +44,24 @@ data class UserProfileSyncDto(
     val letsCareerNicknameUpdatedAt: LocalDateTime? = null,
 )
 
+/**
+ * 가입할 때 만드는 기업 정보다. 새 가입 화면이 배포되기 전의 화면은 기관명과 담당자 이름만 보내므로 나머지는 null일 수 있다.
+ */
 data class CompanyProfileAppendDto(
     val userId: Long,
     val organizationName: String,
     val managerName: String,
+    val managerPhone: String? = null,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
+    val companyType: CompanyType? = null,
+    val employeeCountRange: CompanyEmployeeCountRange? = null,
+    val industry: String? = null,
+    val address: String? = null,
+    val homepageUrl: String? = null,
+    val managerTitle: String? = null,
+    val managerDuty: CompanyManagerDuty? = null,
+    val recommender: String? = null,
 )
 
 /** 기업 회원이 마이페이지에서 고치는 기본 정보다. 함께 교체하므로 로고가 null이면 지운다. */
@@ -146,6 +164,16 @@ data class CompanyProfileDto(
     val managerPhone: String?,
     val notificationEmail: String?,
     val logoImageId: String? = null,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
+    val companyType: CompanyType? = null,
+    val employeeCountRange: CompanyEmployeeCountRange? = null,
+    val industry: String? = null,
+    val address: String? = null,
+    val homepageUrl: String? = null,
+    val managerTitle: String? = null,
+    val managerDuty: CompanyManagerDuty? = null,
+    val recommender: String? = null,
 ) {
     companion object {
         internal fun from(profile: CompanyProfile): CompanyProfileDto = CompanyProfileDto(
@@ -155,6 +183,16 @@ data class CompanyProfileDto(
             logoImageId = profile.logoImageId,
             managerPhone = profile.managerPhone,
             notificationEmail = profile.notificationEmail,
+            businessNumberType = profile.businessNumberType,
+            businessNumber = profile.businessNumber,
+            companyType = profile.companyType,
+            employeeCountRange = profile.employeeCountRange,
+            industry = profile.industry,
+            address = profile.address,
+            homepageUrl = profile.homepageUrl,
+            managerTitle = profile.managerTitle,
+            managerDuty = profile.managerDuty,
+            recommender = profile.recommender,
         )
     }
 }
