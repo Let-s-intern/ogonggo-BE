@@ -220,6 +220,21 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertFalse(response.has("recipientAddress"))
     }
 
+    @Test
+    fun `비즈니스 회원 목록은 가입 때 받은 기업·담당자 정보를 응답에 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val properties = document.at("/components/schemas/AdminCompanyMemberResponse/properties")
+
+        // then
+        listOf(
+            "managerPhone", "businessNumberType", "businessNumber", "companyType", "employeeCountRange", "industry",
+            "address", "homepageUrl", "managerTitle", "managerDuty", "recommender",
+        ).forEach { field -> assertTrue(properties.has(field), field) }
+    }
+
     private fun openApiDocument() = objectMapper.readTree(
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)
