@@ -1,8 +1,10 @@
 package com.ogonggo.userapi.advertisement.implement
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryType
-import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryPromotionChannel
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.mail.OgonggoMailProperties
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
@@ -72,7 +74,7 @@ class AdvertisementInquiryMailSenderTest {
 
     @Test
     fun `메일 발송이 실패해도 예외를 밖으로 던지지 않는다`() {
-        // 문의는 이미 슬랙으로 전달된 뒤다. 확인 메일 실패로 접수를 되돌리지 않는다.
+        // 문의는 이미 저장된 뒤다. 확인 메일 실패로 접수를 되돌리지 않는다.
         val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
         Mockito.doThrow(MailSendException("SMTP 연결 실패"))
             .`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
@@ -110,6 +112,12 @@ class AdvertisementInquiryMailSenderTest {
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            memberType = AdvertisementInquiryMemberType.GUEST,
+            inflowChannel = AdvertisementInquiryInflowChannel.DIRECT,
+            utmSource = null,
+            utmCampaign = null,
+            utmContent = null,
+            referrer = null,
         )
     }
 }

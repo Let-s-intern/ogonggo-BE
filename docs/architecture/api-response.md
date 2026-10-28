@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-10
+- 최종 변경일: 2026-10-27
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -248,19 +248,37 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 ### B2B 광고 문의
 
-`POST /api/v1/advertisement-inquiries`는 기업 담당자가 광고 소개 페이지에서 남긴 문의를 영업 슬랙 채널로 전달합니다. 오공고 계정이 없는 상태로 호출하며 문의를 저장하지 않습니다.
+`POST /api/v1/advertisement-inquiries`는 기업 담당자가 남긴 광고 문의를 `advertisement_inquiries`에 저장한 뒤 영업 슬랙 채널과 담당자 확인 메일로 알립니다.
 
-저장하는 행이 없어 반환할 식별자도 없으므로 생성의 201이 아니라 200과 `data: null`로 응답합니다. 원문 이동 기록과 같은 이유입니다.
+- 결정일: 2026-10-27 (LC-3514) / 리뷰 상태: 팀 리뷰 필요
+- 제출할 때마다 새 행이 생기므로 201과 `data.id`로 응답합니다. 2026-10-27까지는 저장하지 않고 슬랙으로만 전달해 200과 `data: null`로 응답했습니다.
+- 로그인 없이 보낼 수 있고 토큰이 선택입니다. 토큰이 있으면 그 회원의 현재 역할로 회원 구분(`COMPANY`·`USER`, 멘토·관리자는 `USER`)과 회원 식별자를 함께 저장하고, 토큰이 없거나 유효하지 않으면 `GUEST`로 저장합니다. 요청 본문의 회원 구분·회원 식별자는 받지 않습니다.
+- 캠페인 코드는 서버가 정합니다. 지금 이 API를 부르는 진입 페이지는 `/biz` 하나라 `launch_free_promo`로 저장합니다.
+- 유입 경로(`inflowChannel`)는 저장할 때 `utmSource`와 `referrer`로 한 번 판정해 함께 저장합니다(`AdvertisementInquiryInflowChannel.classify`). 판정에 쓴 원본 값도 그대로 남깁니다.
+- 회사명 입력 방식(`companyNameSource`)은 회사명 검색에서 골랐으면 `SEARCH`, 기업 회원 정보로 채웠으면 `MEMBER_PROFILE`, 직접 입력했으면 `MANUAL`이고 선택입니다. 보내지 않으면 `MANUAL`로 저장합니다. 검증 수단이 아니라 영업이 표기를 정리할 행을 고르는 표시라 보낸 값을 그대로 믿습니다(2026-10-28).
+- 직함·채용 직무명·공고 링크·마케팅 동의·유입 원본 필드는 선택입니다. 이 필드가 생기기 전의 폼(`apps/launch-notice`)이 이전될 때까지 같은 API를 부르기 때문입니다. 마케팅 동의를 보내지 않으면 동의하지 않은 것으로 저장합니다.
+- 슬랙 알림은 저장한 뒤 동기로 보내고, 실패하면 `error` 로그만 남기고 성공으로 응답합니다. 문의는 저장돼 어드민에서 다시 볼 수 있으므로 알림 실패로 접수를 실패로 만들 이유가 없습니다. 이전의 503 `ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED`는 없앴습니다.
+- 저장은 한 행이라 유스케이스에 트랜잭션을 열지 않습니다. 열면 슬랙 응답을 기다리는 동안 커넥션을 붙잡고 커밋 전에 알림이 나갑니다.
 
-슬랙 전달에 실패하면 문의가 어디에도 남지 않으므로 성공으로 응답하지 않고 503 `ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED`로 응답합니다. 알림을 비동기로 두지 않는 이유도 같습니다. 응답이 곧 접수 결과이므로 지표 기록처럼 실패를 버릴 수 없습니다. 웹훅 주소가 설정되지 않은 경우도 같은 코드로 응답하며, 두 경우 모두 문의 원문을 `error` 로그로 남겨 로그에서 복구할 수 있게 합니다.
+관리자 콘솔은 `GET /api/v1/admin/advertisement-inquiries`로 목록을 봅니다. 최근에 들어온 순(`id DESC`)이고 정렬은 고를 수 없으며, 항목에 문의의 모든 값(유입 원본 포함)과 처리 상태·메모·접수 일시(`registeredAt`)를 싣습니다. 카드에 모든 값을 보이므로 상세 조회는 두지 않습니다. 접수 기간 `createdFrom`·`createdTo`(`YYYY-MM-DD`)는 두 날짜를 모두 포함하고, 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[createdFrom]`으로 시작합니다. 현재 조건의 건수는 `pageInfo.totalElements`입니다.
 
-접수에 성공하면 문의를 남긴 담당자에게 접수 확인 메일을 보냅니다. 슬랙과 달리 이 메일은 실패해도 접수를 되돌리지 않고 `warn` 로그만 남깁니다. 문의는 이미 슬랙으로 전달된 뒤라 메일이 빠져도 유실이 아니고, 확인 메일 때문에 접수를 실패로 만들면 담당자가 폼을 다시 제출하게 됩니다. 같은 이유로 슬랙을 먼저 보냅니다. 순서를 바꾸면 503으로 응답한 문의에도 확인 메일이 나갑니다.
+메뉴 숫자용 `GET /api/v1/admin/advertisement-inquiries/today-count`는 `{ "count": 3 }`만 줍니다. 한국 시간 오늘 0시부터 들어온 문의 수이며 문의 유형과 처리 상태를 가리지 않습니다. 목록을 크기 1로 불러 총 건수를 쓰면 클라이언트가 시간대까지 맞춰 기간을 보내야 해서 따로 둡니다.
+
+슬랙 알림과 함께 문의를 남긴 담당자에게 접수 확인 메일을 보냅니다. 이 메일은 실패해도 접수를 되돌리지 않고 `warn` 로그만 남깁니다. 슬랙 알림이 실패해도 메일은 보냅니다.
 
 메일은 응답의 정확성에 필요하지 않고 SMTP 응답이 늦어질 수 있어 전용 실행기에서 비동기로 보냅니다. 지표 실행기는 스레드가 하나뿐이고 큐가 차면 버리도록 되어 있어 함께 쓰지 않습니다. 확인 메일은 버리면 담당자가 접수 여부를 알 수 없으므로 큐가 차면 호출한 스레드가 직접 보냅니다. 공통 발신 주소(`ogonggo.mail.from`)가 비어 있으면 발송을 건너뜁니다.
 
-문의를 저장하지 않기로 한 결정은 슬랙 메시지가 유일한 사본이라는 뜻입니다. 메시지 삭제나 워크스페이스 보관 기간이 지나면 문의 이력이 남지 않고 접수 건수도 집계할 수 없습니다. 이력이 필요해지면 엔티티 도입을 다시 검토합니다.
-
 **확인 필요:** 외부 알림 연동(슬랙·메일 등)의 배치, 실패 처리, 동기·비동기 선택, 메일 본문과 발신 주소 관리는 아직 팀 규칙으로 문서화되어 있지 않습니다. 위 내용은 이 엔드포인트의 응답 계약을 설명한 것이며 팀 규칙으로 확정된 것이 아닙니다. 현재 SMTP는 렛츠커리어와 같은 SES 계정과 발신 주소(`official@letscareer.co.kr`)를 함께 쓰고 있어, 오공고 전용 발신 도메인이 필요한지도 함께 확인이 필요합니다.
+
+### 회사명 검색
+
+`GET /api/v1/company-names?keyword=`는 `keyword`를 포함하는 회사명을 최대 10개 문자열 배열로 반환합니다. 페이지가 없으므로 `data`는 배열입니다.
+
+- 결정일: 2026-10-28 (LC-3514) / 리뷰 상태: 팀 리뷰 필요
+- 찾는 곳은 삭제되지 않은 채용공고(마감·비노출 포함)의 `jobs.company_name`, 삭제되지 않은 부트캠프(마감 포함)의 `bootcamps.company_name`, 기업 회원의 `company_profiles.organization_name`입니다. 앞뒤 공백만 다듬어 같은 이름을 하나로 합치고 `(주)`를 지우는 식의 정규화는 하지 않습니다. 광고 문의에 직접 입력한 회사명은 확인되지 않은 이름이라 넣지 않습니다.
+- 대소문자를 가리지 않는 부분 일치입니다. 검색어로 시작하는 이름이 먼저, 그다음 포함하는 이름이고 같은 묶음 안에서는 짧은 이름, 이름 순입니다.
+- `keyword`는 앞뒤 공백을 지우고 찾으며 50자 이하입니다. 보내지 않거나 비면 빈 배열이고, 50자를 넘으면 400 `BAD_REQUEST`입니다. 목록 검색어(2자 이상)와 달리 1자부터 찾습니다. 폼이 한 글자부터 후보를 띄우기 때문입니다.
+- 세 테이블을 `like '%검색어%'`로 훑어 인덱스를 쓰지 못합니다. 테이블마다 같은 순서로 앞의 10개만 가져와 합칩니다. 운영 데이터에서 응답 시간을 재고 느리면 그때 이름 목록 테이블이나 캐시를 검토합니다.
 
 ### 서비스 개선 의견
 
@@ -294,6 +312,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 | `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`, `role`(`USER`·`MENTOR`·`ADMIN`). `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
 | `GET /api/v1/admin/company-members` | `status`, `joinedFrom`, `joinedTo` | 회사명, 담당자 이름 |
+| `GET /api/v1/admin/advertisement-inquiries` | `inquiryType`, `campaignCode`, `status`, `memberType`, `inflowChannel`, `companyNameSource`, `createdFrom`, `createdTo`. `sort`는 받지 않습니다([B2B 광고 문의](#b2b-광고-문의) 참고) | 없음 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - 사이드·스터디 모집글 목록은 임시저장을 싣지 않으므로 `HIDDEN`은 운영자가 숨긴 모집글입니다. 항목에는 작성자 `authorUserId`와 프로필 닉네임 `authorNickname`(프로필이 없으면 `null`)을 싣고, 조회·북마크·댓글 수를 함께 줍니다. 상세·수정·삭제 API는 아직 두지 않았습니다.
@@ -371,7 +390,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - `parent`는 다른 enum 값에 속하는 값(`HierarchicalEnumField`)의 상위 값 이름이고, 그 밖에는 `null`입니다. 시·군·구(`SubRegion`)의 `parent`는 시·도(`Region`)입니다.
 - 값은 enum의 전체 값입니다. 부트캠프 목록의 `status`처럼 일부 값만 받는 곳의 범위는 해당 API 명세를 따릅니다.
 - 목록은 core의 `EnumOptionReader`가 한 곳에서 관리합니다. core에 업무 enum을 새로 만들면 이 목록에 추가하며, 빠뜨리면 core 테스트가 실패합니다.
-- core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(사용자: 광고 문의 유형·홍보 채널, 관리자: 관리 목록 정렬·노출). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
+- core가 볼 수 없는 API 전용 enum만 각 API의 `UserEnumService`·`AdminEnumService`가 덧붙입니다(관리자: 관리 목록 정렬·노출. 사용자 API는 지금 전용 enum이 없습니다. 광고 문의 유형·홍보 채널은 2026-10-27 저장하는 값이 되면서 core로 옮겼습니다). 각 API의 presentation에 쓰인 `EnumField` enum이 응답에 없으면 그 API의 테스트가 실패합니다.
 - 2026-10-06에 enum 이름에 루트 접두어를 붙이면서 키가 바뀌었습니다(예: `RecruitmentType` → `RecruitmentPostType`, `EmploymentType` → `JobEmploymentType`). 프런트 전환 기간에 내려 주던 예전 키는 2026-10-12에 제거했습니다.
 
 #### 목록을 한 곳에서 관리하는 이유

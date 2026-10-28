@@ -1,28 +1,23 @@
 package com.ogonggo.userapi.advertisement.implement
 
-import com.ogonggo.core.error.InternalServerException
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
-import com.ogonggo.userapi.advertisement.error.AdvertisementErrorCode
 import com.ogonggo.userapi.slack.SlackBlock
 import com.ogonggo.userapi.slack.SlackMessage
 import com.ogonggo.userapi.slack.SlackText
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
-import org.springframework.web.client.RestClientException
 
 interface AdvertisementInquiryNotifier {
-    /** 광고 문의를 영업 채널로 알린다. 전달하지 못하면 예외를 던진다. */
+    /** 광고 문의를 영업 채널로 알린다. 전달하지 못하면 예외를 던지고, 접수에 미칠 영향은 호출한 쪽이 정한다. */
     fun notify(notification: AdvertisementInquiryNotification)
 }
 
 /**
  * 슬랙 인커밍 웹훅으로 광고 문의를 보낸다.
  *
- * 실패를 삼키지 않는다. 문의를 저장하지 않아 이 메시지가 유일한 사본이므로,
- * 삼키면 사용자에게는 접수됐다고 알린 문의가 아무 데도 남지 않는다.
- * 대신 던지기 전에 원문을 error 로그로 남겨 로그에서 복구할 수 있게 한다.
+ * 실패를 여기서 삼키지 않고 던진다. 문의는 이미 저장돼 있으므로 서비스가 로그만 남기고 접수를 마친다.
  */
 @Component
 internal class AdvertisementSlackNotifier(
@@ -32,28 +27,14 @@ internal class AdvertisementSlackNotifier(
 ) : AdvertisementInquiryNotifier {
 
     override fun notify(notification: AdvertisementInquiryNotification) {
-        if (properties.inquiryUrl.isBlank()) {
-            log.error(
-                "ogonggo.advertisement.slack.inquiry-url이 설정되지 않았습니다. 유실 방지용 원문: {}",
-                notification,
-            )
-            throw InternalServerException(AdvertisementErrorCode.ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED)
-        }
+        // 값이 없어도 애플리케이션은 기동하도록 두었으므로 보낼 때 실패로 알린다.
+        check(properties.inquiryUrl.isNotBlank()) { "ogonggo.advertisement.slack.inquiry-url이 설정되지 않았습니다." }
 
-        try {
-            advertisementSlackRestClient.post()
-                .uri(properties.inquiryUrl)
-                .body(notification.toSlackMessage())
-                .retrieve()
-                .toBodilessEntity()
-        } catch (exception: RestClientException) {
-            log.error("광고 문의 슬랙 알림 발송에 실패했습니다. 유실 방지용 원문: {}", notification, exception)
-            throw InternalServerException(AdvertisementErrorCode.ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED)
-        }
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(AdvertisementSlackNotifier::class.java)
+        advertisementSlackRestClient.post()
+            .uri(properties.inquiryUrl)
+            .body(notification.toSlackMessage())
+            .retrieve()
+            .toBodilessEntity()
     }
 }
 
@@ -66,7 +47,7 @@ private fun AdvertisementInquiryNotification.toSlackMessage(): SlackMessage =
         headline = "📢 B2B 광고 문의 - ${SlackText.escape(companyName)} (${inquiryType.desc})",
         blocks = listOf(
             SlackBlock.fields(
-                // 저장하지 않아 어드민에서 다시 볼 수 없다. 회신 수단을 함께 싣는다.
+                // 영업이 슬랙만 보고 바로 연락할 수 있도록 회신 수단을 함께 싣는다.
                 listOf(
                     SlackText.labeled("기업명", companyName),
                     SlackText.labeled("담당자", managerName),
@@ -77,7 +58,29 @@ private fun AdvertisementInquiryNotification.toSlackMessage(): SlackMessage =
                 ),
             ),
             SlackBlock.text(SlackText.labeled("현재 홍보 채널 · 어려운 점", promotionAnswer)),
+            // 영업이 슬랙만 보고도 어디서 온 신청인지 알 수 있게 한다.
+            SlackBlock.text(SlackText.labeled("회원 구분 · 유입 경로", "${memberType.desc} · ${inflowLabel()}")),
         ),
     )
+
+/**
+ * 판정한 유입 경로 이름 뒤에 영업이 링크를 나눠 쓴 UTM 값을 붙인다.
+ * 정해 두지 않은 utm_source는 원문을, 외부 사이트는 referrer 호스트를 이름 자리에 쓴다.
+ */
+private fun AdvertisementInquiryNotification.inflowLabel(): String {
+    val name = when (inflowChannel) {
+        AdvertisementInquiryInflowChannel.UTM_OTHER -> utmSource?.trim().orEmpty()
+        AdvertisementInquiryInflowChannel.EXTERNAL_SITE ->
+            AdvertisementInquiryInflowChannel.referrerHost(referrer)
+                ?.let { "${inflowChannel.desc} · $it" }
+                ?: inflowChannel.desc
+        else -> inflowChannel.desc
+    }
+    val details = listOfNotNull(
+        utmCampaign?.takeIf { it.isNotBlank() }?.let { "utm_campaign=$it" },
+        utmContent?.takeIf { it.isNotBlank() }?.let { "utm_content=$it" },
+    )
+    return (listOf(name) + details).joinToString(" · ")
+}
 
 internal const val ADVERTISEMENT_SLACK_REST_CLIENT = "advertisementSlackRestClient"

@@ -513,15 +513,24 @@ class UserOpenApiContractTest @Autowired constructor(
             companySignIn.at("/responses/401/description").asText().startsWith("INVALID_COMPANY_CREDENTIALS"),
         )
 
-        // 광고 문의는 오공고 계정이 없는 기업 담당자가 호출하므로 Security Requirement를 붙이지 않는다.
+        // 광고 문의는 비회원도 남기고, 토큰을 보내면 회원 구분을 서버가 정하는 선택적 인증이다. 저장하므로 201이다.
         val advertisementInquiry = document.at("/paths/~1api~1v1~1advertisement-inquiries/post")
-        assertTrue(advertisementInquiry.isObject)
-        assertFalse(advertisementInquiry.has("security"))
-        assertTrue(advertisementInquiry.at("/responses/200/content/application~1json/schema").isObject)
-        assertTrue(
-            advertisementInquiry.at("/responses/503/description").asText()
-                .startsWith("ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED"),
-        )
+        assertTrue(advertisementInquiry.at("/security/0/BearerAuth").isArray)
+        assertTrue(advertisementInquiry.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(advertisementInquiry.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(advertisementInquiry.at("/responses/503").isMissingNode)
+        // 회사명 입력 방식은 이 필드 없이 부르는 이전 폼이 있어 선택이다.
+        val inquiryRequest = document.at("/components/schemas/CreateAdvertisementInquiryRequest")
+        assertTrue(inquiryRequest.at("/properties/companyNameSource").isObject)
+        assertFalse(inquiryRequest.at("/required").any { it.asText() == "companyNameSource" })
+
+        // 회사명 검색은 광고 문의 폼의 비회원이 쓰는 공개 조회다.
+        val companyNames = document.at("/paths/~1api~1v1~1company-names/get")
+        assertEquals("listPublicCompanyNames", companyNames.at("/operationId").asText())
+        assertFalse(companyNames.has("security"))
+        val companyNameKeyword = companyNames.at("/parameters").first { it.at("/name").asText() == "keyword" }
+        assertFalse(companyNameKeyword.at("/required").asBoolean())
+        assertEquals(50, companyNameKeyword.at("/schema/maxLength").asInt())
 
         val publicSignIn = document.at("/paths/~1api~1v1~1auth~1letscareer/post")
         assertFalse(publicSignIn.has("security"))

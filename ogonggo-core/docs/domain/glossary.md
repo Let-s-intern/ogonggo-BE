@@ -1,6 +1,6 @@
 # 오공고 용어 사전
 
-- 최종 변경일: 2026-10-24
+- 최종 변경일: 2026-10-27
 - 예상 독자: 오공고를 처음 맡는 개발자, 기획·디자인과 대화하는 개발자
 - 리뷰 상태: 팀 리뷰 필요
 
@@ -126,7 +126,14 @@
 | --- | --- | --- |
 | 공지 | `Announcement` | 관리자가 올리는 공지. 노출 여부와 상단 고정을 따로 관리합니다. |
 | 서비스 의견 | `ServiceFeedback` | 좋은 점·아쉬운 점 의견. 비로그인으로도 남길 수 있습니다. |
-| 광고 문의 | `advertisement` 패키지 | 광고 문의를 받아 메일과 Slack으로 전달. DB에 저장하지 않습니다. |
+| 광고 문의 | `AdvertisementInquiry` | 기업 담당자가 남긴 광고 문의. 무료 홍보 신청을 포함한 광고 문의 전체를 한 테이블에 두고 문의 유형과 캠페인 코드로 나눕니다. 저장한 뒤 Slack과 확인 메일로 알립니다. 비회원도 남길 수 있습니다. |
+| 문의 유형 | `AdvertisementInquiryType` | 무료 홍보(`FREE_PROMOTION`), 출시 알림(`LAUNCH_ALERT`). 유료 홍보 같은 문의가 생기면 값을 더합니다. |
+| 캠페인 코드 | `AdvertisementInquiry.campaignCode` | 같은 문의 유형 안의 이벤트. 페이지가 보내지 않고 서버가 진입 페이지로 정합니다. `/biz` 출시 기념 무료 홍보는 `launch_free_promo`입니다. |
+| 홍보 채널 | `AdvertisementInquiryPromotionChannel` | 무료 홍보를 원하는 렛츠커리어 채널. 인스타그램, 직무별 오픈채팅방 6개, 추천 요청 |
+| 광고 문의 처리 상태 | `AdvertisementInquiryStatus` | 접수(`RECEIVED`), 연락함(`CONTACTED`), 집행 완료(`EXECUTED`), 반려(`REJECTED`). 영업이 바꾸며 값 사이의 전이를 막지 않습니다. |
+| 광고 문의 회원 구분 | `AdvertisementInquiryMemberType` | 기업 회원(`COMPANY`), 일반 회원(`USER`), 비회원(`GUEST`). 저장할 때 토큰으로 정한 문의 시점의 값입니다. |
+| 광고 문의 회사명 입력 방식 | `AdvertisementInquiryCompanyNameSource` | 검색(`SEARCH`, 오공고 회사명 검색에서 고름), 직접 입력(`MANUAL`), 회원 정보(`MEMBER_PROFILE`, 기업 회원 정보로 채움). 클라이언트가 보낸 값을 그대로 저장하며 보내지 않으면 직접 입력입니다. 영업이 표기를 정리할 행을 고르는 표시입니다. |
+| 광고 문의 유입 경로 | `AdvertisementInquiryInflowChannel` | 콜드메일·인스타그램·카카오톡·뉴스레터·기타 UTM·오공고 사이트·렛츠커리어·검색·외부 사이트·직접 접속. UTM과 referrer 원본으로 저장할 때 한 번 판정합니다. 회원의 유입 구분(`UserInflowSource`)과 다릅니다. |
 | 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. |
 | 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |
 | 지역 | `Region`, `SubRegion` | 시·도와 시·군·구. 행정 코드를 함께 가집니다. |
