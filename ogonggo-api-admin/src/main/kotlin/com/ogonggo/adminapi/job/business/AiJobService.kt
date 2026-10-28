@@ -82,6 +82,15 @@ class AiJobService(
         jobManager.hide(jobReader.readCollectedForUpdate(jobId))
     }
 
+    /**
+     * 모집을 마감한다. 마감일이 없는 상시 채용 공고가 원래 사이트 목록에서 사라졌을 때 AI 서버가 부른다.
+     * AI 서버가 등록한 크롤링 공고만 다룬다. 이미 마감한 공고를 다시 마감해도 처음 마감 일시를 지키고 성공한다.
+     */
+    @Transactional
+    fun close(jobId: Long) {
+        jobManager.close(jobReader.readCrawledForUpdate(jobId), LocalDateTime.now(clock))
+    }
+
     /** 직무별로 나뉘어 새 공고로 등록된 원래 공고처럼 더는 쓰지 않는 공고를 지운다. 이미 지운 공고를 다시 지워도 성공한다. */
     @Transactional
     fun delete(jobId: Long) {
