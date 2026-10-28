@@ -1,6 +1,10 @@
 package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -105,6 +109,16 @@ class UserAccountControllerTest @Autowired constructor(
                     logoUrl = "https://cdn.example.com/logo.png",
                     managerPhone = "010-1234-5678",
                     notificationEmail = null,
+                    businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+                    businessNumber = "1234567890",
+                    companyType = CompanyType.STARTUP,
+                    employeeCountRange = CompanyEmployeeCountRange.RANGE_10_49,
+                    industry = "IT·정보통신",
+                    address = "서울특별시 마포구 양화로 1",
+                    homepageUrl = "https://www.letscareer.co.kr",
+                    managerTitle = "인사팀 매니저",
+                    managerDuty = CompanyManagerDuty.HR,
+                    recommender = null,
                 ),
             ),
         )
@@ -118,6 +132,16 @@ class UserAccountControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.companyProfile.logoUrl").value("https://cdn.example.com/logo.png"))
             .andExpect(jsonPath("$.data.companyProfile.managerPhone").value("010-1234-5678"))
             .andExpect(jsonPath("$.data.companyProfile.notificationEmail").isEmpty)
+            .andExpect(jsonPath("$.data.companyProfile.businessNumberType").value("BUSINESS_REGISTRATION"))
+            .andExpect(jsonPath("$.data.companyProfile.businessNumber").value("1234567890"))
+            .andExpect(jsonPath("$.data.companyProfile.companyType").value("STARTUP"))
+            .andExpect(jsonPath("$.data.companyProfile.employeeCountRange").value("RANGE_10_49"))
+            .andExpect(jsonPath("$.data.companyProfile.industry").value("IT·정보통신"))
+            .andExpect(jsonPath("$.data.companyProfile.address").value("서울특별시 마포구 양화로 1"))
+            .andExpect(jsonPath("$.data.companyProfile.homepageUrl").value("https://www.letscareer.co.kr"))
+            .andExpect(jsonPath("$.data.companyProfile.managerTitle").value("인사팀 매니저"))
+            .andExpect(jsonPath("$.data.companyProfile.managerDuty").value("HR"))
+            .andExpect(jsonPath("$.data.companyProfile.recommender").isEmpty)
             .andExpect(jsonPath("$.data.profile").isEmpty)
     }
 

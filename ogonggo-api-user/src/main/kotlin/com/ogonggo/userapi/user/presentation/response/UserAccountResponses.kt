@@ -1,5 +1,9 @@
 package com.ogonggo.userapi.user.presentation.response
 
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -97,6 +101,21 @@ data class MyCompanyProfileResponse(
     val managerPhone: String?,
     @Schema(description = "로그인 이메일과 따로 받는 정보 수신용 이메일. 입력하지 않았으면 null이다.")
     val notificationEmail: String?,
+    @Schema(description = "사업자 번호 종류. 해외 기업이면 OVERSEAS다. 아래 가입 정보는 그 값을 받기 전에 가입한 회원이면 모두 null이다.")
+    val businessNumberType: CompanyBusinessNumberType?,
+    @Schema(description = "하이픈 없는 사업자등록번호(10자리) 또는 법인등록번호(13자리). 해외 기업이면 null이다.")
+    val businessNumber: String?,
+    val companyType: CompanyType?,
+    val employeeCountRange: CompanyEmployeeCountRange?,
+    @Schema(description = "산업. 공고의 industry와 같은 문자열이다.")
+    val industry: String?,
+    val address: String?,
+    val homepageUrl: String?,
+    @Schema(description = "담당자 직책")
+    val managerTitle: String?,
+    @Schema(description = "담당 업무")
+    val managerDuty: CompanyManagerDuty?,
+    val recommender: String?,
 ) {
     companion object {
         internal fun from(result: MyCompanyProfileResult): MyCompanyProfileResponse = MyCompanyProfileResponse(
@@ -106,6 +125,16 @@ data class MyCompanyProfileResponse(
             logoUrl = result.logoUrl,
             managerPhone = result.managerPhone,
             notificationEmail = result.notificationEmail,
+            businessNumberType = result.businessNumberType,
+            businessNumber = result.businessNumber,
+            companyType = result.companyType,
+            employeeCountRange = result.employeeCountRange,
+            industry = result.industry,
+            address = result.address,
+            homepageUrl = result.homepageUrl,
+            managerTitle = result.managerTitle,
+            managerDuty = result.managerDuty,
+            recommender = result.recommender,
         )
     }
 }

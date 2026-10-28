@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.image.implement.ImageAssetManager
@@ -105,6 +108,9 @@ class UserAccountServiceTest {
                 logoUrl = null,
                 managerPhone = null,
                 notificationEmail = null,
+                businessNumberType = CompanyBusinessNumberType.OVERSEAS,
+                companyType = CompanyType.FOREIGN,
+                managerDuty = CompanyManagerDuty.EXECUTIVE,
             ),
         )
 
@@ -113,6 +119,10 @@ class UserAccountServiceTest {
         assertEquals(UserRole.COMPANY, result.role)
         assertEquals("렛츠커리어", result.companyProfile?.organizationName)
         assertEquals("김담당", result.companyProfile?.managerName)
+        assertEquals(CompanyBusinessNumberType.OVERSEAS, result.companyProfile?.businessNumberType)
+        assertNull(result.companyProfile?.businessNumber)
+        assertEquals(CompanyType.FOREIGN, result.companyProfile?.companyType)
+        assertEquals(CompanyManagerDuty.EXECUTIVE, result.companyProfile?.managerDuty)
         assertEquals(true, result.passwordChangeable)
         assertNull(result.profile)
         assertEquals("company@example.com", result.email)

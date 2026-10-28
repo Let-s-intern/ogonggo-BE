@@ -435,6 +435,11 @@ class UserOpenApiContractTest @Autowired constructor(
         val myAccountProperties = document.at("/components/schemas/MyAccountResponse/properties")
         listOf("userId", "role", "status", "email", "joinedAt", "profile", "companyProfile")
             .forEach { field -> assertTrue(myAccountProperties.has(field)) }
+        val myCompanyProfileProperties = document.at("/components/schemas/MyCompanyProfileResponse/properties")
+        listOf(
+            "managerPhone", "businessNumberType", "businessNumber", "companyType", "employeeCountRange", "industry",
+            "address", "homepageUrl", "managerTitle", "managerDuty", "recommender",
+        ).forEach { field -> assertTrue(myCompanyProfileProperties.has(field), field) }
 
         // 학력과 희망 조건은 오공고가 소유하므로 조회는 내 정보에 함께 담고 수정만 따로 연다.
         val replaceProfile = document.at("/paths/~1api~1v1~1users~1me~1profile/put")
