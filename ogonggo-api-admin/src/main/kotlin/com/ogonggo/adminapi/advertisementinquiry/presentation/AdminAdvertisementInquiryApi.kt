@@ -70,8 +70,8 @@ interface AdminAdvertisementInquiryApi {
         operationId = "getAdvertisementInquiryTodayCount",
         summary = "오늘 들어온 광고 문의 수 조회",
         description = """
-            관리자 메뉴 숫자용입니다. 한국 시간 오늘 0시부터 지금까지 들어온 광고 문의 수를 반환합니다.
-            문의 유형과 처리 상태를 가리지 않으므로 처리 상태를 바꿔도 줄지 않습니다.
+            관리자 메뉴 숫자용입니다. 한국 시간 오늘 0시부터 지금까지 들어온 광고 문의 중 반려(REJECTED)하지 않은 문의 수를 반환합니다.
+            문의 유형은 가리지 않습니다. 반려로 바꾸면 바로 줄고, 접수·연락함·집행 완료 사이를 오가면 그대로입니다.
         """,
     )
     fun getTodayCount(): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryTodayCountResponse>>

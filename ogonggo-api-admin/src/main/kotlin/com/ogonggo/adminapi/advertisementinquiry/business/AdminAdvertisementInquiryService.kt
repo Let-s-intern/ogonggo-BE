@@ -18,7 +18,7 @@ class AdminAdvertisementInquiryService(
     ): AdminAdvertisementInquiryPageResult =
         AdminAdvertisementInquiryPageResult.from(advertisementInquiryReader.readPage(condition, page, size))
 
-    /** 메뉴 숫자용. 한국 시간 오늘 0시부터 들어온 문의 수이며 문의 유형과 처리 상태를 가리지 않는다. */
+    /** 메뉴 숫자용. 한국 시간 오늘 0시부터 들어온 문의 중 반려하지 않은 문의 수이며 문의 유형은 가리지 않는다. */
     fun getTodayCount(): Long = advertisementInquiryReader.countToday()
 
     /** 어느 상태로든 바꾼다. 바뀐 문의 전체를 돌려준다. */
