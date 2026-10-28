@@ -162,6 +162,33 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `회사명 입력 방식은 보낸 값으로 저장하고 보내지 않으면 직접 입력이다`() {
+        AdvertisementInquiryCompanyNameSource.entries.forEach { source ->
+            val requestBody = body().replaceFirst("{", """{"companyNameSource":"${source.name}",""")
+            mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(requestBody))
+                .andExpect(status().isCreated)
+        }
+        mockMvc.perform(request())
+            .andExpect(status().isCreated)
+
+        assertEquals(
+            AdvertisementInquiryCompanyNameSource.entries + AdvertisementInquiryCompanyNameSource.MANUAL,
+            appended.map { it.companyNameSource },
+        )
+    }
+
+    @Test
+    fun `정의되지 않은 회사명 입력 방식은 400으로 응답한다`() {
+        val requestBody = body().replaceFirst("{", """{"companyNameSource":"AUTO",""")
+
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(requestBody))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(advertisementInquiryAppender)
+    }
+
+    @Test
     fun `필수값과 이메일 형식, 길이를 검증한다`() {
         listOf(
             body(companyName = "") to "companyName",

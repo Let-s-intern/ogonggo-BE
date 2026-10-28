@@ -519,6 +519,10 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(advertisementInquiry.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(advertisementInquiry.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertTrue(advertisementInquiry.at("/responses/503").isMissingNode)
+        // 회사명 입력 방식은 이 필드 없이 부르는 이전 폼이 있어 선택이다.
+        val inquiryRequest = document.at("/components/schemas/CreateAdvertisementInquiryRequest")
+        assertTrue(inquiryRequest.at("/properties/companyNameSource").isObject)
+        assertFalse(inquiryRequest.at("/required").any { it.asText() == "companyNameSource" })
 
         val publicSignIn = document.at("/paths/~1api~1v1~1auth~1letscareer/post")
         assertFalse(publicSignIn.has("security"))

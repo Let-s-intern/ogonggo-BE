@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.presentation.request
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryInflowCommand
@@ -22,6 +23,8 @@ data class CreateAdvertisementInquiryRequest(
     @field:NotBlank
     @field:Size(max = 100)
     val companyName: String,
+    @Schema(description = "회사명을 채운 방식. 회사명 검색에서 고르면 SEARCH, 기업 회원 정보로 채우면 MEMBER_PROFILE입니다. 보내지 않으면 직접 입력(MANUAL)으로 저장합니다.")
+    val companyNameSource: AdvertisementInquiryCompanyNameSource? = null,
     @field:NotBlank
     @field:Size(max = 50)
     val managerName: String,
@@ -78,6 +81,7 @@ data class CreateAdvertisementInquiryRequest(
 ) {
     fun toCommand(): CreateAdvertisementInquiryCommand = CreateAdvertisementInquiryCommand(
         companyName = companyName,
+        companyNameSource = companyNameSource ?: AdvertisementInquiryCompanyNameSource.MANUAL,
         managerName = managerName,
         managerTitle = managerTitle,
         email = email,

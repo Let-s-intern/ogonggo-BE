@@ -47,7 +47,7 @@ class AdvertisementInquiryService(
                 // 지금 이 API를 부르는 진입 페이지는 출시 기념 무료 홍보(`/biz`) 하나뿐이다.
                 campaignCode = LAUNCH_FREE_PROMO_CAMPAIGN,
                 companyName = command.companyName,
-                companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
+                companyNameSource = command.companyNameSource,
                 managerName = command.managerName,
                 managerTitle = command.managerTitle,
                 email = command.email,
@@ -90,6 +90,7 @@ class AdvertisementInquiryService(
 
 data class CreateAdvertisementInquiryCommand(
     val companyName: String,
+    val companyNameSource: AdvertisementInquiryCompanyNameSource,
     val managerName: String,
     val managerTitle: String?,
     val email: String,
