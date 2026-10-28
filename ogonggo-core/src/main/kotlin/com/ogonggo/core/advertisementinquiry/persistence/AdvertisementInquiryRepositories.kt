@@ -37,6 +37,7 @@ internal class AdvertisementInquiryQueryRepository(
             condition.status?.let(advertisementInquiry.status::eq),
             condition.memberType?.let(advertisementInquiry.memberType::eq),
             condition.inflowChannel?.let(advertisementInquiry.inflowChannel::eq),
+            condition.companyNameSource?.let(advertisementInquiry.companyNameSource::eq),
             condition.createdFrom?.let { advertisementInquiry.createdAt.goe(it.atStartOfDay()) },
             condition.createdTo?.let { advertisementInquiry.createdAt.lt(it.plusDays(1).atStartOfDay()) },
         )

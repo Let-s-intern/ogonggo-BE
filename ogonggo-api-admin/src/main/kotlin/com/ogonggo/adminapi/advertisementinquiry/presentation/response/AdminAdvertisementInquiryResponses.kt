@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.advertisementinquiry.presentation.response
 
 import com.ogonggo.adminapi.advertisementinquiry.business.AdminAdvertisementInquirySummary
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
@@ -16,6 +17,8 @@ data class AdminAdvertisementInquiryResponse(
     val campaignCode: String?,
     val status: AdvertisementInquiryStatus,
     val companyName: String,
+    @Schema(description = "회사명을 채운 방식. 직접 입력(MANUAL)은 표기를 정리할 대상입니다.")
+    val companyNameSource: AdvertisementInquiryCompanyNameSource,
     val managerName: String,
     @Schema(description = "담당자 직함. 이 필드가 생기기 전 폼에서 온 문의는 null입니다.")
     val managerTitle: String?,
@@ -60,6 +63,7 @@ data class AdminAdvertisementInquiryResponse(
                 campaignCode = result.campaignCode,
                 status = result.status,
                 companyName = result.companyName,
+                companyNameSource = result.companyNameSource,
                 managerName = result.managerName,
                 managerTitle = result.managerTitle,
                 email = result.email,

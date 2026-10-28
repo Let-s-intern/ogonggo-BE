@@ -8,6 +8,7 @@ import com.ogonggo.adminapi.advertisementinquiry.presentation.response.AdminAdve
 import com.ogonggo.adminapi.error.InvalidRequestParameterException
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
@@ -41,6 +42,7 @@ class AdminAdvertisementInquiryController(
         @RequestParam(name = "status", required = false) status: AdvertisementInquiryStatus?,
         @RequestParam(name = "memberType", required = false) memberType: AdvertisementInquiryMemberType?,
         @RequestParam(name = "inflowChannel", required = false) inflowChannel: AdvertisementInquiryInflowChannel?,
+        @RequestParam(name = "companyNameSource", required = false) companyNameSource: AdvertisementInquiryCompanyNameSource?,
         @RequestParam(name = "createdFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         createdFrom: LocalDate?,
         @RequestParam(name = "createdTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -56,6 +58,7 @@ class AdminAdvertisementInquiryController(
                 status = status,
                 memberType = memberType,
                 inflowChannel = inflowChannel,
+                companyNameSource = companyNameSource,
                 createdFrom = createdFrom,
                 createdTo = createdTo,
             ),

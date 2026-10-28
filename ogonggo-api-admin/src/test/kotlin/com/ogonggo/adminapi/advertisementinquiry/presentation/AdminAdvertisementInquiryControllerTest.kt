@@ -7,6 +7,7 @@ import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
@@ -67,6 +68,7 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].campaignCode").value("launch_free_promo"))
             .andExpect(jsonPath("$.data.items[0].status").value("RECEIVED"))
             .andExpect(jsonPath("$.data.items[0].companyName").value("렛츠커리어"))
+            .andExpect(jsonPath("$.data.items[0].companyNameSource").value("MANUAL"))
             .andExpect(jsonPath("$.data.items[0].managerTitle").value("매니저"))
             .andExpect(jsonPath("$.data.items[0].promotionChannel").value("OPEN_CHAT_SALES"))
             .andExpect(jsonPath("$.data.items[0].marketingConsent").value(true))
@@ -92,6 +94,7 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
             status = AdvertisementInquiryStatus.CONTACTED,
             memberType = AdvertisementInquiryMemberType.GUEST,
             inflowChannel = AdvertisementInquiryInflowChannel.DIRECT,
+            companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
             createdFrom = LocalDate.of(2026, 10, 27),
             createdTo = LocalDate.of(2026, 10, 27),
         )
@@ -110,6 +113,7 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
                 .param("status", "CONTACTED")
                 .param("memberType", "GUEST")
                 .param("inflowChannel", "DIRECT")
+                .param("companyNameSource", "MANUAL")
                 .param("createdFrom", "2026-10-27")
                 .param("createdTo", "2026-10-27"),
         )
@@ -125,7 +129,8 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
                 .param("campaignCode", " ")
                 .param("status", "")
                 .param("memberType", "")
-                .param("inflowChannel", ""),
+                .param("inflowChannel", "")
+                .param("companyNameSource", ""),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(0))
@@ -136,6 +141,7 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
         listOf(
             listOf("memberType" to "VIP") to null,
             listOf("inflowChannel" to "TWITTER") to null,
+            listOf("companyNameSource" to "AUTO") to null,
             listOf("createdFrom" to "2026-10-28", "createdTo" to "2026-10-27") to "createdFrom",
             // 페이지 범위는 메서드 검증이라 메시지 앞머리가 다르다. 400만 확인한다.
             listOf("size" to "101") to null,
@@ -255,6 +261,7 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
             campaignCode = "launch_free_promo",
             status = AdvertisementInquiryStatus.RECEIVED,
             companyName = "렛츠커리어",
+            companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
             managerName = "김담당",
             managerTitle = "매니저",
             email = "manager@ogonggo.co.kr",

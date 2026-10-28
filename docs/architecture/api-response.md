@@ -312,7 +312,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | `GET /api/v1/admin/service-feedbacks` | 없음. `sort`도 받지 않습니다([서비스 개선 의견](#서비스-개선-의견) 참고) | 없음 |
 | `GET /api/v1/admin/general-members` | `status`, `joinedFrom`, `joinedTo`, `role`(`USER`·`MENTOR`·`ADMIN`). `sort`는 받지 않습니다([관리자 회원 조회](#관리자-회원-조회) 참고) | 닉네임, 이메일 |
 | `GET /api/v1/admin/company-members` | `status`, `joinedFrom`, `joinedTo` | 회사명, 담당자 이름 |
-| `GET /api/v1/admin/advertisement-inquiries` | `inquiryType`, `campaignCode`, `status`, `memberType`, `inflowChannel`, `createdFrom`, `createdTo`. `sort`는 받지 않습니다([B2B 광고 문의](#b2b-광고-문의) 참고) | 없음 |
+| `GET /api/v1/admin/advertisement-inquiries` | `inquiryType`, `campaignCode`, `status`, `memberType`, `inflowChannel`, `companyNameSource`, `createdFrom`, `createdTo`. `sort`는 받지 않습니다([B2B 광고 문의](#b2b-광고-문의) 참고) | 없음 |
 
 - `visibility`는 게시 상태 네 값을 둘로 접습니다. `PUBLISHED`만 `VISIBLE`이고 나머지는 `HIDDEN`입니다.
 - 사이드·스터디 모집글 목록은 임시저장을 싣지 않으므로 `HIDDEN`은 운영자가 숨긴 모집글입니다. 항목에는 작성자 `authorUserId`와 프로필 닉네임 `authorNickname`(프로필이 없으면 `null`)을 싣고, 조회·북마크·댓글 수를 함께 줍니다. 상세·수정·삭제 API는 아직 두지 않았습니다.

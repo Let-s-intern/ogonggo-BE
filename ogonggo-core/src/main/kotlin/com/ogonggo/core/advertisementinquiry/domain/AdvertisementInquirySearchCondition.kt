@@ -9,6 +9,7 @@ data class AdvertisementInquirySearchCondition(
     val status: AdvertisementInquiryStatus? = null,
     val memberType: AdvertisementInquiryMemberType? = null,
     val inflowChannel: AdvertisementInquiryInflowChannel? = null,
+    val companyNameSource: AdvertisementInquiryCompanyNameSource? = null,
     /** 이 날짜 0시부터 들어온 문의를 찾는다. */
     val createdFrom: LocalDate? = null,
     /** 이 날짜가 끝날 때까지 들어온 문의를 찾는다. 당일을 포함한다. */

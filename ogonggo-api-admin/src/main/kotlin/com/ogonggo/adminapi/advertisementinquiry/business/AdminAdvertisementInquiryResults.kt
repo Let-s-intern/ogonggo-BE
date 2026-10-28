@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.advertisementinquiry.business
 
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
@@ -34,6 +35,7 @@ data class AdminAdvertisementInquirySummary(
     val campaignCode: String?,
     val status: AdvertisementInquiryStatus,
     val companyName: String,
+    val companyNameSource: AdvertisementInquiryCompanyNameSource,
     val managerName: String,
     val managerTitle: String?,
     val email: String,
@@ -63,6 +65,7 @@ data class AdminAdvertisementInquirySummary(
             campaignCode = inquiry.campaignCode,
             status = inquiry.status,
             companyName = inquiry.companyName,
+            companyNameSource = inquiry.companyNameSource,
             managerName = inquiry.managerName,
             managerTitle = inquiry.managerTitle,
             email = inquiry.email,

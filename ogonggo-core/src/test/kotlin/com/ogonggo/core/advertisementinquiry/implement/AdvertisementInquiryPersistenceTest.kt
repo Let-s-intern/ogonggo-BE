@@ -69,6 +69,22 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `회사명 입력 방식으로 거른다`() {
+        // given
+        val manual = append(companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL)
+        append(companyNameSource = AdvertisementInquiryCompanyNameSource.SEARCH)
+        val memberProfile = append(companyNameSource = AdvertisementInquiryCompanyNameSource.MEMBER_PROFILE)
+        val reader = reader(at(2026, 10, 28, 12, 0))
+
+        // when & then
+        fun ids(source: AdvertisementInquiryCompanyNameSource) =
+            reader.readPage(AdvertisementInquirySearchCondition(companyNameSource = source), 0, 20).advertisementInquiries.map { it.id }
+
+        assertEquals(listOf(manual), ids(AdvertisementInquiryCompanyNameSource.MANUAL))
+        assertEquals(listOf(memberProfile), ids(AdvertisementInquiryCompanyNameSource.MEMBER_PROFILE))
+    }
+
+    @Test
     fun `문의 유형·캠페인·처리 상태·회원 구분·유입 경로로 거른다`() {
         // given
         val coldmailGuest = append()

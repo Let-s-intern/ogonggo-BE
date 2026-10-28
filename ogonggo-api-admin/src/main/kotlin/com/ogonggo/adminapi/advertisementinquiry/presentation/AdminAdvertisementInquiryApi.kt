@@ -8,6 +8,7 @@ import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
@@ -37,7 +38,7 @@ interface AdminAdvertisementInquiryApi {
         summary = "광고 문의 목록 조회",
         description = """
             기업 담당자가 남긴 광고 문의를 최근에 들어온 순으로 반환합니다. 정렬은 고를 수 없습니다.
-            문의 유형·캠페인 코드·처리 상태·회원 구분·유입 경로로 거를 수 있고 필터는 모두 AND로 묶입니다.
+            문의 유형·캠페인 코드·처리 상태·회원 구분·유입 경로·회사명 입력 방식으로 거를 수 있고 필터는 모두 AND로 묶입니다.
             createdFrom·createdTo는 접수일(YYYY-MM-DD, 한국 시간) 범위이며 두 날짜를 모두 포함합니다.
             값을 보내지 않거나 빈 값을 보내면 그 조건을 적용하지 않습니다. 현재 조건의 건수는 pageInfo.totalElements입니다.
         """,
@@ -60,6 +61,7 @@ interface AdminAdvertisementInquiryApi {
         status: AdvertisementInquiryStatus?,
         memberType: AdvertisementInquiryMemberType?,
         inflowChannel: AdvertisementInquiryInflowChannel?,
+        companyNameSource: AdvertisementInquiryCompanyNameSource?,
         @Parameter(description = "접수일 시작(포함)") createdFrom: LocalDate?,
         @Parameter(description = "접수일 끝(포함)") createdTo: LocalDate?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminAdvertisementInquiryResponse>>>
