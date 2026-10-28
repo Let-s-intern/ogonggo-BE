@@ -5,6 +5,7 @@ import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberTy
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
+import com.ogonggo.userapi.slack.SlackProperties
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
@@ -162,8 +163,8 @@ class AdvertisementSlackNotifierTest {
         server.verify()
     }
 
-    private fun properties(inquiryUrl: String): AdvertisementSlackProperties =
-        AdvertisementSlackProperties(inquiryUrl = inquiryUrl)
+    private fun properties(advertisementInquiry: String): SlackProperties =
+        SlackProperties(advertisementInquiry = advertisementInquiry)
 
     companion object {
         private const val WEBHOOK_URL = "https://hooks.slack.com/services/T000/B000/xxxx"

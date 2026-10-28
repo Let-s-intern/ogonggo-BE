@@ -45,9 +45,8 @@ USER_CONFIG = textwrap.dedent(
       letscareer:
         base-url: https://api.letscareer.co.kr
         internal-api-key: 0123456789abcdef0123456789abcdef0123 # 렛츠커리어와 같은 값
-      advertisement:
-        slack:
-          inquiry-url: 'https://hooks.slack.com/services/T000/B000/not-a-real-webhook'
+      slack:
+        advertisement-inquiry: 'https://hooks.slack.com/services/T000/B000/not-a-real-webhook'
 
     server:
       port: 8080
