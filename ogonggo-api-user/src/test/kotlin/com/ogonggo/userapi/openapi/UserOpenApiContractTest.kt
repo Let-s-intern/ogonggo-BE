@@ -524,6 +524,14 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(inquiryRequest.at("/properties/companyNameSource").isObject)
         assertFalse(inquiryRequest.at("/required").any { it.asText() == "companyNameSource" })
 
+        // 회사명 검색은 광고 문의 폼의 비회원이 쓰는 공개 조회다.
+        val companyNames = document.at("/paths/~1api~1v1~1company-names/get")
+        assertEquals("listPublicCompanyNames", companyNames.at("/operationId").asText())
+        assertFalse(companyNames.has("security"))
+        val companyNameKeyword = companyNames.at("/parameters").first { it.at("/name").asText() == "keyword" }
+        assertFalse(companyNameKeyword.at("/required").asBoolean())
+        assertEquals(50, companyNameKeyword.at("/schema/maxLength").asInt())
+
         val publicSignIn = document.at("/paths/~1api~1v1~1auth~1letscareer/post")
         assertFalse(publicSignIn.has("security"))
         val signOut = document.at("/paths/~1api~1v1~1auth~1signout/post")

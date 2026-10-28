@@ -272,6 +272,17 @@ PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/memo   메모 저장
 - 수정·삭제 경로는 두지 않습니다. 문의 내용은 남긴 그대로 둡니다.
 - 응답 계약은 [API 성공 응답의 B2B 광고 문의](api-response.md#b2b-광고-문의)를 따릅니다.
 
+### 회사명 검색
+
+```text
+GET /api/v1/company-names?keyword={검색어}       사용자 API, 로그인 없음
+```
+
+- 결정일: 2026-10-28 (LC-3514) / 리뷰 상태: 팀 리뷰 필요
+- 광고 문의 폼의 회사명 칸이 오공고에 이미 있는 이름을 고르게 권하는 검색입니다. 회사 테이블이 없어 채용공고·부트캠프의 회사명과 기업 회원의 기관명을 합친 이름 모음을 컬렉션으로 보고 `company-names`로 둡니다. 필터는 2절대로 Query Parameter `keyword`입니다.
+- 비회원이 쓰는 폼이라 토큰을 받지 않고 `@SecurityRequirement`도 붙이지 않습니다.
+- 응답 계약은 [API 성공 응답의 회사명 검색](api-response.md#회사명-검색)을 따릅니다.
+
 ### AI 서버 채용공고
 
 ```text
