@@ -332,9 +332,12 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 탈퇴·정지 회원도 운영자가 확인해야 하므로 기본 목록에 포함하고 `status`(`ACTIVE`·`SUSPENDED`·`WITHDRAWN`)로 거릅니다.
 - 가입 기간은 `joinedFrom`·`joinedTo`(`YYYY-MM-DD`)로 받고 두 날짜를 모두 포함합니다. 화면의 "최근 7일" 같은 선택지는 클라이언트가 날짜로 바꿔 보냅니다. 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[joinedFrom]`으로 시작합니다.
 - 정렬은 고를 수 없고 최근 가입 순(`id DESC`)입니다.
-- 목록 항목이 회원 정보 전체를 담으므로 상세 조회 API는 두지 않습니다. 일반 회원은 계정(`userId`, `letsCareerUserId`, `role`, `status`, `joinedAt`, `withdrawnAt`)과 프로필(`name`, `nickname`, `email`, `profileImageUrl`, 학력, 희망 조건)을, 비즈니스 회원은 계정(`userId`, 로그인 `email`, `status`, `joinedAt`, `withdrawnAt`)과 기업 정보(`organizationName`, `managerName`, `managerPhone`, `notificationEmail`, `logoUrl`)를 펼쳐서 줍니다. 프로필·기업 정보 행이 없는 회원은 해당 칸이 `null`입니다.
+- 목록 항목은 일반 회원은 계정(`userId`, `letsCareerUserId`, `role`, `status`, `joinedAt`, `withdrawnAt`)과 프로필(`name`, `nickname`, `email`, `profileImageUrl`, 학력, 희망 조건)을, 비즈니스 회원은 계정(`userId`, 로그인 `email`, `status`, `joinedAt`, `withdrawnAt`)과 기업 정보(`organizationName`, `managerName`, `managerPhone`, `notificationEmail`, `logoUrl`)를 펼쳐서 줍니다. 프로필·기업 정보 행이 없는 회원은 해당 칸이 `null`입니다. 비즈니스 회원 항목에는 가입 때 받은 기업·담당자 정보(`businessNumberType`부터 `recommender`까지)도 함께 펼칩니다.
+- 상세(`GET .../general-members/{userId}`, `GET .../company-members/{userId}`, 2026-10-29, LC-3530)는 목록 항목과 같은 필드를 같은 높이에 펼치고 활동 목록을 더합니다. 활동 목록은 응답이 끝없이 커지지 않도록 각각 최대 50건이며 페이지를 나누지 않습니다.
+  - 일반 회원: `bookmarkedJobs`(`id`, `title`, `companyName`, `viewCount`)는 지금 게시 중인 북마크 공고, `bookmarkedBootcamps`(`id`, `title`, `companyName`, `status`)는 지금 공개된 북마크 부트캠프이며 둘 다 최근 저장 순입니다. 회원이 마이페이지에서 보는 북마크와 같습니다. `status`는 관리자 부트캠프 목록과 같은 모집 상태(`BootcampRecruitmentStatus`)입니다. `authoredSideStudies`(`id`, `title`, `kind`, `appliedCount`, `capacity`, `closed`, `viewCount`)는 작성한 사이드·스터디 모집글 중 콘솔 목록에 나오는 것(임시저장·삭제 제외, 숨긴 글 포함)을 최근 작성 순으로 줍니다. `kind`는 모집 구분, `appliedCount`는 연락처를 열어 생긴 지원 이력 수(작성자의 내 모집글 관리와 같은 값), `closed`는 모집 상태가 `CLOSED`인지입니다.
+  - 비즈니스 회원: `jobs`(`id`, `title`, `visibility`, `reviewStatus`, `registeredAt`, `viewCount`)는 이 회원이 등록한 공고를 검수 중·숨김을 포함해 최근 등록 순으로 줍니다. 삭제한 공고는 뺍니다.
 - 일반 회원의 이메일 검색은 렛츠커리어에서 받은 프로필 이메일(`user_profiles.email`)을 봅니다. 일반 회원은 로그인 이메일(`users.email`)이 없습니다.
-- 등록한 공고·부트캠프 수처럼 다른 도메인에서 모아야 하는 값은 싣지 않았습니다. 화면에 필요해지면 추가를 검토합니다(**확인 필요**).
+- 목록에는 등록한 공고·부트캠프 수처럼 다른 도메인에서 모아야 하는 값을 싣지 않았습니다. 화면에 필요해지면 추가를 검토합니다(**확인 필요**). 비즈니스 회원이 등록한 부트캠프는 상세에도 아직 싣지 않습니다.
 
 ### 채용공고 직군·직무
 

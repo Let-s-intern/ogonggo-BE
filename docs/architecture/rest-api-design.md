@@ -112,7 +112,7 @@ PATCH  /api/v1/users/me/password
 
 `/api/v1/users/me`는 로그인한 사용자 자신을 가리키는 리소스이며, `/users/me/jobs`, `/users/me/bootcamps`, `/users/me/profile`이 그 하위에 있습니다. 프로필은 사용자마다 하나뿐인 단일 리소스여서 목록이 아니므로 단수 명사를 사용합니다. 복수 명사 규칙은 여러 항목을 담는 컬렉션에 적용합니다.
 
-조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기업 정보도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile` 아래에 엽니다. 마이페이지가 기본 정보(기관명·로고)와 담당자 정보(이름·연락처·수신 이메일)를 서로 다른 버튼으로 저장하므로 `basic-info`와 `manager-info` 두 단일 리소스로 나누고, 각 폼의 값을 PUT으로 함께 교체합니다(2026-09-30, 팀 리뷰 필요. 이전에는 `PUT /users/me/company-profile` 하나가 모든 값을 교체했습니다). 로고는 `POST /api/v1/images`로 올린 이미지의 `logoImageId`로 받으며, 로고를 바꾸지 않을 때도 `/users/me`의 `companyProfile.logoImageId`를 그대로 보내야 합니다. 빼면 로고를 지웁니다. 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다.
+조회는 `/users/me` 응답의 `profile`에 함께 담고 별도 GET을 두지 않습니다. 한 화면에서 역할과 프로필을 함께 쓰므로 호출을 나눌 이유가 없습니다. 수정만 따로 여는 이유는 `/users/me` 응답에 `role`이나 `status`처럼 사용자가 바꿀 수 없는 값이 함께 있어 그대로 PUT의 대상이 될 수 없기 때문입니다. 기업 회원의 기업 정보도 같은 이유로 조회는 `/users/me`의 `companyProfile`에 담고 수정만 `/users/me/company-profile` 아래에 엽니다. 마이페이지가 기본 정보(기관명·로고)와 담당자 정보(이름·연락처·수신 이메일)를 서로 다른 버튼으로 저장하므로 `basic-info`와 `manager-info` 두 단일 리소스로 나누고, 각 폼의 값을 PUT으로 함께 교체합니다(2026-09-30, 팀 리뷰 필요. 이전에는 `PUT /users/me/company-profile` 하나가 모든 값을 교체했습니다). 로고는 `POST /api/v1/images`로 올린 이미지의 `logoImageId`로 받으며, 로고를 바꾸지 않을 때도 `/users/me`의 `companyProfile.logoImageId`를 그대로 보내야 합니다. 빼면 로고를 지웁니다. 가입 때 받은 기업 정보(LC-3526)도 같은 두 경로로 고칩니다. `basic-info`는 `businessNumberType`·`businessNumber`·`companyType`·`employeeCountRange`·`industry`·`address`·`homepageUrl`을, `manager-info`는 `managerTitle`·`managerDuty`·`recommender`를 받으며 형식 검사는 가입과 같습니다. 이 값들은 교체가 아니라 빼거나 `null`이면 저장된 값을 그대로 둡니다. 이 값을 모르는 이전 화면이 같은 PUT을 부르므로 빼면 지우는 규칙을 따르면 저장된 가입 정보가 사라지기 때문입니다. 그래서 이 경로로는 이 값들을 비울 수 없습니다. `businessNumberType`을 보내면 번호도 함께 바꾸며 해외 기업(`OVERSEAS`)이면 번호를 비웁니다(2026-10-29, LC-3530, 팀 리뷰 필요. 3절의 PUT 전체 교체 원칙과 다른 예외입니다). 기업 회원이 아니면 403 `COMPANY_ROLE_REQUIRED`, 정지·탈퇴 계정이면 403 `USER_SUSPENDED`·`USER_WITHDRAWN`입니다. 로그인 이메일과 비밀번호는 이 경로로 바꾸지 않습니다.
 
 일반 회원의 오늘의 공고 수신 이메일은 값 하나짜리 단일 리소스로 보고 `PUT /users/me/notification-email`로 교체합니다. 빼거나 `null`이면 비웁니다. 비밀번호 변경은 기존 비밀번호 확인이 따르는 명령이라 조회 대상이 아니므로 `PATCH /users/me/password`로 두고 200과 `data: null`로 응답합니다. 두 경로의 소유권과 오류 규칙은 [사용자 인증 문서](authentication.md#오늘의-공고-수신-이메일)를 따릅니다. 닉네임도 값 하나짜리 단일 리소스로 보고 `PUT /users/me/nickname`으로 교체합니다. 렛츠커리어와 맞추는 규칙은 [사용자 인증 문서](authentication.md#닉네임)를 따릅니다.
 
@@ -421,13 +421,15 @@ PATCH  /api/v1/admin/concerns/visibility
 
 ```text
 GET   /api/v1/admin/general-members                  일반 회원
+GET   /api/v1/admin/general-members/{userId}         일반 회원 상세
 GET   /api/v1/admin/company-members                  비즈니스(기업) 회원
+GET   /api/v1/admin/company-members/{userId}         비즈니스(기업) 회원 상세
 PATCH /api/v1/admin/general-members/{userId}/role    일반 회원 역할 변경
 ```
 
 - 결정일: 2026-09-28 / 리뷰 상태: 팀 리뷰 필요
 - 콘솔 화면이 두 회원을 다른 메뉴·필터로 다루고 응답 항목도 달라 `/users?role=` 하나로 합치지 않고 역할별 컬렉션으로 나눕니다. 이름은 `UserRole`의 `USER`(일반 회원)·`COMPANY`(기업 회원)를 따릅니다.
-- 목록 항목이 회원 정보 전체를 담아 상세 조회는 두지 않습니다. 정지 같은 다른 쓰기도 두지 않습니다.
+- 상세 조회(2026-10-29, LC-3530, 팀 리뷰 필요)는 콘솔의 회원 상세 화면이 회원의 활동을 보여 주려고 둡니다. 목록과 같은 역할별 컬렉션 아래 단건 리소스로 두며, 없는 회원이나 다른 쪽 컬렉션의 회원(일반 회원 상세에 기업 회원)은 404 `USER_NOT_FOUND`입니다. 이전에는 목록 항목이 회원 정보 전체를 담아 상세 조회를 두지 않았습니다. 정지 같은 다른 쓰기는 두지 않습니다.
 - 역할 변경(2026-10-15)은 본문 `{ "role": "USER" | "MENTOR" | "ADMIN" }`으로 올리기와 내리기를 모두 합니다. 회원의 역할 칸 하나만 바꾸므로 PATCH이고 200과 `data: null`로 응답합니다. 같은 역할을 보내면 바꾸지 않고 200입니다. 변경 이력은 남기지 않습니다.
   - 역할마다 전이 규칙이 다르지 않아 4절의 명령별 엔드포인트로 나누지 않고 역할 값 하나를 받습니다.
   - 렛츠커리어로 가입한 일반 회원만 바꿉니다. `role`이 `COMPANY`이거나 없으면 400 `BAD_REQUEST`, 기업 회원이면 400 `COMPANY_MEMBER_ROLE_UNCHANGEABLE`, 탈퇴한 회원이면 409 `WITHDRAWN_USER_ROLE_UNCHANGEABLE`, 없는 회원이면 404 `USER_NOT_FOUND`입니다. 정지한 회원은 바꿀 수 있습니다.

@@ -1,6 +1,10 @@
 package com.ogonggo.userapi.user.presentation
 
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyManagerInfoUpdateDto
 import com.ogonggo.userapi.auth.implement.OgonggoTokenProvider
@@ -8,6 +12,7 @@ import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.user.business.CompanyBasicInfoCommand
 import com.ogonggo.userapi.user.business.UserAccountService
+import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -125,6 +130,87 @@ class CompanyProfileControllerTest @Autowired constructor(
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
         }
+
+        Mockito.verifyNoInteractions(userAccountService)
+    }
+
+    @Test
+    fun `가입 때 받은 기업 정보를 함께 받아 넘기고 빼면 null로 넘겨 저장된 값을 그대로 두게 한다`() {
+        mockMvc.perform(
+            put(BASIC_INFO_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"organizationName":"오공고","businessNumberType":"BUSINESS_REGISTRATION","businessNumber":"1234567890",
+                     "companyType":"STARTUP","employeeCountRange":"RANGE_300_999","industry":"IT·정보통신",
+                     "address":"서울특별시 마포구 양화로 1","homepageUrl":"https://www.letscareer.co.kr"}
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isOk)
+        mockMvc.perform(
+            put(MANAGER_INFO_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"managerName":"이담당","managerTitle":"인사팀 매니저","managerDuty":"HR","recommender":"홍길동"}"""),
+        )
+            .andExpect(status().isOk)
+
+        Mockito.verify(userAccountService).replaceMyCompanyBasicInfo(
+            USER_ID,
+            CompanyBasicInfoCommand(
+                organizationName = "오공고",
+                logoImageId = null,
+                businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+                businessNumber = "1234567890",
+                companyType = CompanyType.STARTUP,
+                employeeCountRange = CompanyEmployeeCountRange.RANGE_300_999,
+                industry = "IT·정보통신",
+                address = "서울특별시 마포구 양화로 1",
+                homepageUrl = "https://www.letscareer.co.kr",
+            ),
+        )
+        Mockito.verify(userAccountService).replaceMyCompanyManagerInfo(
+            USER_ID,
+            CompanyManagerInfoUpdateDto(
+                managerName = "이담당",
+                managerPhone = null,
+                notificationEmail = null,
+                managerTitle = "인사팀 매니저",
+                managerDuty = CompanyManagerDuty.HR,
+                recommender = "홍길동",
+            ),
+        )
+    }
+
+    @Test
+    fun `사업자 번호가 종류와 맞지 않거나 가입 정보 글자 값이 공백이면 어느 필드인지 400으로 알리고 교체하지 않는다`() {
+        mapOf(
+            """{"organizationName":"오공고","businessNumber":"1234567890"}""" to "[businessNumberType]",
+            """{"organizationName":"오공고","businessNumberType":"BUSINESS_REGISTRATION","businessNumber":"123456789"}""" to
+                "[businessNumber]",
+            """{"organizationName":"오공고","businessNumberType":"OVERSEAS","businessNumber":"1234567890"}""" to
+                "[businessNumber]",
+            """{"organizationName":"오공고","businessNumberType":"BUSINESS_REGISTRATION","businessNumber":"123-45-6789"}""" to
+                "[businessNumber]",
+            """{"organizationName":"오공고","homepageUrl":"letscareer"}""" to "[homepageUrl]",
+            """{"organizationName":"오공고","industry":" "}""" to "[industry]",
+        ).forEach { (body, field) ->
+            mockMvc.perform(
+                put(BASIC_INFO_PATH).with(authenticatedUser())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value(startsWith(field)))
+        }
+        mockMvc.perform(
+            put(MANAGER_INFO_PATH).with(authenticatedUser())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"managerName":"이담당","recommender":" "}"""),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value(startsWith("[recommender]")))
 
         Mockito.verifyNoInteractions(userAccountService)
     }

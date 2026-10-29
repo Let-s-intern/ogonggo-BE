@@ -111,6 +111,7 @@ class UserAccountService(
 
     /**
      * 기관명과 로고를 함께 교체한다. 로고는 이미지 업로드(POST /api/v1/images)로 올린 이미지를 연결하며 null이면 지운다.
+     * 가입 때 받은 기업 정보는 보낸 값만 바꾼다. 이 값을 모르는 이전 화면이 저장해도 지워지지 않게 하려는 것이다.
      * 바꾸거나 지운 이전 로고 이미지는 참조를 풀어 보존 기간이 지나면 정리되게 한다.
      * 다른 기업 회원 기능과 같이 정지·탈퇴한 계정과 일반 회원은 막는다.
      */
@@ -127,11 +128,21 @@ class UserAccountService(
         }
         companyProfileManager.replaceBasicInfo(
             userId,
-            CompanyBasicInfoUpdateDto(organizationName = command.organizationName, logo = logo),
+            CompanyBasicInfoUpdateDto(
+                organizationName = command.organizationName,
+                logo = logo,
+                businessNumberType = command.businessNumberType,
+                businessNumber = command.businessNumber,
+                companyType = command.companyType,
+                employeeCountRange = command.employeeCountRange,
+                industry = command.industry,
+                address = command.address,
+                homepageUrl = command.homepageUrl,
+            ),
         )
     }
 
-    /** 담당자 이름·연락처·수신 이메일을 함께 교체한다. 선택 값을 빼면 비운다. */
+    /** 담당자 이름·연락처·수신 이메일을 함께 교체한다. 선택 값을 빼면 비운다. 직책·담당 업무·추천인은 빼면 그대로 둔다. */
     @Transactional
     fun replaceMyCompanyManagerInfo(userId: Long, command: CompanyManagerInfoUpdateDto) {
         verifyCompany(userId)

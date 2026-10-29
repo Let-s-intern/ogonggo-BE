@@ -204,6 +204,57 @@ internal class UserImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `가입 때 받은 기업 정보는 보낸 값만 저장하고 보내지 않은 값은 그대로 둔다`() {
+        // given
+        val companyAccount = userAppender.appendCompany(
+            CompanyAccountAppendDto(email = "company@example.com", encodedPassword = "encoded-password", joinedAt = NOW),
+        )
+        companyProfileAppender.append(
+            CompanyProfileAppendDto(
+                userId = companyAccount.userId,
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+                businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+                businessNumber = "1234567890",
+                industry = "IT·정보통신",
+                managerTitle = "인사팀 매니저",
+                recommender = "홍길동",
+            ),
+        )
+
+        // when
+        companyProfileManager.replaceBasicInfo(
+            companyAccount.userId,
+            CompanyBasicInfoUpdateDto(
+                organizationName = "렛츠커리어",
+                logo = null,
+                companyType = CompanyType.STARTUP,
+                homepageUrl = "https://www.letscareer.co.kr",
+            ),
+        )
+        companyProfileManager.replaceManagerInfo(
+            companyAccount.userId,
+            CompanyManagerInfoUpdateDto(
+                managerName = "김담당",
+                managerPhone = null,
+                notificationEmail = null,
+                managerDuty = CompanyManagerDuty.HR,
+            ),
+        )
+
+        // then
+        val updated = companyProfileReader.read(companyAccount.userId)
+        assertEquals(CompanyBusinessNumberType.BUSINESS_REGISTRATION, updated?.businessNumberType)
+        assertEquals("1234567890", updated?.businessNumber)
+        assertEquals("IT·정보통신", updated?.industry)
+        assertEquals(CompanyType.STARTUP, updated?.companyType)
+        assertEquals("https://www.letscareer.co.kr", updated?.homepageUrl)
+        assertEquals("인사팀 매니저", updated?.managerTitle)
+        assertEquals(CompanyManagerDuty.HR, updated?.managerDuty)
+        assertEquals("홍길동", updated?.recommender)
+    }
+
+    @Test
     fun `구직 정보는 프로필 행에 함께 저장하고 여덟 값을 한 번에 교체한다`() {
         val account = userAppender.append(UserAppendDto(letsCareerUserId = 4821L, joinedAt = NOW))
         userProfileManager.sync(syncCommand(account.userId, name = "김렛츠", letsCareerUpdatedAt = NOW))

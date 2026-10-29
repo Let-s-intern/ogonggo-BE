@@ -59,6 +59,66 @@ class CompanyProfileDomainTest {
         }
     }
 
+    @Test
+    fun `기업 정보 수정은 보낸 값만 바꾸고 보내지 않은 값은 그대로 둔다`() {
+        // given
+        val profile = CompanyProfile(
+            userId = 1L,
+            organizationName = "렛츠커리어",
+            managerName = "김담당",
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
+            companyType = CompanyType.STARTUP,
+            industry = "IT·정보통신",
+            address = "서울특별시 마포구 양화로 1",
+            managerTitle = "인사팀 매니저",
+            managerDuty = CompanyManagerDuty.HR,
+            recommender = "홍길동",
+        )
+
+        // when
+        profile.updateBusinessDetails(
+            businessNumberType = null,
+            businessNumber = null,
+            companyType = null,
+            employeeCountRange = CompanyEmployeeCountRange.RANGE_300_999,
+            industry = null,
+            address = "세종특별자치시 도움6로 11",
+            homepageUrl = null,
+        )
+        profile.updateManagerDetails(managerTitle = "채용 담당", managerDuty = null, recommender = null)
+
+        // then
+        assertEquals(CompanyBusinessNumberType.BUSINESS_REGISTRATION, profile.businessNumberType)
+        assertEquals("1234567890", profile.businessNumber)
+        assertEquals(CompanyType.STARTUP, profile.companyType)
+        assertEquals(CompanyEmployeeCountRange.RANGE_300_999, profile.employeeCountRange)
+        assertEquals("IT·정보통신", profile.industry)
+        assertEquals("세종특별자치시 도움6로 11", profile.address)
+        assertEquals("채용 담당", profile.managerTitle)
+        assertEquals(CompanyManagerDuty.HR, profile.managerDuty)
+        assertEquals("홍길동", profile.recommender)
+    }
+
+    @Test
+    fun `번호 종류를 보내면 번호도 함께 바꾸고 해외 기업이면 번호를 비운다`() {
+        // given
+        val profile = profile(CompanyBusinessNumberType.BUSINESS_REGISTRATION, "1234567890")
+
+        // when
+        profile.updateBusinessDetails(CompanyBusinessNumberType.OVERSEAS, null, null, null, null, null, null)
+
+        // then
+        assertEquals(CompanyBusinessNumberType.OVERSEAS, profile.businessNumberType)
+        assertNull(profile.businessNumber)
+        assertThrows(IllegalArgumentException::class.java) {
+            profile.updateBusinessDetails(null, "1234567890", null, null, null, null, null)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            profile.updateBusinessDetails(CompanyBusinessNumberType.CORPORATE_REGISTRATION, "1234567890", null, null, null, null, null)
+        }
+    }
+
     private fun profile(type: CompanyBusinessNumberType?, number: String?): CompanyProfile = CompanyProfile(
         userId = 1L,
         organizationName = "렛츠커리어",

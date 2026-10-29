@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.member.presentation.request.ChangeGeneralMemberRoleRequest
+import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberDetailResponse
 import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberResponse
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
@@ -63,6 +64,33 @@ interface AdminGeneralMemberApi {
         @Parameter(description = "역할. USER·MENTOR·ADMIN만 받습니다.") role: UserRole?,
         @Parameter(description = "유입 구분. 아직 정해지지 않은 회원은 어느 값으로 걸러도 나오지 않습니다.") inflowSource: UserInflowSource?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminGeneralMemberResponse>>>
+
+    @Operation(
+        operationId = "getGeneralMember",
+        summary = "일반 회원 상세 조회",
+        description = """
+            목록 항목과 같은 회원 정보에 활동을 더해 반환합니다. 멘토와 관리자도 조회할 수 있고 탈퇴·정지한 회원도 조회할 수 있습니다.
+
+            - bookmarkedJobs: 북마크한 채용공고 중 지금 게시 중인 것. 회원이 마이페이지에서 보는 것과 같습니다.
+            - bookmarkedBootcamps: 북마크한 부트캠프 중 지금 공개된 것. status는 모집 상태입니다.
+            - authoredSideStudies: 작성한 사이드·스터디 모집글. 임시저장과 삭제한 글은 빼고 운영자가 숨긴 글은 싣습니다.
+
+            응답이 끝없이 커지지 않도록 세 목록은 각각 최대 50건이며, 북마크는 최근 저장 순, 모집글은 최근 작성 순입니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "404",
+                description = "USER_NOT_FOUND: 회원이 없거나 기업 회원입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun getGeneralMember(
+        @Min(1) userId: Long,
+    ): ResponseEntity<SuccessResponse<AdminGeneralMemberDetailResponse>>
 
     @Operation(
         operationId = "changeGeneralMemberRole",

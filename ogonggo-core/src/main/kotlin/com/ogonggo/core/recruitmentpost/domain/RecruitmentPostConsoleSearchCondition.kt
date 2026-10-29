@@ -11,4 +11,6 @@ data class RecruitmentPostConsoleSearchCondition(
     val recruitmentStatus: RecruitmentPostRecruitmentStatus? = null,
     /** 제목에 포함되는지로 찾는다. 비어 있으면 검색하지 않는다. */
     val keyword: String? = null,
+    /** 이 회원이 쓴 모집글만 고른다. 관리자 회원 상세가 쓴다. */
+    val authorUserId: Long? = null,
 )

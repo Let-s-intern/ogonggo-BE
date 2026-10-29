@@ -132,8 +132,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
 | `PUT /api/v1/users/me/profile` | 필수 | 자기 학력과 희망 조건을 고친다 |
-| `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)를 고친다 |
-| `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)를 고친다 |
+| `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)와 가입 때 받은 기업 정보를 고친다 |
+| `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)와 가입 때 받은 직책·담당 업무·추천인을 고친다 |
 | `PUT /api/v1/users/me/notification-email` | 필수 | 일반 회원이 오늘의 공고 수신 이메일을 고친다 |
 | `PUT /api/v1/users/me/nickname` | 필수 | 일반 회원이 닉네임을 고친다. 아웃박스로 렛츠커리어에 보낸다 |
 | `PATCH /api/v1/users/me/notifications/broadcasts/{batchId}/read` | 필수 | 최근 30일·가입 이후 공통 공지의 회원별 최초 읽음 처리 |
@@ -192,7 +192,7 @@ POST /api/v1/auth/company/signin
 → 200 { "accessToken": "...", "refreshToken": "..." }
 ```
 
-**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 받는 기업 정보는 기관명과 담당자 이름 두 가지입니다. 기업 로고는 가입 후 `PUT /api/v1/users/me/company-profile/basic-info`에서, 담당자 연락처와 정보 수신용 이메일은 `PUT /api/v1/users/me/company-profile/manager-info`에서 선택 값으로 채웁니다.
+**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 필수로 받는 기업 정보는 기관명과 담당자 이름입니다. 사업자 번호(`businessNumberType`, `businessNumber`), 기업 형태(`companyType`), 직원 수(`employeeCountRange`), 산업(`industry`), 주소(`address`), 홈페이지(`homepageUrl`), 담당자 직책(`managerTitle`)·담당 업무(`managerDuty`)·연락처(`managerPhone`), 추천인(`recommender`)은 선택 값입니다(LC-3526). 가입 화면은 이 중 추천인과 홈페이지 말고는 필수로 받지만, 새 화면을 배포하기 전의 가입 화면이 이 값 없이 부를 수 있어 API에서는 선택으로 둡니다. 사업자 번호는 종류에 맞는 자릿수(사업자등록번호 10자리, 법인등록번호 13자리)만 받고, 해외 기업(`OVERSEAS`)은 번호를 받지 않습니다. 기업 로고와 위 기업 정보는 가입 후 `PUT /api/v1/users/me/company-profile/basic-info`에서, 담당자 연락처·정보 수신용 이메일과 위 담당자 정보는 `PUT /api/v1/users/me/company-profile/manager-info`에서 바꿉니다.
 
 | 상황 | 응답 |
 | --- | --- |

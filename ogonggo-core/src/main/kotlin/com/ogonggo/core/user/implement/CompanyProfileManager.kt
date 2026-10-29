@@ -12,7 +12,7 @@ class CompanyProfileManager internal constructor(
 ) {
 
     /**
-     * 기본 정보(기관명·로고)를 교체하고 그 전에 쓰던 로고 이미지 식별자를 돌려준다.
+     * 기본 정보(기관명·로고)를 교체하고 가입 때 받은 기업 정보는 보낸 값만 바꾼 뒤 그 전에 쓰던 로고 이미지 식별자를 돌려준다.
      * 이전 로고 이미지를 정리하는 것은 호출한 쪽이 한다.
      */
     fun replaceBasicInfo(userId: Long, command: CompanyBasicInfoUpdateDto): String? {
@@ -23,6 +23,15 @@ class CompanyProfileManager internal constructor(
             organizationName = command.organizationName,
             logoImageId = command.logo?.imageId,
             logoUrl = command.logo?.url,
+        )
+        profile.updateBusinessDetails(
+            businessNumberType = command.businessNumberType,
+            businessNumber = command.businessNumber,
+            companyType = command.companyType,
+            employeeCountRange = command.employeeCountRange,
+            industry = command.industry,
+            address = command.address,
+            homepageUrl = command.homepageUrl,
         )
         companyProfileRepository.save(profile)
         return previousLogoImageId
@@ -35,6 +44,11 @@ class CompanyProfileManager internal constructor(
             managerName = command.managerName,
             managerPhone = command.managerPhone,
             notificationEmail = command.notificationEmail,
+        )
+        profile.updateManagerDetails(
+            managerTitle = command.managerTitle,
+            managerDuty = command.managerDuty,
+            recommender = command.recommender,
         )
         companyProfileRepository.save(profile)
     }

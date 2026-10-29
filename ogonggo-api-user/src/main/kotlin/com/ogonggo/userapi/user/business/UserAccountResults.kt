@@ -128,8 +128,18 @@ data class MyCompanyProfileResult(
     val recommender: String? = null,
 )
 
-/** 기업 회원이 고치는 기본 정보다. 로고는 업로드한 이미지 식별자로 받으며 null이면 지운다. */
+/**
+ * 기업 회원이 고치는 기본 정보다. 로고는 업로드한 이미지 식별자로 받으며 null이면 지운다.
+ * 가입 때 받은 기업 정보(번호 종류부터 홈페이지까지)는 null이면 저장된 값을 그대로 둔다.
+ */
 data class CompanyBasicInfoCommand(
     val organizationName: String,
     val logoImageId: String?,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
+    val companyType: CompanyType? = null,
+    val employeeCountRange: CompanyEmployeeCountRange? = null,
+    val industry: String? = null,
+    val address: String? = null,
+    val homepageUrl: String? = null,
 )

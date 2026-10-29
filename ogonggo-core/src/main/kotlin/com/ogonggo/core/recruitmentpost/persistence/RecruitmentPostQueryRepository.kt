@@ -193,6 +193,7 @@ internal class RecruitmentPostQueryRepository(
         condition.recruitmentType?.let(recruitmentPost.recruitmentType::eq),
         condition.recruitmentStatus?.let(recruitmentPost.recruitmentStatus::eq),
         condition.keyword?.takeIf(String::isNotBlank)?.let(recruitmentPost.title::containsIgnoreCase),
+        condition.authorUserId?.let(recruitmentPost.authorUserId::eq),
     )
 
     private fun publishedPredicates(filter: RecruitmentPostListFilterDto): Array<Predicate?> = arrayOf(

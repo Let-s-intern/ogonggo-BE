@@ -64,10 +64,20 @@ data class CompanyProfileAppendDto(
     val recommender: String? = null,
 )
 
-/** 기업 회원이 마이페이지에서 고치는 기본 정보다. 함께 교체하므로 로고가 null이면 지운다. */
+/**
+ * 기업 회원이 마이페이지에서 고치는 기본 정보다. 기관명과 로고는 함께 교체하므로 로고가 null이면 지운다.
+ * 가입 때 받은 기업 정보(번호 종류부터 홈페이지까지)는 null이면 저장된 값을 그대로 둔다.
+ */
 data class CompanyBasicInfoUpdateDto(
     val organizationName: String,
     val logo: CompanyLogoDto?,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
+    val companyType: CompanyType? = null,
+    val employeeCountRange: CompanyEmployeeCountRange? = null,
+    val industry: String? = null,
+    val address: String? = null,
+    val homepageUrl: String? = null,
 )
 
 /** 기업 로고로 연결한 이미지다. 식별자는 이미지를 바꾸거나 지울 때 이전 이미지를 정리하는 데 쓴다. */
@@ -76,11 +86,17 @@ data class CompanyLogoDto(
     val url: String,
 )
 
-/** 기업 회원이 마이페이지에서 고치는 담당자 정보다. 함께 교체하므로 선택 값이 null이면 비운다. */
+/**
+ * 기업 회원이 마이페이지에서 고치는 담당자 정보다. 이름·연락처·수신 이메일은 함께 교체하므로 선택 값이 null이면 비운다.
+ * 가입 때 받은 직책·담당 업무·추천인은 null이면 저장된 값을 그대로 둔다.
+ */
 data class CompanyManagerInfoUpdateDto(
     val managerName: String,
     val managerPhone: String?,
     val notificationEmail: String?,
+    val managerTitle: String? = null,
+    val managerDuty: CompanyManagerDuty? = null,
+    val recommender: String? = null,
 )
 
 /**

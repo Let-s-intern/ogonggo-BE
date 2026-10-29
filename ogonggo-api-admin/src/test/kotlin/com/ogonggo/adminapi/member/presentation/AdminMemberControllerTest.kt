@@ -4,7 +4,18 @@ import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
+import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.member.business.AdminCompanyMemberDetailResult
+import com.ogonggo.adminapi.member.business.AdminCompanyMemberJob
+import com.ogonggo.adminapi.member.business.AdminGeneralMemberDetailResult
+import com.ogonggo.adminapi.member.business.AdminMemberAuthoredSideStudy
+import com.ogonggo.adminapi.member.business.AdminMemberBookmarkedBootcamp
+import com.ogonggo.adminapi.member.business.AdminMemberBookmarkedJob
 import com.ogonggo.adminapi.member.business.AdminMemberService
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
 import com.ogonggo.core.user.domain.CompanyManagerDuty
@@ -12,6 +23,7 @@ import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyMemberDto
 import com.ogonggo.core.user.implement.dto.CompanyMemberPageDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileDto
@@ -219,6 +231,104 @@ class AdminMemberControllerTest @Autowired constructor(
                 .content("""{"role": "ADMIN"}"""),
         )
             .andExpect(status().isUnauthorized)
+
+        Mockito.verifyNoInteractions(adminMemberService)
+    }
+
+    @Test
+    fun `일반 회원 상세는 목록 항목 필드를 펼치고 북마크와 작성한 모집글을 더한다`() {
+        // given
+        Mockito.`when`(adminMemberService.getGeneralMember(USER_ID)).thenReturn(
+            AdminGeneralMemberDetailResult(
+                member = generalMember(),
+                bookmarkedJobs = listOf(AdminMemberBookmarkedJob(id = 3L, title = "백엔드 개발자", companyName = "오공고", viewCount = 12)),
+                bookmarkedBootcamps = listOf(
+                    AdminMemberBookmarkedBootcamp(
+                        id = 4L,
+                        title = "백엔드 부트캠프",
+                        companyName = "렛츠커리어",
+                        status = BootcampRecruitmentStatus.RECRUITING,
+                    ),
+                ),
+                authoredSideStudies = listOf(
+                    AdminMemberAuthoredSideStudy(
+                        id = 5L,
+                        title = "코틀린 스터디",
+                        kind = RecruitmentPostType.STUDY,
+                        appliedCount = 2,
+                        capacity = 4,
+                        closed = false,
+                        viewCount = 30,
+                    ),
+                ),
+            ),
+        )
+
+        // when & then
+        mockMvc.perform(admin(get("/api/v1/admin/general-members/$USER_ID")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.userId").value(USER_ID))
+            .andExpect(jsonPath("$.data.nickname").value("렛츠"))
+            .andExpect(jsonPath("$.data.member").doesNotExist())
+            .andExpect(jsonPath("$.data.bookmarkedJobs[0].companyName").value("오공고"))
+            .andExpect(jsonPath("$.data.bookmarkedJobs[0].viewCount").value(12))
+            .andExpect(jsonPath("$.data.bookmarkedBootcamps[0].status").value("RECRUITING"))
+            .andExpect(jsonPath("$.data.authoredSideStudies[0].kind").value("STUDY"))
+            .andExpect(jsonPath("$.data.authoredSideStudies[0].appliedCount").value(2))
+            .andExpect(jsonPath("$.data.authoredSideStudies[0].capacity").value(4))
+            .andExpect(jsonPath("$.data.authoredSideStudies[0].closed").value(false))
+    }
+
+    @Test
+    fun `비즈니스 회원 상세는 목록 항목 필드를 펼치고 등록한 공고를 더한다`() {
+        // given
+        Mockito.`when`(adminMemberService.getCompanyMember(USER_ID)).thenReturn(
+            AdminCompanyMemberDetailResult(
+                member = companyMember(),
+                jobs = listOf(
+                    AdminCompanyMemberJob(
+                        id = 9L,
+                        title = "채용 담당자 모집",
+                        visibility = AdminContentVisibility.HIDDEN,
+                        reviewStatus = ContentReviewStatus.PENDING,
+                        registeredAt = NOW,
+                        viewCount = 0,
+                    ),
+                ),
+            ),
+        )
+
+        // when & then
+        mockMvc.perform(admin(get("/api/v1/admin/company-members/$USER_ID")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.organizationName").value("렛츠커리어"))
+            .andExpect(jsonPath("$.data.businessNumber").value("1101111234567"))
+            .andExpect(jsonPath("$.data.jobs[0].id").value(9))
+            .andExpect(jsonPath("$.data.jobs[0].visibility").value("HIDDEN"))
+            .andExpect(jsonPath("$.data.jobs[0].reviewStatus").value("PENDING"))
+            .andExpect(jsonPath("$.data.jobs[0].registeredAt").value("2026-09-28T10:00:00"))
+            .andExpect(jsonPath("$.data.jobs[0].viewCount").value(0))
+    }
+
+    @Test
+    fun `없거나 다른 쪽 회원의 상세는 404 USER_NOT_FOUND로 응답한다`() {
+        Mockito.`when`(adminMemberService.getGeneralMember(USER_ID))
+            .thenThrow(EntityNotFoundException(UserErrorCode.USER_NOT_FOUND))
+        Mockito.`when`(adminMemberService.getCompanyMember(USER_ID))
+            .thenThrow(EntityNotFoundException(UserErrorCode.USER_NOT_FOUND))
+
+        listOf("/api/v1/admin/general-members/$USER_ID", "/api/v1/admin/company-members/$USER_ID").forEach { path ->
+            mockMvc.perform(admin(get(path)))
+                .andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+        }
+    }
+
+    @Test
+    fun `회원 상세 식별자가 양수가 아니면 400으로 막는다`() {
+        mockMvc.perform(admin(get("/api/v1/admin/general-members/0")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
 
         Mockito.verifyNoInteractions(adminMemberService)
     }

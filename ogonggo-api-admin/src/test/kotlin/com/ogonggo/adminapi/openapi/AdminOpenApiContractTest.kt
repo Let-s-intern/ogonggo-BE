@@ -87,6 +87,8 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1service-feedbacks/get",
             "/paths/~1api~1v1~1admin~1general-members/get",
             "/paths/~1api~1v1~1admin~1company-members/get",
+            "/paths/~1api~1v1~1admin~1general-members~1{userId}/get",
+            "/paths/~1api~1v1~1admin~1company-members~1{userId}/get",
             "/paths/~1api~1v1~1admin~1advertisement-inquiries/get",
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1today-count/get",
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1status/patch",
@@ -218,6 +220,35 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(response.has("recipientUserId"))
         assertTrue(response.has("scheduledAt"))
         assertFalse(response.has("recipientAddress"))
+    }
+
+    @Test
+    fun `회원 상세는 목록 항목의 필드를 같은 높이에 펼치고 활동 목록과 없는 회원 오류를 명세한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val general = document.at("/paths/~1api~1v1~1admin~1general-members~1{userId}/get")
+        val company = document.at("/paths/~1api~1v1~1admin~1company-members~1{userId}/get")
+        val generalDetail = document.at("/components/schemas/AdminGeneralMemberDetailResponse/properties")
+        val companyDetail = document.at("/components/schemas/AdminCompanyMemberDetailResponse/properties")
+
+        // then
+        assertEquals("getGeneralMember", general.at("/operationId").asText())
+        assertEquals("getCompanyMember", company.at("/operationId").asText())
+        listOf(general, company).forEach { operation ->
+            val userId = operation.at("/parameters").first { it["name"].asText() == "userId" }
+            assertTrue(userId.at("/schema/minimum").asDouble() > 0)
+            assertTrue(operation.at("/responses/404/description").asText().startsWith("USER_NOT_FOUND"))
+        }
+        listOf("userId", "nickname", "role", "bookmarkedJobs", "bookmarkedBootcamps", "authoredSideStudies").forEach { field ->
+            assertTrue(generalDetail.has(field), field)
+        }
+        listOf("userId", "organizationName", "businessNumber", "recommender", "jobs").forEach { field ->
+            assertTrue(companyDetail.has(field), field)
+        }
+        assertFalse(generalDetail.has("member"))
+        assertFalse(companyDetail.has("member"))
     }
 
     @Test

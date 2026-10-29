@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
+import com.ogonggo.adminapi.member.presentation.response.AdminCompanyMemberDetailResponse
 import com.ogonggo.adminapi.member.presentation.response.AdminCompanyMemberResponse
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.PageResponse
@@ -54,4 +55,27 @@ interface AdminCompanyMemberApi {
         @Parameter(description = "가입일 시작(포함)") joinedFrom: LocalDate?,
         @Parameter(description = "가입일 끝(포함)") joinedTo: LocalDate?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminCompanyMemberResponse>>>
+
+    @Operation(
+        operationId = "getCompanyMember",
+        summary = "비즈니스 회원 상세 조회",
+        description = """
+            목록 항목과 같은 회원 정보에 이 회원이 등록한 공고(jobs)를 더해 반환합니다.
+            공고는 검수 중이거나 숨긴 공고도 포함하며 최근 등록 순으로 최대 50건입니다. 삭제한 공고는 싣지 않습니다.
+            탈퇴·정지한 회원도 조회할 수 있습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "404",
+                description = "USER_NOT_FOUND: 회원이 없거나 비즈니스 회원이 아닙니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun getCompanyMember(
+        @Min(1) userId: Long,
+    ): ResponseEntity<SuccessResponse<AdminCompanyMemberDetailResponse>>
 }

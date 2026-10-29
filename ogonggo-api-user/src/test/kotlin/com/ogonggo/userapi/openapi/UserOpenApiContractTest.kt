@@ -468,6 +468,15 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(36, basicInfoRequest.at("/properties/logoImageId/maxLength").asInt())
         val managerInfoRequest = document.at("/components/schemas/ReplaceMyCompanyManagerInfoRequest")
         assertEquals(100, managerInfoRequest.at("/properties/managerName/maxLength").asInt())
+        // 가입 때 받은 기업·담당자 정보도 마이페이지에서 고치며, 형식 제약은 가입과 같다.
+        assertEquals(13, basicInfoRequest.at("/properties/businessNumber/maxLength").asInt())
+        assertTrue(basicInfoRequest.at("/properties/businessNumberType/enum").any { it.asText() == "OVERSEAS" })
+        assertTrue(basicInfoRequest.at("/properties/companyType").isObject)
+        assertTrue(basicInfoRequest.at("/properties/employeeCountRange").isObject)
+        assertEquals(2048, basicInfoRequest.at("/properties/homepageUrl/maxLength").asInt())
+        assertEquals(50, managerInfoRequest.at("/properties/managerTitle/maxLength").asInt())
+        assertTrue(managerInfoRequest.at("/properties/managerDuty/enum").any { it.asText() == "HR" })
+        assertEquals(100, managerInfoRequest.at("/properties/recommender/maxLength").asInt())
 
         val jobCalendar = document.at("/paths/~1api~1v1~1jobs~1calendar/get")
         // 스크랩 공고만 거를 때 토큰이 필요하므로 Swagger UI에서 토큰을 보낼 수 있어야 한다.

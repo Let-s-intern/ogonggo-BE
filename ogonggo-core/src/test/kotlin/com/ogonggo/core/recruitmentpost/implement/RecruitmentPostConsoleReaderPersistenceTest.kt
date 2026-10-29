@@ -68,6 +68,20 @@ internal class RecruitmentPostConsoleReaderPersistenceTest @Autowired constructo
     }
 
     @Test
+    fun `작성자로 거르면 그 회원이 쓴 모집글만 싣는다`() {
+        // given
+        val mine = postRepository.save(createPost("내 모집", authorUserId = 7L))
+        postRepository.save(createPost("다른 회원 모집", authorUserId = 8L))
+        postRepository.save(createPost("작성 중 모집", authorUserId = 7L).copyAsDraft())
+
+        // when
+        val result = readConsolePage(RecruitmentPostConsoleSearchCondition(authorUserId = 7L))
+
+        // then
+        assertEquals(listOf(mine.id), result.posts.map(RecruitmentPost::id))
+    }
+
+    @Test
     fun `노출 변경 대상에 임시저장이나 삭제한 모집글이 있으면 그 식별자를 담아 찾을 수 없다고 알린다`() {
         // given
         val published = postRepository.save(createPost("공개 모집"))
@@ -93,8 +107,9 @@ internal class RecruitmentPostConsoleReaderPersistenceTest @Autowired constructo
         title: String,
         publicationStatus: RecruitmentPostPublicationStatus = RecruitmentPostPublicationStatus.PUBLISHED,
         recruitmentType: RecruitmentPostType = RecruitmentPostType.STUDY,
+        authorUserId: Long = 1L,
     ) = RecruitmentPost(
-        authorUserId = 1L,
+        authorUserId = authorUserId,
         title = title,
         recruitmentType = recruitmentType,
         capacity = 4,
