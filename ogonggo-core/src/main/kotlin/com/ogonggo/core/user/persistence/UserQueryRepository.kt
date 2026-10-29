@@ -35,7 +35,9 @@ internal class UserQueryRepository(
             condition.inflowSource?.let(user.inflowSource::eq),
             *commonPredicates(condition),
             condition.keyword?.takeIf { it.isNotBlank() }?.let {
-                userProfile.nickname.containsIgnoreCase(it).or(userProfile.email.containsIgnoreCase(it))
+                userProfile.name.containsIgnoreCase(it)
+                    .or(userProfile.nickname.containsIgnoreCase(it))
+                    .or(userProfile.email.containsIgnoreCase(it))
             },
         )
 
@@ -66,6 +68,7 @@ internal class UserQueryRepository(
             condition.keyword?.takeIf { it.isNotBlank() }?.let {
                 companyProfile.organizationName.containsIgnoreCase(it)
                     .or(companyProfile.managerName.containsIgnoreCase(it))
+                    .or(user.email.containsIgnoreCase(it))
             },
         )
 
