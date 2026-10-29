@@ -132,8 +132,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
 | `PUT /api/v1/users/me/profile` | 필수 | 자기 학력과 희망 조건을 고친다 |
-| `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)를 고친다 |
-| `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)를 고친다 |
+| `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)와 가입 때 받은 기업 정보를 고친다 |
+| `PUT /api/v1/users/me/company-profile/manager-info` | 필수 | 기업 회원이 자기 담당자 정보(이름·연락처·수신 이메일)와 가입 때 받은 직책·담당 업무·추천인을 고친다 |
 | `PUT /api/v1/users/me/notification-email` | 필수 | 일반 회원이 오늘의 공고 수신 이메일을 고친다 |
 | `PUT /api/v1/users/me/nickname` | 필수 | 일반 회원이 닉네임을 고친다. 아웃박스로 렛츠커리어에 보낸다 |
 | `PATCH /api/v1/users/me/notifications/broadcasts/{batchId}/read` | 필수 | 최근 30일·가입 이후 공통 공지의 회원별 최초 읽음 처리 |

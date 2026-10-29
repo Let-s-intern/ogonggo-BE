@@ -7,6 +7,7 @@ import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.userapi.auth.business.CompanySignInCommand
 import com.ogonggo.userapi.auth.business.CompanySignUpCommand
 import com.ogonggo.userapi.error.InvalidRequestFieldException
+import com.ogonggo.userapi.user.presentation.request.validCompanyBusinessNumber
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -86,7 +87,7 @@ data class CompanySignUpRequest(
         organizationName = organizationName,
         managerName = managerName,
         businessNumberType = businessNumberType,
-        businessNumber = validBusinessNumber(),
+        businessNumber = validCompanyBusinessNumber(businessNumberType, businessNumber),
         companyType = companyType,
         employeeCountRange = employeeCountRange,
         industry = validOptionalText("industry", industry),
@@ -97,22 +98,6 @@ data class CompanySignUpRequest(
         managerPhone = managerPhone,
         recommender = validOptionalText("recommender", recommender),
     )
-
-    /** 번호는 종류가 있어야 뜻이 있고 종류마다 자릿수가 다르다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
-    private fun validBusinessNumber(): String? {
-        val type = businessNumberType
-            ?: if (businessNumber == null) {
-                return null
-            } else {
-                throw InvalidRequestFieldException("businessNumberType", "사업자 번호를 보내면 번호 종류도 보내야 합니다.")
-            }
-        if (!type.accepts(businessNumber)) {
-            val reason = type.digitCount?.let { "${type.desc}는 숫자 ${it}자리여야 합니다." }
-                ?: "해외 기업은 사업자 번호를 보낼 수 없습니다."
-            throw InvalidRequestFieldException("businessNumber", reason)
-        }
-        return businessNumber
-    }
 }
 
 data class CompanySignInRequest(

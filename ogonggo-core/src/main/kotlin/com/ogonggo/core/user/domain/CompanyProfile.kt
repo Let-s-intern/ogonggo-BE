@@ -141,6 +141,50 @@ internal class CompanyProfile(
         this.managerPhone = managerPhone
         this.notificationEmail = notificationEmail
     }
+
+    /**
+     * 가입 때 받은 기업 정보 중 보낸 값만 바꾼다. null이면 저장된 값을 그대로 둔다.
+     * 이 값을 모르는 이전 화면이 기본 정보를 저장해도 지워지지 않게 하려는 것이다.
+     * 번호 종류를 보내면 번호도 함께 바꾸며, 해외 기업이면 번호를 비운다.
+     */
+    fun updateBusinessDetails(
+        businessNumberType: CompanyBusinessNumberType?,
+        businessNumber: String?,
+        companyType: CompanyType?,
+        employeeCountRange: CompanyEmployeeCountRange?,
+        industry: String?,
+        address: String?,
+        homepageUrl: String?,
+    ) {
+        if (businessNumberType == null) {
+            require(businessNumber == null) { "번호 종류 없이 사업자 번호를 바꿀 수 없습니다." }
+        } else {
+            validateBusinessNumber(businessNumberType, businessNumber)
+        }
+        requireNotBlankIfPresent(industry, "산업")
+        requireNotBlankIfPresent(address, "주소")
+        requireNotBlankIfPresent(homepageUrl, "홈페이지")
+
+        if (businessNumberType != null) {
+            this.businessNumberType = businessNumberType
+            this.businessNumber = businessNumber
+        }
+        companyType?.let { this.companyType = it }
+        employeeCountRange?.let { this.employeeCountRange = it }
+        industry?.let { this.industry = it }
+        address?.let { this.address = it }
+        homepageUrl?.let { this.homepageUrl = it }
+    }
+
+    /** 가입 때 받은 담당자 정보 중 보낸 값만 바꾼다. null이면 저장된 값을 그대로 둔다. */
+    fun updateManagerDetails(managerTitle: String?, managerDuty: CompanyManagerDuty?, recommender: String?) {
+        requireNotBlankIfPresent(managerTitle, "담당자 직책")
+        requireNotBlankIfPresent(recommender, "추천인")
+
+        managerTitle?.let { this.managerTitle = it }
+        managerDuty?.let { this.managerDuty = it }
+        recommender?.let { this.recommender = it }
+    }
 }
 
 private fun validateBasicInfo(organizationName: String, logoImageId: String?, logoUrl: String?) {
