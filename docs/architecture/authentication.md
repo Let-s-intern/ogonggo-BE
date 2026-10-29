@@ -192,7 +192,7 @@ POST /api/v1/auth/company/signin
 → 200 { "accessToken": "...", "refreshToken": "..." }
 ```
 
-**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 받는 기업 정보는 기관명과 담당자 이름 두 가지입니다. 기업 로고는 가입 후 `PUT /api/v1/users/me/company-profile/basic-info`에서, 담당자 연락처와 정보 수신용 이메일은 `PUT /api/v1/users/me/company-profile/manager-info`에서 선택 값으로 채웁니다.
+**승인 절차와 이메일 인증이 없습니다.** 가입 요청 시점에 계정과 `company_profiles`를 한 트랜잭션에서 만들고 바로 세션을 발급합니다. 가입 때 필수로 받는 기업 정보는 기관명과 담당자 이름입니다. 사업자 번호(`businessNumberType`, `businessNumber`), 기업 형태(`companyType`), 직원 수(`employeeCountRange`), 산업(`industry`), 주소(`address`), 홈페이지(`homepageUrl`), 담당자 직책(`managerTitle`)·담당 업무(`managerDuty`)·연락처(`managerPhone`), 추천인(`recommender`)은 선택 값입니다(LC-3526). 가입 화면은 이 중 추천인과 홈페이지 말고는 필수로 받지만, 새 화면을 배포하기 전의 가입 화면이 이 값 없이 부를 수 있어 API에서는 선택으로 둡니다. 사업자 번호는 종류에 맞는 자릿수(사업자등록번호 10자리, 법인등록번호 13자리)만 받고, 해외 기업(`OVERSEAS`)은 번호를 받지 않습니다. 기업 로고와 위 기업 정보는 가입 후 `PUT /api/v1/users/me/company-profile/basic-info`에서, 담당자 연락처·정보 수신용 이메일과 위 담당자 정보는 `PUT /api/v1/users/me/company-profile/manager-info`에서 바꿉니다.
 
 | 상황 | 응답 |
 | --- | --- |
