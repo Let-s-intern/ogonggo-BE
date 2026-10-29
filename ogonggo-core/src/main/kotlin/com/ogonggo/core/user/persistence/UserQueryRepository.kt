@@ -89,6 +89,24 @@ internal class UserQueryRepository(
         return pageOf(content, pageable, countQuery)
     }
 
+    /** 관리자 콘솔의 일반 회원 상세다. 기업 회원이면 일반 회원이 아니므로 null이다. */
+    fun findGeneralMember(userId: Long): Pair<User, UserProfile?>? =
+        queryFactory.select(user, userProfile)
+            .from(user)
+            .leftJoin(userProfile).on(userProfile.userId.eq(user.id))
+            .where(user.id.eq(userId), user.role.`in`(UserRole.GENERAL_MEMBER_ROLES))
+            .fetchOne()
+            ?.let { row -> checkNotNull(row.get(user)) to row.get(userProfile) }
+
+    /** 관리자 콘솔의 기업 회원 상세다. 일반 회원이면 null이다. */
+    fun findCompanyMember(userId: Long): Pair<User, CompanyProfile?>? =
+        queryFactory.select(user, companyProfile)
+            .from(user)
+            .leftJoin(companyProfile).on(companyProfile.userId.eq(user.id))
+            .where(user.id.eq(userId), user.role.eq(UserRole.COMPANY))
+            .fetchOne()
+            ?.let { row -> checkNotNull(row.get(user)) to row.get(companyProfile) }
+
     private fun commonPredicates(condition: UserManagementSearchCondition): Array<Predicate?> = arrayOf(
         condition.status?.let(user.status::eq),
         condition.joinedFrom?.let { user.joinedAt.goe(it.atStartOfDay()) },

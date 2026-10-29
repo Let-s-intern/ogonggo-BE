@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.member.business.AdminMemberService
 import com.ogonggo.adminapi.member.presentation.request.ChangeGeneralMemberRoleRequest
+import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberDetailResponse
 import com.ogonggo.adminapi.member.presentation.response.AdminGeneralMemberResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -56,6 +57,12 @@ class AdminGeneralMemberController(
             ),
         )
     }
+
+    @GetMapping("/{userId}")
+    override fun getGeneralMember(
+        @PathVariable("userId") userId: Long,
+    ): ResponseEntity<SuccessResponse<AdminGeneralMemberDetailResponse>> =
+        SuccessResponse.ok(AdminGeneralMemberDetailResponse.from(adminMemberService.getGeneralMember(userId)))
 
     @PatchMapping("/{userId}/role")
     override fun changeGeneralMemberRole(

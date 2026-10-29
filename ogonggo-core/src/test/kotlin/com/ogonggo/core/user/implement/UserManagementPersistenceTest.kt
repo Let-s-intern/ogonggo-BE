@@ -1,6 +1,7 @@
 package com.ogonggo.core.user.implement
 
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.domain.UserInflowSource
@@ -222,6 +223,33 @@ internal class UserManagementPersistenceTest @Autowired constructor(
         assertEquals(listOf(byManager, byOrganization), result.members.map { it.userId })
         assertEquals("오공고랩스", result.members.last().companyProfile?.organizationName)
         assertEquals(listOf(byEmail), byEmailResult.members.map { it.userId })
+    }
+
+    @Test
+    fun `회원 상세는 역할에 맞는 회원만 주고 없거나 다른 쪽 회원이면 찾을 수 없다고 알린다`() {
+        // given
+        val general = generalMember(letsCareerUserId = 1L, nickname = "렛츠")
+        val mentor = userAppender.append(UserAppendDto(letsCareerUserId = 2L, joinedAt = NOW, isMentor = true)).userId
+        val company = companyMember(email = "hr@ogonggo.co.kr", organizationName = "오공고", managerName = "김담당")
+
+        // when
+        val generalDetail = userManagementReader.readGeneralMember(general)
+        val mentorDetail = userManagementReader.readGeneralMember(mentor)
+        val companyDetail = userManagementReader.readCompanyMember(company)
+
+        // then
+        assertEquals("렛츠", generalDetail.profile?.nickname)
+        assertNull(mentorDetail.profile)
+        assertEquals("오공고", companyDetail.companyProfile?.organizationName)
+        listOf(
+            { userManagementReader.readGeneralMember(company) },
+            { userManagementReader.readCompanyMember(general) },
+            { userManagementReader.readGeneralMember(999L) },
+            { userManagementReader.readCompanyMember(999L) },
+        ).forEach { read ->
+            val error = assertThrows(EntityNotFoundException::class.java) { read() }
+            assertEquals(UserErrorCode.USER_NOT_FOUND, error.errorCode)
+        }
     }
 
     private fun generalMember(

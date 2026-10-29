@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.member.presentation
 
 import com.ogonggo.adminapi.member.business.AdminMemberService
+import com.ogonggo.adminapi.member.presentation.response.AdminCompanyMemberDetailResponse
 import com.ogonggo.adminapi.member.presentation.response.AdminCompanyMemberResponse
 import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -9,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -47,4 +49,10 @@ class AdminCompanyMemberController(
             ),
         )
     }
+
+    @GetMapping("/{userId}")
+    override fun getCompanyMember(
+        @PathVariable("userId") userId: Long,
+    ): ResponseEntity<SuccessResponse<AdminCompanyMemberDetailResponse>> =
+        SuccessResponse.ok(AdminCompanyMemberDetailResponse.from(adminMemberService.getCompanyMember(userId)))
 }

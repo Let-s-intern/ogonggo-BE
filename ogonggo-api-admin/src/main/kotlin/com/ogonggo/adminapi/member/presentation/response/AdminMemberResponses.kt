@@ -1,5 +1,16 @@
 package com.ogonggo.adminapi.member.presentation.response
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.member.business.AdminCompanyMemberDetailResult
+import com.ogonggo.adminapi.member.business.AdminCompanyMemberJob
+import com.ogonggo.adminapi.member.business.AdminGeneralMemberDetailResult
+import com.ogonggo.adminapi.member.business.AdminMemberAuthoredSideStudy
+import com.ogonggo.adminapi.member.business.AdminMemberBookmarkedBootcamp
+import com.ogonggo.adminapi.member.business.AdminMemberBookmarkedJob
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.recruitmentpost.domain.RecruitmentPostType
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
 import com.ogonggo.core.user.domain.CompanyManagerDuty
@@ -131,5 +142,128 @@ data class AdminCompanyMemberResponse(
                 recommender = companyProfile?.recommender,
             )
         }
+    }
+}
+
+/** 목록 항목과 같은 필드를 같은 높이에 펼치고 활동을 더한다. 콘솔이 목록과 같은 칸으로 기본 정보를 그리기 위해서다. */
+data class AdminGeneralMemberDetailResponse(
+    @get:JsonUnwrapped
+    val member: AdminGeneralMemberResponse,
+    @Schema(description = "북마크한 채용공고. 지금 게시 중인 공고만 최근 저장 순으로 최대 50건입니다.")
+    val bookmarkedJobs: List<AdminMemberBookmarkedJobResponse>,
+    @Schema(description = "북마크한 부트캠프. 지금 공개된 부트캠프만 최근 저장 순으로 최대 50건입니다.")
+    val bookmarkedBootcamps: List<AdminMemberBookmarkedBootcampResponse>,
+    @Schema(description = "작성한 사이드·스터디 모집글. 임시저장과 삭제한 글을 빼고 최근 작성 순으로 최대 50건입니다.")
+    val authoredSideStudies: List<AdminMemberAuthoredSideStudyResponse>,
+) {
+    companion object {
+        internal fun from(result: AdminGeneralMemberDetailResult): AdminGeneralMemberDetailResponse =
+            AdminGeneralMemberDetailResponse(
+                member = AdminGeneralMemberResponse.from(result.member),
+                bookmarkedJobs = result.bookmarkedJobs.map(AdminMemberBookmarkedJobResponse::from),
+                bookmarkedBootcamps = result.bookmarkedBootcamps.map(AdminMemberBookmarkedBootcampResponse::from),
+                authoredSideStudies = result.authoredSideStudies.map(AdminMemberAuthoredSideStudyResponse::from),
+            )
+    }
+}
+
+data class AdminMemberBookmarkedJobResponse(
+    val id: Long,
+    val title: String,
+    val companyName: String,
+    val viewCount: Long,
+) {
+    companion object {
+        internal fun from(job: AdminMemberBookmarkedJob): AdminMemberBookmarkedJobResponse =
+            AdminMemberBookmarkedJobResponse(
+                id = job.id,
+                title = job.title,
+                companyName = job.companyName,
+                viewCount = job.viewCount,
+            )
+    }
+}
+
+data class AdminMemberBookmarkedBootcampResponse(
+    val id: Long,
+    val title: String,
+    @Schema(description = "운영 회사명")
+    val companyName: String,
+    @Schema(description = "모집 상태. 관리자 부트캠프 목록의 status와 같습니다.")
+    val status: BootcampRecruitmentStatus,
+) {
+    companion object {
+        internal fun from(bootcamp: AdminMemberBookmarkedBootcamp): AdminMemberBookmarkedBootcampResponse =
+            AdminMemberBookmarkedBootcampResponse(
+                id = bootcamp.id,
+                title = bootcamp.title,
+                companyName = bootcamp.companyName,
+                status = bootcamp.status,
+            )
+    }
+}
+
+data class AdminMemberAuthoredSideStudyResponse(
+    val id: Long,
+    val title: String,
+    @Schema(description = "모집 구분(사이드 프로젝트·스터디)")
+    val kind: RecruitmentPostType,
+    @Schema(description = "연락처를 열어 지원 이력이 생긴 회원 수입니다. 작성자의 내 모집글 관리와 같은 값입니다.")
+    val appliedCount: Long,
+    @Schema(description = "모집 인원")
+    val capacity: Int,
+    @Schema(description = "모집 마감 여부. 모집 상태가 CLOSED면 true입니다.")
+    val closed: Boolean,
+    val viewCount: Long,
+) {
+    companion object {
+        internal fun from(post: AdminMemberAuthoredSideStudy): AdminMemberAuthoredSideStudyResponse =
+            AdminMemberAuthoredSideStudyResponse(
+                id = post.id,
+                title = post.title,
+                kind = post.kind,
+                appliedCount = post.appliedCount,
+                capacity = post.capacity,
+                closed = post.closed,
+                viewCount = post.viewCount,
+            )
+    }
+}
+
+/** 목록 항목과 같은 필드를 같은 높이에 펼치고 등록한 공고를 더한다. */
+data class AdminCompanyMemberDetailResponse(
+    @get:JsonUnwrapped
+    val member: AdminCompanyMemberResponse,
+    @Schema(description = "이 회원이 등록한 공고. 검수 중이거나 숨긴 공고도 포함해 최근 등록 순으로 최대 50건입니다.")
+    val jobs: List<AdminCompanyMemberJobResponse>,
+) {
+    companion object {
+        internal fun from(result: AdminCompanyMemberDetailResult): AdminCompanyMemberDetailResponse =
+            AdminCompanyMemberDetailResponse(
+                member = AdminCompanyMemberResponse.from(result.member),
+                jobs = result.jobs.map(AdminCompanyMemberJobResponse::from),
+            )
+    }
+}
+
+data class AdminCompanyMemberJobResponse(
+    val id: Long,
+    val title: String,
+    val visibility: AdminContentVisibility,
+    @Schema(description = "검수 상태")
+    val reviewStatus: ContentReviewStatus?,
+    @Schema(description = "등록 일시")
+    val registeredAt: LocalDateTime,
+    val viewCount: Long,
+) {
+    companion object {
+        internal fun from(job: AdminCompanyMemberJob): AdminCompanyMemberJobResponse = AdminCompanyMemberJobResponse(
+            id = job.id,
+            title = job.title,
+            visibility = job.visibility,
+            reviewStatus = job.reviewStatus,
+            registeredAt = job.registeredAt,
+            viewCount = job.viewCount,
+        )
     }
 }
