@@ -2,6 +2,10 @@ package com.ogonggo.userapi.auth.presentation
 
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.UnauthorizedException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.userapi.auth.business.AuthTokens
 import com.ogonggo.userapi.auth.business.CompanyAuthService
@@ -87,6 +91,58 @@ class CompanyAuthControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `기업·담당자 정보를 함께 보내면 가입 명령에 그대로 담는다`() {
+        Mockito.`when`(companyAuthService.signUp(FULL_SIGN_UP_COMMAND)).thenReturn(TOKENS)
+
+        mockMvc.perform(
+            post("/api/v1/auth/company/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FULL_SIGN_UP_BODY),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.accessToken").value("og-access"))
+    }
+
+    @Test
+    fun `해외 기업은 사업자 번호 없이 가입한다`() {
+        val command = SIGN_UP_COMMAND.copy(businessNumberType = CompanyBusinessNumberType.OVERSEAS)
+        Mockito.`when`(companyAuthService.signUp(command)).thenReturn(TOKENS)
+
+        mockMvc.perform(
+            post("/api/v1/auth/company/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(signUpBody(""""businessNumberType":"OVERSEAS"""")),
+        )
+            .andExpect(status().isCreated)
+    }
+
+    @Test
+    fun `사업자 번호가 번호 종류와 맞지 않으면 400으로 응답한다`() {
+        listOf(
+            """"businessNumber":"1234567890"""" to "businessNumberType",
+            """"businessNumberType":"BUSINESS_REGISTRATION","businessNumber":"1101111234567"""" to "businessNumber",
+            """"businessNumberType":"CORPORATE_REGISTRATION","businessNumber":"1234567890"""" to "businessNumber",
+            """"businessNumberType":"BUSINESS_REGISTRATION"""" to "businessNumber",
+            """"businessNumberType":"OVERSEAS","businessNumber":"1234567890"""" to "businessNumber",
+            """"businessNumberType":"BUSINESS_REGISTRATION","businessNumber":"123-45-67890"""" to "businessNumber",
+            """"homepageUrl":"not a url"""" to "homepageUrl",
+            """"managerPhone":"010 1234"""" to "managerPhone",
+            """"address":" """" to "address",
+        ).forEach { (fields, field) ->
+            mockMvc.perform(
+                post("/api/v1/auth/company/signup")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(signUpBody(fields)),
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value(startsWith("[$field] ")))
+        }
+
+        Mockito.verifyNoInteractions(companyAuthService)
+    }
+
+    @Test
     fun `기업 로그인은 200으로 응답한다`() {
         Mockito.`when`(companyAuthService.signIn(SIGN_IN_COMMAND)).thenReturn(TOKENS)
 
@@ -125,6 +181,31 @@ class CompanyAuthControllerTest @Autowired constructor(
             password = "password1234",
             organizationName = "렛츠커리어",
             managerName = "김담당",
+        )
+
+        /** 기존 가입 화면이 보내는 네 값 뒤에 [fields]를 덧붙인다. */
+        private fun signUpBody(fields: String): String =
+            SIGN_UP_BODY.removeSuffix("}") + "," + fields + "}"
+
+        private val FULL_SIGN_UP_BODY = signUpBody(
+            """"businessNumberType":"CORPORATE_REGISTRATION","businessNumber":"1101111234567",""" +
+                """"companyType":"STARTUP","employeeCountRange":"RANGE_1000_PLUS","industry":"IT·정보통신",""" +
+                """"address":"서울특별시 마포구 양화로 1","homepageUrl":"https://www.letscareer.co.kr",""" +
+                """"managerTitle":"인사팀 매니저","managerDuty":"HR","managerPhone":"010-1234-5678",""" +
+                """"recommender":"홍길동"""",
+        )
+        private val FULL_SIGN_UP_COMMAND = SIGN_UP_COMMAND.copy(
+            businessNumberType = CompanyBusinessNumberType.CORPORATE_REGISTRATION,
+            businessNumber = "1101111234567",
+            companyType = CompanyType.STARTUP,
+            employeeCountRange = CompanyEmployeeCountRange.RANGE_1000_PLUS,
+            industry = "IT·정보통신",
+            address = "서울특별시 마포구 양화로 1",
+            homepageUrl = "https://www.letscareer.co.kr",
+            managerTitle = "인사팀 매니저",
+            managerDuty = CompanyManagerDuty.HR,
+            managerPhone = "010-1234-5678",
+            recommender = "홍길동",
         )
         private val SIGN_IN_COMMAND = CompanySignInCommand(
             email = "company@example.com",

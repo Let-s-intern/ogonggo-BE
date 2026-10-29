@@ -3,6 +3,10 @@ package com.ogonggo.core.user.implement
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -10,6 +14,7 @@ import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.CompanyProfileAppendDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileDto
 import com.ogonggo.core.user.implement.dto.CompanyBasicInfoUpdateDto
 import com.ogonggo.core.user.implement.dto.CompanyLogoDto
 import com.ogonggo.core.user.implement.dto.CompanyManagerInfoUpdateDto
@@ -299,6 +304,56 @@ internal class UserImplementPersistenceTest @Autowired constructor(
         assertNull(account.letsCareerUserId)
         assertEquals("company@example.com", account.email)
         assertNotNull(companyProfileRepository.findByUserId(account.userId))
+    }
+
+    @Test
+    fun `가입할 때 받은 기업·담당자 정보를 저장하고 그대로 읽는다`() {
+        // given
+        val account = userAppender.appendCompany(
+            CompanyAccountAppendDto(email = "company@example.com", encodedPassword = "encoded-password", joinedAt = NOW),
+        )
+
+        // when
+        companyProfileAppender.append(
+            CompanyProfileAppendDto(
+                userId = account.userId,
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+                managerPhone = "010-1234-5678",
+                businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+                businessNumber = "1234567890",
+                companyType = CompanyType.STARTUP,
+                employeeCountRange = CompanyEmployeeCountRange.RANGE_10_49,
+                industry = "IT·정보통신",
+                address = "서울특별시 마포구 양화로 1",
+                homepageUrl = "https://www.letscareer.co.kr",
+                managerTitle = "인사팀 매니저",
+                managerDuty = CompanyManagerDuty.HR,
+                recommender = "홍길동",
+            ),
+        )
+
+        // then
+        assertEquals(
+            CompanyProfileDto(
+                organizationName = "렛츠커리어",
+                managerName = "김담당",
+                logoUrl = null,
+                managerPhone = "010-1234-5678",
+                notificationEmail = null,
+                businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+                businessNumber = "1234567890",
+                companyType = CompanyType.STARTUP,
+                employeeCountRange = CompanyEmployeeCountRange.RANGE_10_49,
+                industry = "IT·정보통신",
+                address = "서울특별시 마포구 양화로 1",
+                homepageUrl = "https://www.letscareer.co.kr",
+                managerTitle = "인사팀 매니저",
+                managerDuty = CompanyManagerDuty.HR,
+                recommender = "홍길동",
+            ),
+            companyProfileReader.read(account.userId),
+        )
     }
 
     @Test

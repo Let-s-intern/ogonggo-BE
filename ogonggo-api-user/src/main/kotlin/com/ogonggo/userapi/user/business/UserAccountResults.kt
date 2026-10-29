@@ -1,5 +1,9 @@
 package com.ogonggo.userapi.user.business
 
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -47,6 +51,16 @@ data class MyAccountResult(
                     logoUrl = it.logoUrl,
                     managerPhone = it.managerPhone,
                     notificationEmail = it.notificationEmail,
+                    businessNumberType = it.businessNumberType,
+                    businessNumber = it.businessNumber,
+                    companyType = it.companyType,
+                    employeeCountRange = it.employeeCountRange,
+                    industry = it.industry,
+                    address = it.address,
+                    homepageUrl = it.homepageUrl,
+                    managerTitle = it.managerTitle,
+                    managerDuty = it.managerDuty,
+                    recommender = it.recommender,
                 )
             },
         )
@@ -94,6 +108,7 @@ data class MyProfileResult(
     }
 }
 
+/** 가입할 때 받는 기업·담당자 정보는 그 값을 받기 전에 가입한 회원이면 null이다. */
 data class MyCompanyProfileResult(
     val organizationName: String,
     val managerName: String,
@@ -101,6 +116,16 @@ data class MyCompanyProfileResult(
     val logoUrl: String?,
     val managerPhone: String?,
     val notificationEmail: String?,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
+    val companyType: CompanyType? = null,
+    val employeeCountRange: CompanyEmployeeCountRange? = null,
+    val industry: String? = null,
+    val address: String? = null,
+    val homepageUrl: String? = null,
+    val managerTitle: String? = null,
+    val managerDuty: CompanyManagerDuty? = null,
+    val recommender: String? = null,
 )
 
 /** 기업 회원이 고치는 기본 정보다. 로고는 업로드한 이미지 식별자로 받으며 null이면 지운다. */

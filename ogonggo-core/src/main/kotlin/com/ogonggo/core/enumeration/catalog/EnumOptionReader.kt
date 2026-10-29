@@ -58,6 +58,10 @@ import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewTargetType
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
@@ -150,6 +154,11 @@ class EnumOptionReader {
             enumOptionsOf<UserInflowSource>(),
             enumOptionsOf<UserGrade>(),
             enumOptionsOf<LetsCareerAuthProvider>(),
+            // 기업 회원 가입 정보
+            enumOptionsOf<CompanyBusinessNumberType>(),
+            enumOptionsOf<CompanyType>(),
+            enumOptionsOf<CompanyEmployeeCountRange>(),
+            enumOptionsOf<CompanyManagerDuty>(),
             // 광고 문의
             enumOptionsOf<AdvertisementInquiryType>(),
             enumOptionsOf<AdvertisementInquiryPromotionChannel>(),

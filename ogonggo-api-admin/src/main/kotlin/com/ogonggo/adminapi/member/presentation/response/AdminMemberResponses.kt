@@ -1,5 +1,9 @@
 package com.ogonggo.adminapi.member.presentation.response
 
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserInflowSource
 import com.ogonggo.core.user.domain.UserRole
@@ -84,6 +88,22 @@ data class AdminCompanyMemberResponse(
     @Schema(description = "로그인 이메일과 따로 받는 정보 수신용 이메일")
     val notificationEmail: String?,
     val logoUrl: String?,
+    @Schema(description = "사업자 번호 종류. 해외 기업이면 OVERSEAS입니다. 아래 가입 정보는 그 값을 받기 전에 가입한 회원이면 모두 null입니다.")
+    val businessNumberType: CompanyBusinessNumberType?,
+    @Schema(description = "하이픈 없는 사업자등록번호(10자리) 또는 법인등록번호(13자리). 진위는 확인하지 않았습니다.")
+    val businessNumber: String?,
+    val companyType: CompanyType?,
+    val employeeCountRange: CompanyEmployeeCountRange?,
+    @Schema(description = "산업")
+    val industry: String?,
+    val address: String?,
+    val homepageUrl: String?,
+    @Schema(description = "담당자 직책")
+    val managerTitle: String?,
+    @Schema(description = "담당 업무")
+    val managerDuty: CompanyManagerDuty?,
+    @Schema(description = "추천인")
+    val recommender: String?,
 ) {
     companion object {
         internal fun from(member: CompanyMemberDto): AdminCompanyMemberResponse {
@@ -99,6 +119,16 @@ data class AdminCompanyMemberResponse(
                 managerPhone = companyProfile?.managerPhone,
                 notificationEmail = companyProfile?.notificationEmail,
                 logoUrl = companyProfile?.logoUrl,
+                businessNumberType = companyProfile?.businessNumberType,
+                businessNumber = companyProfile?.businessNumber,
+                companyType = companyProfile?.companyType,
+                employeeCountRange = companyProfile?.employeeCountRange,
+                industry = companyProfile?.industry,
+                address = companyProfile?.address,
+                homepageUrl = companyProfile?.homepageUrl,
+                managerTitle = companyProfile?.managerTitle,
+                managerDuty = companyProfile?.managerDuty,
+                recommender = companyProfile?.recommender,
             )
         }
     }

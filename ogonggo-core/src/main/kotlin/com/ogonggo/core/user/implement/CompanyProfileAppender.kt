@@ -20,6 +20,17 @@ class CompanyProfileAppender internal constructor(
                     userId = command.userId,
                     organizationName = command.organizationName,
                     managerName = command.managerName,
+                    managerPhone = command.managerPhone,
+                    businessNumberType = command.businessNumberType,
+                    businessNumber = command.businessNumber,
+                    companyType = command.companyType,
+                    employeeCountRange = command.employeeCountRange,
+                    industry = command.industry,
+                    address = command.address,
+                    homepageUrl = command.homepageUrl,
+                    managerTitle = command.managerTitle,
+                    managerDuty = command.managerDuty,
+                    recommender = command.recommender,
                 ),
             )
         } catch (exception: DataIntegrityViolationException) {

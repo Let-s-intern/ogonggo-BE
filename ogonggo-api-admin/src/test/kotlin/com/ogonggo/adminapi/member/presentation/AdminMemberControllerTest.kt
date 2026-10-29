@@ -5,10 +5,16 @@ import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companio
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.adminapi.member.business.AdminMemberService
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
+import com.ogonggo.core.user.domain.CompanyManagerDuty
+import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.user.implement.dto.CompanyMemberDto
 import com.ogonggo.core.user.implement.dto.CompanyMemberPageDto
+import com.ogonggo.core.user.implement.dto.CompanyProfileDto
 import com.ogonggo.core.user.implement.dto.GeneralMemberDto
 import com.ogonggo.core.user.implement.dto.GeneralMemberPageDto
 import com.ogonggo.core.user.implement.dto.UserProfileDto
@@ -92,6 +98,36 @@ class AdminMemberControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(20))
+    }
+
+    @Test
+    fun `비즈니스 회원 목록은 가입 때 받은 기업·담당자 정보를 펼쳐 준다`() {
+        // given
+        Mockito.`when`(adminMemberService.getCompanyMembers(UserManagementSearchCondition(), 0, 20)).thenReturn(
+            CompanyMemberPageDto(
+                members = listOf(companyMember()),
+                page = 0,
+                size = 20,
+                totalElements = 1,
+                totalPages = 1,
+            ),
+        )
+
+        // when & then
+        mockMvc.perform(admin(get("/api/v1/admin/company-members")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].organizationName").value("렛츠커리어"))
+            .andExpect(jsonPath("$.data.items[0].managerPhone").value("010-1234-5678"))
+            .andExpect(jsonPath("$.data.items[0].businessNumberType").value("CORPORATE_REGISTRATION"))
+            .andExpect(jsonPath("$.data.items[0].businessNumber").value("1101111234567"))
+            .andExpect(jsonPath("$.data.items[0].companyType").value("PUBLIC"))
+            .andExpect(jsonPath("$.data.items[0].employeeCountRange").value("RANGE_300_999"))
+            .andExpect(jsonPath("$.data.items[0].industry").value("공공·행정"))
+            .andExpect(jsonPath("$.data.items[0].address").value("세종특별자치시 도움6로 11"))
+            .andExpect(jsonPath("$.data.items[0].homepageUrl").value("https://www.example.go.kr"))
+            .andExpect(jsonPath("$.data.items[0].managerTitle").value("채용 담당"))
+            .andExpect(jsonPath("$.data.items[0].managerDuty").value("HR"))
+            .andExpect(jsonPath("$.data.items[0].recommender").value("홍길동"))
     }
 
     @Test
@@ -210,6 +246,31 @@ class AdminMemberControllerTest @Autowired constructor(
             wishIndustry = null,
             wishEmploymentType = null,
             wishCompany = null,
+        ),
+    )
+
+    private fun companyMember(): CompanyMemberDto = CompanyMemberDto(
+        userId = USER_ID,
+        email = "company@example.com",
+        status = UserStatus.ACTIVE,
+        joinedAt = NOW,
+        withdrawnAt = null,
+        companyProfile = CompanyProfileDto(
+            organizationName = "렛츠커리어",
+            managerName = "김담당",
+            logoUrl = null,
+            managerPhone = "010-1234-5678",
+            notificationEmail = null,
+            businessNumberType = CompanyBusinessNumberType.CORPORATE_REGISTRATION,
+            businessNumber = "1101111234567",
+            companyType = CompanyType.PUBLIC,
+            employeeCountRange = CompanyEmployeeCountRange.RANGE_300_999,
+            industry = "공공·행정",
+            address = "세종특별자치시 도움6로 11",
+            homepageUrl = "https://www.example.go.kr",
+            managerTitle = "채용 담당",
+            managerDuty = CompanyManagerDuty.HR,
+            recommender = "홍길동",
         ),
     )
 
