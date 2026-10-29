@@ -186,6 +186,15 @@ class AiJobServiceTest {
     }
 
     @Test
+    fun `크롤링 공고를 마감한다`() {
+        Mockito.`when`(jobReader.readCrawledForUpdate(JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
+
+        service.close(JOB_ID)
+
+        assertEquals(listOf("close"), managerCalls)
+    }
+
+    @Test
     fun `수집 공고를 숨긴다`() {
         Mockito.`when`(jobReader.readCollectedForUpdate(JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
 

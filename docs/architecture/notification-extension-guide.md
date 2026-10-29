@@ -462,6 +462,23 @@ flowchart LR
 억제·거절·전송 결과는 `ogonggo.notification.alerts` 카운터로 기록한다.
 프로세스 종료·전체 감시기 정지·Slack 경로 단절 감지는 외부 감시가 필요하다.
 
+### Slack 웹훅 설정
+
+사용자 API의 Slack 웹훅은 모두 `ogonggo.slack` 아래에 알림 이름별로 한 줄씩 둔다(`SlackProperties`).
+도메인 설정(`ogonggo.<도메인>.slack` 등)에 따로 두지 않는다. 연결·응답 타임아웃과 HTTP 클라이언트(`slackRestClient`)는 함께 쓴다.
+
+```yaml
+ogonggo:
+  slack:
+    company-posting: https://hooks.slack.com/services/...       # 기업회원 공고·부트캠프 등록
+    advertisement-inquiry: https://hooks.slack.com/services/... # 광고 문의 접수
+    notification-alerts: https://hooks.slack.com/services/...   # 알림 운영 경고(OGONGGO_NOTIFICATION_ALERT_WEBHOOK)
+    connect-timeout: 2s
+    read-timeout: 5s
+```
+
+새 Slack 알림은 `SlackProperties`에 필드를 하나 붙이고 `toString`에는 설정 여부만 남긴다. 웹훅 주소가 비어 있을 때 건너뛸지 실패로 볼지는 알림마다 정한다.
+
 ## 패키지 컨벤션
 
 - 도메인 대상 조회·projection: 대상 도메인의 core 패키지 (채용공고 리마인드는 `ogonggo-core/job`)

@@ -38,7 +38,7 @@ interface AdminGeneralMemberApi {
             탈퇴·정지한 회원도 포함하며 status로 거를 수 있습니다. role로 USER·MENTOR·ADMIN 중 하나만 거를 수 있습니다.
             inflowSource로 렛츠커리어 기존 회원(LETSCAREER)과 오공고 신규 유입(OGONGGO)을 거를 수 있습니다.
 
-            keyword는 닉네임이나 이메일에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
+            keyword는 이름, 닉네임, 이메일에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
             joinedFrom·joinedTo는 가입일(YYYY-MM-DD) 범위이며 두 날짜를 모두 포함합니다.
             필터는 모두 AND로 묶이고 값을 보내지 않거나 빈 값을 보내면 그 조건을 적용하지 않습니다.
         """,
@@ -56,7 +56,7 @@ interface AdminGeneralMemberApi {
     fun getGeneralMembers(
         @Min(1) page: Int,
         @Min(1) @Max(100) size: Int,
-        @Parameter(description = "닉네임이나 이메일에서 찾을 검색어") @Size(max = 100) keyword: String?,
+        @Parameter(description = "이름, 닉네임, 이메일에서 찾을 검색어") @Size(max = 100) keyword: String?,
         status: UserStatus?,
         @Parameter(description = "가입일 시작(포함)") joinedFrom: LocalDate?,
         @Parameter(description = "가입일 끝(포함)") joinedTo: LocalDate?,

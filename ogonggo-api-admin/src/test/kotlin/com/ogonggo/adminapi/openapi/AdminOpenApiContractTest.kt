@@ -221,6 +221,24 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `광고 문의 목록의 처리 상태 필터는 여러 값을 받는 배열이다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val status = document.at("/paths/~1api~1v1~1admin~1advertisement-inquiries/get/parameters")
+            .first { it["name"].asText() == "status" }
+
+        // then
+        assertEquals("array", status.at("/schema/type").asText())
+        assertEquals(
+            listOf("RECEIVED", "CONTACTED", "EXECUTED", "REJECTED"),
+            status.at("/schema/items/enum").map { it.asText() },
+        )
+        assertFalse(status.at("/required").asBoolean())
+    }
+
+    @Test
     fun `비즈니스 회원 목록은 가입 때 받은 기업·담당자 정보를 응답에 싣는다`() {
         // given
         val document = openApiDocument()

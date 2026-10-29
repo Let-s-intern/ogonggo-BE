@@ -106,7 +106,7 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
 
         assertEquals(listOf(companyAlert), ids(AdvertisementInquirySearchCondition(inquiryType = AdvertisementInquiryType.LAUNCH_ALERT)))
         assertEquals(listOf(rejected, coldmailGuest), ids(AdvertisementInquirySearchCondition(campaignCode = CAMPAIGN)))
-        assertEquals(listOf(rejected), ids(AdvertisementInquirySearchCondition(status = AdvertisementInquiryStatus.REJECTED)))
+        assertEquals(listOf(rejected), ids(AdvertisementInquirySearchCondition(statuses = setOf(AdvertisementInquiryStatus.REJECTED))))
         assertEquals(listOf(companyAlert), ids(AdvertisementInquirySearchCondition(memberType = AdvertisementInquiryMemberType.COMPANY)))
         assertEquals(
             listOf(coldmailGuest),
@@ -122,6 +122,38 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
                 ),
             ),
         )
+    }
+
+    @Test
+    fun `처리 상태를 여러 개 고르면 그중 하나인 문의를 거르고 비어 있으면 전체를 준다`() {
+        // given
+        val received = append()
+        val contacted = append()
+        val executed = append()
+        val rejected = append()
+        changeStatus(contacted, AdvertisementInquiryStatus.CONTACTED)
+        changeStatus(executed, AdvertisementInquiryStatus.EXECUTED)
+        changeStatus(rejected, AdvertisementInquiryStatus.REJECTED)
+        val reader = reader(at(2026, 10, 28, 12, 0))
+
+        // when
+        val notRejected = reader.readPage(
+            AdvertisementInquirySearchCondition(
+                statuses = setOf(
+                    AdvertisementInquiryStatus.RECEIVED,
+                    AdvertisementInquiryStatus.CONTACTED,
+                    AdvertisementInquiryStatus.EXECUTED,
+                ),
+            ),
+            0,
+            20,
+        )
+        val all = reader.readPage(AdvertisementInquirySearchCondition(statuses = emptySet()), 0, 20)
+
+        // then
+        assertEquals(listOf(executed, contacted, received), notRejected.advertisementInquiries.map { it.id })
+        assertEquals(3, notRejected.totalElements)
+        assertEquals(listOf(rejected, executed, contacted, received), all.advertisementInquiries.map { it.id })
     }
 
     @Test
@@ -149,14 +181,34 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         // given
         append(createdAt = at(2026, 10, 26, 23, 59))
         append(createdAt = at(2026, 10, 27, 0, 0))
-        val rejected = append(createdAt = at(2026, 10, 27, 9, 30))
-        repository.findById(rejected).get().changeStatus(AdvertisementInquiryStatus.REJECTED)
-        entityManager.flush()
+        append(createdAt = at(2026, 10, 27, 9, 30))
 
-        // when & then: 23:59에 만든 문의는 빠지고 00:00에 만든 문의는 들어간다. 처리 상태와 무관하다.
+        // when & then: 23:59에 만든 문의는 빠지고 00:00에 만든 문의는 들어간다.
         assertEquals(2, reader(at(2026, 10, 27, 10, 0)).countToday())
         // 하루 전 23:59의 시점에서 보면 그날의 문의 하나뿐이다.
         assertEquals(1, reader(at(2026, 10, 26, 23, 59, 30)).countToday())
+    }
+
+    @Test
+    fun `오늘 건수는 반려한 문의를 빼고 반려에서 되돌리면 다시 센다`() {
+        // given
+        val received = append(createdAt = at(2026, 10, 27, 9, 0))
+        val contacted = append(createdAt = at(2026, 10, 27, 9, 10))
+        val executed = append(createdAt = at(2026, 10, 27, 9, 20))
+        val rejected = append(createdAt = at(2026, 10, 27, 9, 30))
+        changeStatus(contacted, AdvertisementInquiryStatus.CONTACTED)
+        changeStatus(executed, AdvertisementInquiryStatus.EXECUTED)
+        changeStatus(rejected, AdvertisementInquiryStatus.REJECTED)
+        val reader = reader(at(2026, 10, 27, 10, 0))
+
+        // when & then: 접수·연락함·집행 완료는 세고 반려만 뺀다.
+        assertEquals(3, reader.countToday())
+
+        changeStatus(received, AdvertisementInquiryStatus.REJECTED)
+        assertEquals(2, reader.countToday())
+
+        changeStatus(rejected, AdvertisementInquiryStatus.RECEIVED)
+        assertEquals(3, reader.countToday())
     }
 
     @Test
@@ -181,7 +233,12 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         assertEquals(AdvertisementInquiryErrorCode.ADVERTISEMENT_INQUIRY_NOT_FOUND, exception.errorCode)
     }
 
-    private fun reader(now: LocalDateTime) = AdvertisementInquiryReader(
+    private fun changeStatus(id: Long, status: AdvertisementInquiryStatus) {
+        repository.findById(id).get().changeStatus(status)
+        entityManager.flush()
+    }
+
+    private fun reader(now: LocalDateTime) =AdvertisementInquiryReader(
         repository,
         queryRepository,
         Clock.fixed(now.atZone(SEOUL).toInstant(), SEOUL),

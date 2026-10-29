@@ -31,7 +31,7 @@ interface AdminCompanyMemberApi {
             기업용 회원가입으로 만든 비즈니스(기업) 회원을 최근 가입 순으로 반환합니다.
             탈퇴·정지한 회원도 포함하며 status로 거를 수 있습니다.
 
-            keyword는 회사명이나 담당자 이름에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
+            keyword는 회사명, 담당자 이름, 계정 이메일에서 대소문자를 가리지 않고 부분 일치로 찾습니다.
             joinedFrom·joinedTo는 가입일(YYYY-MM-DD) 범위이며 두 날짜를 모두 포함합니다.
             필터는 모두 AND로 묶이고 값을 보내지 않거나 빈 값을 보내면 그 조건을 적용하지 않습니다.
         """,
@@ -49,7 +49,7 @@ interface AdminCompanyMemberApi {
     fun getCompanyMembers(
         @Min(1) page: Int,
         @Min(1) @Max(100) size: Int,
-        @Parameter(description = "회사명이나 담당자 이름에서 찾을 검색어") @Size(max = 100) keyword: String?,
+        @Parameter(description = "회사명, 담당자 이름, 계정 이메일에서 찾을 검색어") @Size(max = 100) keyword: String?,
         status: UserStatus?,
         @Parameter(description = "가입일 시작(포함)") joinedFrom: LocalDate?,
         @Parameter(description = "가입일 끝(포함)") joinedTo: LocalDate?,

@@ -39,7 +39,7 @@ class AdminAdvertisementInquiryController(
         @RequestParam(name = "size", defaultValue = "20") size: Int,
         @RequestParam(name = "inquiryType", required = false) inquiryType: AdvertisementInquiryType?,
         @RequestParam(name = "campaignCode", required = false) campaignCode: String?,
-        @RequestParam(name = "status", required = false) status: AdvertisementInquiryStatus?,
+        @RequestParam(name = "status", required = false) statuses: List<AdvertisementInquiryStatus>?,
         @RequestParam(name = "memberType", required = false) memberType: AdvertisementInquiryMemberType?,
         @RequestParam(name = "inflowChannel", required = false) inflowChannel: AdvertisementInquiryInflowChannel?,
         @RequestParam(name = "companyNameSource", required = false) companyNameSource: AdvertisementInquiryCompanyNameSource?,
@@ -55,7 +55,7 @@ class AdminAdvertisementInquiryController(
             condition = AdvertisementInquirySearchCondition(
                 inquiryType = inquiryType,
                 campaignCode = campaignCode?.takeIf { it.isNotBlank() },
-                status = status,
+                statuses = statuses.orEmpty().toSet(),
                 memberType = memberType,
                 inflowChannel = inflowChannel,
                 companyNameSource = companyNameSource,
