@@ -59,8 +59,21 @@ class AdvertisementInquiryMailSenderTest {
         assertTrue(body.contains("지금 바로 무료 홍보 할래요"))
         assertTrue(body.contains("오픈채팅방 · 마케팅"))
         assertTrue(body.contains("010-1234-5678"))
+        assertTrue(body.contains("출시 기념 무료 홍보 신청이 접수되었습니다"))
         // 문의 본문은 다시 싣지 않는다. 메일함에 남는 사본이라 짧게 유지한다.
         assertTrue(!body.contains(PROMOTION_ANSWER))
+    }
+
+    @Test
+    fun `신청 유형에 맞는 진행 안내를 담는다`() {
+        val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
+        Mockito.doNothing().`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
+
+        sender.sendConfirmation(NOTIFICATION.copy(inquiryType = AdvertisementInquiryType.LAUNCH_ALERT))
+
+        val body = textOf(capturedMessage())
+        assertTrue(body.contains("출시 알림 신청이 접수되었습니다"))
+        assertTrue(!body.contains("무료 홍보 신청이 접수되었습니다"))
     }
 
     @Test

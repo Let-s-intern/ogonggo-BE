@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisement.implement
 
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryNotification
 import com.ogonggo.userapi.config.UserAsyncConfiguration.Companion.ADVERTISEMENT_TASK_EXECUTOR
 import com.ogonggo.userapi.mail.OgonggoMailProperties
@@ -72,11 +73,20 @@ internal class AdvertisementInquiryMailSender(
         append("  신청 유형: ").append(notification.inquiryType.desc).append('\n')
         append("  희망 홍보 채널: ").append(notification.promotionChannel.desc).append('\n')
         append("  연락처: ").append(notification.phoneNumber).append("\n\n")
+        append(guideOf(notification.inquiryType)).append("\n\n")
         append("채용공고 홍보 상품 소개서를 첨부해 드립니다. 상품 구성과 집행 사례를 먼저 살펴봐 주세요.\n")
         append("담당자가 확인한 뒤 이 주소로 회신드리겠습니다.\n\n")
         append("감사합니다.\n")
         append("렛츠커리어 드림\n")
         append("official@letscareer.co.kr\n")
+    }
+
+    /** 소개서보다 먼저, 신청한 건이 어떻게 진행되는지 알린다. 무료 홍보 신청자가 유료 상품 안내만 받고 끝나지 않게 한다. */
+    private fun guideOf(inquiryType: AdvertisementInquiryType): String = when (inquiryType) {
+        AdvertisementInquiryType.FREE_PROMOTION ->
+            "출시 기념 무료 홍보 신청이 접수되었습니다. 담당자가 신청 내용을 확인한 뒤 게시 일정과 필요한 자료를 안내드리겠습니다."
+        AdvertisementInquiryType.LAUNCH_ALERT ->
+            "출시 알림 신청이 접수되었습니다. 비즈 오공고가 열리면 이 주소로 가장 먼저 알려드리겠습니다."
     }
 
     companion object {
