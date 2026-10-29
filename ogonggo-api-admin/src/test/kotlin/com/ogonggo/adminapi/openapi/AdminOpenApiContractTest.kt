@@ -220,6 +220,24 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertFalse(response.has("recipientAddress"))
     }
 
+    @Test
+    fun `광고 문의 목록의 처리 상태 필터는 여러 값을 받는 배열이다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val status = document.at("/paths/~1api~1v1~1admin~1advertisement-inquiries/get/parameters")
+            .first { it["name"].asText() == "status" }
+
+        // then
+        assertEquals("array", status.at("/schema/type").asText())
+        assertEquals(
+            listOf("RECEIVED", "CONTACTED", "EXECUTED", "REJECTED"),
+            status.at("/schema/items/enum").map { it.asText() },
+        )
+        assertFalse(status.at("/required").asBoolean())
+    }
+
     private fun openApiDocument() = objectMapper.readTree(
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)

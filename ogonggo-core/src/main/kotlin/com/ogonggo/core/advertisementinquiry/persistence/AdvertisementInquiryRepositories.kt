@@ -2,6 +2,7 @@ package com.ogonggo.core.advertisementinquiry.persistence
 
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.QAdvertisementInquiry.advertisementInquiry
 import com.ogonggo.core.jpa.pageOf
 import com.ogonggo.core.jpa.paged
@@ -16,7 +17,11 @@ import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
 internal interface AdvertisementInquiryJpaRepository : JpaRepository<AdvertisementInquiry, Long> {
-    fun countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from: LocalDateTime, to: LocalDateTime): Long
+    fun countByStatusNotAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+        status: AdvertisementInquiryStatus,
+        from: LocalDateTime,
+        to: LocalDateTime,
+    ): Long
 
     /** 상태와 메모를 동시에 바꿔도 한쪽 변경이 다른 쪽의 낡은 값으로 덮이지 않도록 잠근다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -34,7 +39,7 @@ internal class AdvertisementInquiryQueryRepository(
         val predicates = arrayOf(
             condition.inquiryType?.let(advertisementInquiry.inquiryType::eq),
             condition.campaignCode?.takeIf { it.isNotBlank() }?.let(advertisementInquiry.campaignCode::eq),
-            condition.status?.let(advertisementInquiry.status::eq),
+            condition.statuses.takeIf { it.isNotEmpty() }?.let { advertisementInquiry.status.`in`(it) },
             condition.memberType?.let(advertisementInquiry.memberType::eq),
             condition.inflowChannel?.let(advertisementInquiry.inflowChannel::eq),
             condition.companyNameSource?.let(advertisementInquiry.companyNameSource::eq),

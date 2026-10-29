@@ -91,7 +91,7 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
         val condition = AdvertisementInquirySearchCondition(
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             campaignCode = "launch_free_promo",
-            status = AdvertisementInquiryStatus.CONTACTED,
+            statuses = setOf(AdvertisementInquiryStatus.CONTACTED),
             memberType = AdvertisementInquiryMemberType.GUEST,
             inflowChannel = AdvertisementInquiryInflowChannel.DIRECT,
             companyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
@@ -137,9 +137,30 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `처리 상태는 여러 번 보내 여러 개를 고른다`() {
+        // given
+        val condition = AdvertisementInquirySearchCondition(
+            statuses = setOf(
+                AdvertisementInquiryStatus.RECEIVED,
+                AdvertisementInquiryStatus.CONTACTED,
+                AdvertisementInquiryStatus.EXECUTED,
+            ),
+        )
+        Mockito.`when`(adminAdvertisementInquiryService.getAdvertisementInquiries(condition, 0, 20))
+            .thenReturn(AdminAdvertisementInquiryPageResult(emptyList(), page = 0, size = 20, totalElements = 7, totalPages = 1))
+
+        // when & then
+        mockMvc.perform(get(PATH).with(admin()).param("status", "RECEIVED", "CONTACTED", "EXECUTED"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.pageInfo.totalElements").value(7))
+    }
+
+    @Test
     fun `정의되지 않은 필터 값과 거꾸로 된 기간, 페이지 범위는 400으로 응답한다`() {
         listOf(
             listOf("memberType" to "VIP") to null,
+            listOf("status" to "DONE") to null,
+            listOf("status" to "RECEIVED", "status" to "DONE") to null,
             listOf("inflowChannel" to "TWITTER") to null,
             listOf("companyNameSource" to "AUTO") to null,
             listOf("createdFrom" to "2026-10-28", "createdTo" to "2026-10-27") to "createdFrom",
