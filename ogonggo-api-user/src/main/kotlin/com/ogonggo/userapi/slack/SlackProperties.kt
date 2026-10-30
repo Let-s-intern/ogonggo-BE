@@ -18,12 +18,17 @@ data class SlackProperties(
     val advertisementInquiry: String = "",
     /** 알림 시스템 운영 경고 전용 웹훅. 사용자 알림 발송 대기열을 거치지 않는다. */
     val notificationAlerts: String = "",
+    /** 알림에 붙이는 어드민 바로가기 링크의 앞부분. dev에서 보낼 때는 dev 어드민을 가리키게 바꾼다. */
+    val adminBaseUrl: String = "https://admin.ogonggo.co.kr",
     val connectTimeout: Duration = Duration.ofSeconds(2),
     val readTimeout: Duration = Duration.ofSeconds(5),
 ) {
     override fun toString(): String = "SlackProperties(companyPostingConfigured=${companyPosting.isNotBlank()}, " +
         "advertisementInquiryConfigured=${advertisementInquiry.isNotBlank()}, " +
-        "notificationAlertsConfigured=${notificationAlerts.isNotBlank()}, connectTimeout=$connectTimeout, readTimeout=$readTimeout)"
+        "notificationAlertsConfigured=${notificationAlerts.isNotBlank()}, adminBaseUrl=$adminBaseUrl, connectTimeout=$connectTimeout, readTimeout=$readTimeout)"
 }
+
+/** 끝의 `/`를 떼고 [path]를 붙인다. 설정값 끝에 `/`가 있어도 `//`가 생기지 않게 한다. */
+internal fun SlackProperties.adminUrl(path: String): String = adminBaseUrl.trimEnd('/') + path
 
 internal const val SLACK_REST_CLIENT = "slackRestClient"
