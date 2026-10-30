@@ -87,8 +87,5 @@ private fun AdvertisementInquiryNotification.inflowLabel(): String {
     return (listOf(name) + details).joinToString(" · ")
 }
 
-/**
- * 어드민 광고 문의 목록 경로다. 어드민에 문의 상세 화면이 없어 목록으로 보낸다.
- * 어드민이 문의 ID로 특정 건을 열 수 있게 되면 여기에 ID를 붙인다.
- */
+/** 어드민 광고 문의 목록 경로다. 문의는 목록에서 다른 건과 함께 처리하므로 목록으로 보낸다. */
 private const val ADMIN_INQUIRY_LIST_PATH = "/business/ad-inquiries"

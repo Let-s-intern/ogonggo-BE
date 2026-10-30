@@ -40,7 +40,6 @@ class AdvertisementSlackNotifierTest {
                 jsonPath("$.blocks[1].fields[5].text").value("*희망 홍보 채널*\n오픈채팅방 · 마케팅"),
             )
             .andExpect(jsonPath("$.blocks[2].text.text").value("*현재 홍보 채널 · 어려운 점*\n$PROMOTION_ANSWER"))
-            // 어드민에 문의 상세 화면이 없어 목록으로 보낸다.
             .andExpect(
                 jsonPath("$.blocks[4].text.text").value("<https://admin.ogonggo.co.kr/business/ad-inquiries|어드민에서 보기>"),
             )

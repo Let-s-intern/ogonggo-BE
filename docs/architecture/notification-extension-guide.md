@@ -481,8 +481,8 @@ ogonggo:
 새 Slack 알림은 `SlackProperties`에 필드를 하나 붙이고 `toString`에는 설정 여부만 남긴다. 웹훅 주소가 비어 있을 때 건너뛸지 실패로 볼지는 알림마다 정한다.
 
 알림 끝에는 처리할 어드민 화면으로 가는 링크를 붙인다(`SlackText.link`, 주소는 `SlackProperties.adminUrl(경로)`).
-경로는 어드민 프론트(ogonggo-FE `apps/admin`)의 라우트와 맞춘다. 공고·부트캠프 등록은 상세 화면(`/content/jobs/{id}`, `/content/bootcamps/{id}`)으로,
-광고 문의는 어드민에 상세 화면이 없어 목록(`/business/ad-inquiries`)으로 보낸다.
+경로는 어드민 프론트(ogonggo-FE `apps/admin`)의 라우트와 맞춘다. 알림 받은 건은 목록에서 다른 대기 건과 함께 처리하므로 목록으로 보낸다.
+공고·부트캠프 등록은 검수 목록(`/ads/review`), 광고 문의는 문의 목록(`/business/ad-inquiries`)이다.
 
 ## 패키지 컨벤션
 
