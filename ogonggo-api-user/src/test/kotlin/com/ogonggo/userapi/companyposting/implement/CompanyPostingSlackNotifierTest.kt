@@ -36,6 +36,9 @@ class CompanyPostingSlackNotifierTest {
             // `>`는 이스케이프되어 나가고 슬랙 화면에는 `>`로 보인다.
             .andExpect(jsonPath("$.blocks[1].fields[4].text").value("*직무*\nIT·개발 &gt; 백엔드"))
             .andExpect(jsonPath("$.blocks[2].text.text").value("*제목*\n백엔드 개발자"))
+            .andExpect(
+                jsonPath("$.blocks[3].text.text").value("<https://admin.ogonggo.co.kr/ads/review|어드민에서 보기>"),
+            )
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(EVENT)
@@ -52,6 +55,9 @@ class CompanyPostingSlackNotifierTest {
         server.expect(requestTo(WEBHOOK_URL))
             .andExpect(jsonPath("$.text").value("🆕 비즈니스 부트캠프 등록 - 오공고 · 백엔드 개발자"))
             .andExpect(jsonPath("$.blocks[1].fields[4].text").value("*모집 마감*\n2026-11-30 23:59"))
+            .andExpect(
+                jsonPath("$.blocks[3].text.text").value("<https://admin.ogonggo.co.kr/ads/review|어드민에서 보기>"),
+            )
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(
@@ -62,6 +68,25 @@ class CompanyPostingSlackNotifierTest {
                 recruitmentEndAt = LocalDateTime.of(2026, 11, 30, 23, 59),
             ),
         )
+
+        server.verify()
+    }
+
+    @Test
+    fun `어드민 주소 끝에 슬래시가 있어도 링크가 겹 슬래시가 되지 않는다`() {
+        // dev에서 어드민 주소를 바꿔 넣을 때 끝에 `/`를 붙여도 검수 목록으로 가야 한다.
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val properties = properties(WEBHOOK_URL).copy(adminBaseUrl = "https://dev-admin.ogonggo.co.kr/")
+        val notifier = CompanyPostingSlackNotifier(builder.build(), properties)
+
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(
+                jsonPath("$.blocks[3].text.text").value("<https://dev-admin.ogonggo.co.kr/ads/review|어드민에서 보기>"),
+            )
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        notifier.notify(EVENT)
 
         server.verify()
     }

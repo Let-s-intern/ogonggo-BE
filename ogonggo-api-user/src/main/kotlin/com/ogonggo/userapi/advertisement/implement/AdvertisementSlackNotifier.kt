@@ -7,6 +7,7 @@ import com.ogonggo.userapi.slack.SLACK_REST_CLIENT
 import com.ogonggo.userapi.slack.SlackMessage
 import com.ogonggo.userapi.slack.SlackProperties
 import com.ogonggo.userapi.slack.SlackText
+import com.ogonggo.userapi.slack.adminUrl
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -34,7 +35,7 @@ internal class AdvertisementSlackNotifier(
 
         slackRestClient.post()
             .uri(properties.advertisementInquiry)
-            .body(notification.toSlackMessage())
+            .body(notification.toSlackMessage(properties.adminUrl(ADMIN_INQUIRY_LIST_PATH)))
             .retrieve()
             .toBodilessEntity()
     }
@@ -44,7 +45,7 @@ internal class AdvertisementSlackNotifier(
  * 기업명과 신청 유형을 요약 줄에 함께 넣는다.
  * 영업 담당자가 열어보지 않고도 바로 연락할 건인지 구분할 수 있어야 한다.
  */
-private fun AdvertisementInquiryNotification.toSlackMessage(): SlackMessage =
+private fun AdvertisementInquiryNotification.toSlackMessage(adminUrl: String): SlackMessage =
     SlackMessage.withHeadline(
         headline = "📢 B2B 광고 문의 - ${SlackText.escape(companyName)} (${inquiryType.desc})",
         blocks = listOf(
@@ -62,6 +63,7 @@ private fun AdvertisementInquiryNotification.toSlackMessage(): SlackMessage =
             SlackBlock.text(SlackText.labeled("현재 홍보 채널 · 어려운 점", promotionAnswer)),
             // 영업이 슬랙만 보고도 어디서 온 신청인지 알 수 있게 한다.
             SlackBlock.text(SlackText.labeled("회원 구분 · 유입 경로", "${memberType.desc} · ${inflowLabel()}")),
+            SlackBlock.text(SlackText.link(adminUrl, "어드민에서 보기")),
         ),
     )
 
@@ -84,3 +86,6 @@ private fun AdvertisementInquiryNotification.inflowLabel(): String {
     )
     return (listOf(name) + details).joinToString(" · ")
 }
+
+/** 어드민 광고 문의 목록 경로다. 문의는 목록에서 다른 건과 함께 처리하므로 목록으로 보낸다. */
+private const val ADMIN_INQUIRY_LIST_PATH = "/business/ad-inquiries"

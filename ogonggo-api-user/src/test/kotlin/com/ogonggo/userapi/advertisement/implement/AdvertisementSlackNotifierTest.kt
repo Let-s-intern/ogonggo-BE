@@ -40,6 +40,9 @@ class AdvertisementSlackNotifierTest {
                 jsonPath("$.blocks[1].fields[5].text").value("*희망 홍보 채널*\n오픈채팅방 · 마케팅"),
             )
             .andExpect(jsonPath("$.blocks[2].text.text").value("*현재 홍보 채널 · 어려운 점*\n$PROMOTION_ANSWER"))
+            .andExpect(
+                jsonPath("$.blocks[4].text.text").value("<https://admin.ogonggo.co.kr/business/ad-inquiries|어드민에서 보기>"),
+            )
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         notifier.notify(NOTIFICATION)

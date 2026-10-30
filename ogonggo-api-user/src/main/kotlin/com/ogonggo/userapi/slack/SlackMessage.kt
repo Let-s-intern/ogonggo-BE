@@ -53,6 +53,9 @@ internal data class SlackText(
         fun labeled(label: String, value: String?): SlackText =
             SlackText(text = "*$label*\n${escape(value.orEmpty()).ifBlank { EMPTY }}")
 
+        /** 누르면 [url]로 가는 링크다. [url]은 서버가 만든 주소만 넣는다. 사용자 값이 들어가면 `|`·`>`로 링크가 깨진다. */
+        fun link(url: String, label: String): SlackText = SlackText(text = "<$url|${escape(label)}>")
+
         /**
          * 슬랙 mrkdwn은 `&`, `<`, `>`를 제어 문자로 읽는다.
          * 사용자가 넣은 값이 링크나 멘션 문법으로 해석되지 않도록 먼저 치환한다.

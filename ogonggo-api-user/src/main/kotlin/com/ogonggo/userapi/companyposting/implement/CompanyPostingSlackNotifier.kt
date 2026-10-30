@@ -8,6 +8,7 @@ import com.ogonggo.userapi.slack.SLACK_REST_CLIENT
 import com.ogonggo.userapi.slack.SlackMessage
 import com.ogonggo.userapi.slack.SlackProperties
 import com.ogonggo.userapi.slack.SlackText
+import com.ogonggo.userapi.slack.adminUrl
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.scheduling.annotation.Async
@@ -46,7 +47,7 @@ internal class CompanyPostingSlackNotifier(
         try {
             slackRestClient.post()
                 .uri(properties.companyPosting)
-                .body(event.toSlackMessage())
+                .body(event.toSlackMessage(properties.adminUrl(ADMIN_REVIEW_LIST_PATH)))
                 .retrieve()
                 .toBodilessEntity()
         } catch (exception: Exception) {
@@ -73,8 +74,14 @@ private val RECRUITMENT_END_AT_FORMAT: DateTimeFormatter = DateTimeFormatter.ofP
 private fun CompanyPostingRegisteredEvent.jobDescription(): String? =
     listOfNotNull(jobField?.desc, jobRole?.desc).joinToString(" > ").ifBlank { null }
 
+/**
+ * 어드민 검수 목록 경로다. 등록 건은 검수 목록에서 다른 대기 건과 함께 처리하므로 상세 대신 목록으로 보낸다.
+ * 어드민 프론트(ogonggo-FE apps/admin)의 라우트와 맞춘다.
+ */
+private const val ADMIN_REVIEW_LIST_PATH = "/ads/review"
+
 /** 요약 줄에 종류·기업명·제목을 넣어 채널 목록에서 바로 어떤 건인지 보이게 한다. */
-private fun CompanyPostingRegisteredEvent.toSlackMessage(): SlackMessage =
+private fun CompanyPostingRegisteredEvent.toSlackMessage(adminUrl: String): SlackMessage =
     SlackMessage.withHeadline(
         headline = "🆕 비즈니스 ${type.desc} 등록 - ${SlackText.escape(companyName)} · ${SlackText.escape(title)}",
         blocks = listOf(
@@ -92,5 +99,7 @@ private fun CompanyPostingRegisteredEvent.toSlackMessage(): SlackMessage =
                 ),
             ),
             SlackBlock.text(SlackText.labeled("제목", title)),
+            // 검수하러 바로 들어갈 수 있게 검수 목록으로 보낸다.
+            SlackBlock.text(SlackText.link(adminUrl, "어드민에서 보기")),
         ),
     )
