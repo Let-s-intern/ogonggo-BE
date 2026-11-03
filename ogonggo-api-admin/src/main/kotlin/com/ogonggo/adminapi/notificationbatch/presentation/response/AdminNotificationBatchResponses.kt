@@ -22,6 +22,8 @@ data class AdminNotificationBatchCreatedResponse(
     val advertisement: Boolean,
     @field:Schema(description = "광고성 발송에서 마케팅 수신에 동의하지 않아 뺀 활성 회원 수. 기업 회원은 동의 항목이 없어 여기에 센다.")
     val noMarketingConsentUserCount: Long,
+    val imageId: String?,
+    val imageUrl: String?,
 ) {
     companion object {
         fun from(batch: NotificationBatchDto) = AdminNotificationBatchCreatedResponse(
@@ -29,7 +31,7 @@ data class AdminNotificationBatchCreatedResponse(
             batch.skippedNoTokenUserCount, batch.skippedInactiveUserCount,
             if (batch.topicName == null) NotificationRecipientType.DIRECT else NotificationRecipientType.TOPIC,
             batch.skippedNoTokenUserCount,
-            batch.advertisement, batch.skippedNoMarketingConsentUserCount,
+            batch.advertisement, batch.skippedNoMarketingConsentUserCount, batch.imageId, batch.imageUrl,
         )
     }
 }
@@ -68,6 +70,8 @@ data class AdminNotificationBatchResultResponse(
     val targetJobRoles: List<String>?,
     val advertisement: Boolean,
     val noMarketingConsentUserCount: Long,
+    val imageId: String?,
+    val imageUrl: String?,
 ) {
     companion object {
         private val jsonMapper = jacksonObjectMapper()
@@ -84,6 +88,7 @@ data class AdminNotificationBatchResultResponse(
                 targetJobRoles = batch.targetJobRolesJson?.let { jsonMapper.readValue(it, Array<String>::class.java).toList() },
                 advertisement = batch.advertisement,
                 noMarketingConsentUserCount = batch.skippedNoMarketingConsentUserCount,
+                imageId = batch.imageId, imageUrl = batch.imageUrl,
                 batchId = batch.batchId, requestedByUserId = batch.requestedByUserId, createdAt = batch.createdAt,
                 targetType = batch.targetType, title = batch.title, body = batch.body,
                 targetUserCount = batch.targetUserCount, recipientUserCount = batch.recipientUserCount,

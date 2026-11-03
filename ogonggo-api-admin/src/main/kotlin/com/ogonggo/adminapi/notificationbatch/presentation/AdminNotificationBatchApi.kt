@@ -5,6 +5,9 @@ import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.notificationbatch.presentation.request.CreateNotificationBatchRequest
 import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchCreatedResponse
 import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchResultResponse
+import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchStatisticsResponse
+import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
+import java.time.LocalDateTime
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -31,12 +34,13 @@ interface AdminNotificationBatchApi {
         설정이 꺼진 대상과 USER_IDS는 활성 회원별 알림함·활성 토큰별 발송을 유지합니다. deliveryTargetType으로 DIRECT/TOPIC을 구분합니다.
         enqueuedCount는 발송 작업 수입니다. TOPIC에서는 1이며 회원별 성공 수가 아닙니다. noTokenUserCount와 회원 집계는 요청 시점 DB 참고 값입니다.
         skippedNoTokenUserCount는 호환용 별칭이며 새 클라이언트는 noTokenUserCount를 사용합니다. data.url은 http(s) URL이 필요합니다.
+        imageId는 관리자 푸시 이미지 업로드 API가 발급한 이미지 식별자입니다. 생략하면 이미지 없이 발송하며, 소유하지 않거나 사용 불가한 이미지는 400입니다.
         제목 100자·본문 1000자 원문을 보관하고 TOPIC 푸시는 본문 미리보기 최대 100자를 보냅니다. 시스템 식별자 포함 TOPIC payload는 2048바이트, DIRECT는 4096바이트입니다.
         실제 발송은 기존 dispatcher가 24시간 안에 처리합니다. POST마다 새 발송이며 자동 재발송·중복 클릭 방지는 제공하지 않습니다.
     """)
     @ApiResponses(value = [
         ApiResponse(responseCode = "201", description = "적재 및 운영 기록 저장 완료", useReturnTypeSchema = true),
-        ApiResponse(responseCode = "400", description = "BAD_REQUEST: 대상·길이·data·URL·payload 크기 오류", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ApiResponse(responseCode = "400", description = "BAD_REQUEST 또는 IMAGE_ASSET_NOT_AVAILABLE: 대상·길이·data·URL·이미지·payload 크기 오류", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ApiResponse(responseCode = "403", description = "FORBIDDEN: 관리자 권한 없음", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ApiResponse(responseCode = "404", description = "USER_NOT_FOUND: 지정 회원 중 존재하지 않는 ID", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
@@ -54,6 +58,21 @@ interface AdminNotificationBatchApi {
         ApiResponse(responseCode = "403", description = "FORBIDDEN: 관리자 권한 없음", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
     ])
     fun getJobRoleOptions(): ResponseEntity<SuccessResponse<List<AdminNotificationJobRoleOptionResponse>>>
+
+    @Operation(operationId = "getNotificationBatchStatistics", summary = "기간별 FCM 발송·알림함 읽음 통계", description = """
+        from 이상 to 미만의 배치를 대상 종류와 DIRECT/TOPIC별로 집계합니다. 둘 다 생략하면 현재 시각을 포함한 최근 30일을 조회하며, 지정 시 둘 다 보내야 합니다.
+        최근 30일 안에서 최대 30일 범위만 허용합니다. to는 현재 시각 다음 날까지 허용합니다.
+        sentCount는 FCM 접수 작업 수입니다. DIRECT는 기기별, TOPIC은 토픽 요청별이며 단말 도착·푸시 탭 수가 아닙니다.
+        readUserCount는 배치마다 중복 없이 읽은 회원 수의 합입니다. DIRECT는 회원 알림함, TOPIC은 현재 활성 회원의 역할에 보이는 공통 공지 읽음을 셉니다.
+        readEligibleUserCount는 DIRECT 알림함 행 수와 TOPIC 발송 시점 대상 회원 수를 분모로 사용합니다.
+    """)
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "BAD_REQUEST: 기간 형식·범위 오류", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+    ])
+    fun getStatistics(from: LocalDateTime?, to: LocalDateTime?, targetType: NotificationBatchTargetType?): ResponseEntity<SuccessResponse<AdminNotificationBatchStatisticsResponse>>
 
     @Operation(operationId = "getNotificationBatch", summary = "FCM 발송 결과 조회", description = """
         생성 후 30일 동안 결과와 resultCode별 실패·미확정 건수를 조회합니다. DIRECT는 기기별, TOPIC은 토픽 요청 한 건 단위입니다. sentCount는 FCM 접수이며 단말 도착을 뜻하지 않습니다.

@@ -15,6 +15,7 @@ import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
+import java.net.URI
 import java.util.UUID
 
 @Component
@@ -140,9 +141,20 @@ class ImageAssetManager internal constructor(
      * 새 이미지는 첨부하고 이전 이미지는 참조를 푼다. 같은 이미지를 다시 보내면 그대로 둔다.
      * 남의 이미지, 다른 곳에서 쓰는 이미지, 지워진 이미지는 쓸 수 없다.
      */
-    fun replaceImage(ownerUserId: Long, previousImageId: String?, imageId: String, now: LocalDateTime): String {
+    fun replaceImage(
+        ownerUserId: Long, previousImageId: String?, imageId: String, now: LocalDateTime,
+        requiredUsage: ImageAssetUsage? = null,
+    ): String {
         val asset = imageAssetRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(imageId, ownerUserId)
             ?: throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        if (requiredUsage != null) {
+            val uri = runCatching { URI(asset.url) }.getOrNull()
+            if (!asset.storageKey.startsWith("ogonggo/${requiredUsage.directory}/") ||
+                asset.mimeType !in requiredUsage.supportedMimeTypes ||
+                uri?.scheme?.lowercase() != "https" || uri.host.isNullOrBlank()) {
+                throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+            }
+        }
         if (imageId == previousImageId) return asset.url
         if (!asset.isAttachable()) {
             throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)

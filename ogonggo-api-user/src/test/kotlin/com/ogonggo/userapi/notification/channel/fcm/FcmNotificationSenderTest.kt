@@ -59,6 +59,28 @@ internal class FcmNotificationSenderTest {
     }
 
     @Test
+    @DisplayName("이미지 푸시는 Firebase 알림 이미지 필드에 URL을 담는다")
+    fun `이미지를 Firebase 메시지로 전달한다`() {
+        // given
+        var sentImageUrl: String? = null
+        Mockito.doAnswer { call ->
+            val json = jacksonObjectMapper().readTree(com.google.gson.Gson().toJson(call.getArgument<Message>(0)))
+            sentImageUrl = json.path("notification").path("image").asText(null)
+            "message-image"
+        }.`when`(firebaseMessaging).send(Mockito.any(Message::class.java))
+        val notification = validNotification().copy(
+            payloadJson = """{"title":"안내","body":"내용","imageUrl":"https://cdn.example.com/push.png"}""",
+        )
+
+        // when
+        val result = sender.send(notification)
+
+        // then
+        assertEquals(NotificationDeliveryResult.Sent("message-image"), result)
+        assertEquals("https://cdn.example.com/push.png", sentImageUrl)
+    }
+
+    @Test
     fun `잘못된 FCM payload는 provider를 호출하지 않고 실패한다`() {
         val result = sender.send(
             NotificationMessageDto(

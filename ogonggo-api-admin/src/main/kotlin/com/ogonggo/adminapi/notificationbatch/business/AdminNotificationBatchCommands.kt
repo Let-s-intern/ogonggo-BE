@@ -12,4 +12,6 @@ data class CreateNotificationBatchCommand(
     val jobRoles: List<String>? = null,
     /** 광고성이면 렛츠커리어 마케팅 수신 동의자에게만 기기마다 보낸다. */
     val advertisement: Boolean = false,
+    val imageId: String? = null,
+    val imageUrl: String? = null,
 )

@@ -61,6 +61,10 @@ internal class NotificationBatch(
     val body: String,
     @Column(name = "data_json", nullable = false, columnDefinition = "text")
     val dataJson: String,
+    @Column(name = "image_id", length = 36)
+    val imageId: String? = null,
+    @Column(name = "image_url", length = 2048)
+    val imageUrl: String? = null,
     @Column(name = "target_user_count", nullable = false)
     val targetUserCount: Long,
     @Column(name = "recipient_user_count", nullable = false)
@@ -99,6 +103,7 @@ internal class NotificationBatch(
         require(targetUserCount == recipientUserCount + skippedNoTokenUserCount + skippedInactiveUserCount + skippedNoMarketingConsentUserCount)
         require(advertisement || skippedNoMarketingConsentUserCount == 0L)
         require((targetType == NotificationBatchTargetType.JOB_ROLES) == (targetJobRolesJson != null))
+        require((imageId == null) == (imageUrl == null))
         if (topicName == null) require(enqueuedCount >= recipientUserCount)
         else {
             require(targetType in NotificationBatchTargetType.TOPIC_TARGETS)

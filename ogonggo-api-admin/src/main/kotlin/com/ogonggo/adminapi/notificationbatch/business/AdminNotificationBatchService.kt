@@ -3,6 +3,8 @@ package com.ogonggo.adminapi.notificationbatch.business
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.notification.domain.NotificationRecipientType
 import com.ogonggo.core.notificationbatch.implement.NotificationBroadcastProperties
 import com.ogonggo.core.notification.domain.NotificationChannel
@@ -45,19 +47,22 @@ class AdminNotificationBatchService(
     private val broadcast: NotificationBroadcastProperties,
     private val generalMembers: GeneralMemberAudienceReader,
     private val marketingAgreements: LetsCareerMarketingAgreementClient,
+    private val images: ImageAssetManager,
 ) {
     /** 알림함·발송 적재·요청 기록을 함께 커밋한다. provider 호출은 사용자 API의 기존 dispatcher가 맡는다. */
     @Transactional
     fun create(adminUserId: Long, command: CreateNotificationBatchCommand): NotificationBatchDto {
         val requestedUserIds = validateTargets(command)
         validateData(command.data)
+        val imageUrl = command.imageId?.let { images.replaceImage(adminUserId, null, it, LocalDateTime.now(clock), ImageAssetUsage.NOTIFICATION) }
+        val withImage = command.copy(imageUrl = imageUrl)
         // 토픽 발송 게이트가 켜진 대상(전체·일반회원·기업회원)은 FCM 토픽 한 건으로 보낸다. 꺼져 있으면 기기마다 보낸다.
         // 광고성은 동의자만 골라야 하는데 토픽은 받는 사람을 거르지 못하므로 항상 기기마다 보낸다.
         if (!command.advertisement) {
-            broadcast.sendingTopicFor(command.targetType)?.let { topic -> return createBroadcast(adminUserId, command, topic) }
+            broadcast.sendingTopicFor(command.targetType)?.let { topic -> return createBroadcast(adminUserId, withImage, topic) }
         }
         val audience = resolveAudience(command, requestedUserIds)
-        notificationPayload(command, command.data)
+        notificationPayload(withImage, command.data)
         val previewLength = minOf(100, command.body.codePointCount(0, command.body.length))
         val preview = command.body.substring(0, command.body.offsetByCodePoints(0, previewLength))
 
@@ -91,7 +96,7 @@ class AdminNotificationBatchService(
                         )))
                         // 요청 data가 시스템의 알림함 ID·종류를 덮어쓰지 못하게 한다.
                         val data = (command.data - setOf("source", "batchId")) + mapOf("notificationId" to inboxId.toString(), "type" to UserNotificationType.ADMIN_NOTIFICATION.name)
-                        val payload = notificationPayload(command, data)
+                        val payload = notificationPayload(withImage, data)
                         if (recipient.tokens.isEmpty()) noTokenCount++ else recipientCount++
                         recipient.tokens.map { token -> NotificationAppendDto(
                             deduplicationKey = "admin-batch:$batchId:token:${token.id}",
@@ -114,6 +119,7 @@ class AdminNotificationBatchService(
             batchId = batchId, requestedByUserId = adminUserId, targetType = command.targetType,
             requestedUserIdsJson = requestedUserIds?.let { objectMapper.writeValueAsString(it.sorted()) },
             title = command.title, body = command.body, dataJson = objectMapper.writeValueAsString(command.data),
+            imageId = command.imageId, imageUrl = imageUrl,
             targetUserCount = targetCount + audience.skippedInactiveCount + audience.skippedNoConsentCount,
             recipientUserCount = recipientCount, enqueuedCount = enqueuedCount,
             skippedNoTokenUserCount = noTokenCount, skippedInactiveUserCount = inactiveCount + audience.skippedInactiveCount,
@@ -210,7 +216,7 @@ class AdminNotificationBatchService(
         val batch = batches.append(NotificationBatchAppendDto(
             batchId = batchId, requestedByUserId = adminUserId, targetType = command.targetType,
             requestedUserIdsJson = null, title = command.title, body = command.body,
-            dataJson = objectMapper.writeValueAsString(command.data), targetUserCount = count,
+            dataJson = objectMapper.writeValueAsString(command.data), imageId = command.imageId, imageUrl = command.imageUrl, targetUserCount = count,
             recipientUserCount = count - noToken, enqueuedCount = 1, skippedNoTokenUserCount = noToken,
             skippedInactiveUserCount = 0, dispatchExpiresAt = expiresAt, topicName = topic,
             url = command.data.getValue("url"),
@@ -227,11 +233,13 @@ class AdminNotificationBatchService(
     fun get(batchId: UUID): NotificationBatchResultDto = batchReader.readResult(batchId.toString(), LocalDateTime.now(clock))
 
     private fun notificationPayload(command: CreateNotificationBatchCommand, data: Map<String, String>, maxBytes: Int = 4096): String {
-        val messageBytes = objectMapper.writeValueAsBytes(mapOf(
-            "notification" to mapOf("title" to command.title, "body" to command.body), "data" to data,
-        ))
+        val notification = buildMap<String, String> {
+            put("title", command.title); put("body", command.body)
+            command.imageUrl?.let { put("imageUrl", it) }
+        }
+        val messageBytes = objectMapper.writeValueAsBytes(mapOf("notification" to notification, "data" to data))
         if (messageBytes.size > maxBytes) throw InvalidRequestFieldException("data", "시스템 식별자를 포함한 FCM payload는 ${maxBytes}바이트 이하여야 합니다.")
-        return objectMapper.writeValueAsString(mapOf("title" to command.title, "body" to command.body, "data" to data))
+        return objectMapper.writeValueAsString(notification + mapOf("data" to data))
     }
 
     /** 회원 종류로 대상을 정하는 발송의 역할 조건. 전체·지정 회원 발송은 역할로 거르지 않는다. */

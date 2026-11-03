@@ -62,7 +62,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
     @BeforeEach
     fun reset() {
         clock.current = START
-        listOf("notifications", "user_notifications", "notification_batches", "user_fcm_tokens", "users").forEach { jdbc.update("delete from $it") }
+        listOf("notifications", "user_notifications", "notification_batches", "user_fcm_tokens", "image_assets", "users").forEach { jdbc.update("delete from $it") }
     }
 
     @Test
@@ -101,6 +101,7 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertTrue(rows.all { (it["user_notification_id"] as Number).toLong() == inboxId })
         assertTrue(rows.all { mapper.readTree(it["payload_json"].toString()).at("/data/notificationId").asText() == inboxId.toString() })
         assertTrue(rows.all { mapper.readTree(it["payload_json"].toString()).at("/data/type").asText() == "ADMIN_NOTIFICATION" })
+        assertTrue(rows.all { !mapper.readTree(it["payload_json"].toString()).has("imageUrl") })
         assertTrue(inboxRows.all { it["type"] == "ADMIN_NOTIFICATION" && it["post_id"] == null && it["comment_id"] == null })
         assertTrue(inboxRows.all { it["actor_nickname"] == "오공고" && it["post_title"] == "제목" && it["preview"] == "본문" && it["url"] == URL })
         assertEquals("NO_ACTIVE_TOKEN", inboxRows.single { (it["recipient_user_id"] as Number).toLong() == noToken }["push_skip_reason"])
@@ -110,6 +111,54 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertFalse(result["completed"].asBoolean())
         assertEquals("2026-10-23T12:00:00", result["dispatchExpiresAt"].asText())
         assertEquals("2026-10-22T12:00:00", result["createdAt"].asText())
+    }
+
+    @Test
+    @DisplayName("관리자가 업로드 완료한 이미지를 지정 회원 푸시와 배치 조회에 연결한다")
+    fun `이미지 자산을 직접 발송에 연결한다`() {
+        // given
+        val receiver = user()
+        register(receiver, "image-token")
+        val imageId = UUID.randomUUID().toString()
+        val imageUrl = "https://cdn.example.com/notification.png"
+        jdbc.update("""insert into image_assets
+            (id, owner_user_id, storage_key, url, mime_type, size, status, created_at, updated_at)
+            values (?, ?, ?, ?, 'image/png', 100, 'TEMPORARY', ?, ?)""",
+            imageId, ADMIN_ID, "ogonggo/notification/$imageId.png", imageUrl, NOW, NOW)
+
+        // when
+        val batch = create(request(listOf(receiver)) + ("imageId" to imageId))
+        val id = batch["batchId"].asText()
+
+        // then
+        val payload = mapper.readTree(jdbc.queryForObject("select payload_json from notifications where batch_id = ?", String::class.java, id))
+        assertEquals(imageUrl, payload["imageUrl"].asText())
+        assertEquals(imageId, result(id)["imageId"].asText())
+        assertEquals(imageUrl, result(id)["imageUrl"].asText())
+        assertEquals("ATTACHED", jdbc.queryForObject("select status from image_assets where id = ?", String::class.java, imageId))
+    }
+
+    @Test
+    @DisplayName("알림 용도가 아닌 이미지는 발송 기록을 만들지 않고 거부한다")
+    fun `다른 용도 이미지를 푸시에 사용할 수 없다`() {
+        // given
+        val receiver = user()
+        register(receiver, "image-token")
+        val imageId = UUID.randomUUID().toString()
+        jdbc.update("""insert into image_assets
+            (id, owner_user_id, storage_key, url, mime_type, size, status, created_at, updated_at)
+            values (?, ?, ?, ?, 'image/png', 100, 'TEMPORARY', ?, ?)""",
+            imageId, ADMIN_ID, "ogonggo/profile/$imageId.png", "https://cdn.example.com/profile.png", NOW, NOW)
+
+        // when
+        mvc.perform(admin(post(PATH)).contentType(MediaType.APPLICATION_JSON)
+            .content(mapper.writeValueAsBytes(request(listOf(receiver)) + ("imageId" to imageId))))
+            .andExpect(status().isBadRequest)
+
+        // then
+        assertEquals(0, jdbc.queryForObject("select count(*) from notification_batches", Int::class.java))
+        assertEquals(0, jdbc.queryForObject("select count(*) from notifications", Int::class.java))
+        assertEquals("TEMPORARY", jdbc.queryForObject("select status from image_assets where id = ?", String::class.java, imageId))
     }
 
     @Test
@@ -187,6 +236,88 @@ class AdminNotificationBatchIntegrationTest @Autowired constructor(
         assertFalse(result.has("recipientAddress"))
         complete(ids[3], NotificationDeliveryResult.Sent("provider-2"))
         assertTrue(result(batch)["completed"].asBoolean())
+    }
+
+    @Test
+    @DisplayName("기간 통계에서 기기별 접수 수와 회원별 알림함 읽음 수를 구분한다")
+    fun `다중 기기 발송 통계를 회원 읽음과 분리한다`() {
+        // given
+        val receiver = user()
+        register(receiver, "stats-desktop")
+        register(receiver, "stats-mobile")
+        val batchId = create(request(listOf(receiver)))["batchId"].asText()
+        val deliveries = notifications.claimDue(NOW, 10)
+        notifications.complete(deliveries[0].notificationId, checkNotNull(deliveries[0].processingAttemptId),
+            NotificationDeliveryResult.Sent("accepted"), NOW)
+        notifications.complete(deliveries[1].notificationId, checkNotNull(deliveries[1].processingAttemptId),
+            NotificationDeliveryResult.Failed("UNREGISTERED", NotificationFailureCategory.CLIENT_ERROR), NOW)
+        jdbc.update("update user_notifications set read_at = ? where batch_id = ?", NOW, batchId)
+
+        // when
+        val response = mvc.perform(admin(get("$PATH/statistics"))
+            .param("from", "2026-10-22T00:00:00").param("to", "2026-10-23T00:00:00"))
+            .andExpect(status().isOk).andReturn()
+        val group = mapper.readTree(response.response.contentAsString)["data"]["groups"][0]
+
+        // then
+        assertEquals("DIRECT", group["deliveryTargetType"].asText())
+        assertEquals("USER_IDS", group["targetType"].asText())
+        assertEquals(1, group["batchCount"].asInt())
+        assertEquals(1, group["sentCount"].asInt())
+        assertEquals(1, group["failedCount"].asInt())
+        assertEquals(1, group["readUserCount"].asInt())
+        assertEquals(1, group["readEligibleUserCount"].asInt())
+        assertEquals(1.0, group["readRate"].asDouble())
+    }
+
+    @Test
+    @DisplayName("생성 후 30일이 지난 배치는 기간 통계에 포함하지 않는다")
+    fun `기간 통계는 결과 보관 경계를 지킨다`() {
+        // given
+        val receiver = user()
+        val batchId = create(request(listOf(receiver)))["batchId"].asText()
+        jdbc.update("update notification_batches set created_at = ? where id = ?", NOW.minusDays(30), batchId)
+
+        // when
+        val response = mvc.perform(admin(get("$PATH/statistics"))).andExpect(status().isOk).andReturn()
+
+        // then
+        val groups = mapper.readTree(response.response.contentAsString)["data"]["groups"]
+        assertEquals(0, groups.size())
+    }
+
+    @Test
+    @DisplayName("기간 통계는 요청한 대상 유형의 배치만 보여 주고 빈 범위는 빈 목록을 준다")
+    fun `기간 통계를 대상 유형으로 거른다`() {
+        // given
+        val receiver = user()
+        create(request(listOf(receiver)))
+        create(request(null, "ALL"))
+
+        // when
+        val filtered = mvc.perform(admin(get("$PATH/statistics")).param("targetType", "ALL"))
+            .andExpect(status().isOk).andReturn()
+        val empty = mvc.perform(admin(get("$PATH/statistics"))
+            .param("from", "2026-10-21T00:00:00").param("to", "2026-10-22T00:00:00"))
+            .andExpect(status().isOk).andReturn()
+
+        // then
+        val groups = mapper.readTree(filtered.response.contentAsString)["data"]["groups"]
+        assertEquals(1, groups.size())
+        assertEquals("ALL", groups[0]["targetType"].asText())
+        assertEquals(0, mapper.readTree(empty.response.contentAsString)["data"]["groups"].size())
+    }
+
+    @Test
+    @DisplayName("기간 통계는 관리자 인증과 최근 30일 범위를 요구한다")
+    fun `기간 통계의 접근과 기간을 검증한다`() {
+        // when, then
+        mvc.perform(get("$PATH/statistics")).andExpect(status().isUnauthorized)
+        mvc.perform(admin(get("$PATH/statistics"))
+            .param("from", "2026-09-01T00:00:00").param("to", "2026-10-01T00:00:00"))
+            .andExpect(status().isBadRequest)
+        mvc.perform(admin(get("$PATH/statistics")).param("from", "2026-10-22T00:00:00"))
+            .andExpect(status().isBadRequest)
     }
 
     @Test

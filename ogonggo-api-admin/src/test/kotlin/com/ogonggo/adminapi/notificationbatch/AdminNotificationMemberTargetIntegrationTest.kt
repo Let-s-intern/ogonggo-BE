@@ -22,6 +22,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
@@ -63,6 +64,57 @@ class AdminNotificationMemberTopicIntegrationTest @Autowired constructor(
         assertEquals(1, result["noTokenUserCount"].asInt())
         assertEquals("ogonggo-company-test", jdbc.queryForObject("select recipient_address from notifications", String::class.java))
         assertEquals(0, jdbc.queryForObject("select count(*) from user_notifications", Int::class.java))
+    }
+
+    @Test
+    @DisplayName("회원 종류 토픽 푸시도 업로드한 이미지를 Firebase payload에 포함한다")
+    fun `토픽 푸시에 이미지를 연결한다`() {
+        // given
+        val imageId = UUID.randomUUID().toString()
+        val imageUrl = "https://cdn.example.com/topic.png"
+        val now = LocalDateTime.now(clock)
+        jdbc.update("""insert into image_assets
+            (id, owner_user_id, storage_key, url, mime_type, size, status, created_at, updated_at)
+            values (?, 999, ?, ?, 'image/png', 100, 'TEMPORARY', ?, ?)""",
+            imageId, "ogonggo/notification/$imageId.png", imageUrl, now, now)
+        val request = mapOf("targetType" to "GENERAL_MEMBERS", "title" to "공지", "body" to "본문",
+            "data" to mapOf("url" to "https://example.com/notice"), "imageId" to imageId)
+
+        // when
+        val response = mvc.perform(post("/api/v1/admin/notification-batches").with(authentication(MemberTargetFixture.admin()))
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(request)))
+            .andExpect(status().isCreated).andReturn()
+
+        // then
+        val data = mapper.readTree(response.response.contentAsString)["data"]
+        val payload = mapper.readTree(jdbc.queryForObject("select payload_json from notifications", String::class.java))
+        assertEquals("TOPIC", data["deliveryTargetType"].asText())
+        assertEquals(imageUrl, payload["imageUrl"].asText())
+        assertEquals(imageId, jdbc.queryForObject("select image_id from notification_batches", String::class.java))
+    }
+
+    @Test
+    @DisplayName("토픽 읽음 통계는 현재 대상 역할인 활성 회원만 센다")
+    fun `토픽 읽음을 현재 역할로 집계한다`() {
+        // given
+        val batchId = MemberTargetFixture.send(mvc, mapper, "GENERAL_MEMBERS")["batchId"].asText()
+        val general = jdbc.queryForObject("select id from users where role = 'USER' order by id limit 1", Long::class.java)!!
+        val company = jdbc.queryForObject("select id from users where role = 'COMPANY' order by id limit 1", Long::class.java)!!
+        val now = LocalDateTime.now(clock)
+        jdbc.update("insert into notification_broadcast_reads (user_id, batch_id, read_at) values (?, ?, ?)", general, batchId, now)
+        jdbc.update("insert into notification_broadcast_reads (user_id, batch_id, read_at) values (?, ?, ?)", company, batchId, now)
+
+        // when
+        val response = mvc.perform(get("/api/v1/admin/notification-batches/statistics")
+            .with(authentication(MemberTargetFixture.admin()))
+            .param("from", now.minusHours(1).toString()).param("to", now.plusHours(1).toString()))
+            .andExpect(status().isOk).andReturn()
+
+        // then
+        val group = mapper.readTree(response.response.contentAsString)["data"]["groups"][0]
+        assertEquals("TOPIC", group["deliveryTargetType"].asText())
+        assertEquals(1, group["readUserCount"].asInt())
+        assertEquals(3, group["readEligibleUserCount"].asInt())
     }
 
     @Test
@@ -130,7 +182,7 @@ private object MemberTargetFixture {
 
     fun clean(jdbc: JdbcTemplate) {
         listOf("notification_broadcast_reads", "fcm_topic_sync_tasks", "notifications", "user_notifications",
-            "notification_batches", "user_fcm_tokens", "users").forEach { jdbc.update("delete from $it") }
+            "notification_batches", "user_fcm_tokens", "image_assets", "users").forEach { jdbc.update("delete from $it") }
     }
 
     /** 일반 회원 3명(그중 토큰 있는 회원 2명), 기업 회원 2명(그중 토큰 있는 회원 1명)을 만든다. */

@@ -32,8 +32,11 @@ data class CreateNotificationBatchRequest(
     val jobRoles: List<String>? = null,
     @field:Schema(description = "광고성이면 true. 렛츠커리어 마케팅 수신 동의자에게만 기기마다 보낸다. 기업 회원 대상에는 쓸 수 없다.")
     val advertisement: Boolean = false,
+    @field:Schema(description = "관리자 이미지 업로드 API에서 받은 이미지 ID. 생략하면 이미지 없이 발송", format = "uuid")
+    @field:Size(max = 36)
+    val imageId: String? = null,
 ) {
-    fun toCommand() = CreateNotificationBatchCommand(targetType, userIds, title, body, data, jobRoles, advertisement)
+    fun toCommand() = CreateNotificationBatchCommand(targetType, userIds, title, body, data, jobRoles, advertisement, imageId)
 }
 
 /** Jackson의 숫자·boolean→문자열 변환을 이 요청의 data에서만 막는다. */

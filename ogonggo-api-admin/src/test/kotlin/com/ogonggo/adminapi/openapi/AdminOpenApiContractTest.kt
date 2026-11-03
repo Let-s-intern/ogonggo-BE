@@ -196,6 +196,14 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertEquals("string", request.at("/properties/data/additionalProperties/type").asText())
         assertEquals("uuid", result.at("/parameters").first { it.at("/name").asText() == "batchId" }.at("/schema/format").asText())
         assertTrue(result.at("/responses/404/description").asText().contains("NOTIFICATION_BATCH_NOT_FOUND"))
+        assertEquals("uuid", request.at("/properties/imageId/format").asText())
+        assertTrue(document.at("/components/schemas/AdminNotificationBatchResultResponse/properties").has("imageUrl"))
+        val statistics = document.at("/paths/~1api~1v1~1admin~1notification-batches~1statistics/get")
+        assertEquals("getNotificationBatchStatistics", statistics.at("/operationId").asText())
+        assertTrue(statistics.at("/security/0/BearerAuth").isArray)
+        val imageUpload = document.at("/paths/~1api~1v1~1admin~1notification-images/post")
+        assertEquals("uploadNotificationImage", imageUpload.at("/operationId").asText())
+        assertTrue(imageUpload.at("/security/0/BearerAuth").isArray)
     }
 
     @Test
