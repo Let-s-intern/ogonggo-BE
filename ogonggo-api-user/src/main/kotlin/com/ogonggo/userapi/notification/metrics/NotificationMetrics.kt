@@ -3,15 +3,18 @@ package com.ogonggo.userapi.notification.metrics
 import com.ogonggo.core.notification.domain.NotificationChannel
 import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.notification.delivery.implement.dto.NotificationDeliveryResult
+import com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto
 import com.ogonggo.core.notification.intake.implement.event.NotificationEnqueuedEvent
 import com.ogonggo.userapi.notification.alert.NotificationAlertNotifier
 import com.ogonggo.userapi.notification.alert.NotificationAlertType
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 import java.time.Clock
+import java.time.Duration
 import java.time.LocalDateTime
 
 /** 알림 적재량·발송 결과·DB 대기 잔량을 Actuator MeterRegistry에 기록한다. */
@@ -21,9 +24,27 @@ class NotificationMetrics(
     private val notificationManager: NotificationManager,
     private val clock: Clock,
     private val alertNotifier: NotificationAlertNotifier,
+    private val waitWindow: NotificationDispatchWaitWindow,
 ) {
     init {
         PendingState.entries.forEach(::registerPendingGauge)
+    }
+
+    /**
+     * 발송 작업이 알림을 꺼낸 순간, 예정 시각부터 꺼낼 때까지 기다린 시간을 기록한다.
+     * 관리자 발송 묶음은 한꺼번에 쌓여 차례로 나가므로 원래 오래 기다린다. 그래서 지연 경보 표본에서는 빼고 지표에만 남긴다.
+     */
+    fun recordDispatchWait(notification: NotificationMessageDto, claimedAt: LocalDateTime) {
+        val scheduledAt = notification.scheduledAt ?: return
+        val wait = Duration.between(scheduledAt, claimedAt).let { if (it.isNegative) Duration.ZERO else it }
+        val adminBatch = notification.batchId != null
+        Timer.builder(DISPATCH_WAIT_METRIC)
+            .tag(CHANNEL_TAG, notification.channel.name)
+            .tag(ADMIN_BATCH_TAG, adminBatch.toString())
+            .description("예정 시각부터 발송 작업이 꺼낼 때까지 기다린 시간")
+            .register(meterRegistry)
+            .record(wait)
+        if (!adminBatch) waitWindow.record(clock.instant(), wait)
     }
 
     /** 적재 이벤트는 Appender 트랜잭션이 실제 커밋된 뒤에만 누적한다. */
@@ -93,6 +114,8 @@ class NotificationMetrics(
         const val ENQUEUED_METRIC = "ogonggo.notification.enqueued"
         const val DELIVERY_METRIC = "ogonggo.notification.delivery"
         const val PENDING_METRIC = "ogonggo.notification.pending"
+        const val DISPATCH_WAIT_METRIC = "ogonggo.notification.dispatch.wait"
+        const val ADMIN_BATCH_TAG = "admin_batch"
         const val CHANNEL_TAG = "channel"
         const val OUTCOME_TAG = "outcome"
         const val FAILURE_CATEGORY_TAG = "failure_category"

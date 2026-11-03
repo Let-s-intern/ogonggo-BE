@@ -20,6 +20,10 @@ data class NotificationBatchAppendDto(
     val dispatchExpiresAt: LocalDateTime,
     val topicName: String? = null,
     val url: String? = null,
+    /** 희망 직무 발송에서 고른 렛츠커리어 직무 선택지(JSON 배열). */
+    val targetJobRolesJson: String? = null,
+    val advertisement: Boolean = false,
+    val skippedNoMarketingConsentUserCount: Long = 0,
 )
 
 data class NotificationBatchDto(
@@ -38,6 +42,9 @@ data class NotificationBatchDto(
     val topicName: String? = null,
     val url: String? = null,
     val createdAt: LocalDateTime,
+    val targetJobRolesJson: String? = null,
+    val advertisement: Boolean = false,
+    val skippedNoMarketingConsentUserCount: Long = 0,
 )
 
 data class NotificationBatchStatusCountDto(val status: NotificationStatus, val resultCode: String?, val count: Long)

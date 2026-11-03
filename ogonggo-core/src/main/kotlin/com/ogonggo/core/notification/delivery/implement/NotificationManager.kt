@@ -26,22 +26,14 @@ class NotificationManager internal constructor(
         limit: Int,
     ): List<NotificationMessageDto> {
         require(limit > 0)
-        return notificationRepository.findDue(
-            now = now,
-            pending = NotificationStatus.PENDING,
-            pageable = PageRequest.of(0, limit),
-        ).map { it.toMessageDto() }
+        return readDue(now, limit).map { it.toMessageDto() }
     }
 
     /** due 행을 attempt token으로 원자적으로 선점하고, 트랜잭션 종료 후 caller가 provider를 호출한다. */
     @Transactional
     fun claimDue(now: LocalDateTime, limit: Int): List<NotificationMessageDto> {
         require(limit > 0)
-        val candidates = notificationRepository.findDue(
-            now = now,
-            pending = NotificationStatus.PENDING,
-            pageable = PageRequest.of(0, limit),
-        )
+        val candidates = readDue(now, limit)
         return candidates.mapNotNull { notification ->
             val attemptId = UUID.randomUUID().toString()
             val id = checkNotNull(notification.id)
@@ -139,6 +131,11 @@ class NotificationManager internal constructor(
             listOf(NotificationStatus.SENT, NotificationStatus.FAILED, NotificationStatus.UNKNOWN), since,
         )
 
+    /** 관리자 발송 알림이 예정 시각부터 waitedAtLeast 넘게 대기 중인지 본다. 발송 기한이 지난 행은 세지 않는다. */
+    @Transactional(readOnly = true)
+    fun hasAdminBatchWaitingLongerThan(now: LocalDateTime, waitedAtLeast: java.time.Duration): Boolean =
+        notificationRepository.existsBatchPendingSince(now.minus(waitedAtLeast), now, NotificationStatus.PENDING)
+
     @Transactional(readOnly = true)
     fun countPendingDue(now: LocalDateTime): Long =
         notificationRepository.countDuePending(now, NotificationStatus.PENDING)
@@ -201,6 +198,13 @@ class NotificationManager internal constructor(
         )
     }
 
+    /** 개별 알림을 먼저 채우고 남은 자리만 관리자 발송 알림으로 채운다. 두 조회 모두 인덱스 순서로 limit 건에서 멈춘다. */
+    private fun readDue(now: LocalDateTime, limit: Int): List<Notification> {
+        val direct = notificationRepository.findDueDirect(now, NotificationStatus.PENDING, PageRequest.of(0, limit))
+        if (direct.size >= limit) return direct
+        return direct + notificationRepository.findDueBatch(now, NotificationStatus.PENDING, PageRequest.of(0, limit - direct.size))
+    }
+
     private fun Notification.toMessageDto() = NotificationMessageDto(
         notificationId = checkNotNull(id),
         channel = channel,
@@ -212,6 +216,8 @@ class NotificationManager internal constructor(
         recipientUserId = recipientUserId,
         userNotificationId = userNotificationId,
         processingAttemptId = processingAttemptId,
+        scheduledAt = scheduledAt,
+        batchId = batchId,
     )
 
     private fun Notification.toMessageDto(attemptId: String) = toMessageDto().copy(processingAttemptId = attemptId)

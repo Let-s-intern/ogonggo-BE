@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.notificationbatch.presentation
 
+import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationJobRoleOptionResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.notificationbatch.presentation.request.CreateNotificationBatchRequest
 import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchCreatedResponse
@@ -22,9 +23,12 @@ import java.util.UUID
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
 interface AdminNotificationBatchApi {
     @Operation(operationId = "createNotificationBatch", summary = "FCM 발송 요청", description = """
-        USER_IDS는 최대 1000개 ID를 중복 제거하고 없는 회원이 있으면 전체 요청을 거부합니다. ALL에는 userIds를 보내지 않습니다.
-        전체 토픽 전환 설정이 켜진 ALL은 공통 공지와 토픽 작업 한 건을 함께 저장합니다. 회원별 알림함·토큰별 발송 행을 생성하지 않습니다.
-        전환 전 ALL과 USER_IDS는 활성 회원별 알림함·활성 토큰별 발송을 유지합니다. deliveryTargetType으로 DIRECT/TOPIC을 구분합니다.
+        USER_IDS는 최대 1000개 ID를 중복 제거하고 없는 회원이 있으면 전체 요청을 거부합니다. ALL·GENERAL_MEMBERS·COMPANY_MEMBERS·JOB_ROLES에는 userIds를 보내지 않습니다.
+        GENERAL_MEMBERS는 활성 일반 회원(USER·MENTOR·ADMIN), COMPANY_MEMBERS는 활성 기업 회원에게 보냅니다.
+        JOB_ROLES는 jobRoles(job-role-options의 직무 또는 '<직군> 직무 전체', 최대 100개)와 희망 직무가 하나라도 겹치는 활성 일반 회원에게 기기마다 보냅니다. '직무 무관'을 고른 회원은 대상이 아닙니다.
+        advertisement=true(광고성)는 대상 중 렛츠커리어 마케팅 수신 동의자에게만 기기마다 보내며 토픽을 쓰지 않습니다. 동의 여부를 확인하지 못하면 503으로 거부합니다. 기업 회원 대상에는 쓸 수 없습니다.
+        전체 토픽 전환 설정이 켜진 ALL, 회원 종류 토픽 설정이 켜진 GENERAL_MEMBERS·COMPANY_MEMBERS는 공통 공지와 토픽 작업 한 건을 함께 저장합니다. 회원별 알림함·토큰별 발송 행을 생성하지 않습니다.
+        설정이 꺼진 대상과 USER_IDS는 활성 회원별 알림함·활성 토큰별 발송을 유지합니다. deliveryTargetType으로 DIRECT/TOPIC을 구분합니다.
         enqueuedCount는 발송 작업 수입니다. TOPIC에서는 1이며 회원별 성공 수가 아닙니다. noTokenUserCount와 회원 집계는 요청 시점 DB 참고 값입니다.
         skippedNoTokenUserCount는 호환용 별칭이며 새 클라이언트는 noTokenUserCount를 사용합니다. data.url은 http(s) URL이 필요합니다.
         제목 100자·본문 1000자 원문을 보관하고 TOPIC 푸시는 본문 미리보기 최대 100자를 보냅니다. 시스템 식별자 포함 TOPIC payload는 2048바이트, DIRECT는 4096바이트입니다.
@@ -36,8 +40,20 @@ interface AdminNotificationBatchApi {
         ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ApiResponse(responseCode = "403", description = "FORBIDDEN: 관리자 권한 없음", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ApiResponse(responseCode = "404", description = "USER_NOT_FOUND: 지정 회원 중 존재하지 않는 ID", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ApiResponse(responseCode = "503", description = "MARKETING_AGREEMENT_UNAVAILABLE: 광고성 발송의 마케팅 수신 동의 확인 실패", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
     ])
     fun createNotificationBatch(@Parameter(hidden = true) adminUserId: Long, @Valid request: CreateNotificationBatchRequest): ResponseEntity<SuccessResponse<AdminNotificationBatchCreatedResponse>>
+
+    @Operation(operationId = "getNotificationJobRoleOptions", summary = "희망 직무 발송 선택지 조회", description = """
+        JOB_ROLES 발송에서 고를 수 있는 렛츠커리어 희망 직군과 직무 목록입니다. 회원 프로필의 희망 직무와 같은 목록입니다.
+        직군 전체를 고를 때는 allRolesOption 값을, 개별 직무는 jobRoles의 값을 jobRoles 요청에 그대로 보냅니다.
+    """)
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ApiResponse(responseCode = "403", description = "FORBIDDEN: 관리자 권한 없음", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+    ])
+    fun getJobRoleOptions(): ResponseEntity<SuccessResponse<List<AdminNotificationJobRoleOptionResponse>>>
 
     @Operation(operationId = "getNotificationBatch", summary = "FCM 발송 결과 조회", description = """
         생성 후 30일 동안 결과와 resultCode별 실패·미확정 건수를 조회합니다. DIRECT는 기기별, TOPIC은 토픽 요청 한 건 단위입니다. sentCount는 FCM 접수이며 단말 도착을 뜻하지 않습니다.

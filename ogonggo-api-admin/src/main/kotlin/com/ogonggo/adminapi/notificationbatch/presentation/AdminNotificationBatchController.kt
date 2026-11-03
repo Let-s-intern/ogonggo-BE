@@ -1,5 +1,7 @@
 package com.ogonggo.adminapi.notificationbatch.presentation
 
+import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationJobRoleOptionResponse
+import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
 import com.ogonggo.adminapi.notificationbatch.business.AdminNotificationBatchService
 import com.ogonggo.adminapi.notificationbatch.presentation.request.CreateNotificationBatchRequest
 import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchCreatedResponse
@@ -26,11 +28,17 @@ class AdminNotificationBatchController(private val service: AdminNotificationBat
     ): ResponseEntity<SuccessResponse<AdminNotificationBatchCreatedResponse>> {
         val batch = service.create(adminUserId, request.toCommand())
         // Service의 트랜잭션 커밋이 끝난 요청만 기록하며 본문·토큰은 로그에 남기지 않는다.
-        log.info("관리자 FCM 발송 적재 완료. batchId={}, adminUserId={}, targetType={}, enqueued={}, skippedNoToken={}, skippedInactive={}",
-            batch.batchId, batch.requestedByUserId, batch.targetType, batch.enqueuedCount,
-            batch.skippedNoTokenUserCount, batch.skippedInactiveUserCount)
+        log.info("관리자 FCM 발송 적재 완료. batchId={}, adminUserId={}, targetType={}, advertisement={}, enqueued={}, skippedNoToken={}, skippedInactive={}, skippedNoMarketingConsent={}",
+            batch.batchId, batch.requestedByUserId, batch.targetType, batch.advertisement, batch.enqueuedCount,
+            batch.skippedNoTokenUserCount, batch.skippedInactiveUserCount, batch.skippedNoMarketingConsentUserCount)
         return SuccessResponse.created(AdminNotificationBatchCreatedResponse.from(batch))
     }
+
+    @GetMapping("/job-role-options")
+    override fun getJobRoleOptions(): ResponseEntity<SuccessResponse<List<AdminNotificationJobRoleOptionResponse>>> =
+        SuccessResponse.ok(service.jobRoleOptions().map { (field, roles) ->
+            AdminNotificationJobRoleOptionResponse(field, LetsCareerWishJobCatalog.allRolesOf(field), roles)
+        })
 
     @GetMapping("/{batchId}")
     override fun getNotificationBatch(@PathVariable("batchId") batchId: UUID): ResponseEntity<SuccessResponse<AdminNotificationBatchResultResponse>> =

@@ -4,6 +4,7 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.notificationbatch.domain.NotificationBroadcastRead
 import com.ogonggo.core.notificationbatch.persistence.NotificationBroadcastReadJpaRepository
 import com.ogonggo.core.notificationbatch.persistence.NotificationBroadcastQueryRepository
+import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.usernotification.error.UserNotificationErrorCode.USER_NOTIFICATION_NOT_FOUND
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -14,15 +15,15 @@ class NotificationBroadcastManager internal constructor(
     private val reads: NotificationBroadcastReadJpaRepository,
     private val queries: NotificationBroadcastQueryRepository,
 ) {
-    fun markRead(userId: Long, batchId: String, since: LocalDateTime, now: LocalDateTime) {
+    fun markRead(userId: Long, role: UserRole, batchId: String, since: LocalDateTime, now: LocalDateTime) {
         reads.lockUser(userId)
-        if (!queries.isVisible(batchId, since, now)) throw EntityNotFoundException(USER_NOTIFICATION_NOT_FOUND)
+        if (!queries.isVisible(batchId, role, since, now)) throw EntityNotFoundException(USER_NOTIFICATION_NOT_FOUND)
         if (!reads.existsByUserIdAndBatchId(userId, batchId)) reads.save(NotificationBroadcastRead(userId, batchId, now))
     }
 
-    fun markAllRead(userId: Long, since: LocalDateTime, now: LocalDateTime) {
+    fun markAllRead(userId: Long, role: UserRole, since: LocalDateTime, now: LocalDateTime) {
         reads.lockUser(userId)
-        val ids = queries.unreadIds(userId, since, now)
+        val ids = queries.unreadIds(userId, role, since, now)
         ids.chunked(500).forEach { chunk ->
             reads.saveAllAndFlush(chunk.map { NotificationBroadcastRead(userId, it, now) })
         }

@@ -4,6 +4,7 @@ import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
 import com.ogonggo.core.notificationbatch.implement.NotificationBatchAppender
 import com.ogonggo.core.notificationbatch.implement.dto.NotificationBatchAppendDto
 import com.ogonggo.core.user.implement.UserAppender
+import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import com.ogonggo.core.usernotification.domain.UserNotificationType
 import com.ogonggo.core.usernotification.implement.UserNotificationAppender
@@ -134,8 +135,36 @@ class NotificationBroadcastIntegrationTest @Autowired constructor(
         assertEquals(0, jdbc.queryForObject("select count(*) from notification_broadcast_reads", Int::class.java))
     }
 
-    private fun broadcast(number: Int, topic: String? = "ogonggo-all-test") = batches.append(NotificationBatchAppendDto(
-        batchId = uuid(number).toString(), requestedByUserId = 42, targetType = NotificationBatchTargetType.ALL,
+    @Test
+    @DisplayName("일반회원·기업회원 대상 공지는 해당 회원 종류의 알림함에만 보이고 다른 종류 회원은 읽음 처리도 할 수 없다")
+    fun `회원 종류 대상 공지는 해당 회원에게만 보인다`() {
+        // given
+        val general = user()
+        val company = tx.execute {
+            users.appendCompany(CompanyAccountAppendDto("inbox-company@example.com", "encoded", NOW.minusDays(1))).userId
+        }!!
+        broadcast(1)
+        broadcast(2, target = NotificationBatchTargetType.GENERAL_MEMBERS, topic = "ogonggo-general-test")
+        broadcast(3, target = NotificationBatchTargetType.COMPANY_MEMBERS, topic = "ogonggo-company-test")
+        // when
+        val generalItems = inbox.list(general, null, 20).items.map { it.broadcastId }
+        val companyItems = inbox.list(company, null, 20).items.map { it.broadcastId }
+        // then
+        assertEquals(listOf(uuid(2).toString(), uuid(1).toString()), generalItems)
+        assertEquals(listOf(uuid(3).toString(), uuid(1).toString()), companyItems)
+        assertEquals(2, inbox.countUnread(general))
+        mvc.perform(patch("$PATH/broadcasts/${uuid(3)}/read").with(auth(general)))
+            .andExpect(status().isNotFound).andExpect(jsonPath("$.code").value("USER_NOTIFICATION_NOT_FOUND"))
+        inbox.markAllRead(general)
+        assertEquals(2, inbox.countUnread(company))
+    }
+
+    private fun broadcast(
+        number: Int,
+        topic: String? = "ogonggo-all-test",
+        target: NotificationBatchTargetType = NotificationBatchTargetType.ALL,
+    ) = batches.append(NotificationBatchAppendDto(
+        batchId = uuid(number).toString(), requestedByUserId = 42, targetType = target,
         requestedUserIdsJson = null, title = "전체 공지", body = "전체 본문", dataJson = "{}",
         targetUserCount = 2, recipientUserCount = 1, enqueuedCount = 1, skippedNoTokenUserCount = 1,
         skippedInactiveUserCount = 0, dispatchExpiresAt = NOW.plusHours(24), topicName = topic, url = "https://example.com/notice",

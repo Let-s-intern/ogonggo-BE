@@ -22,12 +22,39 @@ class NotificationMetricsTest {
     private val notificationManager = Mockito.mock(NotificationManager::class.java)
     private val now = LocalDateTime.of(2026, 10, 7, 12, 0)
     private val alertNotifier = Mockito.mock(NotificationAlertNotifier::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-10-07T03:00:00Z"), ZoneId.of("Asia/Seoul"))
+    private val waitWindow = NotificationDispatchWaitWindow()
     private val metrics = NotificationMetrics(
         meterRegistry = meterRegistry,
         notificationManager = notificationManager,
-        clock = Clock.fixed(Instant.parse("2026-10-07T03:00:00Z"), ZoneId.of("Asia/Seoul")),
+        clock = clock,
         alertNotifier = alertNotifier,
+        waitWindow = waitWindow,
     )
+
+    @Test
+    @DisplayName("꺼낸 알림의 대기 시간을 지표에 남기고, 관리자 발송은 지연 경보 표본에서 뺀다")
+    fun `관리자 발송은 지연 경보 표본에서 뺀다`() {
+        // given
+        val direct = message(scheduledAt = now.minusSeconds(4), batchId = null)
+        val adminBatch = message(scheduledAt = now.minusMinutes(5), batchId = "batch-1")
+        // when
+        metrics.recordDispatchWait(direct, now)
+        metrics.recordDispatchWait(adminBatch, now)
+        // then
+        val percentile = checkNotNull(waitWindow.p95Since(clock.instant().minusSeconds(60)))
+        assertEquals(1, percentile.samples)
+        assertEquals(java.time.Duration.ofSeconds(4), percentile.p95)
+        assertEquals(1L, meterRegistry.get("ogonggo.notification.dispatch.wait")
+            .tags("channel", "FCM", "admin_batch", "true").timer().count())
+    }
+
+    private fun message(scheduledAt: LocalDateTime, batchId: String?) =
+        com.ogonggo.core.notification.delivery.implement.dto.NotificationMessageDto(
+            notificationId = 1, channel = NotificationChannel.FCM, templateCode = "admin_notification",
+            recipientAddress = "token", payloadJson = "{}", deduplicationKey = "key-${batchId ?: "direct"}",
+            scheduledAt = scheduledAt, batchId = batchId,
+        )
 
     @Test
     @DisplayName("결과 저장이 미해결이면 지표 기록과 함께 운영 경고를 제출한다")

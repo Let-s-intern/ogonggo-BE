@@ -27,7 +27,7 @@ class UserNotificationService(
         val since = now.minusDays(30)
         val position = UserNotificationCursor.decode(cursor)
         val rows = (reader.readPage(userId, since, position, size + 1) +
-            broadcasts.readPage(userId, maxOf(since, user.joinedAt), now, position, size + 1))
+            broadcasts.readPage(userId, user.role, maxOf(since, user.joinedAt), now, position, size + 1))
             .sortedWith(compareByDescending<com.ogonggo.core.usernotification.implement.dto.UserNotificationDto> { it.createdAt }
                 .thenByDescending { it.broadcastId != null }.thenByDescending { it.broadcastId }.thenByDescending { it.id })
         val items = rows.take(size)
@@ -41,7 +41,7 @@ class UserNotificationService(
         user.status.requireActive()
         val now = LocalDateTime.now(clock)
         return reader.countUnread(userId, now.minusDays(30)) +
-            broadcasts.countUnread(userId, maxOf(now.minusDays(30), user.joinedAt), now)
+            broadcasts.countUnread(userId, user.role, maxOf(now.minusDays(30), user.joinedAt), now)
     }
 
     @Transactional
@@ -56,7 +56,7 @@ class UserNotificationService(
         val user = userReader.read(userId)
         user.status.requireActive()
         val now = LocalDateTime.now(clock)
-        broadcastManager.markRead(userId, batchId.toString(), maxOf(now.minusDays(30), user.joinedAt), now)
+        broadcastManager.markRead(userId, user.role, batchId.toString(), maxOf(now.minusDays(30), user.joinedAt), now)
     }
 
     @Transactional
@@ -64,7 +64,7 @@ class UserNotificationService(
         val user = userReader.read(userId)
         user.status.requireActive()
         val now = LocalDateTime.now(clock)
-        broadcastManager.markAllRead(userId, maxOf(now.minusDays(30), user.joinedAt), now)
+        broadcastManager.markAllRead(userId, user.role, maxOf(now.minusDays(30), user.joinedAt), now)
         manager.markAllRead(userId, now.minusDays(30), now)
     }
 }

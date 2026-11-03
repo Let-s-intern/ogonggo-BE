@@ -94,12 +94,12 @@ internal class FcmTopicSyncPersistenceTest @Autowired constructor(
         val id = user(804)
         repeat(3) { tokenRows.saveAndFlush(UserFcmToken(id, UUID.randomUUID().toString(), "existing-$it", "slot-$it")) }
         // when
-        assertEquals(2, tasks.reconcile(NOW, 2))
+        assertEquals(2, reconcile(2))
         em.flush(); em.clear()
-        assertEquals(1, tasks.reconcile(NOW, 2))
+        assertEquals(1, reconcile(2))
         em.flush(); em.clear()
         // then
-        assertEquals(0, tasks.reconcile(NOW, 2))
+        assertEquals(0, reconcile(2))
         assertEquals(setOf("existing-0", "existing-1", "existing-2"), tasks.pending(NOW, 100).map { it.token }.toSet())
     }
 
@@ -115,13 +115,17 @@ internal class FcmTopicSyncPersistenceTest @Autowired constructor(
             .setParameter("status", UserStatus.SUSPENDED).setParameter("id", id).executeUpdate()
         em.clear()
         // when
-        tasks.reconcile(NOW, 100)
+        reconcile(100)
         em.flush(); em.clear()
         // then
         assertFalse(tasks.pending(NOW, 100).single().subscribed)
     }
 
     private fun user(externalId: Long) = checkNotNull(users.saveAndFlush(User.ofLetsCareer(externalId, NOW.minusDays(1))).id)
+
+    /** 구독 동기화 작업처럼 후보를 찾은 뒤 같은 시각으로 고친다. */
+    private fun reconcile(limit: Int) = tasks.reconcile(tasks.reconciliationCandidates(limit), NOW)
+
     companion object {
         private val NOW = LocalDateTime.of(2026, 10, 24, 12, 0)
         private val DEVICE = UUID.fromString("330a7396-907a-4e7f-a127-0cf5a80565ca")

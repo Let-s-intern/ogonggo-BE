@@ -10,6 +10,7 @@ import com.ogonggo.core.user.domain.User
 import com.ogonggo.core.user.domain.UserManagementSearchCondition
 import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.domain.UserRole
+import com.ogonggo.core.user.domain.UserStatus
 import com.querydsl.core.types.Predicate
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.domain.Page
@@ -106,6 +107,17 @@ internal class UserQueryRepository(
             .where(user.id.eq(userId), user.role.eq(UserRole.COMPANY))
             .fetchOne()
             ?.let { row -> checkNotNull(row.get(user)) to row.get(companyProfile) }
+
+    /**
+     * 알림 대상 고르기용 활성 일반 회원 목록. 회원 ID 순으로 렛츠커리어 회원 ID와 희망 직무 원문만 읽는다.
+     * 프로필 행이 없는 회원도 대상이 될 수 있어 프로필은 left join 한다.
+     */
+    fun findActiveGeneralMemberAudience(): List<Triple<Long, Long?, String?>> = queryFactory
+        .select(user.id, user.letsCareerUserId, userProfile.wishJob).from(user)
+        .leftJoin(userProfile).on(userProfile.userId.eq(user.id))
+        .where(user.role.`in`(UserRole.GENERAL_MEMBER_ROLES), user.status.eq(UserStatus.ACTIVE))
+        .orderBy(user.id.asc()).fetch()
+        .map { Triple(checkNotNull(it.get(user.id)), it.get(user.letsCareerUserId), it.get(userProfile.wishJob)) }
 
     private fun commonPredicates(condition: UserManagementSearchCondition): Array<Predicate?> = arrayOf(
         condition.status?.let(user.status::eq),

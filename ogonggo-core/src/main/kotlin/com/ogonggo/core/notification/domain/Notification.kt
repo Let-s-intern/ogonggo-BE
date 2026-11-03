@@ -48,6 +48,8 @@ enum class NotificationProvider(val channel: NotificationChannel) {
         Index(name = "idx_notification_user_notification", columnList = "user_notification_id"),
         Index(name = "idx_notification_batch", columnList = "batch_id, status"),
         Index(name = "idx_notification_due", columnList = "status, scheduled_at, id"),
+        // 관리자 발송이 많이 쌓여 있어도 개별 알림(batch_id null)만 예정 시각 순으로 바로 찾는다.
+        Index(name = "idx_notification_due_direct", columnList = "status, batch_id, scheduled_at, id"),
         Index(name = "idx_notification_processing_stale", columnList = "status, channel, processing_started_at, id"),
         Index(name = "idx_notification_cleanup", columnList = "status, updated_at, id"),
     ],
