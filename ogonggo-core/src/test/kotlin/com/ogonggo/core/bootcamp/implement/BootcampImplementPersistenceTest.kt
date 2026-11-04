@@ -363,6 +363,24 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         )
     }
 
+    @Test
+    fun `우선 노출을 끄면 마감되지 않은 비즈니스 등록 과정도 앞에 두지 않고 기업 연계 과정만 먼저 둔다`() {
+        val companyOpen = approvedCompanyBootcamp()
+        val linked = bootcampAppender.append(work24Command("A-1", enterpriseLinked = true))
+        val plain = bootcampAppender.append(createCommand())
+        listOf(linked, plain).forEach(bootcampManager::startRecruitment)
+
+        val beforeDeadline = LocalDateTime.of(2026, 8, 15, 12, 0)
+        assertEquals(
+            listOf(linked.id, plain.id, companyOpen.id),
+            publicPage(now = beforeDeadline, companyFirst = false).bootcamps.map { it.id },
+        )
+        assertEquals(
+            linked.id,
+            publicPage(sortType = BootcampSortType.VIEW_COUNT, now = beforeDeadline, companyFirst = false).bootcamps.first().id,
+        )
+    }
+
     /** 비즈니스 등록 부트캠프는 검수를 승인해야 게시된다. */
     private fun approvedCompanyBootcamp(): Bootcamp {
         val bootcamp = bootcampAppender.append(
@@ -421,11 +439,13 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         page: Int = 0,
         size: Int = 10,
         now: LocalDateTime,
+        companyFirst: Boolean = true,
     ): BootcampPageDto = bootcampReader.readPublicPage(
         condition = condition,
         sortType = sortType,
         page = page,
         size = size,
+        companyFirst = companyFirst,
         now = now,
     )
 
@@ -433,9 +453,9 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
     fun `사용자 부트캠프 목록의 페이지 범위를 검증한다`() {
         val none = BootcampSearchCondition.NONE
         val latest = BootcampSortType.LATEST
-        assertThrows(IllegalArgumentException::class.java) { bootcampReader.readPublicPage(none, latest, -1, 20) }
-        assertThrows(IllegalArgumentException::class.java) { bootcampReader.readPublicPage(none, latest, 0, 0) }
-        assertThrows(IllegalArgumentException::class.java) { bootcampReader.readPublicPage(none, latest, 0, 101) }
+        assertThrows(IllegalArgumentException::class.java) { bootcampReader.readPublicPage(none, latest, -1, 20, true) }
+        assertThrows(IllegalArgumentException::class.java) { bootcampReader.readPublicPage(none, latest, 0, 0, true) }
+        assertThrows(IllegalArgumentException::class.java) { bootcampReader.readPublicPage(none, latest, 0, 101, true) }
     }
 
     @Test
@@ -559,6 +579,7 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
             sortType = BootcampSortType.VIEW_COUNT,
             page = 0,
             size = 10,
+            companyFirst = true,
             now = now,
         )
 

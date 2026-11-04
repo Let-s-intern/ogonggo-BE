@@ -188,7 +188,7 @@ internal class BootcampManagementPersistenceTest @Autowired constructor(
     )
 
     private fun publicPage() =
-        bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10, NOW)
+        bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 10, companyFirst = true, now = NOW)
 
     private fun ids(condition: BootcampManagementSearchCondition): List<Long?> =
         bootcampReader.readManagementPage(condition, BootcampSortType.LATEST, 0, 20).bootcamps.map { it.id }

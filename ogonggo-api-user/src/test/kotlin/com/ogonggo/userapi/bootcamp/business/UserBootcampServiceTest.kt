@@ -22,6 +22,7 @@ import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import java.time.LocalDate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
 
@@ -33,6 +34,7 @@ class UserBootcampServiceTest {
     private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val bootcampMetricReader = Mockito.mock(BootcampMetricReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
+    private val companyContentPriorityReader = Mockito.mock(CompanyContentPriorityReader::class.java)
     private val service = UserBootcampService(
         bootcampReader,
         bootcampBookmarkReader,
@@ -40,6 +42,7 @@ class UserBootcampServiceTest {
         sourceUrlClickAppender,
         bootcampMetricReader,
         eventPublisher,
+        companyContentPriorityReader,
     )
 
     @Test
@@ -94,10 +97,11 @@ class UserBootcampServiceTest {
     }
 
     @Test
-    fun `게시된 부트캠프 목록을 페이지 결과로 변환한다`() {
+    fun `게시된 부트캠프 목록을 운영자가 정한 우선 노출 여부로 읽어 페이지 결과로 변환한다`() {
         val bootcamp = createBootcampMock()
+        Mockito.`when`(companyContentPriorityReader.isEnabled()).thenReturn(false)
         Mockito.`when`(
-            bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20),
+            bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20, false),
         ).thenReturn(
             BootcampPageDto(
                 bootcamps = listOf(bootcamp),
@@ -125,7 +129,7 @@ class UserBootcampServiceTest {
         assertEquals(7L, result.items.single().viewCount)
         assertEquals(2L, result.items.single().bookmarkCount)
         Mockito.verify(bootcampReader)
-            .readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20)
+            .readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20, false)
     }
 
     @Test

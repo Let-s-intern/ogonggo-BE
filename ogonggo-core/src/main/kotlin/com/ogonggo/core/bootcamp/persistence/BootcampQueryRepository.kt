@@ -37,17 +37,23 @@ internal class BootcampQueryRepository(
     private val queryFactory: JPAQueryFactory,
 ) {
 
+    /** [companyFirst]가 거짓이면(운영자가 우선 노출을 끄면) 기업 연계 과정만 먼저 둔다. */
     fun findPublicPage(
         condition: BootcampSearchCondition,
         sortType: BootcampSortType,
         publicStatuses: Collection<BootcampRecruitmentStatus>,
         now: LocalDateTime,
+        companyFirst: Boolean,
         pageable: Pageable,
     ): Page<Bootcamp> = findPage(
         publicPredicates(condition, publicStatuses, now),
         sortType,
         pageable,
-        leadingOrders = arrayOf(companyRecruitingFirst(now), bootcamp.enterpriseLinked.desc()),
+        leadingOrders = if (companyFirst) {
+            arrayOf(companyRecruitingFirst(now), bootcamp.enterpriseLinked.desc())
+        } else {
+            arrayOf(bootcamp.enterpriseLinked.desc())
+        },
     )
 
     /**
