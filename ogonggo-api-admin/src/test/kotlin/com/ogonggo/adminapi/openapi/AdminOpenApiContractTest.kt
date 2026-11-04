@@ -64,6 +64,8 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf(
             "/paths/~1api~1v1~1admin~1jobs~1{jobId}/patch",
             "/paths/~1api~1v1~1admin~1jobs~1{jobId}/delete",
+            "/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/put",
+            "/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/delete",
             "/paths/~1api~1v1~1admin~1jobs~1today/get",
             "/paths/~1api~1v1~1admin~1jobs~1today/put",
             "/paths/~1api~1v1~1admin~1bootcamps/get",
@@ -291,6 +293,27 @@ class AdminOpenApiContractTest @Autowired constructor(
             .response
             .contentAsString,
     )
+
+    @Test
+    fun `채용공고 검수 완료는 본문 없는 PUT과 DELETE이고 목록과 상세에 검수 완료 일시를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val mark = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/put")
+        val clear = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/delete")
+
+        // then
+        assertEquals("replaceJobInspection", mark.at("/operationId").asText())
+        assertEquals("deleteJobInspection", clear.at("/operationId").asText())
+        listOf(mark, clear).forEach { operation ->
+            assertTrue(operation.at("/requestBody").isMissingNode)
+            assertEquals(listOf("jobId"), operation.at("/parameters").map { it["name"].asText() })
+            assertTrue(operation.at("/responses/404/description").asText().startsWith("JOB_NOT_FOUND"))
+        }
+        assertTrue(document.at("/components/schemas/AdminJobSummaryResponse/properties/inspectedAt").isObject)
+        assertTrue(document.at("/components/schemas/AdminJobDetailResponse/properties/inspectedAt").isObject)
+    }
 
     @Test
     fun `관리자 OpenAPI는 독립된 정보와 인증 스키마를 제공하고 health를 제외한다`() {

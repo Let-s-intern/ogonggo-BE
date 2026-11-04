@@ -18,6 +18,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -234,6 +235,52 @@ interface AdminJobApi {
         @Positive jobId: Long,
         @Valid request: UpdateAdminJobRequest,
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>>
+
+    @Operation(
+        operationId = "replaceJobInspection",
+        summary = "채용공고 검수 완료 표시",
+        description = """
+            운영자가 공고를 직접 확인했다고 남깁니다(어드민 오늘 올라온 공고 화면의 검수 완료). 본문 없이 보내며 성공하면 data 없이 응답합니다.
+            이미 검수 완료한 공고에 다시 보내도 200이며 처음 확인한 시각(inspectedAt)을 지킵니다.
+            등록 경로와 무관하게 받고, 노출(visibility)과 검수 상태(reviewStatus)는 바꾸지 않습니다. 숨긴 공고도 표시할 수 있습니다.
+            내용을 고치거나 AI 서버가 다시 수집해도 검수 완료는 풀리지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "표시 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "404",
+                description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun markJobInspected(
+        @Positive jobId: Long,
+        @Parameter(hidden = true) adminUserId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "deleteJobInspection",
+        summary = "채용공고 검수 완료 해제",
+        description = """
+            검수 완료 표시를 지워 미검수로 되돌립니다. 성공하면 data 없이 응답합니다. 표시가 없어도 200입니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "해제 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "404",
+                description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun clearJobInspection(
+        @Positive jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
         operationId = "deleteJob",

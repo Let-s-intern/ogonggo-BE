@@ -73,6 +73,8 @@ data class AdminJobSummary(
     val reviewStatus: ContentReviewStatus?,
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
+    /** 운영자가 검수 완료한 일시다. 미검수면 null이다. */
+    val inspectedAt: LocalDateTime?,
 ) {
     companion object {
         internal fun from(job: Job, metric: JobMetricDto): AdminJobSummary = AdminJobSummary(
@@ -98,6 +100,7 @@ data class AdminJobSummary(
             reviewStatus = job.reviewStatus,
             recruitmentStatus = job.recruitmentStatus,
             registeredAt = job.createdAt,
+            inspectedAt = job.inspectedAt,
         )
     }
 }

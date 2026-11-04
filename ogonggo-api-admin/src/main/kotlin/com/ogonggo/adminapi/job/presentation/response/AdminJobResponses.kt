@@ -45,6 +45,8 @@ data class AdminJobSummaryResponse(
     @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
+    @Schema(description = "검수 완료 일시(한국 시간). 미검수면 null입니다. 기업회원 공고의 검수 상태(reviewStatus)와 다른 값입니다.")
+    val inspectedAt: LocalDateTime?,
 ) {
     companion object {
         internal fun from(result: AdminJobSummary): AdminJobSummaryResponse = AdminJobSummaryResponse(
@@ -70,6 +72,7 @@ data class AdminJobSummaryResponse(
             reviewStatus = result.reviewStatus,
             recruitmentStatus = result.recruitmentStatus,
             registeredAt = result.registeredAt,
+            inspectedAt = result.inspectedAt,
         )
     }
 }
@@ -126,6 +129,8 @@ data class AdminJobDetailResponse(
     @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
+    @Schema(description = "검수 완료 일시(한국 시간). 미검수면 null입니다. 기업회원 공고의 검수 상태(reviewStatus)와 다른 값입니다.")
+    val inspectedAt: LocalDateTime?,
     val companyAndTeamIntroduction: String?,
     val responsibilities: String?,
     val qualifications: String?,
@@ -175,6 +180,7 @@ data class AdminJobDetailResponse(
                 reviewStatus = summary.reviewStatus,
                 recruitmentStatus = summary.recruitmentStatus,
                 registeredAt = summary.registeredAt,
+                inspectedAt = summary.inspectedAt,
                 companyAndTeamIntroduction = result.companyAndTeamIntroduction,
                 responsibilities = result.responsibilities,
                 qualifications = result.qualifications,

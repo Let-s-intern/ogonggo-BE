@@ -18,6 +18,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -110,6 +111,23 @@ class AdminJobController(
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>> {
         adminJobService.updateJob(jobId, request.toCommand())
         return SuccessResponse.ok(AdminJobDetailResponse.from(adminJobService.getJob(jobId)))
+    }
+
+    @PutMapping("/{jobId}/inspection")
+    override fun markJobInspected(
+        @PathVariable("jobId") jobId: Long,
+        @AuthenticationPrincipal adminUserId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminJobService.markInspected(jobId, adminUserId)
+        return SuccessResponse.ok()
+    }
+
+    @DeleteMapping("/{jobId}/inspection")
+    override fun clearJobInspection(
+        @PathVariable("jobId") jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminJobService.clearInspection(jobId)
+        return SuccessResponse.ok()
     }
 
     @DeleteMapping("/{jobId}")

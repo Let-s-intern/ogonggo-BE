@@ -38,6 +38,8 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -259,6 +261,42 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `검수 완료 표시는 본문 없이 받아 로그인한 관리자로 남기고 data 없이 200으로 응답한다`() {
+        mockMvc.perform(signedInAdmin(put("/api/v1/admin/jobs/693/inspection")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").doesNotExist())
+
+        Mockito.verify(adminJobService).markInspected(693L, ADMIN_USER_ID)
+    }
+
+    @Test
+    fun `검수 완료 해제는 data 없이 200으로 응답하고 없는 공고는 404다`() {
+        mockMvc.perform(admin(delete("/api/v1/admin/jobs/693/inspection")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").doesNotExist())
+        Mockito.verify(adminJobService).clearInspection(693L)
+
+        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)).`when`(adminJobService).clearInspection(999L)
+        mockMvc.perform(admin(delete("/api/v1/admin/jobs/999/inspection")))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("JOB_NOT_FOUND"))
+    }
+
+    @Test
+    fun `목록과 상세는 검수 완료 일시를 싣고 미검수면 null이다`() {
+        Mockito.`when`(adminJobService.getJobs(JobManagementSearchCondition.NONE, JobSortType.LATEST, 0, 20))
+            .thenReturn(pageOf(AdminJobFixtures.summary(inspectedAt = LocalDateTime.of(2026, 11, 4, 9, 30))))
+        Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
+
+        mockMvc.perform(admin(get("/api/v1/admin/jobs")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].inspectedAt").value("2026-11-04T09:30:00"))
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/693")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.inspectedAt").value(null as Any?))
+    }
+
+    @Test
     fun `삭제하면 data 없이 200으로 응답한다`() {
         mockMvc.perform(admin(delete("/api/v1/admin/jobs/693")))
             .andExpect(status().isOk)
@@ -435,6 +473,14 @@ class AdminJobControllerTest @Autowired constructor(
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
         request.with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY)))
 
+    /** 관리자 인증 필터처럼 사용자 식별자를 주체로 남긴다. */
+    private fun signedInAdmin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
+        request.with(
+            authentication(
+                UsernamePasswordAuthenticationToken(ADMIN_USER_ID, null, listOf(SimpleGrantedAuthority(ADMIN_AUTHORITY))),
+            ),
+        )
+
     private fun pageOf(vararg items: AdminJobSummary): AdminJobPageResult =
         AdminJobPageResult(
             items = items.toList(),
@@ -443,4 +489,8 @@ class AdminJobControllerTest @Autowired constructor(
             totalElements = items.size.toLong(),
             totalPages = if (items.isEmpty()) 0 else 2,
         )
+
+    private companion object {
+        const val ADMIN_USER_ID = 1L
+    }
 }

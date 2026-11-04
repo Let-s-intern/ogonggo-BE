@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 
 internal object AdminJobFixtures {
 
-    fun summary(id: Long = 693L): AdminJobSummary = AdminJobSummary(
+    fun summary(id: Long = 693L, inspectedAt: LocalDateTime? = null): AdminJobSummary = AdminJobSummary(
         id = id,
         title = "VMD 경력사원 채용",
         companyName = "한국후지필름",
@@ -40,6 +40,7 @@ internal object AdminJobFixtures {
         reviewStatus = ContentReviewStatus.PENDING,
         recruitmentStatus = JobRecruitmentStatus.RECRUITING,
         registeredAt = LocalDateTime.of(2026, 9, 10, 10, 48),
+        inspectedAt = inspectedAt,
     )
 
     fun detail(id: Long = 693L): AdminJobResult = AdminJobResult(

@@ -82,6 +82,18 @@ class AdminJobService(
             .forEach { job -> changeVisibility(job, command.visibility) }
     }
 
+    /** 노출·검수 상태는 바꾸지 않는다. 이미 검수 완료한 공고는 처음 확인한 시각과 관리자를 지킨다. */
+    @Transactional
+    fun markInspected(jobId: Long, adminUserId: Long) {
+        jobManager.markInspected(jobReader.readForUpdate(jobId), adminUserId, LocalDateTime.now(clock))
+    }
+
+    /** 검수 완료가 없어도 성공한다. 마지막 동작 되돌리기가 같은 요청을 반복해도 결과가 같게 하기 위해서다. */
+    @Transactional
+    fun clearInspection(jobId: Long) {
+        jobManager.clearInspection(jobReader.readForUpdate(jobId))
+    }
+
     /** 반려 기록은 지우지 않는다. 반려 보관에서 "반려하고 지웠다"는 기록으로 남는다. */
     @Transactional
     fun deleteJob(jobId: Long) {
