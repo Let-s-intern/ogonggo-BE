@@ -197,7 +197,7 @@ internal class TodayJobPersistenceTest @Autowired constructor(
     }
 
     private fun latestJobIds(): List<Long?> =
-        jobReader.readPublishedPage(JobSearchCondition(), JobSortType.LATEST, 0, 20).jobs.map { it.id }
+        jobReader.readPublishedPage(JobSearchCondition(), JobSortType.LATEST, 0, 20, companyFirst = true).jobs.map { it.id }
 
     private fun sortKeyOf(job: Job): Long = jobReader.readPublished(job.requiredId()).listSortKey
 
