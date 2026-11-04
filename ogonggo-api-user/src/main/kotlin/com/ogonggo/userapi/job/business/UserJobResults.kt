@@ -96,6 +96,8 @@ data class UserJobSummary(
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val closedAt: LocalDateTime?,
+    /** 공고 등록 일시다. 관리자 목록의 등록 일시와 같은 값이다. */
+    val registeredAt: LocalDateTime,
     val bookmarked: Boolean,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -120,6 +122,7 @@ data class UserJobSummary(
             recruitmentStartAt = job.recruitmentStartAt,
             recruitmentEndAt = job.recruitmentEndAt,
             closedAt = job.closedAt,
+            registeredAt = job.createdAt,
             bookmarked = bookmarked,
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,
@@ -166,6 +169,8 @@ data class UserJobResult(
     /** 이메일로 지원받는 공고가 지원서를 받는 주소다. */
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
+    /** 공고 등록 일시다. 관리자 상세의 등록 일시와 같은 값이다. */
+    val registeredAt: LocalDateTime,
     val bookmarked: Boolean,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -209,6 +214,7 @@ data class UserJobResult(
             sourceHtml = sourceHtml,
             applyEmail = job.applyEmail,
             closedAt = job.closedAt,
+            registeredAt = job.createdAt,
             bookmarked = bookmarked,
             viewCount = metric.viewCount,
             bookmarkCount = metric.bookmarkCount,

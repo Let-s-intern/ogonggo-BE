@@ -70,6 +70,8 @@ data class UserJobSummaryResponse(
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val closedAt: LocalDateTime?,
+    @field:Schema(description = "공고 등록 일시(한국 시간). 오공고에 들어온 시각이며 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
+    val registeredAt: LocalDateTime,
     val bookmarked: Boolean,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -94,6 +96,7 @@ data class UserJobSummaryResponse(
             recruitmentStartAt = result.recruitmentStartAt,
             recruitmentEndAt = result.recruitmentEndAt,
             closedAt = result.closedAt,
+            registeredAt = result.registeredAt,
             bookmarked = result.bookmarked,
             viewCount = result.viewCount,
             bookmarkCount = result.bookmarkCount,
@@ -151,6 +154,8 @@ data class UserJobDetailResponse(
     val sourceHtml: String?,
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
+    @field:Schema(description = "공고 등록 일시(한국 시간). 오공고에 들어온 시각이며 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
+    val registeredAt: LocalDateTime,
     val bookmarked: Boolean,
     val viewCount: Long,
     val bookmarkCount: Long,
@@ -188,6 +193,7 @@ data class UserJobDetailResponse(
             sourceHtml = result.sourceHtml,
             applyEmail = result.applyEmail,
             closedAt = result.closedAt,
+            registeredAt = result.registeredAt,
             bookmarked = result.bookmarked,
             viewCount = result.viewCount,
             bookmarkCount = result.bookmarkCount,

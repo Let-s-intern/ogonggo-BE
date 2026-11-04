@@ -93,6 +93,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].viewCount").value(12))
             .andExpect(jsonPath("$.data.items[0].bookmarkCount").value(3))
             .andExpect(jsonPath("$.data.items[0].commentCount").value(0))
+            .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-11-04T04:10:00"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(10))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(1))
@@ -106,6 +107,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
             .andExpect(jsonPath("$.data.title").value("백엔드 개발자"))
+            .andExpect(jsonPath("$.data.registeredAt").value("2026-11-04T04:10:00"))
             .andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/cover.png"))
             .andExpect(jsonPath("$.data.jobField").value("IT_DEVELOPMENT"))
             .andExpect(jsonPath("$.data.jobRole").value("IT_BACKEND"))
@@ -189,6 +191,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].id").value(1))
             .andExpect(jsonPath("$.data[0].bookmarked").value(true))
             .andExpect(jsonPath("$.data[0].viewCount").value(12))
+            .andExpect(jsonPath("$.data[0].registeredAt").value("2026-11-04T04:10:00"))
             .andExpect(jsonPath("$.data[0].recommendationTitle").value("경력 없이 시작하고 싶다면"))
             .andExpect(jsonPath("$.data[0].recommendationDescription").value("실무 중심 프로젝트로 빠른 성장"))
             .andExpect(jsonPath("$.data[0].job").doesNotExist())
@@ -820,6 +823,7 @@ class UserReadControllerTest @Autowired constructor(
         recruitmentStartAt = null,
         recruitmentEndAt = null,
         closedAt = null,
+        registeredAt = LocalDateTime.of(2026, 11, 4, 4, 10),
         bookmarked = bookmarked,
         viewCount = 12,
         bookmarkCount = 3,
@@ -855,6 +859,7 @@ class UserReadControllerTest @Autowired constructor(
         sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
         applyEmail = "recruit@example.com",
         closedAt = null,
+        registeredAt = LocalDateTime.of(2026, 11, 4, 4, 10),
         bookmarked = bookmarked,
         viewCount = 12,
         bookmarkCount = 3,

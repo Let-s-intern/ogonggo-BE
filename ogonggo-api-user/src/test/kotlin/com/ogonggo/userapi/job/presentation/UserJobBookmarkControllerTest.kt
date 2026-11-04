@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [UserJobBookmarkController::class])
 @Import(UserSecurityConfiguration::class, UserApiExceptionHandler::class)
@@ -252,6 +253,7 @@ class UserJobBookmarkControllerTest @Autowired constructor(
                 recruitmentStartAt = null,
                 recruitmentEndAt = null,
                 closedAt = null,
+                registeredAt = LocalDateTime.of(2026, 11, 4, 4, 10),
                 bookmarked = true,
                 viewCount = 12,
                 bookmarkCount = 3,

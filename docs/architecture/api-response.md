@@ -138,6 +138,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 채용공고 상세는 단일 `content` 대신 선택형 `companyAndTeamIntroduction`, `responsibilities`, `qualifications`, `preferredQualifications`, `compensation`, `benefits`, `hiringProcess`, `recruitmentNotice`를 반환합니다. 채용 안내사항(`recruitmentNotice`)은 2026-10-08에 추가했습니다(리뷰 상태: 팀 리뷰 필요). 공고 분석의 본문 해시와 '공고 속 문구'가 이 칸까지 보므로, 사용자가 원문에서 그 문장을 찾을 수 있게 하려는 것입니다. 값이 없는 항목도 필드는 유지하고 `null`로 반환해 클라이언트가 섹션 표시 여부를 판단하게 합니다.
 
+사용자 채용공고 목록(`GET /api/v1/jobs`, 인기·비슷한 공고, 북마크 목록), 오늘의 공고(`GET /api/v1/jobs/today`), 상세(`GET /api/v1/jobs/{jobId}`)는 공고 등록 일시 `registeredAt`(한국 시간)을 싣습니다(2026-11-04, LC-3567). 관리자 목록·상세의 `registeredAt`과 같은 `jobs.created_at`이며, 모집 시작 일시(`recruitmentStartAt`)와 다른 "오공고에 들어온 시각"입니다. 웹은 이 값이 24시간 안이면 카드와 상세 머리에 `NEW`를 답니다.
+
 ### 채용공고 공고 분석
 
 채용공고 상세(`GET /api/v1/jobs/{jobId}`)의 `analysis`는 상세 화면 '공고 분석' 탭의 내용입니다. AI 서버가 만들어 보내며([REST API 설계의 AI 서버 공고 분석](rest-api-design.md#ai-서버-공고-분석)), 목록·달력에는 싣지 않습니다.
