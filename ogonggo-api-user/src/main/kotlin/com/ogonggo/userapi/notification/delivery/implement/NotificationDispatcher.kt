@@ -99,6 +99,7 @@ class NotificationDispatcher internal constructor(
                         limit = maxConcurrency - inFlight.size,
                     )
                     val candidates = dueNotifications
+                    candidates.forEach { notificationMetrics.recordDispatchWait(it, now) }
 
                     for (index in candidates.indices) {
                         val notification = candidates[index]

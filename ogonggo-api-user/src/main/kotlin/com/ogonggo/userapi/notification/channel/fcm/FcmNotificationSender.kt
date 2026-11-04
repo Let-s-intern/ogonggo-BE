@@ -60,6 +60,7 @@ internal class FcmNotificationSender(
                     Notification.builder()
                         .setTitle(payload.title)
                         .setBody(payload.body)
+                        .apply { payload.imageUrl?.let { setImage(it) } }
                         .build(),
                 )
                 .putAllData(payload.data)
@@ -133,4 +134,5 @@ internal data class FcmNotificationPayload(
     val title: String,
     val body: String,
     val data: Map<String, String> = emptyMap(),
+    val imageUrl: String? = null,
 )

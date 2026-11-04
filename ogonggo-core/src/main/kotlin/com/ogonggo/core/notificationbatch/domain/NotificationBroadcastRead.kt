@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 @Entity
 @Table(name = "notification_broadcast_reads", uniqueConstraints = [
     UniqueConstraint(name = "uk_broadcast_read_user_batch", columnNames = ["user_id", "batch_id"]),
-])
+], indexes = [Index(name = "idx_notification_broadcast_read_batch", columnList = "batch_id")])
 internal class NotificationBroadcastRead(
     @Column(name = "user_id", nullable = false) val userId: Long,
     @Column(name = "batch_id", nullable = false, length = 36) val batchId: String,

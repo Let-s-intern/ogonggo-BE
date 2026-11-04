@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
 import java.time.LocalDateTime
 
 @DataJpaTest
@@ -264,6 +265,43 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("관리자 발송이 개별 알림보다 먼저 쌓여 있어도 개별 알림을 먼저 꺼내고 남은 자리만 관리자 발송으로 채운다")
+    fun `개별 알림을 먼저 꺼내고 남은 자리만 관리자 발송으로 채운다`() {
+        // given
+        val now = LocalDateTime.of(2026, 10, 31, 12, 0)
+        (1..3).forEach { appendAdminBatch("admin-$it", scheduledAt = now.minusMinutes(30), expiresAt = now.plusHours(23)) }
+        append("comment-1", now.minusMinutes(1))
+        append("comment-2", now.minusSeconds(30))
+
+        // when
+        val onlyDirect = notificationManager.findDue(now, 2)
+        val filled = notificationManager.findDue(now, 4)
+
+        // then
+        assertEquals(listOf("comment-1", "comment-2"), onlyDirect.map { it.deduplicationKey })
+        assertEquals(listOf("comment-1", "comment-2", "admin-1", "admin-2"), filled.map { it.deduplicationKey })
+    }
+
+    @Test
+    @DisplayName("관리자 발송 알림이 예정 시각부터 기준 시간 넘게 대기 중일 때만 관리자 발송 지연으로 본다")
+    fun `관리자 발송 지연은 기준 시간을 넘긴 대기 건으로 판단한다`() {
+        // given
+        val now = LocalDateTime.of(2026, 10, 31, 12, 0)
+        appendAdminBatch("admin-recent", scheduledAt = now.minusMinutes(9), expiresAt = now.plusHours(23))
+        appendAdminBatch("admin-expired", scheduledAt = now.minusHours(25), expiresAt = now.minusHours(1))
+        append("comment-old", now.minusMinutes(30))
+
+        // when
+        val slowBeforeOldBatch = notificationManager.hasAdminBatchWaitingLongerThan(now, Duration.ofMinutes(10))
+        appendAdminBatch("admin-old", scheduledAt = now.minusMinutes(11), expiresAt = now.plusHours(23))
+        val slowAfterOldBatch = notificationManager.hasAdminBatchWaitingLongerThan(now, Duration.ofMinutes(10))
+
+        // then
+        assertFalse(slowBeforeOldBatch)
+        assertTrue(slowAfterOldBatch)
+    }
+
+    @Test
     @DisplayName("발송 조회와 대기 지표는 채널에 관계없이 저장된 기한과 동일한 만료 경계를 사용한다")
     fun `채널별 저장 기한으로 발송 대상과 기한 초과 건수를 구분한다`() {
         // given
@@ -284,6 +322,22 @@ internal class NotificationManagerPersistenceTest @Autowired constructor(
         assertEquals(1L, dueCount)
         assertEquals(2L, expiredCount)
         assertEquals(1L, futureCount)
+    }
+
+    private fun appendAdminBatch(key: String, scheduledAt: LocalDateTime, expiresAt: LocalDateTime) {
+        notificationRepository.saveAndFlush(
+            Notification(
+                deduplicationKey = key,
+                channel = NotificationChannel.FCM,
+                templateCode = "admin_notification",
+                recipientAddress = "test-token",
+                payloadJson = "{}",
+                scheduledAt = scheduledAt,
+                recipientUserId = 17,
+                batchId = "test-batch",
+                dispatchExpiresAt = expiresAt,
+            ),
+        )
     }
 
     private fun append(

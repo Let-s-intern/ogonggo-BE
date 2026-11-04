@@ -438,6 +438,7 @@ AI 서버처럼 사람이 아닌 클라이언트는 사용자 로그인 흐름�
 | --- | --- | --- |
 | `https://www.ogonggo.co.kr` | 공통 | 운영 프론트엔드 |
 | `https://ogonggo.co.kr` | 공통 | apex 도메인 직접 접속 |
+| `https://admin.ogonggo.co.kr` | 공통 | 관리자 콘솔 로그인·이미지 업로드(사용자 API), 발송 관리(관리자 API) |
 | `http://localhost:[*]` | 공통 | 로컬 개발 서버. 포트는 사람과 프레임워크마다 달라 전부 연다 |
 | `https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com` | 사용자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |
 | `https://p5itn5nbm4.execute-api.ap-northeast-2.amazonaws.com` | 관리자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |
@@ -473,7 +474,7 @@ AI 서버처럼 사람이 아닌 클라이언트는 사용자 로그인 흐름�
 
 `ADMIN` 역할은 관리자가 콘솔의 역할 변경 API로 부여하고 회수합니다(2026-10-15). 관리자가 아무도 없을 때의 첫 관리자만 운영자가 DB에서 직접 바꿉니다(`users.role = 'ADMIN'`). 부여 이력과 감사 기록은 남기지 않습니다.
 
-콘솔 운영 도메인 `https://admin.ogonggo.co.kr`은 관리자 API의 `ALLOWED_ORIGIN_PATTERNS`에만 둡니다.
+콘솔 운영 도메인 `https://admin.ogonggo.co.kr`은 사용자 API와 관리자 API의 `ALLOWED_ORIGIN_PATTERNS`에 둡니다. 콘솔은 로그인·푸시 이미지 업로드에 사용자 API를, 발송 요청·결과 조회에 관리자 API를 사용합니다.
 
 ## 8. 아직 정하지 않은 것
 

@@ -15,17 +15,22 @@ class NotificationBatchAppender internal constructor(private val repository: Not
             topicName = dto.topicName, url = dto.url,
             id = dto.batchId, requestedByUserId = dto.requestedByUserId, targetType = dto.targetType,
             requestedUserIdsJson = dto.requestedUserIdsJson, title = dto.title, body = dto.body, dataJson = dto.dataJson,
+            imageId = dto.imageId, imageUrl = dto.imageUrl,
             targetUserCount = dto.targetUserCount, recipientUserCount = dto.recipientUserCount,
             enqueuedCount = dto.enqueuedCount, skippedNoTokenUserCount = dto.skippedNoTokenUserCount,
             skippedInactiveUserCount = dto.skippedInactiveUserCount, dispatchExpiresAt = dto.dispatchExpiresAt,
+            targetJobRolesJson = dto.targetJobRolesJson, advertisement = dto.advertisement,
+            skippedNoMarketingConsentUserCount = dto.skippedNoMarketingConsentUserCount,
         ),
     ).toDto()
 }
 
 internal fun NotificationBatch.toDto() = NotificationBatchDto(
-    topicName = topicName, url = url,
+    topicName = topicName, url = url, imageId = imageId, imageUrl = imageUrl,
     batchId = id, requestedByUserId = requestedByUserId, targetType = targetType, title = title, body = body,
     dataJson = dataJson, targetUserCount = targetUserCount, recipientUserCount = recipientUserCount,
     enqueuedCount = enqueuedCount, skippedNoTokenUserCount = skippedNoTokenUserCount,
     skippedInactiveUserCount = skippedInactiveUserCount, dispatchExpiresAt = dispatchExpiresAt, createdAt = createdAt,
+    targetJobRolesJson = targetJobRolesJson, advertisement = advertisement,
+    skippedNoMarketingConsentUserCount = skippedNoMarketingConsentUserCount,
 )

@@ -266,7 +266,7 @@ class NotificationDispatcherTest {
             senders = senders,
             taskExecutor = TaskExecutor { task -> Thread(task, "notification-test").apply { start() } },
             resultDbTaskExecutor = databaseTaskExecutor,
-            notificationMetrics = NotificationMetrics(SimpleMeterRegistry(), manager, clock, Mockito.mock(NotificationAlertNotifier::class.java)),
+            notificationMetrics = NotificationMetrics(SimpleMeterRegistry(), manager, clock, Mockito.mock(NotificationAlertNotifier::class.java), com.ogonggo.userapi.notification.metrics.NotificationDispatchWaitWindow()),
             clock = clock,
             deliveryProperties = properties,
         )

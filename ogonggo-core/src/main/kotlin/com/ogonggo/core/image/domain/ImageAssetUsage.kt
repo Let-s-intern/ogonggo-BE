@@ -15,6 +15,7 @@ enum class ImageAssetUsage(
     PROFILE(1, "프로필 이미지·기업 로고", "profile", ALL_FORMATS),
     RECRUITMENT_POST(2, "사이드 프로젝트·스터디 모집글", "side", setOf(JPEG, PNG)),
     CONCERN(3, "취준고민", "concern", setOf(JPEG, PNG)),
+    NOTIFICATION(4, "푸시 알림 이미지", "notification", setOf(JPEG, PNG)),
 }
 
 private const val JPEG = "image/jpeg"

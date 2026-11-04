@@ -1,6 +1,11 @@
 package com.ogonggo.adminapi.notificationbatch.presentation
 
+import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationJobRoleOptionResponse
+import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
 import com.ogonggo.adminapi.notificationbatch.business.AdminNotificationBatchService
+import com.ogonggo.adminapi.notificationbatch.business.AdminNotificationBatchStatisticsService
+import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchStatisticsResponse
+import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
 import com.ogonggo.adminapi.notificationbatch.presentation.request.CreateNotificationBatchRequest
 import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchCreatedResponse
 import com.ogonggo.adminapi.notificationbatch.presentation.response.AdminNotificationBatchResultResponse
@@ -14,11 +19,17 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.format.annotation.DateTimeFormat
+import java.time.LocalDateTime
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/admin/notification-batches")
-class AdminNotificationBatchController(private val service: AdminNotificationBatchService) : AdminNotificationBatchApi {
+class AdminNotificationBatchController(
+    private val service: AdminNotificationBatchService,
+    private val statistics: AdminNotificationBatchStatisticsService,
+) : AdminNotificationBatchApi {
     @PostMapping
     override fun createNotificationBatch(
         @AuthenticationPrincipal adminUserId: Long,
@@ -26,11 +37,25 @@ class AdminNotificationBatchController(private val service: AdminNotificationBat
     ): ResponseEntity<SuccessResponse<AdminNotificationBatchCreatedResponse>> {
         val batch = service.create(adminUserId, request.toCommand())
         // Service의 트랜잭션 커밋이 끝난 요청만 기록하며 본문·토큰은 로그에 남기지 않는다.
-        log.info("관리자 FCM 발송 적재 완료. batchId={}, adminUserId={}, targetType={}, enqueued={}, skippedNoToken={}, skippedInactive={}",
-            batch.batchId, batch.requestedByUserId, batch.targetType, batch.enqueuedCount,
-            batch.skippedNoTokenUserCount, batch.skippedInactiveUserCount)
+        log.info("관리자 FCM 발송 적재 완료. batchId={}, adminUserId={}, targetType={}, advertisement={}, enqueued={}, skippedNoToken={}, skippedInactive={}, skippedNoMarketingConsent={}",
+            batch.batchId, batch.requestedByUserId, batch.targetType, batch.advertisement, batch.enqueuedCount,
+            batch.skippedNoTokenUserCount, batch.skippedInactiveUserCount, batch.skippedNoMarketingConsentUserCount)
         return SuccessResponse.created(AdminNotificationBatchCreatedResponse.from(batch))
     }
+
+    @GetMapping("/job-role-options")
+    override fun getJobRoleOptions(): ResponseEntity<SuccessResponse<List<AdminNotificationJobRoleOptionResponse>>> =
+        SuccessResponse.ok(service.jobRoleOptions().map { (field, roles) ->
+            AdminNotificationJobRoleOptionResponse(field, LetsCareerWishJobCatalog.allRolesOf(field), roles)
+        })
+
+    @GetMapping("/statistics")
+    override fun getStatistics(
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) from: LocalDateTime?,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) to: LocalDateTime?,
+        @RequestParam(required = false) targetType: NotificationBatchTargetType?,
+    ): ResponseEntity<SuccessResponse<AdminNotificationBatchStatisticsResponse>> =
+        SuccessResponse.ok(statistics.read(from, to, targetType))
 
     @GetMapping("/{batchId}")
     override fun getNotificationBatch(@PathVariable("batchId") batchId: UUID): ResponseEntity<SuccessResponse<AdminNotificationBatchResultResponse>> =

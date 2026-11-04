@@ -24,7 +24,7 @@ class FcmTopicSyncService(
 ) {
     /** 외부 호출은 DB 트랜잭션 밖에서 수행하고 결과는 요청 revision이 유지될 때만 반영한다. */
     fun sync() {
-        if (properties.topic.isEmpty()) return
+        if (properties.syncTopics().isEmpty()) return
         val messaging = firebase.ifAvailable ?: return
         val started = System.nanoTime()
         var completed = 0
@@ -32,13 +32,18 @@ class FcmTopicSyncService(
         var reconciled = 0
         do {
             val now = LocalDateTime.now(clock)
-            reconciled += transactions.execute { tasks.reconcile(now, 1000) } ?: 0
+            // 후보를 작은 묶음마다 별도 트랜잭션으로 고친다. 한 트랜잭션에 1,000개를 넣으면 저장할 때마다
+            // 그동안 읽은 엔티티 전체를 다시 검사해 처리 시간이 후보 수의 제곱으로 늘어난다.
+            tasks.reconciliationCandidates(RECONCILE_LIMIT).chunked(RECONCILE_CHUNK).forEach { chunk ->
+                reconciled += transactions.execute { tasks.reconcile(chunk, now) } ?: 0
+            }
             val pending = tasks.pending(now, 1000)
             if (pending.isEmpty()) break
-            for ((subscribed, group) in pending.groupBy { it.subscribed }) {
+            for ((key, group) in pending.groupBy { it.topic to it.subscribed }) {
+                val (topic, subscribed) = key
                 val errors: Map<Int, String> = try {
-                    val future = if (subscribed) messaging.subscribeToTopicAsync(group.map { it.token }, properties.topic)
-                        else messaging.unsubscribeFromTopicAsync(group.map { it.token }, properties.topic)
+                    val future = if (subscribed) messaging.subscribeToTopicAsync(group.map { it.token }, topic)
+                        else messaging.unsubscribeFromTopicAsync(group.map { it.token }, topic)
                     val response = future.get(20, TimeUnit.SECONDS)
                     response.errors.associate { it.index to it.reason }
                 } catch (exception: Exception) {
@@ -68,5 +73,9 @@ class FcmTopicSyncService(
             reconciled, completed, failed, tasks.countPending())
     }
 
-    companion object { private val log = LoggerFactory.getLogger(FcmTopicSyncService::class.java) }
+    companion object {
+        private val log = LoggerFactory.getLogger(FcmTopicSyncService::class.java)
+        private const val RECONCILE_LIMIT = 1000
+        private const val RECONCILE_CHUNK = 50
+    }
 }

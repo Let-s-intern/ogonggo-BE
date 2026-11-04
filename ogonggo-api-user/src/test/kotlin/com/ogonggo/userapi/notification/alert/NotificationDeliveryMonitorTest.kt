@@ -4,6 +4,7 @@ import com.ogonggo.core.notification.delivery.implement.NotificationManager
 import com.ogonggo.core.schedule.implement.ScheduledJobReader
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobSettingDto
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
+import com.ogonggo.userapi.notification.metrics.NotificationDispatchWaitWindow
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -18,7 +19,7 @@ internal class NotificationDeliveryMonitorTest {
     private val notifier = Mockito.mock(NotificationAlertNotifier::class.java)
     private val clock = MonitorClock()
     private val scheduledJobReader = Mockito.mock(ScheduledJobReader::class.java)
-    private val monitor = NotificationDeliveryMonitor(manager, notifier, NotificationAlertProperties(enabled = true), clock, scheduledJobReader)
+    private val monitor = NotificationDeliveryMonitor(manager, notifier, NotificationAlertProperties(enabled = true), clock, scheduledJobReader, NotificationDispatchWaitWindow())
 
     @Test
     @DisplayName("발송 대기가 2분 이상 지속되고 공용 DB에 최근 확정 처리가 없으면 중단을 경고한다")
@@ -84,7 +85,7 @@ internal class NotificationDeliveryMonitorTest {
     @DisplayName("운영 경고가 비활성화되어 있으면 감시 DB 조회를 하지 않는다")
     fun `비활성 상태는 감시하지 않는다`() {
         // given
-        val disabled = NotificationDeliveryMonitor(manager, notifier, NotificationAlertProperties(), clock, scheduledJobReader)
+        val disabled = NotificationDeliveryMonitor(manager, notifier, NotificationAlertProperties(), clock, scheduledJobReader, NotificationDispatchWaitWindow())
         // when
         disabled.check()
         // then
@@ -101,6 +102,59 @@ internal class NotificationDeliveryMonitorTest {
         monitor.check()
         // then
         Mockito.verifyNoInteractions(manager, notifier)
+    }
+
+    @Test
+    @DisplayName("개별 알림의 대기 p95가 3초 이상인 상태가 2분 이어지면 발송 지연을 경고한다")
+    fun `개별 알림 대기 p95가 기준을 넘는 상태가 이어지면 지연을 경고한다`() {
+        // given
+        val window = NotificationDispatchWaitWindow()
+        val lagMonitor = NotificationDeliveryMonitor(manager, notifier, NotificationAlertProperties(enabled = true), clock, scheduledJobReader, window)
+        // when
+        repeat(3) {
+            window.record(clock.instant(), Duration.ofSeconds(4))
+            lagMonitor.check()
+            if (it < 2) Mockito.verifyNoInteractions(notifier)
+            clock.advance(Duration.ofMinutes(1))
+        }
+        // then
+        Mockito.verify(notifier).notify(
+            NotificationAlertType.DELIVERY_LAGGING, "all",
+            // 최근 1분 구간에는 직전 감시와 이번 감시에 기록한 표본 두 개가 들어간다.
+            mapOf("p95Millis" to "4000", "samples" to "2", "laggingSeconds" to "120"),
+        )
+    }
+
+    @Test
+    @DisplayName("대기 p95가 3초 아래로 내려가면 지연 지속 시간을 처음부터 다시 센다")
+    fun `대기가 회복되면 지연 지속 시간을 다시 센다`() {
+        // given
+        val window = NotificationDispatchWaitWindow()
+        val lagMonitor = NotificationDeliveryMonitor(manager, notifier, NotificationAlertProperties(enabled = true), clock, scheduledJobReader, window)
+        window.record(clock.instant(), Duration.ofSeconds(4))
+        lagMonitor.check()
+        // 1분 구간에서 앞선 4초 표본이 빠지도록 70초 뒤에 감시한다.
+        clock.advance(Duration.ofSeconds(70))
+        window.record(clock.instant(), Duration.ofMillis(500))
+        lagMonitor.check()
+        // when
+        clock.advance(Duration.ofSeconds(70))
+        window.record(clock.instant(), Duration.ofSeconds(4))
+        lagMonitor.check()
+        // then
+        Mockito.verifyNoInteractions(notifier)
+    }
+
+    @Test
+    @DisplayName("관리자 발송 알림이 예정 시각부터 10분 넘게 대기 중이면 관리자 발송 지연을 경고한다")
+    fun `관리자 발송 지연을 경고한다`() {
+        // given
+        val now = LocalDateTime.now(clock)
+        Mockito.`when`(manager.hasAdminBatchWaitingLongerThan(now, Duration.ofMinutes(10))).thenReturn(true)
+        // when
+        monitor.check()
+        // then
+        Mockito.verify(notifier).notify(NotificationAlertType.ADMIN_BATCH_SLOW, "all", mapOf("waitingOverMinutes" to "10"))
     }
 }
 

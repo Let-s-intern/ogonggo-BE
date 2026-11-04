@@ -5,6 +5,7 @@ import com.ogonggo.core.notification.domain.NotificationStatus
 import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
 import com.ogonggo.core.notificationbatch.implement.dto.NotificationBatchDto
 import com.ogonggo.core.notificationbatch.implement.dto.NotificationBatchResultDto
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.time.LocalDateTime
 import io.swagger.v3.oas.annotations.media.Schema
 
@@ -17,6 +18,12 @@ data class AdminNotificationBatchCreatedResponse(
     val skippedInactiveUserCount: Long,
     val deliveryTargetType: NotificationRecipientType,
     val noTokenUserCount: Long,
+    @field:Schema(description = "광고성 발송 여부")
+    val advertisement: Boolean,
+    @field:Schema(description = "광고성 발송에서 마케팅 수신에 동의하지 않아 뺀 활성 회원 수. 기업 회원은 동의 항목이 없어 여기에 센다.")
+    val noMarketingConsentUserCount: Long,
+    val imageId: String?,
+    val imageUrl: String?,
 ) {
     companion object {
         fun from(batch: NotificationBatchDto) = AdminNotificationBatchCreatedResponse(
@@ -24,9 +31,17 @@ data class AdminNotificationBatchCreatedResponse(
             batch.skippedNoTokenUserCount, batch.skippedInactiveUserCount,
             if (batch.topicName == null) NotificationRecipientType.DIRECT else NotificationRecipientType.TOPIC,
             batch.skippedNoTokenUserCount,
+            batch.advertisement, batch.skippedNoMarketingConsentUserCount, batch.imageId, batch.imageUrl,
         )
     }
 }
+
+/** 희망 직무 발송에서 고를 수 있는 렛츠커리어 직군과 그 직무. 직군 전체를 고를 때는 allRolesOption 값을 보낸다. */
+data class AdminNotificationJobRoleOptionResponse(
+    val jobField: String,
+    val allRolesOption: String,
+    val jobRoles: List<String>,
+)
 
 data class AdminNotificationBatchResultResponse(
     val batchId: String,
@@ -51,8 +66,16 @@ data class AdminNotificationBatchResultResponse(
     val failureReasons: List<AdminNotificationBatchFailureResponse>,
     val deliveryTargetType: NotificationRecipientType,
     val noTokenUserCount: Long,
+    @field:Schema(description = "JOB_ROLES 발송에서 고른 희망 직무 선택지. 다른 대상은 null")
+    val targetJobRoles: List<String>?,
+    val advertisement: Boolean,
+    val noMarketingConsentUserCount: Long,
+    val imageId: String?,
+    val imageUrl: String?,
 ) {
     companion object {
+        private val jsonMapper = jacksonObjectMapper()
+
         fun from(result: NotificationBatchResultDto): AdminNotificationBatchResultResponse {
             val batch = result.batch
             fun count(status: NotificationStatus) = result.counts.filter { it.status == status }.sumOf { it.count }
@@ -62,6 +85,10 @@ data class AdminNotificationBatchResultResponse(
             return AdminNotificationBatchResultResponse(
                 deliveryTargetType = if (batch.topicName == null) NotificationRecipientType.DIRECT else NotificationRecipientType.TOPIC,
                 noTokenUserCount = batch.skippedNoTokenUserCount,
+                targetJobRoles = batch.targetJobRolesJson?.let { jsonMapper.readValue(it, Array<String>::class.java).toList() },
+                advertisement = batch.advertisement,
+                noMarketingConsentUserCount = batch.skippedNoMarketingConsentUserCount,
+                imageId = batch.imageId, imageUrl = batch.imageUrl,
                 batchId = batch.batchId, requestedByUserId = batch.requestedByUserId, createdAt = batch.createdAt,
                 targetType = batch.targetType, title = batch.title, body = batch.body,
                 targetUserCount = batch.targetUserCount, recipientUserCount = batch.recipientUserCount,

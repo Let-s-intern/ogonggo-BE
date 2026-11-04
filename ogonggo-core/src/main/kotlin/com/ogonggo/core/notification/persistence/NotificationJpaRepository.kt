@@ -53,22 +53,61 @@ internal interface NotificationJpaRepository : JpaRepository<Notification, Long>
         @Param("pending") pending: NotificationStatus,
     ): Int
 
-    /** 예정 시각이 도래한 대기 알림만 작은 묶음으로 읽는다. */
+    /**
+     * 예정 시각이 도래한 개별 알림(관리자 발송 묶음이 아닌 것)을 작은 묶음으로 읽는다.
+     * 정렬을 인덱스(status, batch_id, scheduled_at, id) 순서와 맞춰 대기 행 전체를 읽지 않는다.
+     */
     @Query(
         """
         select notification from Notification notification
-        where notification.scheduledAt <= :now
+        where notification.status = :pending
+          and notification.batchId is null
+          and notification.scheduledAt <= :now
           and (notification.dispatchExpiresAt is null or notification.dispatchExpiresAt > :now)
-          and notification.status = :pending
-        order by case when notification.batchId is null then 0 else 1 end,
-          notification.scheduledAt, notification.id
+        order by notification.scheduledAt, notification.id
         """,
     )
-    fun findDue(
+    fun findDueDirect(
         @Param("now") now: LocalDateTime,
         @Param("pending") pending: NotificationStatus,
         pageable: Pageable,
     ): List<Notification>
+
+    /**
+     * 예정 시각이 도래한 관리자 발송 묶음의 알림을 읽는다. 개별 알림을 먼저 보낸 뒤 남은 자리만 채운다.
+     * 발송 기한이 지난 대기 행은 상태를 바꾸지 않고 남으므로, 그런 행이 많으면 이 조회가 그만큼 더 읽는다.
+     */
+    @Query(
+        """
+        select notification from Notification notification
+        where notification.status = :pending
+          and notification.batchId is not null
+          and notification.scheduledAt <= :now
+          and (notification.dispatchExpiresAt is null or notification.dispatchExpiresAt > :now)
+        order by notification.scheduledAt, notification.id
+        """,
+    )
+    fun findDueBatch(
+        @Param("now") now: LocalDateTime,
+        @Param("pending") pending: NotificationStatus,
+        pageable: Pageable,
+    ): List<Notification>
+
+    /** 예정 시각이 waitingSince 이전인데 아직 대기 중인 관리자 발송 알림이 있는지 본다. 발송 기한이 지난 행은 제외한다. */
+    @Query(
+        """
+        select count(notification) > 0 from Notification notification
+        where notification.status = :pending
+          and notification.batchId is not null
+          and notification.scheduledAt <= :waitingSince
+          and (notification.dispatchExpiresAt is null or notification.dispatchExpiresAt > :now)
+        """,
+    )
+    fun existsBatchPendingSince(
+        @Param("waitingSince") waitingSince: LocalDateTime,
+        @Param("now") now: LocalDateTime,
+        @Param("pending") pending: NotificationStatus,
+    ): Boolean
 
     /** 읽은 PENDING을 attempt token으로 원자적으로 선점한다. 네트워크 호출 전 별도 트랜잭션으로 커밋된다. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

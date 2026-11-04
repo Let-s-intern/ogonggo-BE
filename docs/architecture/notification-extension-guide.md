@@ -33,7 +33,7 @@
 ## 핵심 규칙
 
 1. 업무 기능은 수신 대상·발송 시각·템플릿 변수를 결정하고 provider를 직접 호출하지 않는다.
-2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 개별 주소 또는 FCM 토픽 하나·채널 한 개의 발송 기록이다. DIRECT 다중 기기 FCM은 설치마다, TOPIC 전체 발송은 토픽에 한 행을 만든다.
+2. 공통 발송 대상은 `notifications`에 저장한다. 한 행은 개별 주소 또는 FCM 토픽 하나·채널 한 개의 발송 기록이다. DIRECT 다중 기기 FCM은 설치마다, TOPIC 발송(전체·일반회원·기업회원)은 토픽에 한 행을 만든다.
 3. `deduplication_key`는 같은 논리 알림의 재처리에도 변하지 않게 만든다. 별도 회차로 다시 보낼 때는 회차 식별자를 포함한다.
 4. 발송 상태는 `PENDING → PROCESSING → SENT | FAILED | UNKNOWN`이다. `SENT`는 provider 접수, `FAILED`는 명시적 거절, `UNKNOWN`은 접수 여부를 판단할 수 없는 결과다. `SENT`는 사용자 도착을 뜻하지 않는다.
 5. `dispatch_expires_at`은 업무가 지정한 발송 기한만 저장한다. null 일반 알림은 업무 만료 없이 대기하며 provider별 stale timeout은 `PROCESSING` 시작 시각에 적용한다. stale 복구는 provider 정책에 따라 제한 재시도하거나 `UNKNOWN`으로 남긴다.
@@ -254,9 +254,9 @@ Authorization: Bearer {ogonggo-access-token}
 
 ## 어드민 FCM 발송
 
-아래의 회원·토큰별 적재 설명은 USER_IDS와 전체 토픽 전환 전 ALL에 해당한다. 토픽 전환 후 ALL은 [전체 토픽 발송과 공통 알림함](#전체-토픽-발송과-공통-알림함)을 따른다.
+아래의 회원·토큰별 적재 설명은 USER_IDS와 토픽 전환 전 ALL·GENERAL_MEMBERS·COMPANY_MEMBERS에 해당한다. 토픽 전환 후 ALL은 [전체 토픽 발송과 공통 알림함](#전체-토픽-발송과-공통-알림함)을, GENERAL_MEMBERS·COMPANY_MEMBERS는 [회원 종류 토픽 발송](#회원-종류-토픽-발송)을 따른다.
 
-- `POST /api/v1/admin/notification-batches`: `targetType`, `userIds`, `title`, `body`, `data`를 받는다. `USER_IDS`는 양수 ID 1~1,000개를 중복 제거하고, `ALL`은 `userIds` 없이 전체 활성 회원을 평가한다. 없는 지정 회원이 있으면 404 `USER_NOT_FOUND`로 전체 롤백한다.
+- `POST /api/v1/admin/notification-batches`: `targetType`, `userIds`, `title`, `body`, `data`와 선택 값 `jobRoles`·`advertisement`를 받는다. `USER_IDS`는 양수 ID 1~1,000개를 중복 제거하고, `ALL`은 `userIds` 없이 전체 활성 회원을 평가한다. `GENERAL_MEMBERS`는 활성 일반 회원(역할 USER·MENTOR·ADMIN), `COMPANY_MEMBERS`는 활성 기업 회원(역할 COMPANY)만 평가하며 `userIds`를 보내면 400이다. 없는 지정 회원이 있으면 404 `USER_NOT_FOUND`로 전체 롤백한다.
 - 제목과 본문은 공백만 있는 값을 거부하며 각각 최대 100자·1,000자다. `data`는 최대 20개의 문자열 맵이며 `url`에 http(s) 이동 주소가 필요하다. FCM 예약 키·문자열이 아닌 값·직렬화한 전체 메시지 4,096바이트 초과는 400 `BAD_REQUEST`다.
 - 500명씩 대상과 토큰을 조회해 기존 `NotificationAppender`로 적재한다. 응답은 적재 완료 후 201이며 `batchId`, `targetUserCount`, `recipientUserCount`, `enqueuedCount`, `skippedNoTokenUserCount`, `skippedInactiveUserCount`를 반환한다. 적재 건수는 활성 토큰별, 나머지는 중복 제거한 회원 수다. 전체 발송은 정지·탈퇴 회원을 처음부터 제외한다.
 - `notification_batches`에 요청 관리자·시각·대상 유형·지정 ID·제목·본문·data·건수를 남긴다. 기록과 대기열은 같은 트랜잭션으로 저장하고, 0건도 기록한다. 요청 성공 로그에는 묶음 ID·관리자·대상 유형·건수만 남긴다.
@@ -277,10 +277,10 @@ Authorization: Bearer {ogonggo-access-token}
 - 식별자: 개인 항목은 source=PERSONAL·숫자 id, 공통 항목은 source=BROADCAST·id=null·UUID batchId다. sourceId는 두 종류의 문자열 식별자다. 공통 공지 읽음은 `PATCH /api/v1/users/me/notifications/broadcasts/{batchId}/read`를 사용한다. 기존 개인 읽음 경로와 숫자 커서는 유지하고 공통 UUID 커서를 함께 해석한다.
 - 읽음: `notification_broadcast_reads`에 읽은 회원·배치·최초 시각만 저장한다. `(user_id,batch_id)` 유니크와 회원 잠금으로 단건/전체 읽음의 경합을 직렬화한다. 전체 읽음은 공지 ID 목록을 한 번 고정하고 500개씩 저장하며 이후 추가된 공지를 포함하지 않는다. 목록·미읽음·읽음에 같은 가입/30일/현재 시각 경계를 사용한다. 읽음 기록 자동 정리는 추가하지 않는다.
 - 구독: topic 설정이 있으면 토큰 등록·교체·해제 트랜잭션에서 `fcm_topic_sync_tasks`에 최신 구독 희망 상태를 저장한다. 해제 전에 원문을 작업에 옮기므로 토큰 연결이 지워져도 해제 요청을 수행할 수 있다. topic 설정만 먼저 배포하고 enabled는 나중에 켤 수 있다.
-- 동기화: 사용자 API의 `fcmTopicSync`가 30초마다 실행된다. 기존 토큰 중 작업이 없는 대상과 회원 상태 변경을 1,000개씩 재평가한다. 같은 회원→토큰→작업 잠금 순서로 후보를 다시 확인한다. 이미 기록한 대상을 제외하므로 재기동 후에도 최초 구독을 이어간다. FCM 요청은 1,000개 이내로 나누고 DB 트랜잭션 밖에서 수행한다.
+- 동기화: 사용자 API의 `fcmTopicSync`가 30초마다 실행된다. 기존 토큰 중 작업이 없는 대상과 회원 상태 변경을 토픽마다 찾아 최대 1,000개를 재평가한다. 후보는 50개씩 별도 트랜잭션에서 고친다. 한 트랜잭션에 1,000개를 넣으면 작업을 저장할 때마다 그동안 읽은 엔티티 전체를 다시 검사해 처리 시간이 후보 수의 제곱으로 늘기 때문이다(2026-10-31 변경). 같은 회원→토큰→작업 잠금 순서로 후보를 다시 확인한다. 이미 기록한 대상을 제외하므로 재기동 후에도 최초 구독을 이어간다. FCM 요청은 1,000개 이내로 나누고 DB 트랜잭션 밖에서 수행한다.
 - 재처리: 구독 성공·실패를 원하는 상태의 revision이 같을 때만 기록한다. 이후 해제·재구독 요청이 있으면 이전 결과를 버린다. 성공 시 작업 token 원문을 지우고 실패 시 코드·횟수·다음 시각을 기록한다. 실패는 5초부터 지수 지연하며 최대 1시간 간격으로 재처리한다. 종료 상태 푸시의 자동 재발송 정책과는 별개다.
 - 실행: 동기화는 45초 동안 새 묶음을 시작하고 개별 SDK 대기는 20초로 제한한다. 진행 중 묶음이 있어 45초는 hard timeout이 아니다. 작업 전체에는 5분 ShedLock을 적용한다. 로그에는 재평가·완료·실패·대기 수만 기록하며 외부 오류 메시지·토큰 원문은 기록하지 않는다.
-- 한계: DB의 희망 상태와 Firebase 구독은 즉시 일치하지 않는다. 구독 해제 지연 중 푸시가 도착할 수 있고 토픽은 접근 제어 수단이 아니므로 공개 공지에 사용한다. Firebase 콘솔 직접 발송은 이 배치·공통 알림함 기록을 만들지 않는다. 토픽·회원 관리 화면, 직무/관심사 분류, 특정 회원 발송 100명 제한은 이번 범위에서 제외한다.
+- 한계: DB의 희망 상태와 Firebase 구독은 즉시 일치하지 않는다. 구독 해제 지연 중 푸시가 도착할 수 있고 토픽은 접근 제어 수단이 아니므로 공개 공지에 사용한다. Firebase 콘솔 직접 발송은 이 배치·공통 알림함 기록을 만들지 않는다. 토픽·회원 관리 화면, 특정 회원 발송 100명 제한은 이번 범위에서 제외한다. 회원 종류 토픽은 [회원 종류 토픽 발송](#회원-종류-토픽-발송), 희망 직무·광고성 발송은 [희망 직무 발송과 광고성 발송](#희망-직무-발송과-광고성-발송)을 따른다.
 
 ### 전체 토픽 설정
 
@@ -317,6 +317,64 @@ select count(*) as pending_sync_count
 from fcm_topic_sync_tasks
 where topic = @notification_broadcast_topic and pending = true;
 ```
+
+### 회원 종류 토픽 발송
+
+- 결정일: 2026-10-31 / 리뷰 상태: 팀 리뷰 필요
+- 결정: 정보성 관리자 발송 중 전체·일반회원·기업회원은 토픽으로, 지정 회원은 기기마다 보낸다. 대상이 많은 발송일수록 기기마다 펼쳐 보내는 일(팬아웃)을 FCM에 맡기는 이점이 크다. 일반회원은 회원 대부분이라 전체 발송과 규모가 같다.
+- 대상: 일반 회원은 역할 USER·MENTOR·ADMIN, 기업 회원은 역할 COMPANY인 활성 회원이다. 기업 회원 역할은 가입 때 정해지고 바뀌지 않으며 관리자는 일반 회원 역할 사이에서만 바꾼다([사용자 역할](authentication.md#5-사용자-역할과-기업-회원)). 그래서 회원 종류 구독은 토큰 등록·해제와 회원 상태 변경만 따라가면 된다.
+- 구독: 토큰 등록 트랜잭션에서 설정된 토픽마다 회원이 대상인지 계산해 구독 또는 해제를 기록한다(`FcmTopicSyncTaskManager.requestMembership`). 해제·교체·계정 전환은 모든 토픽에서 해제한다. 작업이 없는 토픽에는 해제 기록을 만들지 않는다 → 기업 회원 기기에 일반회원 토픽 해제 요청을 보내지 않는다. 정지·탈퇴 같은 상태 변경은 30초마다 도는 재평가가 반영한다.
+- 발송: `member-topics-enabled=true`이면 GENERAL_MEMBERS·COMPANY_MEMBERS는 [전체 토픽 발송과 공통 알림함](#전체-토픽-발송과-공통-알림함)과 같은 방식으로 배치 1건과 TOPIC 발송 1건을 저장한다. 대상 수는 해당 역할의 활성 회원만 센다. 꺼져 있으면 해당 역할의 활성 회원마다 알림함을, 기기마다 발송 행을 만든다.
+- 알림함: 토픽 공지는 알림함을 볼 때 회원의 지금 역할로 판정한다. 전체 공지는 모든 활성 회원, 일반회원 공지는 일반 회원, 기업회원 공지는 기업 회원에게만 보이며 읽음 처리도 같은 조건을 쓴다. 발송 당시 대상 명단은 저장하지 않는다.
+- 희망 직무·광고성 발송은 토픽을 쓰지 않고 기기마다 보낸다. [희망 직무 발송과 광고성 발송](#희망-직무-발송과-광고성-발송)을 따른다.
+
+```yaml
+ogonggo:
+  notification:
+    broadcast:
+      topic: ogonggo-all-prod
+      general-topic: ogonggo-general-prod  # 사용자·관리자 API에 동일 값, 개발은 다른 이름
+      company-topic: ogonggo-company-prod
+      member-topics-enabled: false         # 최초 구독 확인 후 관리자 API에서 true
+```
+
+- 토픽 이름은 서로 달라야 하며, `member-topics-enabled=true`에는 두 이름이 모두 필요하다. 어긋나면 기동 시 실패한다.
+
+### 회원 종류 토픽 이관·배포
+
+1. [`2026-10-31-notification-member-topics.sql`](../schema/2026-10-31-notification-member-topics.sql)을 적용해 개별 알림 조회 인덱스를 만든다. 다른 스키마 변경은 없다.
+2. 사용자 API에 `general-topic`·`company-topic`을 설정해 배포한다. `fcmTopicSync`가 기존 토큰을 두 토픽에 구독시킨다. 관리자 API는 `member-topics-enabled=false`로 둔다.
+3. [전체 토픽 이관·배포](#전체-토픽-이관배포)의 확인 SQL에서 토픽 변수만 바꿔 두 토픽의 미처리 구독이 0인지 보고, 테스트 기기 수신을 확인한다. 일반회원 토픽은 `u.role in ('USER','MENTOR','ADMIN')`, 기업회원 토픽은 `u.role = 'COMPANY'` 조건을 더한다.
+4. 관리자 API의 `member-topics-enabled`를 true로 바꿔 배포한다. 그 전까지 두 대상은 기기마다 보내므로 기능은 바로 쓸 수 있다.
+5. 되돌릴 때는 `member-topics-enabled`를 먼저 끈다. 이미 저장한 회원 종류 토픽 공지와 읽음을 읽는 사용자 API는 유지한다.
+
+### 희망 직무 발송과 광고성 발송
+
+- 결정일: 2026-11-02 / 리뷰 상태: 팀 리뷰 필요
+- 희망 직무(`targetType=JOB_ROLES`): `jobRoles`(1~100개)와 희망 직무가 하나라도 겹치는 활성 일반 회원에게 기기마다 보낸다. 회원별 알림함을 만든다.
+  - 선택지는 렛츠커리어 커리어 정보 화면의 고정 목록이다(`LetsCareerWishJobCatalog`). 회원 프로필의 희망 직무(`user_profiles.wish_job`)는 이 목록의 직무 이름을 `", "`로 이은 값이다. `GET /api/v1/admin/notification-batches/job-role-options`가 같은 목록을 내려준다.
+  - 공고 직군 enum(`JobRole`)과는 다른 목록이다. 이름이 같은 직무는 66개 중 4개뿐이라 공고 직군으로 고르지 않는다.
+  - `<직군> 직무 전체`는 양쪽 모두 그 직군의 모든 직무로 펼쳐 비교한다. 회원이 직군 전체를 골랐으면 그 직군의 어느 직무 발송이든 받는다.
+  - `직무 무관`과 목록에 없는 옛 값은 어떤 직무와도 겹치지 않는다. 관리자는 `직무 무관`을 고를 수 없다.
+  - 대상은 활성 일반 회원 전체의 희망 직무를 읽어 앱에서 거른다(`GeneralMemberAudienceReader`). 회원이 수만 명으로 늘면 희망 직무를 회원·직무 행으로 따로 저장하는 방식으로 바꾼다.
+  - 렛츠커리어가 목록을 바꾸면 이 목록과 오공고 웹(`careerOptions.ts`)을 함께 맞춘다.
+- 광고성(`advertisement=true`): 대상 중 렛츠커리어 마케팅 수신 동의자에게만 기기마다 보내고 토픽은 쓰지 않는다. 토픽은 보낼 때 받는 사람을 거르지 못하기 때문이다.
+  - 동의 값은 렛츠커리어 회원 테이블(`user.marketing_agree`)에만 있다. 오공고 일반 회원 가입 화면의 선택 동의도 렛츠커리어 가입 API로 저장된다.
+  - 관리자 API가 발송을 등록하는 순간 렛츠커리어 내부 API(`POST /api/v1/internal/users/marketing-agreements`, 1,000명씩)에 묻는다. 렛츠커리어에서 철회하면 다음 발송부터 바로 빠진다. 등록 뒤 실제 발송까지(최대 24시간) 사이의 철회는 반영하지 않는다.
+  - 동의를 확인하지 못하면 503 `MARKETING_AGREEMENT_UNAVAILABLE`로 등록 전체를 거부한다. 동의 여부를 모른 채 보내지 않기 위해서다.
+  - 기업 회원은 가입에 동의 항목이 없어 대상이 아니다. 기업 회원 대상 광고성 발송은 400이고, 전체·지정 회원 광고성 발송에서는 기업 회원을 동의하지 않은 회원으로 센다.
+  - 대상 수(`targetUserCount`)는 동의와 무관하게 조건에 맞는 회원 수다. 동의하지 않아 뺀 회원은 `noMarketingConsentUserCount`로 따로 보인다.
+  - 야간 발송 제한, "(광고)" 표시, 수신 거부 안내, 동의 이력 보관은 넣지 않았다(2026-11-02 결정).
+
+```yaml
+ogonggo:
+  letscareer:                      # 관리자 API. 사용자 API와 같은 키를 쓴다
+    base-url: ${OGONGGO_LETSCAREER_BASE_URL:}
+    internal-api-key: ${OGONGGO_LETSCAREER_INTERNAL_API_KEY:}
+```
+
+- 관리자 API에 위 설정이 없어도 기동한다. 광고성 발송만 503으로 거부한다.
+- 배포 순서: 렛츠커리어에 동의 조회 API를 먼저 배포한 뒤, [`2026-10-31-notification-member-topics.sql`](../schema/2026-10-31-notification-member-topics.sql)의 `notification_batches` 칸 추가를 적용하고 관리자 API를 배포한다.
 
 ## 구현 규칙
 
@@ -392,6 +450,10 @@ sender를 호출하고 결과 commit이 끝날 때까지 슬롯을 유지한다.
 가상 스레드 작업이 DB 완료를 기다리므로 진행 중 알림 상한에는 HTTP와 DB 대기가 모두 포함된다.
 `virtual-threads=false`는 같은 상한의 플랫폼 발송 스레드로 비교·복귀할 때 사용한다.
 
+발송 작업은 빈 자리마다 개별 알림(관리자 발송 묶음이 아닌 것)을 먼저 예정 시각 순으로 꺼내고, 남은 자리만 관리자 발송 알림으로 채운다. 두 조회 모두 정렬이 인덱스 순서와 같아 limit 건에서 멈춘다. 이전에는 "관리자 발송이면 뒤로" 하는 계산식이 정렬 맨 앞에 있어 꺼낼 때마다 대기 행 전체를 읽고 정렬했다(2026-10-31 변경, 인덱스 `idx_notification_due_direct`). 관리자 발송 조회는 발송 기한이 지나 상태가 바뀌지 않은 대기 행이 많으면 그만큼 더 읽는다.
+
+발송 작업이 알림을 꺼낼 때 예정 시각부터 꺼낸 시각까지의 대기 시간을 `ogonggo.notification.dispatch.wait`(꼬리표 `channel`, `admin_batch`)로 기록한다. 개별 알림의 대기 시간은 [Slack 운영 경고](#slack-운영-경고)의 발송 지연 판단에도 쓴다.
+
 `max-concurrency`는 코드 기본값 4를 유지한다. 운영 설정값은 실제 provider 할당량·호출 지연과
 DB 결과 저장 여력을 확인해 정한다.
 설정은 `OGONGGO_NOTIFICATION_DELIVERY_MAX_CONCURRENCY`,
@@ -417,12 +479,14 @@ DB 전용 풀은 `NotificationManager.complete`의 결과 저장을 분리한다
 
 ### Slack 운영 경고
 
-`notification/alert`는 정리 적체·실행 실패, 잠금 만료 위험, 발송 중단·기한 초과·결과 기록 실패,
-적재 실패, 감시 이상을 위한 8종 템플릿과 전송기를 제공한다. 자동 감지는 아래 경로에 연결한다.
+`notification/alert`는 정리 적체·실행 실패, 잠금 만료 위험, 발송 중단·발송 지연·관리자 발송 지연·기한 초과·결과 기록 실패,
+적재 실패, 감시 이상을 위한 10종 템플릿과 전송기를 제공한다. 자동 감지는 아래 경로에 연결한다.
 
 - 결과 기록 실패: dispatcher의 `recordUnresolved` 지표 기록 시 `DELIVERY_UNRESOLVED` 경고를 제출한다.
 - 가입 적재 실패: 알림톡·환영 메일의 실행기 제출 거절·등록 실패·적재 실패 시 `ENQUEUE_FAILURE`를 제출한다. 필수 정보 누락에 따른 정상 생략은 경고하지 않는다.
 - 발송 진행 중단: `NotificationDeliveryMonitor`가 기본 30초마다 공용 DB를 확인한다. due 대기가 2분 이상 유지되고 최근 2분의 `SENT`·`FAILED`·`UNKNOWN` 수정 기록이 없거나 provider별 stale timeout을 넘긴 `PROCESSING`이 남으면 `DELIVERY_STALLED`를 제출한다. 다른 인스턴스의 확정 처리도 진행으로 인정하며 의도적으로 비활성화한 발송 작업은 제외한다.
+- 개별 알림 발송 지연(2026-10-31 추가): 같은 감시기가 최근 1분 동안 꺼낸 개별 알림(관리자 발송 제외)의 대기 시간 p95가 3초 이상인 상태가 2분 이어지면 `DELIVERY_LAGGING`을 제출한다. 정상일 때 대기는 발송 작업 주기인 1초 이내다. 관리자 발송은 한꺼번에 쌓여 차례로 나가 원래 오래 기다리므로 표본에서 뺀다. 대기 시간은 발송 작업을 돌린 인스턴스의 메모리에만 있어, 잠금을 잡은 인스턴스가 바뀌거나 재기동하면 처음부터 다시 센다.
+- 관리자 발송 지연(2026-10-31 추가): 관리자 발송 알림이 예정 시각부터 10분 넘게 대기 중이면 `ADMIN_BATCH_SLOW`를 제출한다. 공용 DB로 판단하고 발송 기한이 지난 행은 세지 않는다. 반복되면 기기마다 보내는 방식이 한계에 가까워졌다는 뜻이므로 토픽 전환이나 묶음 발송을 검토한다.
 - 감시 조회 실패: 예외 원문 없이 `MONITORING_FAILURE`를 제출한다. 다음 감시 주기는 계속 실행한다.
 
 정리 적체·실행 누락, 실행 중 잠금 만료 위험, 새 기한 초과는 템플릿만 제공하며 자동 감지는 아직 연결하지 않았다.
@@ -444,7 +508,7 @@ flowchart LR
 `HOSTNAME`을 사용한다. 주소·토큰·알림 본문·원본 예외는 경고에 넣지 않는다.
 
 중복 억제는 큐 제출 **전**에 수행한다. 키는 유형·상태뿐이며 범위·채널·개별 알림 ID는 키에 넣지 않는다.
-8유형 × 3상태의 고정 배열에 다음 허용 시각 24개만 보관하므로 1만 건이 몰려도 상태 크기는 증가하지 않는다.
+10유형 × 3상태의 고정 배열에 다음 허용 시각 30개만 보관하므로 1만 건이 몰려도 상태 크기는 증가하지 않는다.
 같은 유형·상태는 기본 15분 동안 최초 한 건만 제출하고 나머지는 버린다. 첫 경고의 범위·관측값만 남는다.
 제출 거절·전송 실패에도 억제 시각을 유지한다. 경고 유실을 허용하며 별도 저장·재시도·누적 목록은 두지 않는다.
 `FIRING`·`RESOLVED`·`TEST`는 각자 억제하고 복구가 발생 억제를 해제하지 않아 상태 반복으로 인한 폭주를 막는다.
@@ -452,7 +516,8 @@ flowchart LR
 
 요청 간격은 인스턴스별 최소 1초이며 HTTP 429의 `Retry-After` 동안 전송을 중단한다.
 `ogonggo.notification.alerts.cooldown`·`min-send-interval`로 전송 간격을,
-`check-interval`·`stalled-after`로 감시 간격·중단 기준을 조정한다.
+`check-interval`·`stalled-after`로 감시 간격·중단 기준을,
+`lag-threshold`(3초)·`lag-window`(1분)·`lag-sustained-for`(2분)·`admin-batch-slow-after`(10분)로 지연 기준을 조정한다.
 감시기는 경고 활성화 시에만 전용 플랫폼 스레드 1개를 시작하고 종료 시 중단한다. 업무 스케줄러가
 막힌 경우에도 관측할 수 있도록 업무 cron과 분리하며 감시 상태는 대기 최초 관측 시각 한 개만 둔다.
 최근 확정 처리 확인은 기존 정리 인덱스(`status, updated_at, id`)를 활용하는 존재 조회다.
@@ -483,6 +548,14 @@ ogonggo:
 알림 끝에는 처리할 어드민 화면으로 가는 링크를 붙인다(`SlackText.link`, 주소는 `SlackProperties.adminUrl(경로)`).
 경로는 어드민 프론트(ogonggo-FE `apps/admin`)의 라우트와 맞춘다. 알림 받은 건은 목록에서 다른 대기 건과 함께 처리하므로 목록으로 보낸다.
 공고·부트캠프 등록은 검수 목록(`/ads/review`), 광고 문의는 문의 목록(`/business/ad-inquiries`)이다.
+
+## 관리자 푸시 이미지와 기간 통계
+
+- 운영 DB에는 관리자 API 배포 전에 [`2026-11-03-notification-image-admin-metrics.sql`](../schema/2026-11-03-notification-image-admin-metrics.sql)을 적용한다. 이미지가 있는 발송을 처리할 사용자 API의 FCM sender를 먼저 배포한다. SQL 적용·실기기 표시 확인은 자동 테스트로 대체하지 않는다.
+- 관리자 콘솔은 사용자 API의 기존 `POST /api/v1/images?usage=NOTIFICATION`에 JPEG 또는 PNG 파일(최대 10 MiB)을 multipart `file`로 올린다. 로그인 때 받은 오공고 액세스 토큰을 그대로 사용한다. 응답의 `id`를 관리자 발송 요청 `imageId`에 넣는다. 업로드 자체는 공용 API이며, 발송 연결 시 관리자 권한·같은 계정 소유·미사용 이미지 조건을 검사한다. 이미지 URL은 S3/CDN에서 공개 HTTPS로 접근 가능해야 한다. S3 공개 접근성은 운영 환경에서 확인한다.
+- `POST /api/v1/admin/notification-batches`의 `imageId`는 선택이다. 같은 관리자 계정이 알림 용도로 올리고 완료했으며 다른 곳에 붙어 있지 않은 이미지만 연결한다. 다른 용도·형식·소유자·상태 또는 HTTPS가 아닌 URL은 저장 전에 400으로 거부한다. 연결된 자산은 `ATTACHED`가 되어 다른 배치에 다시 연결할 수 없다. 배치에는 `image_id`·`image_url`을, FCM payload에는 `imageUrl`을 보관하며 DIRECT와 TOPIC sender 모두 Firebase 알림 이미지 필드로 전달한다. 이미지가 없으면 기존 payload 형식을 유지한다.
+- `GET /api/v1/admin/notification-batches/{batchId}`는 이미지 ID·URL을 함께 돌려준다. `GET /api/v1/admin/notification-batches/statistics`는 `from` 이상 `to` 미만의 배치를 대상 유형과 DIRECT/TOPIC별로 집계한다. 둘 다 생략하면 현재 시각을 포함한 최근 30일이며, 지정하면 둘 다 필요하다. 시작은 최근 30일 이내, 최대 범위는 30일, 종료는 현재 시각 다음 날까지 허용한다. 생성 후 정확히 30일이 된 배치는 단건 결과와 같이 제외한다.
+- `sentCount`는 Firebase가 접수한 발송 작업 수다. DIRECT는 기기별, TOPIC은 토픽 요청별이므로 두 단위를 합친 단일 성공률을 제공하지 않는다. `readUserCount`는 배치마다 중복 없이 읽은 회원 수의 합이다. DIRECT는 회원 알림함, TOPIC은 조회 시점 활성 상태와 대상 역할에 맞는 공통 알림 읽음에서 센다. 같은 회원이 여러 배치를 읽으면 배치마다 한 번씩 센다. `readEligibleUserCount`는 DIRECT 알림함 행 수와 TOPIC 발송 당시 대상 회원 수의 합이다. `readRate`는 두 수의 비율이며 분모가 0이면 null이다. 푸시 탭이나 단말 도착은 측정하지 않는다.
 
 ## 패키지 컨벤션
 

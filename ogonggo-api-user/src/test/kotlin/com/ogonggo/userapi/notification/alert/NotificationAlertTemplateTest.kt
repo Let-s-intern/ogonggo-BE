@@ -86,6 +86,8 @@ internal fun sampleAlert(type: NotificationAlertType) = NotificationAlert(
         NotificationAlertType.CLEANUP_EXECUTION_FAILURE -> mapOf("예정 시각 (샘플)" to "03:30 Asia/Seoul", "연속 실패 (샘플)" to "2회")
         NotificationAlertType.LOCK_EXPIRY_RISK -> mapOf("실행 중 시간 (샘플)" to "65초", "잠금 상한" to "90초")
         NotificationAlertType.DELIVERY_STALLED -> mapOf("발송 가능 대기 (샘플)" to "120건", "진행 없음 (샘플)" to "90초")
+        NotificationAlertType.DELIVERY_LAGGING -> mapOf("대기 p95 (샘플)" to "3,400ms", "지연 지속 (샘플)" to "120초")
+        NotificationAlertType.ADMIN_BATCH_SLOW -> mapOf("대기 기준 (샘플)" to "10분")
         NotificationAlertType.PENDING_EXPIRED -> mapOf("새 기한 초과 (샘플)" to "5건", "채널 (샘플)" to "FCM")
         NotificationAlertType.DELIVERY_UNRESOLVED -> mapOf("UNRESOLVED 증가 (샘플)" to "1건", "오류 분류 (샘플)" to "DB_COMMIT_FAILED")
         NotificationAlertType.ENQUEUE_FAILURE -> mapOf("적재 실패 (샘플)" to "1건", "사유 (샘플)" to "EXECUTOR_REJECTED")

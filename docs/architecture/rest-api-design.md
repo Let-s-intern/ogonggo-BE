@@ -127,10 +127,11 @@ POST /api/v1/images/{imageId}/complete       S3에 올린 파일을 확인하고
 ```
 
 - 결정일: 2026-10-12 / 리뷰 상태: 팀 리뷰 필요
+- 후속 결정(2026-11-04, 팀 리뷰 필요): 푸시 이미지도 기존 사용자 API의 `usage=NOTIFICATION`으로 구분한다. 관리자 콘솔은 같은 오공고 액세스 토큰으로 이 API를 호출하고, 관리자 발송 API가 이미지 소유권과 연결 가능 상태를 검사한다. 별도 관리자 이미지 업로드 경로는 두지 않는다.
 - presigned 방식은 파일이 서버를 거치지 않습니다. 발급 응답의 `uploadUrl`에 `uploadHeaders`(`Content-Type`, `Cache-Control`)를 그대로 넣어 5분 안에 PUT하고, 완료 API를 불러야 본문·프로필에 쓸 수 있습니다. 형식(`image/jpeg`·`image/png`·`image/webp`)과 크기(10 MiB 이하)는 발급할 때 검사하고, 크기·형식·캐시 헤더는 서명에 묶여 다르게 올리면 S3가 거절합니다.
 - 완료는 서버가 S3 객체 크기와 앞 12바이트로 실제 형식을 다시 확인합니다. 아직 올리지 않았으면 409 `IMAGE_FILE_NOT_UPLOADED`, 알린 형식이 아니면 400 `IMAGE_FILE_TYPE_NOT_SUPPORTED`입니다. 이미 완료한 이미지를 다시 완료해도 200입니다. 완료하지 않은 이미지는 업로드 중으로 남아 정리 작업이 지웁니다.
 - 완료 API를 따로 둔 이유: 글 저장 때 확인하면 호출은 줄지만 저장 요청이 S3 확인만큼 느려지고, 잘못 올린 파일을 글을 저장할 때에야 알게 됩니다.
-- S3 키는 `ogonggo/{폴더}/{imageId}.{확장자}`입니다. 렛츠커리어와 같이 쓰는 버킷이라 `ogonggo/` 아래에 두고, 폴더는 `usage`(`ImageAssetUsage`)로 정합니다: `PROFILE` → `profile`(프로필 이미지·기업 로고), `RECRUITMENT_POST` → `side`, `CONCERN` → `concern`. 용도마다 받는 형식이 다르며 `RECRUITMENT_POST`·`CONCERN`은 JPG·PNG만 받습니다. presigned 발급은 `usage`가 필수이고, multipart는 선택이라 보내지 않으면 `etc`에 둡니다. 모집글 복사로 만든 이미지는 원본과 같은 폴더에 둡니다. 고용24 기관 이미지(관리자 API)도 `ogonggo/work24/`에 둡니다. 이 변경 전에 올린 이미지는 `images/` 아래에 그대로 둡니다.
+- S3 키는 `ogonggo/{폴더}/{imageId}.{확장자}`입니다. 렛츠커리어와 같이 쓰는 버킷이라 `ogonggo/` 아래에 두고, 폴더는 `usage`(`ImageAssetUsage`)로 정합니다: `PROFILE` → `profile`(프로필 이미지·기업 로고), `RECRUITMENT_POST` → `side`, `CONCERN` → `concern`, `NOTIFICATION` → `notification`(푸시 이미지). 용도마다 받는 형식이 다르며 `RECRUITMENT_POST`·`CONCERN`·`NOTIFICATION`은 JPG·PNG만 받습니다. 관리자 콘솔의 푸시 이미지도 사용자 API의 `POST /api/v1/images?usage=NOTIFICATION`으로 올리고, 관리자 배치 생성에서 같은 계정 소유·미사용 이미지만 연결합니다. presigned 발급은 `usage`가 필수이고, multipart는 선택이라 보내지 않으면 `etc`에 둡니다. 모집글 복사로 만든 이미지는 원본과 같은 폴더에 둡니다. 고용24 기관 이미지(관리자 API)도 `ogonggo/work24/`에 둡니다. 이 변경 전에 올린 이미지는 `images/` 아래에 그대로 둡니다.
 - multipart 방식은 화면이 모두 presigned로 옮겨 갈 때까지 유지하고 그 뒤 없앱니다(확인 필요: 제거 시점). multipart 한도는 `spring.servlet.multipart.max-file-size`를 10MB로 맞춥니다.
 
 ### 부트캠프 북마크

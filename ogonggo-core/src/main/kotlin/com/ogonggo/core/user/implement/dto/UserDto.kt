@@ -302,3 +302,10 @@ data class CompanyMemberPageDto(
     val totalElements: Long,
     val totalPages: Int,
 )
+
+/** 알림 대상 고르기용 활성 일반 회원. 희망 직무는 렛츠커리어 선택지를 `", "`로 이은 원문이다. */
+data class GeneralMemberAudienceDto(
+    val userId: Long,
+    val letsCareerUserId: Long?,
+    val wishJob: String?,
+)

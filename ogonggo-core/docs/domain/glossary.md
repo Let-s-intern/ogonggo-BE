@@ -116,9 +116,12 @@
 | 사용자 알림함 | `UserNotification` | 수신자에게 보관하는 댓글 소식 또는 관리자 메시지 한 건. 읽음은 `readAt`으로 표시하며, 토큰·푸시 결과와 독립적으로 최근 30일을 조회합니다. |
 | 알림 종류 | `UserNotificationType` | 모집글 부모 댓글의 답글(`SIDE_STUDY_COMMENT_REPLY`), 취준고민 최상위 댓글(`CONCERN_COMMENT`), 관리자 메시지(`ADMIN_NOTIFICATION`) |
 | 푸시 생략 사유 | `UserNotificationPushSkipReason` | 생성 시 활성 토큰이 없는 `NO_ACTIVE_TOKEN`. 이후 토큰 등록 때 재발송하지 않습니다. |
-| 발송 묶음 | `NotificationBatch` | 어드민의 FCM 요청 운영 기록. 회원별 알림함과 토큰별 발송은 각각 `UserNotification.batchId`·`Notification.batchId`로 묶으며 DIRECT 적재 수는 토큰 수, TOPIC 적재 수는 1건입니다. 토픽 배치는 공통 공지 원문으로 사용하고 회원별 읽음은 NotificationBroadcastRead에 저장합니다. |
-| 공통 공지 읽음 | `NotificationBroadcastRead` | 전체 토픽 공지를 읽은 회원과 배치·최초 읽음 시각. 읽기 전에는 회원별 행을 만들지 않습니다. |
-| 토픽 구독 동기화 | `FcmTopicSyncTask` | 토큰별 최신 구독 희망 상태와 요청 revision, 실패 재처리 정보. FCM 접수 결과와 사용자 읽음 상태와는 별개입니다. |
+| 발송 묶음 | `NotificationBatch` | 어드민의 FCM 요청 운영 기록. 회원별 알림함과 토큰별 발송은 각각 `UserNotification.batchId`·`Notification.batchId`로 묶으며 DIRECT 적재 수는 토큰 수, TOPIC 적재 수는 1건입니다. 토픽 배치는 공통 공지 원문으로 사용하고 회원별 읽음은 NotificationBroadcastRead에 저장합니다. 선택한 푸시 이미지는 `imageId`·`imageUrl`로 기록합니다. |
+| 발송 대상 종류 | `NotificationBatchTargetType` | 지정 회원(`USER_IDS`), 전체 활성 회원(`ALL`), 활성 일반 회원(`GENERAL_MEMBERS`, 역할 USER·MENTOR·ADMIN), 활성 기업 회원(`COMPANY_MEMBERS`, 역할 COMPANY), 희망 직무가 맞는 활성 일반 회원(`JOB_ROLES`). 전체·일반·기업은 같은 이름의 토픽 구독 대상이기도 합니다. |
+| 렛츠커리어 희망 직무 선택지 | `LetsCareerWishJobCatalog` | 렛츠커리어 커리어 정보 화면의 직군·직무 고정 목록. 회원 희망 직무는 이 직무 이름을 `", "`로 이어 저장합니다. 공고 직군(`JobRole`)과 다른 목록입니다. |
+| 광고성 발송 | `NotificationBatch.advertisement` | 렛츠커리어 마케팅 수신 동의자에게만 기기마다 보내는 관리자 발송. 동의 값은 렛츠커리어에만 있어 발송 등록 때 묻습니다. |
+| 공통 공지 읽음 | `NotificationBroadcastRead` | 토픽 공지(전체·일반회원·기업회원)를 읽은 회원과 배치·최초 읽음 시각. 읽기 전에는 회원별 행을 만들지 않습니다. |
+| 토픽 구독 동기화 | `FcmTopicSyncTask` | 토픽·토큰별 최신 구독 희망 상태와 요청 revision, 실패 재처리 정보. FCM 접수 결과와 사용자 읽음 상태와는 별개입니다. |
 | 발송 기록 | `Notification` | 개별 주소 또는 FCM 토픽의 발송 대기·처리 중·결과. `PROCESSING`은 provider 요청 후 결과를 기다리는 상태이며, 알림함이 있으면 `userNotificationId`로 연결합니다. |
 | 알림 처리 중 | `NotificationStatus.PROCESSING` | provider 요청을 시작해 응답 또는 결과 저장을 기다리는 상태. provider별 stale timeout을 넘기면 해당 provider 정책으로 복구합니다. |
 | 알림 provider | `NotificationProvider` | 알림 발송을 맡는 시스템. 현재 NHN 알림톡, SMTP 이메일, Firebase FCM이며 stale 처리 정책을 각각 설정합니다. |
