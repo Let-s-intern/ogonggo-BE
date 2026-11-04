@@ -205,6 +205,20 @@ class ImageAssetManager internal constructor(
         return deletedCount
     }
 
+    /**
+     * 이미지를 식별자가 아니라 URL로 저장하는 자리(채용공고·부트캠프의 로고·대표 이미지)에 넣은 URL 중
+     * [ownerUserId]가 올린 이미지를 첨부한다. 외부 URL, 남의 이미지, 이미 첨부된 이미지는 그대로 두고 막지 않는다.
+     * 같은 이미지를 여러 공고가 쓸 수 있어 이전 이미지의 참조는 풀지 않는다.
+     */
+    fun attachImageUrls(ownerUserId: Long, urls: Collection<String?>) {
+        val targets = urls.filterNotNull().filter(String::isNotBlank).toSet()
+        if (targets.isEmpty()) return
+        val attached = imageAssetRepository.findAllByUrlInAndOwnerUserIdAndDeletedAtIsNull(targets, ownerUserId)
+            .filter { it.isAttachable() }
+            .onEach { it.attach() }
+        imageAssetRepository.saveAll(attached)
+    }
+
     /** 첨부된 이미지를 원본과 같은 폴더(용도)의 새 저장 키로 복제한다. 하나라도 실패하면 이미 복사한 객체를 지우고 다시 던진다. */
     private fun copyAttached(ownerUserId: Long, sources: List<ImageAsset>): List<AttachedImageDto> {
         if (sources.any { it.status != ImageAssetStatus.ATTACHED }) {

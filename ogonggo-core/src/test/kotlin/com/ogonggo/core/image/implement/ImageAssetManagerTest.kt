@@ -272,6 +272,47 @@ class ImageAssetManagerTest {
         Mockito.verify(storage).delete(asset.storageKey)
     }
 
+    @Test
+    fun `공고에 저장한 URL 중 내가 올린 임시 이미지를 첨부한다`() {
+        // given
+        val logo = uploadedAsset("logo")
+        val cover = uploadedAsset("cover")
+        givenAssetsByUrl(logo, cover)
+
+        // when
+        manager.attachImageUrls(17L, listOf(logo.url, cover.url, null))
+
+        // then
+        assertEquals(ImageAssetStatus.ATTACHED, logo.status)
+        assertEquals(ImageAssetStatus.ATTACHED, cover.status)
+    }
+
+    @Test
+    fun `외부 URL이나 남의 이미지나 이미 첨부된 이미지가 있어도 막지 않고 그대로 둔다`() {
+        // given
+        val others = uploadedAsset("others")
+        val alreadyAttached = uploadedAsset("attached").also { it.attach() }
+        givenAssetsByUrl(others, alreadyAttached)
+
+        // when
+        manager.attachImageUrls(18L, listOf(others.url, "https://example.com/logo.png"))
+        manager.attachImageUrls(17L, listOf(alreadyAttached.url))
+
+        // then
+        assertEquals(ImageAssetStatus.TEMPORARY, others.status)
+        assertEquals(ImageAssetStatus.ATTACHED, alreadyAttached.status)
+    }
+
+    /** 소유자와 URL로 거른 이미지를 돌려주는 저장소 대역이다. */
+    private fun givenAssetsByUrl(vararg assets: ImageAsset) {
+        Mockito.`when`(repository.findAllByUrlInAndOwnerUserIdAndDeletedAtIsNull(Mockito.anyCollection(), Mockito.anyLong()))
+            .thenAnswer { invocation ->
+                val urls = invocation.getArgument<Collection<String>>(0)
+                val ownerUserId = invocation.getArgument<Long>(1)
+                assets.filter { it.url in urls && it.ownerUserId == ownerUserId }
+            }
+    }
+
     /** 소유자와 식별자로 거른 이미지를 돌려주는 저장소 대역이다. */
     private fun givenAssets(vararg assets: ImageAsset) {
         Mockito.`when`(repository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(Mockito.anyCollection(), Mockito.anyLong()))

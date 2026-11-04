@@ -14,6 +14,11 @@ internal interface ImageAssetJpaRepository : JpaRepository<ImageAsset, String> {
         ownerUserId: Long,
     ): List<ImageAsset>
 
+    fun findAllByUrlInAndOwnerUserIdAndDeletedAtIsNull(
+        urls: Collection<String>,
+        ownerUserId: Long,
+    ): List<ImageAsset>
+
     fun findAllByStatusInAndDeletedAtIsNullAndCreatedAtBefore(
         statuses: Collection<ImageAssetStatus>,
         createdAt: LocalDateTime,
