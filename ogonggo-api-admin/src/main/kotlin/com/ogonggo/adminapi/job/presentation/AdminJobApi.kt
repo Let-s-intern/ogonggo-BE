@@ -31,6 +31,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
+import java.time.LocalDate
 
 private const val ADMIN_AUTH_DESCRIPTION = "UNAUTHORIZED: 액세스 토큰이 없거나 올바르지 않습니다."
 private const val ADMIN_FORBIDDEN_DESCRIPTION = "FORBIDDEN: 활성 상태의 관리자 계정이 아닙니다."
@@ -54,6 +55,9 @@ interface AdminJobApi {
             jobField(직군), jobRole(직무)은 GET /api/v1/enums(사용자 API)의 JobField·JobRole 값을 보냅니다.
             jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.
+            registeredFrom·registeredTo는 등록일(YYYY-MM-DD, 한국 시간) 범위이며 두 날짜를 모두 포함합니다. 항목의 registeredAt과 같은 값으로 거릅니다.
+            오늘 등록분만 보려면 두 값에 같은 날짜를 보냅니다. 시작일이 종료일보다 늦으면 400입니다.
+            inspected는 true면 검수 완료한 공고만, false면 미검수 공고만 고릅니다.
 
             정렬 기본값은 REGISTERED_AT(등록일 역순)이며, VIEW_COUNT는 조회 수가 같으면 등록일 역순입니다.
             마지막 페이지를 넘는 page는 빈 items를 반환합니다.
@@ -90,6 +94,9 @@ interface AdminJobApi {
         recruitmentStatus: JobRecruitmentStatus?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
+        @Parameter(description = "등록일 시작(포함)") registeredFrom: LocalDate?,
+        @Parameter(description = "등록일 끝(포함)") registeredTo: LocalDate?,
+        @Parameter(description = "검수 완료 여부") inspected: Boolean?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminJobSummaryResponse>>>
 
     @Operation(

@@ -29,6 +29,7 @@ import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import org.hamcrest.Matchers.startsWith
+import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -105,6 +106,38 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `등록일 범위와 검수 완료 여부를 조회 조건으로 옮기고 시작일이 늦으면 400이다`() {
+        val today = LocalDate.of(2026, 11, 4)
+        Mockito.`when`(
+            adminJobService.getJobs(
+                JobManagementSearchCondition(registeredFrom = today, registeredTo = today, inspected = false),
+                JobSortType.LATEST,
+                0,
+                20,
+            ),
+        ).thenReturn(pageOf(AdminJobFixtures.summary()))
+
+        mockMvc.perform(
+            admin(
+                get("/api/v1/admin/jobs")
+                    .param("registeredFrom", "2026-11-04")
+                    .param("registeredTo", "2026-11-04")
+                    .param("inspected", "false"),
+            ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].id").value(693))
+
+        mockMvc.perform(
+            admin(get("/api/v1/admin/jobs").param("registeredFrom", "2026-11-05").param("registeredTo", "2026-11-04")),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value(startsWith("[registeredFrom]")))
+        mockMvc.perform(admin(get("/api/v1/admin/jobs").param("registeredFrom", "2026-11-04T00:00:00+09:00")))
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
     fun `빈 필터 값은 보내지 않은 것과 같이 전체로 본다`() {
         Mockito.`when`(adminJobService.getJobs(JobManagementSearchCondition.NONE, JobSortType.LATEST, 0, 20))
             .thenReturn(pageOf())
@@ -119,6 +152,9 @@ class AdminJobControllerTest @Autowired constructor(
                     .param("recruitmentStatus", "")
                     .param("jobField", "")
                     .param("jobRole", "")
+                    .param("registeredFrom", "")
+                    .param("registeredTo", "")
+                    .param("inspected", "")
                     .param("sort", ""),
             ),
         )

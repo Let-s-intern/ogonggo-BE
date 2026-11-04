@@ -309,6 +309,9 @@ internal class JobQueryRepository(
             condition.jobField?.let(job.jobField::eq),
             condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
             keywordContains(condition.keyword),
+            condition.registeredFrom?.let { job.createdAt.goe(it.atStartOfDay()) },
+            condition.registeredTo?.let { job.createdAt.lt(it.plusDays(1).atStartOfDay()) },
+            condition.inspected?.let { if (it) job.inspectedAt.isNotNull else job.inspectedAt.isNull },
         )
 
     private fun employmentTypeEq(employmentType: JobEmploymentType?): BooleanExpression? =
