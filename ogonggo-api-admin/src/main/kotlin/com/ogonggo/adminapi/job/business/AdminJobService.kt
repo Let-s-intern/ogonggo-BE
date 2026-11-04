@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
+import com.ogonggo.adminapi.job.implement.JobSourceHtmlSanitizer
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -13,6 +14,7 @@ import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
 import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
@@ -34,6 +36,7 @@ class AdminJobService(
     private val jobSourceReader: JobSourceReader,
     private val jobAnalysisReader: JobAnalysisReader,
     private val jobAnalysisManager: JobAnalysisManager,
+    private val jobSourceManager: JobSourceManager,
     private val clock: Clock,
 ) {
 
@@ -80,6 +83,18 @@ class AdminJobService(
         if (!command.details.isEmpty()) {
             jobManager.update(job, command.details.mergeInto(job), now)
         }
+        command.sourceHtml?.let { saveSourceHtml(job, it) }
+    }
+
+    /**
+     * AI 서버 원문과 같은 거르기를 거쳐 저장한다. 상대 주소는 수정을 반영한 원문 URL 기준으로 바꾼다.
+     * 원문은 공고 분석의 본문 해시에 들어가지 않으므로 원문을 고쳐도 분석은 그대로 보인다.
+     * 걸러서 그릴 것이 남지 않으면 원문을 지우지 않고 400으로 거절한다. 원문은 지우는 경로를 두지 않았다.
+     */
+    private fun saveSourceHtml(job: Job, sourceHtml: String) {
+        val sanitized = JobSourceHtmlSanitizer.sanitize(sourceHtml, job.sourceUrl)
+            ?: throw InvalidRequestFieldException("sourceHtml", "안전한 태그만 남기면 보여 줄 내용이 없습니다.")
+        jobSourceManager.save(job.requiredId(), sanitized)
     }
 
     /**

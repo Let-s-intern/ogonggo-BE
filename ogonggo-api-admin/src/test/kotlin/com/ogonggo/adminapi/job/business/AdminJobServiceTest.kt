@@ -17,6 +17,7 @@ import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
 import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
@@ -47,6 +48,7 @@ class AdminJobServiceTest {
     private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
     private val jobAnalysisReader = Mockito.mock(JobAnalysisReader::class.java)
     private val jobAnalysisManager = Mockito.mock(JobAnalysisManager::class.java)
+    private val jobSourceManager = Mockito.mock(JobSourceManager::class.java)
     private val service = AdminJobService(
         jobReader,
         jobManager,
@@ -55,6 +57,7 @@ class AdminJobServiceTest {
         jobSourceReader,
         jobAnalysisReader,
         jobAnalysisManager,
+        jobSourceManager,
         clock,
     )
 
@@ -325,6 +328,35 @@ class AdminJobServiceTest {
         recruitmentStartAt = LocalDateTime.of(2026, 9, 1, 0, 0),
         recruitmentEndAt = LocalDateTime.of(2026, 9, 14, 23, 59),
     )
+
+    @Test
+    fun `원문 HTML은 크롤러 원문과 같이 안전한 태그만 남기고 원문 URL 기준 절대 주소로 바꿔 저장한다`() {
+        val job = lockedJob(reviewStatus = null)
+        Mockito.`when`(job.id).thenReturn(JOB_ID)
+        Mockito.`when`(job.sourceUrl).thenReturn("https://example.com/jobs/1")
+
+        service.updateJob(
+            JOB_ID,
+            AdminJobUpdateCommand(
+                sourceHtml = "<h2 onclick=\"x()\">주요 업무</h2><script>alert(1)</script><img src=\"/logo.png\">",
+            ),
+        )
+
+        Mockito.verify(jobSourceManager).save(JOB_ID, "<h2>주요 업무</h2><img src=\"https://example.com/logo.png\">")
+        Mockito.verifyNoInteractions(jobManager, jobAnalysisManager)
+    }
+
+    @Test
+    fun `걸러서 보여 줄 내용이 없는 원문은 지우지 않고 400 예외를 던진다`() {
+        lockedJob(reviewStatus = null)
+
+        val error = assertThrows(InvalidRequestFieldException::class.java) {
+            service.updateJob(JOB_ID, AdminJobUpdateCommand(sourceHtml = "<script>alert(1)</script><style>p{}</style>"))
+        }
+
+        assertEquals("sourceHtml", error.fieldName)
+        Mockito.verifyNoInteractions(jobSourceManager)
+    }
 
     private fun lockedJob(reviewStatus: ContentReviewStatus?): Job {
         val job = Mockito.mock(Job::class.java)

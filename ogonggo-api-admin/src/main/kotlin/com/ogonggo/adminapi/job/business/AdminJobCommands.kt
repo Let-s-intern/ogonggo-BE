@@ -26,6 +26,8 @@ data class AdminJobUpdateCommand(
     /** 값이 null인 칸은 비운다. */
     val contents: Map<JobContentField, String?> = emptyMap(),
     val details: AdminJobDetailsPatch = AdminJobDetailsPatch(),
+    /** 원문 HTML. null이면 그대로 둔다. 크롤러 원문과 같이 안전한 태그만 남겨 저장한다. */
+    val sourceHtml: String? = null,
 )
 
 /**

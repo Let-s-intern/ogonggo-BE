@@ -240,6 +240,19 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `원문 HTML을 보내면 수정 명령에 담고 공백이면 400이다`() {
+        Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
+
+        mockMvc.perform(admin(patchJson(mapOf("sourceHtml" to "<p>고친 원문</p>"))))
+            .andExpect(status().isOk)
+        Mockito.verify(adminJobService).updateJob(693L, AdminJobUpdateCommand(sourceHtml = "<p>고친 원문</p>"))
+
+        mockMvc.perform(admin(patchJson(mapOf("sourceHtml" to " "))))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value(startsWith("[sourceHtml]")))
+    }
+
+    @Test
     fun `공고 정보와 clear를 보내면 바꿀 값과 비울 값으로 나눠 넘기고 상세에 공고 정보를 싣는다`() {
         Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
 

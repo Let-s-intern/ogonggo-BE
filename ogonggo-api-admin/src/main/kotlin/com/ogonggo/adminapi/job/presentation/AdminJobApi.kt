@@ -217,6 +217,11 @@ interface AdminJobApi {
             직군·시·도를 바꾸면서 직무·시·군·구를 보내지 않으면, 바뀐 직군·시·도에 맞지 않는 기존 직무·시·군·구는 지웁니다.
             직무·시·군·구만 보내면 직군·시·도도 그에 맞춰 바뀝니다. 모집 기간 유형을 ALWAYS_OPEN으로 바꾸면 모집 종료 일시를 지웁니다.
             모집 종료 일시를 바꾸면 모집 상태를 다시 정합니다. 종료 일시가 지난 공고의 마감일을 미루면 모집 중으로 돌아가며, 직접 마감한 공고는 마감으로 남습니다.
+
+            sourceHtml은 원문 HTML을 바꿉니다. AI 서버 원문과 같이 안전한 태그만 남겨 저장하고 상대 주소는 sourceUrl 기준 절대 주소로 바꿉니다.
+            보내지 않거나 null이면 그대로 두고, 비울 수 없어 공백이거나 걸러서 남는 글·이미지가 없으면 400입니다.
+            원문은 공고 분석의 본문 해시에 들어가지 않아 원문만 고치면 분석(analysisCurrent)은 그대로입니다. 본문 칸(fields)을 고치면 분석이 낡습니다.
+            내용을 고쳐도 검수 완료(inspectedAt)는 풀리지 않습니다.
         """,
     )
     @ApiResponses(
@@ -224,7 +229,7 @@ interface AdminJobApi {
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 제목이 비었거나, reviewStatus에 REJECTED를 보냈거나, 공고 정보 값이 올바르지 않거나 서로 맞지 않습니다(직군과 직무, 시·도와 시·군·구, 모집 시작·종료 일시, 상시 채용의 종료 일시).",
+                description = "BAD_REQUEST: 제목이 비었거나, reviewStatus에 REJECTED를 보냈거나, 공고 정보 값이 올바르지 않거나 서로 맞지 않습니다(직군과 직무, 시·도와 시·군·구, 모집 시작·종료 일시, 상시 채용의 종료 일시). sourceHtml이 공백이거나 걸러서 남는 내용이 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
