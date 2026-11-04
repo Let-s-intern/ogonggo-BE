@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @WebMvcTest(controllers = [ImageUploadController::class])
@@ -116,24 +117,27 @@ class ImageUploadControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `multipart 업로드에 용도를 보내면 그 용도로 저장한다`() {
+    fun `관리자 화면에서 푸시 알림 이미지를 기존 업로드 경로로 올린다`() {
         // given
         val content = byteArrayOf(1, 2, 3)
-        val command = ImageUploadDto(content, ImageAssetUsage.PROFILE)
+        val command = ImageUploadDto(content, ImageAssetUsage.NOTIFICATION)
         Mockito.`when`(imageUploadService.upload(USER_ID, command)).thenReturn(
-            ImageUploadResultDto(id = "image-id", url = "https://cdn.example.com/ogonggo/profile/image-id.png", mimeType = "image/png", size = 3L),
+            ImageUploadResultDto(id = "image-id", url = "https://cdn.example.com/ogonggo/notification/image-id.png", mimeType = "image/png", size = 3L),
         )
 
         // when
         mockMvc.perform(
             multipart("/api/v1/images")
                 .file(MockMultipartFile("file", "image.png", "image/png", content))
-                .param("usage", "PROFILE")
+                .param("usage", "NOTIFICATION")
+                .header("Origin", "https://admin.ogonggo.co.kr")
                 .with(authentication(authenticatedUser())),
         )
             // then
             .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.data.url").value("https://cdn.example.com/ogonggo/profile/image-id.png"))
+            .andExpect(header().string("Access-Control-Allow-Origin", "https://admin.ogonggo.co.kr"))
+            .andExpect(jsonPath("$.data.url").value("https://cdn.example.com/ogonggo/notification/image-id.png"))
+        Mockito.verify(imageUploadService).upload(USER_ID, command)
     }
 
     @Test

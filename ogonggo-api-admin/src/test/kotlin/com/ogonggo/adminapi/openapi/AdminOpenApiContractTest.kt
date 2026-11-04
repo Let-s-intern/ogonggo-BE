@@ -201,9 +201,7 @@ class AdminOpenApiContractTest @Autowired constructor(
         val statistics = document.at("/paths/~1api~1v1~1admin~1notification-batches~1statistics/get")
         assertEquals("getNotificationBatchStatistics", statistics.at("/operationId").asText())
         assertTrue(statistics.at("/security/0/BearerAuth").isArray)
-        val imageUpload = document.at("/paths/~1api~1v1~1admin~1notification-images/post")
-        assertEquals("uploadNotificationImage", imageUpload.at("/operationId").asText())
-        assertTrue(imageUpload.at("/security/0/BearerAuth").isArray)
+        assertTrue(document.at("/paths/~1api~1v1~1admin~1notification-images/post").isMissingNode)
     }
 
     @Test

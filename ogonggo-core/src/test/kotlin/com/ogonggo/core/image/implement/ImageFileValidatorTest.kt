@@ -1,6 +1,7 @@
 package com.ogonggo.core.image.implement
 
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.implement.dto.ImageUploadDto
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,6 +28,31 @@ class ImageFileValidatorTest {
             result.mimeType,
         )
         assertEquals(format, result.extension)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["png", "jpg"])
+    fun `푸시 알림 용도로 JPEG와 PNG 이미지를 올릴 수 있다`(format: String) {
+        // given
+        val image = ImageUploadDto(signature(format), ImageAssetUsage.NOTIFICATION)
+
+        // when
+        val result = validator.validate(image)
+
+        // then
+        assertEquals(if (format == "png") "image/png" else "image/jpeg", result.mimeType)
+    }
+
+    @Test
+    fun `푸시 알림 용도로 WebP 이미지를 올릴 수 없다`() {
+        // given
+        val image = ImageUploadDto(signature("webp"), ImageAssetUsage.NOTIFICATION)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) { validator.validate(image) }
+
+        // then
+        assertEquals(ImageUploadErrorCode.IMAGE_FILE_TYPE_NOT_SUPPORTED, exception.errorCode)
     }
 
     @ParameterizedTest

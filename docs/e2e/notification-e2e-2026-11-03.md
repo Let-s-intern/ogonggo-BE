@@ -2,6 +2,8 @@
 
 대상: `feat/notification-member-topics` 작업 트리. 관리자 API(18081: 회원 토픽 게이트 꺼짐, 18082: 회원 토픽 게이트 켜짐), 사용자 API(18080), 임시 MySQL 8.0·Redis 7을 각각 격리해 실행했다. 기존 `go-mysql`과 기존 데이터는 사용하지 않았다. 모든 요청은 실제 `curl`로 보냈고 응답 본문과 DB 스냅샷은 [결과 JSON](notification-e2e-2026-11-03-results.json)에 수집했다.
 
+후속 변경(2026-11-04): 아래 요청은 당시 실행 기록으로 보존한다. 관리자 이미지 전용 경로는 제거됐으며 현재는 사용자 API의 `POST /api/v1/images?usage=NOTIFICATION`을 사용한다. 새 경로의 계약 테스트는 별도로 통과했지만 아래 E2E 결과에 포함되지는 않는다.
+
 ## 실행한 핵심 요청
 
 ```bash

@@ -18,8 +18,6 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.AuthenticationException
 import org.springframework.validation.BindException
-import org.springframework.web.multipart.MaxUploadSizeExceededException
-import org.springframework.web.multipart.support.MissingServletRequestPartException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
 class AdminApiExceptionHandlerTest {
@@ -60,17 +58,6 @@ class AdminApiExceptionHandlerTest {
         assertEquals(500, unexpected.statusCode.value())
         assertEquals(AdminApiErrorCode.INTERNAL_SERVER_ERROR.message, unexpected.body?.message)
         assertFalse(unexpected.body?.message.orEmpty().contains("내부 구현 메시지"))
-    }
-
-    @Test
-    fun `이미지 파일 누락과 multipart 용량 초과를 400으로 변환한다`() {
-        val missing = handler.handleMissingServletRequestPart(MissingServletRequestPartException("file"))
-        val oversized = handler.handleMaxUploadSizeExceeded(MaxUploadSizeExceededException(10 * 1024 * 1024))
-
-        assertEquals(400, missing.statusCode.value())
-        assertEquals("IMAGE_FILE_REQUIRED", missing.body?.code)
-        assertEquals(400, oversized.statusCode.value())
-        assertEquals("IMAGE_FILE_TOO_LARGE", oversized.body?.code)
     }
 
     @Test
