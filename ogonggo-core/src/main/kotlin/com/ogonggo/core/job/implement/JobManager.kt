@@ -81,6 +81,10 @@ class JobManager internal constructor(
 
     fun delete(job: Job, now: LocalDateTime) = change(job) { delete(now) }
 
+    fun markInspected(job: Job, userId: Long, now: LocalDateTime) = change(job) { markInspected(userId, now) }
+
+    fun clearInspection(job: Job) = change(job) { clearInspection() }
+
     /** 모집 종료 일시가 지난 모집 중 공고를 마감하고 마감한 건수를 돌려준다. 직접 마감한 것이 아니므로 마감 처리 일시는 남기지 않는다. */
     fun closeExpired(now: LocalDateTime): Int = jobRepository.closeExpired(now)
 
