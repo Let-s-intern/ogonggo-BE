@@ -12,6 +12,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
@@ -43,7 +44,16 @@ class AdminJobServiceTest {
     private val todayJobManager = Mockito.mock(TodayJobManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-27T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
-    private val service = AdminJobService(jobReader, jobManager, jobMetricReader, todayJobManager, jobSourceReader, clock)
+    private val jobAnalysisReader = Mockito.mock(JobAnalysisReader::class.java)
+    private val service = AdminJobService(
+        jobReader,
+        jobManager,
+        jobMetricReader,
+        todayJobManager,
+        jobSourceReader,
+        jobAnalysisReader,
+        clock,
+    )
 
     @Test
     fun `승인과 숨김을 함께 보내면 승인한 뒤 숨긴다`() {

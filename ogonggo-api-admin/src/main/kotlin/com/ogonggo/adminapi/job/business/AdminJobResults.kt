@@ -11,6 +11,8 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.job.domain.JobAnalysisContent
+import com.ogonggo.core.job.implement.dto.JobAnalysisViewDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
@@ -130,9 +132,18 @@ data class AdminJobResult(
     val sourceUrl: String?,
     /** AI 서버가 보낸 원문 HTML이다. 원문이 없는 공고는 null이다. */
     val sourceHtml: String?,
+    /** 저장된 공고 분석이다. 본문이 바뀌어도 싣는다. 분석이 없으면 null이다. */
+    val analysis: JobAnalysisContent?,
+    /** 분석이 지금 본문으로 만든 것인지. 분석이 없거나 다시 분석을 기다리면 false다. */
+    val analysisCurrent: Boolean,
 ) {
     companion object {
-        internal fun from(job: Job, metric: JobMetricDto, sourceHtml: String?): AdminJobResult = AdminJobResult(
+        internal fun from(
+            job: Job,
+            metric: JobMetricDto,
+            sourceHtml: String?,
+            analysis: JobAnalysisViewDto?,
+        ): AdminJobResult = AdminJobResult(
             summary = AdminJobSummary.from(job, metric),
             parentCompanyName = job.parentCompanyName,
             industry = job.industry,
@@ -155,6 +166,8 @@ data class AdminJobResult(
             recruitmentNotice = job.recruitmentNotice,
             sourceUrl = job.sourceUrl,
             sourceHtml = sourceHtml,
+            analysis = analysis?.content,
+            analysisCurrent = analysis?.current ?: false,
         )
     }
 }

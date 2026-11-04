@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.adminapi.job.business.AdminTodayJobSummary
+import com.ogonggo.adminapi.job.presentation.request.AiJobAnalysisRequest
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobEducationLevel
@@ -145,6 +146,10 @@ data class AdminJobDetailResponse(
     val sourceUrl: String?,
     @Schema(description = "채용공고 원문 HTML입니다. 원문 페이지의 본문 영역을 안전한 태그만 남긴 것이며, 원문이 없는 공고와 기업회원 공고는 null입니다.")
     val sourceHtml: String?,
+    @Schema(description = "저장된 공고 분석입니다. 사용자 상세의 analysis와 같은 칸이며 PUT /api/v1/admin/jobs/{jobId}/analysis 본문과도 같습니다. 사용자 상세와 달리 본문이 바뀌어도 저장된 분석을 싣고 analysisCurrent로 알립니다. 분석이 없으면 null입니다.")
+    val analysis: AiJobAnalysisRequest.Analysis?,
+    @Schema(description = "analysis가 지금 본문(제목과 본문 여덟 칸)으로 만든 것인지입니다. false면 사용자에게 보이지 않고 AI 서버의 다시 분석을 기다립니다. 분석이 없으면 false입니다.")
+    val analysisCurrent: Boolean,
 ) {
     companion object {
         internal fun from(result: AdminJobResult): AdminJobDetailResponse {
@@ -194,6 +199,8 @@ data class AdminJobDetailResponse(
                 inquiryEmail = result.inquiryEmail,
                 sourceUrl = result.sourceUrl,
                 sourceHtml = result.sourceHtml,
+                analysis = result.analysis?.let(AiJobAnalysisRequest.Analysis::from),
+                analysisCurrent = result.analysisCurrent,
             )
         }
     }

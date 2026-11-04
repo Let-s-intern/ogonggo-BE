@@ -157,6 +157,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 - `value`가 `null`이면 공고에서 확인할 수 없는 값이며 화면은 '공고에 명시 없음'으로 그립니다. `note`는 짧은 보충이고 없으면 `null`입니다.
 - `quote`는 그 역량을 요구하는 공고 문장입니다. AI 서버가 제목과 본문 여덟 칸에서 찾을 수 있는 문장만 보내므로, 상세 응답의 본문 칸에서 그대로 찾을 수 있습니다.
+- 관리자 상세(`GET /api/v1/admin/jobs/{jobId}`)도 같은 칸의 `analysis`를 싣지만, 사용자 상세와 달리 본문 해시가 달라도 저장된 분석을 주고 `analysisCurrent`(boolean)로 지금 본문으로 만든 것인지 알립니다. 운영자는 "분석이 낡아 다시 분석을 기다린다"는 사실도 봐야 하기 때문입니다. 분석이 없거나 저장된 내용을 읽지 못하면 `analysis`는 `null`, `analysisCurrent`는 `false`입니다(2026-11-04, LC-3567). 관리자 API는 사용자 API와 응답 클래스를 공유하지 않으므로 OpenAPI 스키마 이름은 AI 서버 저장 요청과 같은 `Analysis`입니다.
 
 ### 지표
 

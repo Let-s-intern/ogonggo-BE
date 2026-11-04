@@ -36,6 +36,7 @@ data class AiJobAnalysisRequest(
         content = analysis.toContent(),
     )
 
+    /** 공고 분석의 칸이다. AI 서버 저장, 관리자 상세 응답(`analysis`), 관리자 분석 수정 본문이 같은 모양을 쓴다. */
     data class Analysis(
         @field:Size(max = JobAnalysisContent.MAX_TASKS)
         @field:Valid
@@ -77,6 +78,21 @@ data class AiJobAnalysisRequest(
                 JobAnalysisContent.Competency(it.name, it.quote, it.description, it.experiences)
             },
         )
+
+        companion object {
+            fun from(content: JobAnalysisContent): Analysis = Analysis(
+                tasks = content.tasks.map { Task(it.tag, it.text) },
+                required = content.required,
+                preferred = content.preferred,
+                employment = content.employment.let {
+                    Employment(Fact.from(it.type), Fact.from(it.conversion), Fact.from(it.salary), Fact.from(it.affiliation))
+                },
+                submission = content.submission.let {
+                    Submission(Fact.from(it.documents), Fact.from(it.essay), Fact.from(it.process), Fact.from(it.deadline))
+                },
+                competencies = content.competencies.map { Competency(it.name, it.quote, it.description, it.experiences) },
+            )
+        }
     }
 
     data class Task(
@@ -91,6 +107,10 @@ data class AiJobAnalysisRequest(
     ) {
         fun toFact(): JobAnalysisContent.Fact =
             JobAnalysisContent.Fact(value = value?.takeIf(String::isNotBlank), note = note?.takeIf(String::isNotBlank))
+
+        companion object {
+            fun from(fact: JobAnalysisContent.Fact): Fact = Fact(value = fact.value, note = fact.note)
+        }
     }
 
     data class Employment(

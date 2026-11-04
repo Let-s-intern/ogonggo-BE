@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.implement.dto.JobAnalysisViewDto
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobAnalysisJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
@@ -63,6 +64,25 @@ internal class JobAnalysisPersistenceTest @Autowired constructor(
         // then
         assertEquals(CONTENT, current)
         assertNull(jobAnalysisReader.readCurrent(job))
+    }
+
+    @Test
+    fun `운영자에게는 본문이 바뀌어도 저장된 분석을 주고 낡았다고 알린다`() {
+        // given
+        val job = publishedJob()
+        val none = jobAnalysisReader.readForAdmin(job)
+        jobAnalysisManager.save(job, CONTENT, guideVersion = 3, model = "deepseek")
+        flush()
+
+        // when
+        val fresh = jobAnalysisReader.readForAdmin(job)
+        job.editContent(title = null, contents = mapOf(JobContentField.RESPONSIBILITIES to "다른 업무"))
+        val stale = jobAnalysisReader.readForAdmin(job)
+
+        // then
+        assertNull(none)
+        assertEquals(JobAnalysisViewDto(CONTENT, current = true), fresh)
+        assertEquals(JobAnalysisViewDto(CONTENT, current = false), stale)
     }
 
     @Test

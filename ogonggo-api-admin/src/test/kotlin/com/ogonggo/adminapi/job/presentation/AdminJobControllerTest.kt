@@ -175,6 +175,27 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `상세는 저장된 공고 분석과 지금 본문으로 만든 것인지를 싣고 분석이 없으면 null과 false다`() {
+        Mockito.`when`(adminJobService.getJob(693L))
+            .thenReturn(AdminJobFixtures.detail(analysis = AdminJobFixtures.ANALYSIS, analysisCurrent = false))
+        Mockito.`when`(adminJobService.getJob(7L)).thenReturn(AdminJobFixtures.detail(id = 7L))
+
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/693")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.analysisCurrent").value(false))
+            .andExpect(jsonPath("$.data.analysis.tasks[0].tag").value("개발"))
+            .andExpect(jsonPath("$.data.analysis.required[0]").value("Kotlin 경험이 있는 분"))
+            .andExpect(jsonPath("$.data.analysis.employment.type.value").value("정규직"))
+            .andExpect(jsonPath("$.data.analysis.employment.conversion.value").value(null as Any?))
+            .andExpect(jsonPath("$.data.analysis.submission.documents.note").value("PDF 권장"))
+            .andExpect(jsonPath("$.data.analysis.competencies[0].experiences[0]").value("버그를 끝까지 추적한 경험"))
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/7")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.analysis").value(null as Any?))
+            .andExpect(jsonPath("$.data.analysisCurrent").value(false))
+    }
+
+    @Test
     fun `수정은 허용한 본문 칸만 반영하고 빈 문자열은 그 칸을 비우며 수정된 공고를 돌려준다`() {
         Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
 

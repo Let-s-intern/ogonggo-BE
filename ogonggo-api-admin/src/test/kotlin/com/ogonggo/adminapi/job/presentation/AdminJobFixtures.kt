@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -43,7 +44,11 @@ internal object AdminJobFixtures {
         inspectedAt = inspectedAt,
     )
 
-    fun detail(id: Long = 693L): AdminJobResult = AdminJobResult(
+    fun detail(
+        id: Long = 693L,
+        analysis: JobAnalysisContent? = null,
+        analysisCurrent: Boolean = false,
+    ): AdminJobResult = AdminJobResult(
         summary = summary(id),
         parentCompanyName = null,
         industry = null,
@@ -66,5 +71,35 @@ internal object AdminJobFixtures {
         recruitmentNotice = null,
         sourceUrl = "https://example.com/jobs/693",
         sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
+        analysis = analysis,
+        analysisCurrent = analysisCurrent,
+    )
+
+    private val NOT_STATED = JobAnalysisContent.Fact(value = null, note = null)
+
+    val ANALYSIS = JobAnalysisContent(
+        tasks = listOf(JobAnalysisContent.Task(tag = "개발", text = "서버를 개발해요.")),
+        required = listOf("Kotlin 경험이 있는 분"),
+        preferred = emptyList(),
+        employment = JobAnalysisContent.Employment(
+            type = JobAnalysisContent.Fact(value = "정규직", note = null),
+            conversion = NOT_STATED,
+            salary = NOT_STATED,
+            affiliation = NOT_STATED,
+        ),
+        submission = JobAnalysisContent.Submission(
+            documents = JobAnalysisContent.Fact(value = "이력서", note = "PDF 권장"),
+            essay = NOT_STATED,
+            process = NOT_STATED,
+            deadline = NOT_STATED,
+        ),
+        competencies = listOf(
+            JobAnalysisContent.Competency(
+                name = "문제 해결",
+                quote = "주요 업무",
+                description = "막힌 문제를 끝까지 푸는 역량이에요.",
+                experiences = listOf("버그를 끝까지 추적한 경험"),
+            ),
+        ),
     )
 }
