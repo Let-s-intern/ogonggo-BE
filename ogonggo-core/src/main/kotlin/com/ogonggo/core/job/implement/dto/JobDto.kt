@@ -136,6 +136,8 @@ data class JobAnalysisViewDto(
     val content: JobAnalysisContent,
     /** 지금 본문 해시로 만든 분석인지. 본문이 바뀌어 다시 분석을 기다리면 false다. */
     val current: Boolean,
+    /** 운영자가 고친 분석이면 고친 일시다. AI 서버 분석이면 null이다. */
+    val editedAt: LocalDateTime? = null,
 )
 
 /** 오늘의 공고 한 건이다. 고른 공고와 그 카드에 보여 줄 추천 문구를 함께 담는다. */

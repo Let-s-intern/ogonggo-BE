@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.job.presentation.request.AiJobAnalysisRequest
 import com.ogonggo.adminapi.job.presentation.request.ChangeAdminJobVisibilityRequest
 import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsRequest
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
@@ -241,6 +242,41 @@ interface AdminJobApi {
     fun updateJob(
         @Positive jobId: Long,
         @Valid request: UpdateAdminJobRequest,
+    ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>>
+
+    @Operation(
+        operationId = "replaceJobAnalysis",
+        summary = "채용공고 공고 분석 수정",
+        description = """
+            운영자가 고친 공고 분석으로 통째로 바꾸고 바뀐 공고 전체를 반환합니다. 본문은 상세 응답의 analysis와 같은 칸이며,
+            AI 서버 분석 저장(PUT /api/v1/internal/jobs/{jobId}/analysis)의 analysis와 같은 개수 제한과 검증을 따릅니다.
+            tasks 3개, required·preferred 각 8개, competencies 3개, 역량마다 experiences 3개까지이고 글은 1000자까지입니다.
+            employment·submission의 칸마다 value가 비었거나 공백이면 공고에서 확인할 수 없는 값(null)으로 저장합니다.
+
+            지금 본문 해시로 저장하므로 사용자 상세에 바로 보이고 analysisCurrent가 true가 됩니다. 분석이 없던 공고에도 저장합니다.
+            운영자가 고친 분석은 본문(제목과 본문 여덟 칸)이 바뀌기 전까지 AI 서버의 분석 대상에서 빠지고 AI 서버 저장은 409로 거절합니다.
+            본문이 바뀌면 평소처럼 AI 서버가 다시 분석해 바꿉니다. 같은 요청을 반복해도 결과가 같습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "저장 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 분석 칸이 없거나, 항목 개수를 넘었거나, 글이 비었거나 깁니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun replaceJobAnalysis(
+        @Positive jobId: Long,
+        @Valid request: AiJobAnalysisRequest.Analysis,
+        @Parameter(hidden = true) adminUserId: Long,
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>>
 
     @Operation(

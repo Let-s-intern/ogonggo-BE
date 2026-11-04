@@ -2,13 +2,16 @@ package com.ogonggo.core.job.implement
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobAnalysis
 import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.dto.JobAnalysisViewDto
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobAnalysisJpaRepository
@@ -18,6 +21,7 @@ import jakarta.persistence.EntityManager
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -83,6 +87,57 @@ internal class JobAnalysisPersistenceTest @Autowired constructor(
         assertNull(none)
         assertEquals(JobAnalysisViewDto(CONTENT, current = true), fresh)
         assertEquals(JobAnalysisViewDto(CONTENT, current = false), stale)
+    }
+
+    @Test
+    fun `운영자가 고친 분석은 지금 본문으로 저장해 바로 보이고 본문이 그대로인 동안 AI 서버가 덮어쓰지 못한다`() {
+        // given
+        val job = publishedJob()
+        jobAnalysisManager.save(job, CONTENT, guideVersion = 3, model = "deepseek")
+        flush()
+        val edited = CONTENT.copy(required = listOf("운영자가 고친 조건"))
+
+        // when
+        jobAnalysisManager.edit(job, edited, userId = 1L, now = NOW)
+        flush()
+
+        // then
+        assertEquals(edited, jobAnalysisReader.readCurrent(job))
+        assertEquals(JobAnalysisViewDto(edited, current = true, editedAt = NOW), jobAnalysisReader.readForAdmin(job))
+        val row = jobAnalysisRepository.findByJobId(checkNotNull(job.id))!!
+        assertEquals(1L, row.editedByUserId)
+        assertEquals(JobAnalysis.ADMIN_MODEL, row.model)
+        assertNull(row.guideVersion)
+        val error = assertThrows(ConflictException::class.java) {
+            jobAnalysisManager.save(job, CONTENT, guideVersion = 4, model = "deepseek")
+        }
+        assertEquals(JobErrorCode.JOB_ANALYSIS_EDITED_BY_ADMIN, error.errorCode)
+        assertEquals(edited, jobAnalysisReader.readCurrent(job))
+    }
+
+    @Test
+    fun `운영자가 고친 공고는 본문이 그대로면 분석 대상이 아니고 본문이 바뀌면 다시 대상이 되어 AI 분석이 표시를 지운다`() {
+        // given
+        val job = publishedJob()
+        jobAnalysisManager.edit(job, CONTENT, userId = 1L, now = NOW)
+        flush()
+
+        // when
+        val whileEdited = jobAnalysisReader.readCandidates(limit = 10)
+        job.editContent(title = null, contents = mapOf(JobContentField.RESPONSIBILITIES to "바뀐 업무"))
+        flush()
+        val afterChange = jobAnalysisReader.readCandidates(limit = 10)
+        jobAnalysisManager.save(job, CONTENT, guideVersion = 4, model = "deepseek")
+        flush()
+
+        // then
+        assertEquals(emptyList<Job>(), whileEdited.targets)
+        assertEquals(listOf(job.id), afterChange.targets.map(Job::id))
+        val row = jobAnalysisRepository.findByJobId(checkNotNull(job.id))!!
+        assertNull(row.editedAt)
+        assertNull(row.editedByUserId)
+        assertEquals("deepseek", row.model)
+        assertEquals(CONTENT, jobAnalysisReader.readCurrent(job))
     }
 
     @Test

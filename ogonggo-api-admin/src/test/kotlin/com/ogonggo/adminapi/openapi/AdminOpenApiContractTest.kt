@@ -312,7 +312,39 @@ class AdminOpenApiContractTest @Autowired constructor(
             assertTrue(operation.at("/responses/404/description").asText().startsWith("JOB_NOT_FOUND"))
         }
         assertTrue(document.at("/components/schemas/AdminJobSummaryResponse/properties/inspectedAt").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1analysis/put/security/0/BearerAuth").isArray)
         assertTrue(document.at("/components/schemas/AdminJobDetailResponse/properties/inspectedAt").isObject)
+    }
+
+    @Test
+    fun `채용공고 분석 수정은 AI 서버 저장과 같은 분석 스키마를 받고 상세는 같은 스키마로 분석과 최신 여부를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1analysis/put")
+        val detail = document.at("/components/schemas/AdminJobDetailResponse/properties")
+
+        // then
+        assertEquals("replaceJobAnalysis", operation.at("/operationId").asText())
+        assertEquals(listOf("jobId"), operation.at("/parameters").map { it["name"].asText() })
+        assertEquals(
+            "#/components/schemas/Analysis",
+            operation.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+        )
+        assertEquals(
+            "#/components/schemas/Analysis",
+            document.at("/components/schemas/AiJobAnalysisRequest/properties/analysis/\$ref").asText(),
+        )
+        assertEquals("#/components/schemas/Analysis", detail.at("/analysis/\$ref").asText())
+        assertEquals("boolean", detail.at("/analysisCurrent/type").asText())
+        assertTrue(detail.at("/analysisEditedAt").isObject)
+        assertEquals(3, document.at("/components/schemas/Analysis/properties/tasks/maxItems").asInt())
+        assertTrue(operation.at("/responses/404/description").asText().startsWith("JOB_NOT_FOUND"))
+        assertTrue(
+            document.at("/paths/~1api~1v1~1internal~1jobs~1{jobId}~1analysis/put/responses/409/description").asText()
+                .contains("JOB_ANALYSIS_EDITED_BY_ADMIN"),
+        )
     }
 
     @Test

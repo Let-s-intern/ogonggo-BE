@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.InvalidRequestParameterException
 import com.ogonggo.adminapi.job.business.AdminJobService
+import com.ogonggo.adminapi.job.presentation.request.AiJobAnalysisRequest
 import com.ogonggo.adminapi.job.presentation.request.ChangeAdminJobVisibilityRequest
 import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsRequest
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
@@ -124,6 +125,17 @@ class AdminJobController(
         @RequestBody request: UpdateAdminJobRequest,
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>> {
         adminJobService.updateJob(jobId, request.toCommand())
+        return SuccessResponse.ok(AdminJobDetailResponse.from(adminJobService.getJob(jobId)))
+    }
+
+    /** 저장이 커밋된 뒤의 공고를 다시 읽어 응답한다. */
+    @PutMapping("/{jobId}/analysis")
+    override fun replaceJobAnalysis(
+        @PathVariable("jobId") jobId: Long,
+        @RequestBody request: AiJobAnalysisRequest.Analysis,
+        @AuthenticationPrincipal adminUserId: Long,
+    ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>> {
+        adminJobService.replaceAnalysis(jobId, request.toContent(), adminUserId)
         return SuccessResponse.ok(AdminJobDetailResponse.from(adminJobService.getJob(jobId)))
     }
 

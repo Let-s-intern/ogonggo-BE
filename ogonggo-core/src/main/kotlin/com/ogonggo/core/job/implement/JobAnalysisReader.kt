@@ -46,7 +46,11 @@ class JobAnalysisReader internal constructor(
             .onFailure { log.warn("공고 분석을 읽지 못했습니다. jobId={}", jobId, it) }
             .getOrNull()
             ?: return null
-        return JobAnalysisViewDto(content = content, current = analysis.contentHash == job.contentHash())
+        return JobAnalysisViewDto(
+            content = content,
+            current = analysis.contentHash == job.contentHash(),
+            editedAt = analysis.editedAt,
+        )
     }
 
     /**

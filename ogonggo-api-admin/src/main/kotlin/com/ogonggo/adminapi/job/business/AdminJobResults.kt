@@ -136,6 +136,8 @@ data class AdminJobResult(
     val analysis: JobAnalysisContent?,
     /** 분석이 지금 본문으로 만든 것인지. 분석이 없거나 다시 분석을 기다리면 false다. */
     val analysisCurrent: Boolean,
+    /** 운영자가 고친 분석이면 고친 일시다. AI 서버 분석이거나 분석이 없으면 null이다. */
+    val analysisEditedAt: LocalDateTime? = null,
 ) {
     companion object {
         internal fun from(
@@ -168,6 +170,7 @@ data class AdminJobResult(
             sourceHtml = sourceHtml,
             analysis = analysis?.content,
             analysisCurrent = analysis?.current ?: false,
+            analysisEditedAt = analysis?.editedAt,
         )
     }
 }

@@ -150,6 +150,8 @@ data class AdminJobDetailResponse(
     val analysis: AiJobAnalysisRequest.Analysis?,
     @Schema(description = "analysis가 지금 본문(제목과 본문 여덟 칸)으로 만든 것인지입니다. false면 사용자에게 보이지 않고 AI 서버의 다시 분석을 기다립니다. 분석이 없으면 false입니다.")
     val analysisCurrent: Boolean,
+    @Schema(description = "운영자가 고친 분석이면 고친 일시(한국 시간)입니다. AI 서버가 만든 분석이거나 분석이 없으면 null입니다. 본문이 바뀌기 전까지 AI 서버는 운영자가 고친 분석을 덮어쓰지 않습니다.")
+    val analysisEditedAt: LocalDateTime?,
 ) {
     companion object {
         internal fun from(result: AdminJobResult): AdminJobDetailResponse {
@@ -201,6 +203,7 @@ data class AdminJobDetailResponse(
                 sourceHtml = result.sourceHtml,
                 analysis = result.analysis?.let(AiJobAnalysisRequest.Analysis::from),
                 analysisCurrent = result.analysisCurrent,
+                analysisEditedAt = result.analysisEditedAt,
             )
         }
     }

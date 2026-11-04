@@ -12,6 +12,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.implement.JobAnalysisManager
 import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
@@ -45,6 +46,7 @@ class AdminJobServiceTest {
     private val clock = Clock.fixed(Instant.parse("2026-08-27T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
     private val jobAnalysisReader = Mockito.mock(JobAnalysisReader::class.java)
+    private val jobAnalysisManager = Mockito.mock(JobAnalysisManager::class.java)
     private val service = AdminJobService(
         jobReader,
         jobManager,
@@ -52,6 +54,7 @@ class AdminJobServiceTest {
         todayJobManager,
         jobSourceReader,
         jobAnalysisReader,
+        jobAnalysisManager,
         clock,
     )
 

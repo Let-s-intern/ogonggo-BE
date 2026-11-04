@@ -318,6 +318,46 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `분석 수정은 분석 칸을 받아 로그인한 관리자로 저장하고 바뀐 공고를 돌려준다`() {
+        Mockito.`when`(adminJobService.getJob(693L))
+            .thenReturn(AdminJobFixtures.detail(analysis = AdminJobFixtures.ANALYSIS, analysisCurrent = true))
+
+        mockMvc.perform(
+            signedInAdmin(
+                put("/api/v1/admin/jobs/693/analysis")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(analysisBody())),
+            ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.analysisCurrent").value(true))
+            .andExpect(jsonPath("$.data.analysis.required[0]").value("Kotlin 경험이 있는 분"))
+
+        Mockito.verify(adminJobService).replaceAnalysis(693L, AdminJobFixtures.ANALYSIS, ADMIN_USER_ID)
+    }
+
+    @Test
+    fun `분석 수정은 AI 서버 저장과 같이 항목 개수와 빈 칸을 검증해 400으로 거절한다`() {
+        val tooManyTasks = analysisBody().plus(
+            "tasks" to List(4) { mapOf("tag" to "개발", "text" to "서버를 개발해요.") },
+        )
+        val blankTaskTag = analysisBody().plus("tasks" to listOf(mapOf("tag" to " ", "text" to "서버를 개발해요.")))
+        val missingEmployment = analysisBody().minus("employment")
+
+        listOf(tooManyTasks, blankTaskTag, missingEmployment).forEach { body ->
+            mockMvc.perform(
+                signedInAdmin(
+                    put("/api/v1/admin/jobs/693/analysis")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)),
+                ),
+            )
+                .andExpect(status().isBadRequest)
+        }
+        Mockito.verifyNoInteractions(adminJobService)
+    }
+
+    @Test
     fun `검수 완료 표시는 본문 없이 받아 로그인한 관리자로 남기고 data 없이 200으로 응답한다`() {
         mockMvc.perform(signedInAdmin(put("/api/v1/admin/jobs/693/inspection")))
             .andExpect(status().isOk)
@@ -546,6 +586,36 @@ class AdminJobControllerTest @Autowired constructor(
             totalElements = items.size.toLong(),
             totalPages = if (items.isEmpty()) 0 else 2,
         )
+
+    /** [AdminJobFixtures.ANALYSIS]와 같은 분석을 요청 JSON 모양으로 둔다. 비운 칸은 공백으로 보내 null로 저장되는지도 본다. */
+    private fun analysisBody(): Map<String, Any?> {
+        fun fact(value: String?, note: String? = null) = mapOf("value" to value, "note" to note)
+        return mapOf(
+            "tasks" to listOf(mapOf("tag" to "개발", "text" to "서버를 개발해요.")),
+            "required" to listOf("Kotlin 경험이 있는 분"),
+            "preferred" to emptyList<String>(),
+            "employment" to mapOf(
+                "type" to fact("정규직"),
+                "conversion" to fact(" "),
+                "salary" to fact(null),
+                "affiliation" to fact(null),
+            ),
+            "submission" to mapOf(
+                "documents" to fact("이력서", "PDF 권장"),
+                "essay" to fact(null),
+                "process" to fact(null),
+                "deadline" to fact(null),
+            ),
+            "competencies" to listOf(
+                mapOf(
+                    "name" to "문제 해결",
+                    "quote" to "주요 업무",
+                    "description" to "막힌 문제를 끝까지 푸는 역량이에요.",
+                    "experiences" to listOf("버그를 끝까지 추적한 경험"),
+                ),
+            ),
+        )
+    }
 
     private companion object {
         const val ADMIN_USER_ID = 1L
