@@ -260,6 +260,15 @@ class Bootcamp internal constructor(
     var enterpriseLinked: Boolean = enterpriseLinked /* 기업 연계 과정 여부 */
         protected set
 
+    /**
+     * 기업회원 공고 우선 노출([com.ogonggo.core.companycontentpriority.domain.CompanyContentPriority])을 이 과정에 줄지다.
+     * 전체 설정이 켜져 있고 이 값도 참일 때만 마감 전 기업회원 과정을 공개 목록 맨 앞에 둔다. 운영자가 과정마다 끈다.
+     * 등록할 때 참으로 시작해 칸을 두기 전처럼 앞에 둔다. 기업회원 과정(`source = COMPANY`)에만 영향이 있고 다른 경로 과정은 값만 저장한다.
+     */
+    @Column(name = "priority_exposed", nullable = false)
+    var priorityExposed: Boolean = true /* 기업회원 공고 우선 노출 여부 */
+        protected set
+
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", length = 20)
     var reviewStatus: ContentReviewStatus? = if (ownerUserId == null) null else ContentReviewStatus.PENDING /* 검수 상태 */
@@ -409,6 +418,11 @@ class Bootcamp internal constructor(
     fun hide() {
         checkModifiable()
         publicationStatus = BootcampPublicationStatus.HIDDEN
+    }
+
+    fun changePriorityExposed(priorityExposed: Boolean) {
+        checkModifiable()
+        this.priorityExposed = priorityExposed
     }
 
     fun delete(now: LocalDateTime) {

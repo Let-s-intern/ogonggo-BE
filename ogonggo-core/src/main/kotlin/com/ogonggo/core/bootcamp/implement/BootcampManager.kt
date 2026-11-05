@@ -91,6 +91,9 @@ class BootcampManager internal constructor(
 
     fun hide(bootcamp: Bootcamp) = change(bootcamp) { hide() }
 
+    fun changePriorityExposed(bootcamp: Bootcamp, priorityExposed: Boolean) =
+        change(bootcamp) { changePriorityExposed(priorityExposed) }
+
     fun delete(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { delete(now) }
 
     /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */

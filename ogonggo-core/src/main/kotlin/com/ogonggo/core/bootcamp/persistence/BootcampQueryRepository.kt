@@ -57,13 +57,15 @@ internal class BootcampQueryRepository(
     )
 
     /**
-     * 기업이 비즈니스로 등록했고 아직 마감되지 않은 부트캠프를 맨 앞에 둔다. 마감 처리됐거나 모집 종료 일시가 지나면 다른 부트캠프와 같이 정렬한다.
+     * 기업이 비즈니스로 등록했고 아직 마감되지 않았으며 운영자가 우선 노출을 끄지 않은 부트캠프를 맨 앞에 둔다([Bootcamp.priorityExposed]).
+     * 마감 처리됐거나 모집 종료 일시가 지나면 다른 부트캠프와 같이 정렬한다.
      * 자동 마감 작업은 매시 돌므로 그 사이에 종료 일시가 지난 부트캠프도 바로 빼도록 종료 일시를 함께 본다.
      */
     private fun companyRecruitingFirst(now: LocalDateTime): OrderSpecifier<Int> =
         CaseBuilder()
             .`when`(
                 bootcamp.source.eq(ContentSource.COMPANY)
+                    .and(bootcamp.priorityExposed.isTrue)
                     .and(bootcamp.status.eq(BootcampRecruitmentStatus.RECRUITING))
                     .and(bootcamp.recruitmentEndAt.isNull.or(bootcamp.recruitmentEndAt.goe(now))),
             ).then(1)
