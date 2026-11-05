@@ -7,6 +7,7 @@ import com.ogonggo.core.image.domain.ImageAssetStatus
 import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
+import com.ogonggo.core.image.persistence.ImageUrlReferenceQueryRepository
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -20,7 +21,8 @@ class ImageAssetManagerTest {
 
     private val repository = Mockito.mock(ImageAssetJpaRepository::class.java)
     private val storage = Mockito.mock(S3ObjectClient::class.java)
-    private val manager = ImageAssetManager(repository, storage, ObjectMapper())
+    private val references = Mockito.mock(ImageUrlReferenceQueryRepository::class.java)
+    private val manager = ImageAssetManager(repository, storage, ObjectMapper(), references)
     private val now = LocalDateTime.of(2026, 9, 12, 10, 0)
 
     @Test
@@ -303,14 +305,100 @@ class ImageAssetManagerTest {
         assertEquals(ImageAssetStatus.ATTACHED, alreadyAttached.status)
     }
 
-    /** 소유자와 URL로 거른 이미지를 돌려주는 저장소 대역이다. */
+    @Test
+    fun `정리 작업이 이미 지운 이미지 URL을 공고에 저장하면 다시 올리도록 막는다`() {
+        // given
+        val deleted = deletedAsset("deleted")
+        val pending = uploadedAsset("pending").also { it.markDeletePending() }
+        val unconfirmed = ImageAsset.uploading("unconfirmed", 17L, "images/unconfirmed.png", "https://cdn.example.com/images/unconfirmed.png", "image/png", 3L)
+        val fresh = uploadedAsset("fresh")
+        givenAssetsByUrl(deleted, pending, unconfirmed, fresh)
+
+        // when & then
+        listOf(deleted, pending, unconfirmed).forEach { unavailable ->
+            val exception = assertThrows(InvalidValueException::class.java) {
+                manager.attachImageUrls(17L, listOf(fresh.url, unavailable.url))
+            }
+            assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
+        }
+        assertEquals(ImageAssetStatus.TEMPORARY, fresh.status)
+    }
+
+    @Test
+    fun `공고나 부트캠프가 URL로 쓰는 이전 로고는 기업 로고를 바꿔도 참조를 풀지 않는다`() {
+        // given
+        val previous = uploadedAsset("old-logo").also { it.attach() }
+        val next = uploadedAsset("new-logo")
+        givenAssets(previous, next)
+        givenUsedByPostings(previous.url)
+
+        // when
+        manager.replaceImage(17L, previous.id, next.id, now)
+        manager.unreferenceImage(17L, previous.id, now)
+
+        // then
+        assertEquals(ImageAssetStatus.ATTACHED, previous.status)
+        assertEquals(null, previous.unreferencedAt)
+    }
+
+    @Test
+    fun `정리 작업은 공고나 부트캠프가 URL로 쓰는 이미지를 지우지 않고 첨부로 되돌린다`() {
+        // given
+        val temporary = uploadedAsset("temporary-logo")
+        val unreferenced = uploadedAsset("unreferenced-logo").also {
+            it.attach()
+            it.unreference(now.minusDays(3))
+        }
+        val pending = uploadedAsset("pending-logo").also { it.markDeletePending() }
+        val orphan = uploadedAsset("orphan")
+        givenCleanupCandidates(temporary = listOf(temporary, orphan), unreferenced = listOf(unreferenced), pending = listOf(pending))
+        givenUsedByPostings(temporary.url, unreferenced.url, pending.url)
+
+        // when
+        val deletedCount = manager.cleanup(now, Duration.ofHours(24))
+
+        // then
+        assertEquals(1, deletedCount)
+        listOf(temporary, unreferenced, pending).forEach {
+            assertEquals(ImageAssetStatus.ATTACHED, it.status)
+            Mockito.verify(storage, Mockito.never()).delete(it.storageKey)
+        }
+        assertEquals(ImageAssetStatus.DELETED, orphan.status)
+    }
+
+    /** URL로 거른 이미지를 소유자와 삭제 여부에 관계없이 돌려주는 저장소 대역이다. */
     private fun givenAssetsByUrl(vararg assets: ImageAsset) {
-        Mockito.`when`(repository.findAllByUrlInAndOwnerUserIdAndDeletedAtIsNull(Mockito.anyCollection(), Mockito.anyLong()))
+        Mockito.`when`(repository.findAllByUrlIn(Mockito.anyCollection()))
             .thenAnswer { invocation ->
                 val urls = invocation.getArgument<Collection<String>>(0)
-                val ownerUserId = invocation.getArgument<Long>(1)
-                assets.filter { it.url in urls && it.ownerUserId == ownerUserId }
+                assets.filter { it.url in urls }
             }
+    }
+
+    /** 채용공고·부트캠프의 로고·대표 이미지 칼럼이 [urls]를 쓴다. */
+    private fun givenUsedByPostings(vararg urls: String) {
+        Mockito.`when`(references.findUrlsUsedByPostings(Mockito.anyCollection()))
+            .thenAnswer { invocation -> invocation.getArgument<Collection<String>>(0).filter { it in urls }.toSet() }
+    }
+
+    private fun givenCleanupCandidates(temporary: List<ImageAsset>, unreferenced: List<ImageAsset>, pending: List<ImageAsset>) {
+        val page = org.springframework.data.domain.PageRequest.of(0, 100)
+        Mockito.`when`(
+            repository.findAllByStatusInAndDeletedAtIsNullAndCreatedAtBefore(
+                setOf(ImageAssetStatus.UPLOADING, ImageAssetStatus.TEMPORARY),
+                now.minusHours(24),
+                page,
+            ),
+        ).thenReturn(temporary)
+        Mockito.`when`(
+            repository.findAllByStatusAndDeletedAtIsNullAndUnreferencedAtBefore(ImageAssetStatus.UNREFERENCED, now.minusHours(24), page),
+        ).thenReturn(unreferenced)
+        Mockito.`when`(repository.findAllByStatusAndDeletedAtIsNull(ImageAssetStatus.DELETE_PENDING, page)).thenReturn(pending)
+    }
+
+    private fun deletedAsset(id: String): ImageAsset = uploadedAsset(id).also {
+        it.markDeletePending()
+        it.markDeleted(now.minusDays(1))
     }
 
     /** 소유자와 식별자로 거른 이미지를 돌려주는 저장소 대역이다. */
