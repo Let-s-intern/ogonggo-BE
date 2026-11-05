@@ -325,6 +325,21 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `채용공고 목록 항목은 원문 주소를 nullable 문자열로 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val schema = document.at("/components/schemas/AdminJobSummaryResponse")
+
+        // then
+        assertEquals("string", schema.at("/properties/sourceUrl/type").asText())
+        val required = schema.at("/required").map { it.asText() }
+        assertTrue(required.contains("id"))
+        assertFalse(required.contains("sourceUrl"))
+    }
+
+    @Test
     fun `채용공고 분석 수정은 AI 서버 저장과 같은 분석 스키마를 받고 상세는 같은 스키마로 분석과 최신 여부를 싣는다`() {
         // given
         val document = openApiDocument()
