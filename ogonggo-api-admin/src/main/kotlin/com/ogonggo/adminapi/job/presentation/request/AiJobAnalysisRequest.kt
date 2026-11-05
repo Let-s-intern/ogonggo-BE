@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.job.presentation.request
 
+import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.AiJobAnalysisCommand
 import com.ogonggo.core.job.domain.JobAnalysisContent
 import io.swagger.v3.oas.annotations.media.Schema
@@ -8,7 +9,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 
-private const val TEXT_MAX = 1000
+private const val TEXT_MAX = JobAnalysisContent.TEXT_MAX_LENGTH
 
 /** AI 서버가 만든 공고 분석이다. 칸 이름과 개수는 사용자 상세 응답의 `analysis`와 같다. */
 data class AiJobAnalysisRequest(
@@ -58,7 +59,17 @@ data class AiJobAnalysisRequest(
         @field:Valid
         val competencies: List<Competency>,
     ) {
-        fun toContent(): JobAnalysisContent = JobAnalysisContent(
+        /**
+         * 목록 원소(`required`·`preferred`의 글, 역량 `experiences`)의 공백·길이는 Bean Validation이 보지 못해
+         * 도메인이 거절하고, 그 거절을 다른 검증 오류와 같은 400으로 알린다.
+         */
+        fun toContent(): JobAnalysisContent = try {
+            createContent()
+        } catch (exception: IllegalArgumentException) {
+            throw InvalidRequestFieldException("analysis", exception.message ?: "공고 분석 값이 올바르지 않습니다.")
+        }
+
+        private fun createContent(): JobAnalysisContent = JobAnalysisContent(
             tasks = tasks.map { JobAnalysisContent.Task(it.tag, it.text) },
             required = required,
             preferred = preferred,

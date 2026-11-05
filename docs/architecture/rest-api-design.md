@@ -348,7 +348,7 @@ PUT /api/v1/admin/jobs/{jobId}/analysis
 - 지금 본문 해시로 저장하므로 사용자 상세에 바로 보입니다. 분석이 없던 공고에도 저장합니다. `job_analyses`에 고친 관리자(`edited_by_user_id`)와 일시(`edited_at`)를 남기고, 분석 방법 판 번호는 비우며 모델 칸에는 `admin`을 둡니다.
 - 본문 해시가 그대로인 동안 AI 서버는 이 분석을 바꾸지 못합니다. 대상 조회에 나오지 않고, 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다. 본문(제목과 본문 여덟 칸)이 바뀌면 분석이 낡은 것이 되어 평소처럼 AI 서버가 다시 분석하고, 그 저장이 고친 표시를 지웁니다. 낡은 분석을 계속 보여 주면 본문과 어긋나기 때문입니다. 전이는 [라이프사이클의 공고 분석](../../ogonggo-core/docs/domain/lifecycles.md#공고-분석)에 있습니다.
 - 없거나 지워진 공고는 404 `JOB_NOT_FOUND`입니다. 게시 상태는 보지 않습니다.
-- **확인 필요:** 목록 요소(`required`·`preferred`의 글, 역량의 `experiences`)의 빈 글·길이 제약은 Kotlin 1.9가 형식 인자 주석을 바이트코드에 남기지 않아 검사되지 않습니다. AI 서버 저장도 같습니다.
+- 목록 요소(`required`·`preferred`의 글, 역량의 `experiences`)의 빈 글·1000자 제한은 Kotlin 1.9가 형식 인자 주석을 바이트코드에 남기지 않아 Bean Validation이 보지 못합니다. 그래서 도메인 [`JobAnalysisContent`](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/JobAnalysisContent.kt)가 막고, 요청 변환(`AiJobAnalysisRequest.Analysis.toContent`)이 그 거절을 400 `[analysis]`로 알립니다. AI 서버 저장도 같습니다.
 
 ### 렛츠커리어 콘텐츠 추천 점수
 

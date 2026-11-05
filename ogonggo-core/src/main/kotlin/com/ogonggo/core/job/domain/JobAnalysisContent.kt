@@ -20,6 +20,8 @@ data class JobAnalysisContent(
         require(required.size <= MAX_CONDITIONS) { "필수 조건은 ${MAX_CONDITIONS}개까지입니다." }
         require(preferred.size <= MAX_CONDITIONS) { "우대 조건은 ${MAX_CONDITIONS}개까지입니다." }
         require(competencies.size <= MAX_COMPETENCIES) { "역량은 ${MAX_COMPETENCIES}개까지입니다." }
+        requireTexts("필수 조건", required)
+        requireTexts("우대 조건", preferred)
     }
 
     /** 실제 하는 일 하나. `tag`는 일의 성격을 짧게 적은 것이다(예: 기획). */
@@ -43,6 +45,7 @@ data class JobAnalysisContent(
     ) {
         init {
             require(experiences.size <= MAX_EXPERIENCES) { "연결할 경험은 ${MAX_EXPERIENCES}개까지입니다." }
+            requireTexts("연결할 경험", experiences)
         }
     }
 
@@ -51,6 +54,19 @@ data class JobAnalysisContent(
         const val MAX_CONDITIONS = 8
         const val MAX_COMPETENCIES = 3
         const val MAX_EXPERIENCES = 3
+
+        /** 분석 글 하나의 최대 길이다. */
+        const val TEXT_MAX_LENGTH = 1000
+
+        /**
+         * 목록의 글마다 비어 있지 않고 [TEXT_MAX_LENGTH]자 이하인지 본다. 요청 DTO의 `List<@NotBlank String>`은
+         * Kotlin 1.9가 형식 인자 주석을 바이트코드에 남기지 않아 검사되지 않으므로 여기서 막는다.
+         */
+        private fun requireTexts(name: String, texts: List<String>) {
+            require(texts.all { it.isNotBlank() && it.length <= TEXT_MAX_LENGTH }) {
+                "${name}은 비어 있지 않은 ${TEXT_MAX_LENGTH}자 이하 글이어야 합니다."
+            }
+        }
 
         /** 본문 해시([Job.contentHash]) 길이와 분석 모델 이름의 최대 길이. 저장 칸의 크기다. */
         const val CONTENT_HASH_LENGTH = 64

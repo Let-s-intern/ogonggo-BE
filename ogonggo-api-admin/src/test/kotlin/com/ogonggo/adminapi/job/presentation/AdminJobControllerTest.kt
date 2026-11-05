@@ -356,8 +356,14 @@ class AdminJobControllerTest @Autowired constructor(
         )
         val blankTaskTag = analysisBody().plus("tasks" to listOf(mapOf("tag" to " ", "text" to "서버를 개발해요.")))
         val missingEmployment = analysisBody().minus("employment")
+        // 목록 원소의 검증은 Kotlin 1.9 에서 형식 인자 주석이 남지 않아 Bean Validation 이 보지 못한다. 도메인이 막는다.
+        val blankRequired = analysisBody().plus("required" to listOf(" "))
+        val tooLongPreferred = analysisBody().plus("preferred" to listOf("가".repeat(1001)))
+        @Suppress("UNCHECKED_CAST")
+        val competency = (analysisBody()["competencies"] as List<Map<String, Any?>>).single()
+        val blankExperience = analysisBody().plus("competencies" to listOf(competency.plus("experiences" to listOf(""))))
 
-        listOf(tooManyTasks, blankTaskTag, missingEmployment).forEach { body ->
+        listOf(tooManyTasks, blankTaskTag, missingEmployment, blankRequired, tooLongPreferred, blankExperience).forEach { body ->
             mockMvc.perform(
                 signedInAdmin(
                     put("/api/v1/admin/jobs/693/analysis")
