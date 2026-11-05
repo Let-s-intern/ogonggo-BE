@@ -27,6 +27,7 @@ import com.ogonggo.core.user.implement.dto.UserProfileDto
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
+import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
@@ -41,6 +42,7 @@ class UserJobServiceTest {
     private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
+    private val companyContentPriorityReader = Mockito.mock(CompanyContentPriorityReader::class.java)
     private val service = UserJobService(
         jobReader,
         jobBookmarkReader,
@@ -50,12 +52,14 @@ class UserJobServiceTest {
         sourceUrlClickAppender,
         userProfileReader,
         eventPublisher,
+        companyContentPriorityReader,
     )
 
     @Test
     fun `게시된 공고를 조회해 사용자 결과로 변환한다`() {
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(job.id).thenReturn(1L)
+        Mockito.`when`(job.publicRegisteredAt()).thenReturn(REGISTERED_AT)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
@@ -89,6 +93,7 @@ class UserJobServiceTest {
         assertEquals(3L, result.bookmarkCount)
         assertEquals(1L, result.commentCount)
         assertEquals("<h2>주요 업무</h2>", result.sourceHtml)
+        assertEquals(REGISTERED_AT, result.registeredAt)
         Mockito.verify(jobReader).readPublished(1L)
     }
 
@@ -131,9 +136,10 @@ class UserJobServiceTest {
     }
 
     @Test
-    fun `게시된 공고 목록을 페이지 결과로 변환한다`() {
+    fun `게시된 공고 목록을 운영자가 정한 우선 노출 여부로 읽어 페이지 결과로 변환한다`() {
         val job = createJobMock()
-        Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)).thenReturn(
+        Mockito.`when`(companyContentPriorityReader.isEnabledOrDefault()).thenReturn(false)
+        Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20, false)).thenReturn(
             JobPageDto(
                 jobs = listOf(job),
                 page = 0,
@@ -156,14 +162,15 @@ class UserJobServiceTest {
         assertEquals(false, result.items.single().bookmarked)
         assertEquals(5L, result.items.single().viewCount)
         assertEquals(2L, result.items.single().bookmarkCount)
-        Mockito.verify(jobReader).readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)
+        Mockito.verify(jobReader).readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20, false)
     }
 
     @Test
     fun `비로그인 조회는 북마크 저장소를 조회하지 않고 모두 북마크되지 않은 것으로 본다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
-        Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20)).thenReturn(
+        Mockito.`when`(companyContentPriorityReader.isEnabledOrDefault()).thenReturn(true)
+        Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20, true)).thenReturn(
             JobPageDto(
                 jobs = listOf(job),
                 page = 0,
@@ -411,6 +418,7 @@ class UserJobServiceTest {
 
     private fun createJobMock(id: Long = 1L): Job = Mockito.mock(Job::class.java).also { job ->
         Mockito.`when`(job.id).thenReturn(id)
+        Mockito.`when`(job.publicRegisteredAt()).thenReturn(REGISTERED_AT)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
@@ -422,5 +430,6 @@ class UserJobServiceTest {
 
     companion object {
         private const val USER_ID = 17L
+        private val REGISTERED_AT = LocalDateTime.of(2026, 11, 4, 4, 10)
     }
 }

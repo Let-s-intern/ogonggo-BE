@@ -87,6 +87,21 @@ class ImageAsset internal constructor(
     fun isAttachable(): Boolean =
         status == ImageAssetStatus.TEMPORARY || status == ImageAssetStatus.UNREFERENCED
 
+    /** S3에 파일이 남아 있어 URL로 쓸 수 있는 이미지인지 본다. 업로드 확인 전이거나 정리 작업이 지우기 시작한 이미지는 쓸 수 없다. */
+    fun isAvailable(): Boolean =
+        deletedAt == null &&
+            (status == ImageAssetStatus.TEMPORARY || status == ImageAssetStatus.ATTACHED || status == ImageAssetStatus.UNREFERENCED)
+
+    /**
+     * 정리 대상이 됐지만 채용공고·부트캠프가 URL로 쓰고 있는 이미지를 첨부 상태로 되돌린다.
+     * 첨부 없이 URL만 저장된 경로(관리자 수정, AI 등록, 이전에 쓰던 기업 로고)의 이미지를 지우지 않기 위한 것이다.
+     */
+    fun restoreAttached() {
+        check(deletedAt == null) { "삭제된 이미지는 되돌릴 수 없습니다." }
+        this.unreferencedAt = null
+        this.status = ImageAssetStatus.ATTACHED
+    }
+
     fun unreference(now: LocalDateTime) {
         if (status == ImageAssetStatus.ATTACHED) {
             unreferencedAt = now

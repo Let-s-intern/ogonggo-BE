@@ -12,9 +12,12 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
+import com.ogonggo.core.job.implement.JobAnalysisManager
+import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
 import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
@@ -43,7 +46,20 @@ class AdminJobServiceTest {
     private val todayJobManager = Mockito.mock(TodayJobManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-27T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
-    private val service = AdminJobService(jobReader, jobManager, jobMetricReader, todayJobManager, jobSourceReader, clock)
+    private val jobAnalysisReader = Mockito.mock(JobAnalysisReader::class.java)
+    private val jobAnalysisManager = Mockito.mock(JobAnalysisManager::class.java)
+    private val jobSourceManager = Mockito.mock(JobSourceManager::class.java)
+    private val service = AdminJobService(
+        jobReader,
+        jobManager,
+        jobMetricReader,
+        todayJobManager,
+        jobSourceReader,
+        jobAnalysisReader,
+        jobAnalysisManager,
+        jobSourceManager,
+        clock,
+    )
 
     @Test
     fun `승인과 숨김을 함께 보내면 승인한 뒤 숨긴다`() {
@@ -52,6 +68,7 @@ class AdminJobServiceTest {
         service.updateJob(
             JOB_ID,
             AdminJobUpdateCommand(visibility = AdminContentVisibility.HIDDEN, reviewStatus = ContentReviewStatus.APPROVED),
+            ADMIN_ID,
         )
 
         val order = Mockito.inOrder(jobManager)
@@ -64,7 +81,7 @@ class AdminJobServiceTest {
     fun `이미 같은 검수 상태면 다시 전이하지 않아 노출이 되돌아가지 않는다`() {
         lockedJob(reviewStatus = ContentReviewStatus.APPROVED)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.APPROVED))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.APPROVED), ADMIN_ID)
 
         Mockito.verifyNoInteractions(jobManager)
     }
@@ -73,7 +90,7 @@ class AdminJobServiceTest {
     fun `검수 대기로 바꾸면 검수를 다시 요청한다`() {
         val job = lockedJob(reviewStatus = ContentReviewStatus.APPROVED)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.PENDING))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.PENDING), ADMIN_ID)
 
         Mockito.verify(jobManager).requestReview(job, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
@@ -83,7 +100,7 @@ class AdminJobServiceTest {
     fun `노출만 보내면 게시 상태만 바꾼다`() {
         val job = lockedJob(reviewStatus = null)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE), ADMIN_ID)
 
         Mockito.verify(jobManager).publish(job)
         Mockito.verifyNoMoreInteractions(jobManager)
@@ -94,10 +111,24 @@ class AdminJobServiceTest {
         val job = lockedJob(reviewStatus = null)
         val contents = mapOf(JobContentField.RESPONSIBILITIES to "고친 업무", JobContentField.BENEFITS to null)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목", contents = contents))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목", contents = contents), ADMIN_ID)
 
         Mockito.verify(jobManager).editContent(job, JobContentEditDto(title = "고친 제목", contents = contents))
+        Mockito.verify(jobManager).markContentEdited(job, ADMIN_ID, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
+    }
+
+    @Test
+    fun `본문을 고쳐 본문 해시가 바뀌면 운영자가 고친 분석을 새 본문으로 옮기게 한다`() {
+        // given
+        val job = lockedJob(reviewStatus = null)
+        Mockito.`when`(job.contentHash()).thenReturn("before", "after")
+
+        // when
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목"), ADMIN_ID)
+
+        // then
+        Mockito.verify(jobAnalysisManager).keepAdminEditCurrent(job, "before")
     }
 
     @Test
@@ -108,6 +139,7 @@ class AdminJobServiceTest {
         service.updateJob(
             JOB_ID,
             AdminJobUpdateCommand(details = AdminJobDetailsPatch(experienceMinYears = 5, recruitmentEndAt = endAt)),
+            ADMIN_ID,
         )
 
         Mockito.verify(jobManager).update(
@@ -115,6 +147,7 @@ class AdminJobServiceTest {
             currentValues().copy(experienceMinYears = 5, recruitmentEndAt = endAt),
             NOW,
         )
+        Mockito.verify(jobManager).markContentEdited(job, ADMIN_ID, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
     }
 
@@ -313,6 +346,39 @@ class AdminJobServiceTest {
         recruitmentEndAt = LocalDateTime.of(2026, 9, 14, 23, 59),
     )
 
+    @Test
+    fun `원문 HTML은 크롤러 원문과 같이 안전한 태그만 남기고 원문 URL 기준 절대 주소로 바꿔 저장한다`() {
+        val job = lockedJob(reviewStatus = null)
+        Mockito.`when`(job.id).thenReturn(JOB_ID)
+        Mockito.`when`(job.sourceUrl).thenReturn("https://example.com/jobs/1")
+
+        service.updateJob(
+            JOB_ID,
+            AdminJobUpdateCommand(
+                sourceHtml = "<h2 onclick=\"x()\">주요 업무</h2><script>alert(1)</script><img src=\"/logo.png\">",
+            ),
+            ADMIN_ID,
+        )
+
+        Mockito.verify(jobSourceManager).save(JOB_ID, "<h2>주요 업무</h2><img src=\"https://example.com/logo.png\">")
+        // 원문만 고쳐도 운영자 내용 수정이라 AI 서버의 다시 수집이 덮지 못한다.
+        Mockito.verify(jobManager).markContentEdited(job, ADMIN_ID, NOW)
+        Mockito.verifyNoMoreInteractions(jobManager)
+        Mockito.verifyNoInteractions(jobAnalysisManager)
+    }
+
+    @Test
+    fun `걸러서 보여 줄 내용이 없는 원문은 지우지 않고 400 예외를 던진다`() {
+        lockedJob(reviewStatus = null)
+
+        val error = assertThrows(InvalidRequestFieldException::class.java) {
+            service.updateJob(JOB_ID, AdminJobUpdateCommand(sourceHtml = "<script>alert(1)</script><style>p{}</style>"), ADMIN_ID)
+        }
+
+        assertEquals("sourceHtml", error.fieldName)
+        Mockito.verifyNoInteractions(jobSourceManager)
+    }
+
     private fun lockedJob(reviewStatus: ContentReviewStatus?): Job {
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(job.reviewStatus).thenReturn(reviewStatus)
@@ -322,6 +388,7 @@ class AdminJobServiceTest {
 
     companion object {
         private const val JOB_ID = 1L
+        private const val ADMIN_ID = 9L
         private val NOW = LocalDateTime.of(2026, 8, 27, 12, 0)
     }
 }

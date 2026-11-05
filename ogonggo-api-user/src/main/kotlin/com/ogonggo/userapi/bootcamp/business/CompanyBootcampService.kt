@@ -9,6 +9,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.core.user.implement.UserReader
@@ -29,6 +30,7 @@ class CompanyBootcampService(
     private val bootcampContentReader: BootcampContentReader,
     private val bootcampAppender: BootcampAppender,
     private val bootcampManager: BootcampManager,
+    private val imageAssetManager: ImageAssetManager,
     private val clock: Clock,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
@@ -40,6 +42,7 @@ class CompanyBootcampService(
         val bootcamp = bootcampAppender.append(
             command.copy(ownerUserId = userId, closedAt = closedAt),
         )
+        imageAssetManager.attachImageUrls(userId, listOf(command.logoUrl, command.representativeImageUrl))
         eventPublisher.publishEvent(
             CompanyPostingRegisteredEvent(
                 type = CompanyPostingType.BOOTCAMP,
@@ -70,6 +73,7 @@ class CompanyBootcampService(
         verifyCompany(userId)
         val bootcamp = bootcampReader.readOwnedForUpdate(userId, bootcampId)
         bootcampManager.update(bootcamp, command)
+        imageAssetManager.attachImageUrls(userId, listOf(command.logoUrl, command.representativeImageUrl))
         bootcampManager.requestReview(bootcamp, LocalDateTime.now(clock))
     }
 

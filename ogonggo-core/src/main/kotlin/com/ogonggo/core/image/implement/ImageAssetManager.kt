@@ -11,6 +11,7 @@ import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.implement.dto.AttachedImageDto
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
+import com.ogonggo.core.image.persistence.ImageUrlReferenceQueryRepository
 import com.ogonggo.core.storage.s3.S3ObjectClient
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
@@ -23,6 +24,7 @@ class ImageAssetManager internal constructor(
     private val imageAssetRepository: ImageAssetJpaRepository,
     private val s3ObjectClient: S3ObjectClient,
     private val objectMapper: ObjectMapper,
+    private val imageUrlReferenceQueryRepository: ImageUrlReferenceQueryRepository,
 ) {
 
     fun startUploading(
@@ -138,7 +140,7 @@ class ImageAssetManager internal constructor(
 
     /**
      * 이미지 한 장을 쓰는 자리(회원 프로필 이미지, 기업 로고)의 이미지를 바꾸고 새 이미지 URL을 돌려준다.
-     * 새 이미지는 첨부하고 이전 이미지는 참조를 푼다. 같은 이미지를 다시 보내면 그대로 둔다.
+     * 새 이미지는 첨부하고 이전 이미지는 참조를 푼다(채용공고·부트캠프가 URL로 쓰면 첨부로 둔다). 같은 이미지를 다시 보내면 그대로 둔다.
      * 남의 이미지, 다른 곳에서 쓰는 이미지, 지워진 이미지는 쓸 수 없다.
      */
     fun replaceImage(
@@ -201,8 +203,12 @@ class ImageAssetManager internal constructor(
             )
         }
 
+        val usedByPostings = imageUrlReferenceQueryRepository.findUrlsUsedByPostings(candidates.map(ImageAsset::url))
+        val (kept, deletable) = candidates.partition { it.url in usedByPostings }
+        imageAssetRepository.saveAll(kept.onEach(ImageAsset::restoreAttached))
+
         var deletedCount = 0
-        candidates.forEach { asset ->
+        deletable.forEach { asset ->
             asset.markDeletePending()
             imageAssetRepository.save(asset)
             try {
@@ -215,6 +221,26 @@ class ImageAssetManager internal constructor(
             }
         }
         return deletedCount
+    }
+
+    /**
+     * 이미지를 식별자가 아니라 URL로 저장하는 자리(채용공고·부트캠프의 로고·대표 이미지)에 넣은 URL 중
+     * [ownerUserId]가 올린 이미지를 첨부한다. 외부 URL, 남의 이미지, 이미 첨부된 이미지는 그대로 두고 막지 않는다.
+     * 같은 이미지를 여러 공고가 쓸 수 있어 이전 이미지의 참조는 풀지 않는다.
+     * 오공고에 올린 이미지인데 정리 작업이 이미 지웠거나 지우는 중이면 IMAGE_ASSET_NOT_AVAILABLE로 막아 다시 올리게 한다.
+     * 하루 넘게 둔 임시 저장 글을 제출하면 이렇게 된다.
+     */
+    fun attachImageUrls(ownerUserId: Long, urls: Collection<String?>) {
+        val targets = urls.filterNotNull().filter(String::isNotBlank).toSet()
+        if (targets.isEmpty()) return
+        val assets = imageAssetRepository.findAllByUrlIn(targets)
+        if (assets.groupBy(ImageAsset::url).values.any { sameUrl -> sameUrl.none(ImageAsset::isAvailable) }) {
+            throw InvalidValueException(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE)
+        }
+        val attached = assets
+            .filter { it.ownerUserId == ownerUserId && it.deletedAt == null && it.isAttachable() }
+            .onEach { it.attach() }
+        imageAssetRepository.saveAll(attached)
     }
 
     /** 첨부된 이미지를 원본과 같은 폴더(용도)의 새 저장 키로 복제한다. 하나라도 실패하면 이미 복사한 객체를 지우고 다시 던진다. */
@@ -261,9 +287,12 @@ class ImageAssetManager internal constructor(
             imageAssetRepository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(ids, ownerUserId)
         }
 
+    /** 채용공고·부트캠프가 URL로 쓰는 이미지는 참조를 풀지 않는다. 기업 로고를 바꿔도 그 로고를 넣은 공고가 남아 있을 수 있다. */
     private fun unreference(ownerUserId: Long, ids: Set<String>, now: LocalDateTime) {
-        val assets = readOwnedAssets(ownerUserId, ids).onEach { it.unreference(now) }
-        imageAssetRepository.saveAll(assets)
+        val assets = readOwnedAssets(ownerUserId, ids)
+        val usedByPostings = imageUrlReferenceQueryRepository.findUrlsUsedByPostings(assets.map(ImageAsset::url))
+        val released = assets.filterNot { it.url in usedByPostings }.onEach { it.unreference(now) }
+        imageAssetRepository.saveAll(released)
     }
 
     private fun extractImageReferences(content: String?): Map<String, String> {

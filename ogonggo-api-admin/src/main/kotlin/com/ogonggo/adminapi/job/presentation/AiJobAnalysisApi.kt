@@ -29,6 +29,7 @@ interface AiJobAnalysisApi {
         summary = "공고 분석 대상 조회",
         description = """
             게시 중인 모집 중 채용공고 가운데 분석이 없거나 분석한 뒤로 본문이 바뀐 공고를 최근 것부터 줍니다.
+            운영자가 지금 본문에 대해 고친 분석이 있는 공고는 본문이 바뀌기 전까지 주지 않습니다.
             AI 서버가 등록한 공고만이 아니라 고용24·기업회원 공고도 들어 있습니다.
             본문은 제목과 본문 여덟 칸이며, 응답의 `contentHash`를 분석을 보낼 때 그대로 돌려줍니다.
         """,
@@ -54,6 +55,8 @@ interface AiJobAnalysisApi {
             AI 서버가 만든 공고 분석을 저장합니다. 이미 있으면 바꿉니다.
             분석 대상을 받은 뒤 운영자가 본문을 고쳤으면 `contentHash`가 지금 본문과 달라 409로 거절합니다.
             그 공고는 다음 대상 조회에 다시 나옵니다.
+            운영자가 관리자 콘솔에서 지금 본문에 대한 분석을 고쳤으면 409 JOB_ANALYSIS_EDITED_BY_ADMIN으로 거절합니다.
+            그 공고는 본문이 바뀌기 전까지 대상 조회에 나오지 않으므로 다시 보내지 않습니다.
         """,
     )
     @ApiResponses(
@@ -76,7 +79,7 @@ interface AiJobAnalysisApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "JOB_ANALYSIS_OUTDATED: 분석한 뒤로 공고 본문이 바뀌었습니다.",
+                description = "JOB_ANALYSIS_OUTDATED: 분석한 뒤로 공고 본문이 바뀌었습니다. JOB_ANALYSIS_EDITED_BY_ADMIN: 운영자가 고친 분석이라 바꿀 수 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

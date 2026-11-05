@@ -23,6 +23,9 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
 
+private const val IMAGE_NOT_AVAILABLE_DESCRIPTION =
+    "IMAGE_ASSET_NOT_AVAILABLE: 로고·대표 이미지 URL이 오공고에 올린 이미지인데 정리 작업이 이미 지웠거나 지우는 중입니다. 다시 올린 이미지 URL로 저장하세요. 외부 URL은 막지 않습니다."
+
 @Tag(name = "기업회원 부트캠프")
 @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
 interface CompanyBootcampApi {
@@ -31,6 +34,11 @@ interface CompanyBootcampApi {
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "등록 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = IMAGE_NOT_AVAILABLE_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "403",
                 description = "COMPANY_ROLE_REQUIRED, USER_SUSPENDED 또는 USER_WITHDRAWN",
@@ -67,6 +75,16 @@ interface CompanyBootcampApi {
     ): ResponseEntity<SuccessResponse<CompanyBootcampDetailResponse>>
 
     @Operation(operationId = "replaceMyBootcamp", summary = "내 부트캠프 수정")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = IMAGE_NOT_AVAILABLE_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
     fun updateBootcamp(
         @Parameter(hidden = true) userId: Long,
         @Positive bootcampId: Long,

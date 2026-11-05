@@ -73,6 +73,7 @@ class UserJobBookmarkServiceTest {
         Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
         Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
+        Mockito.`when`(job.publicRegisteredAt()).thenReturn(LocalDateTime.of(2026, 11, 4, 4, 10))
         Mockito.`when`(jobBookmarkReader.readBookmarkedPublishedPage(USER_ID, JobSearchCondition.NONE, 0, 10)).thenReturn(
             JobPageDto(listOf(job), 0, 10, 1, 1, false),
         )

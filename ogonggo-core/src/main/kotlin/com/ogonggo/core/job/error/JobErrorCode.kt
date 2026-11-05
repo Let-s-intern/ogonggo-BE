@@ -12,4 +12,5 @@ enum class JobErrorCode(
     JOB_BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 일자리 공고입니다."),
     JOB_BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크하지 않은 일자리 공고입니다."),
     JOB_ANALYSIS_OUTDATED(HttpStatus.CONFLICT, "공고 본문이 바뀌어 분석을 저장할 수 없습니다."),
+    JOB_ANALYSIS_EDITED_BY_ADMIN(HttpStatus.CONFLICT, "운영자가 고친 분석이라 본문이 바뀌기 전에는 바꿀 수 없습니다."),
 }

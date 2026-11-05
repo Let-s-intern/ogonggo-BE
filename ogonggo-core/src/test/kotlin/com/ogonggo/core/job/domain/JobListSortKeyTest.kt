@@ -10,15 +10,28 @@ import java.time.LocalDate
 class JobListSortKeyTest {
 
     @Test
-    fun `크롤러 공고는 등록일과 무작위 값에 관계없이 다른 경로 공고보다 앞에 온다`() {
+    fun `크롤러 공고와 기업회원 공고는 등록일과 무작위 값에 관계없이 고용24 공고보다 앞에 온다`() {
         // given
-        val oldCrawled = JobListSortKey.of(ContentSource.CRAWLER, LocalDate.of(2026, 1, 1), false, Int.MIN_VALUE)
+        val newestWork24 = JobListSortKey.of(ContentSource.WORK24, LocalDate.of(2026, 12, 31), false, -1)
 
         // when & then
-        listOf(ContentSource.COMPANY, ContentSource.WORK24).forEach { source ->
-            val newest = JobListSortKey.of(source, LocalDate.of(2026, 12, 31), false, -1)
-            assertTrue(oldCrawled > newest)
+        listOf(ContentSource.CRAWLER, ContentSource.COMPANY).forEach { source ->
+            val oldest = JobListSortKey.of(source, LocalDate.of(2026, 1, 1), false, Int.MIN_VALUE)
+            assertTrue(oldest > newestWork24)
         }
+    }
+
+    @Test
+    fun `기업회원 공고는 크롤러 공고와 등록일 기준으로 섞인다`() {
+        // given
+        val day = LocalDate.of(2026, 9, 30)
+        val crawledThatDay = JobListSortKey.of(ContentSource.CRAWLER, day, false, 0)
+        val company = JobListSortKey.of(ContentSource.COMPANY, day, false, 0)
+
+        // when & then
+        assertEquals(crawledThatDay, company)
+        assertTrue(company > JobListSortKey.of(ContentSource.CRAWLER, day.minusDays(1), true, -1))
+        assertTrue(company < JobListSortKey.of(ContentSource.CRAWLER, day.plusDays(1), false, 0))
     }
 
     @Test

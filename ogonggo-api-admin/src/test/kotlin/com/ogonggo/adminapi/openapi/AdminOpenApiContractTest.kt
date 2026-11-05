@@ -64,6 +64,8 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf(
             "/paths/~1api~1v1~1admin~1jobs~1{jobId}/patch",
             "/paths/~1api~1v1~1admin~1jobs~1{jobId}/delete",
+            "/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/put",
+            "/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/delete",
             "/paths/~1api~1v1~1admin~1jobs~1today/get",
             "/paths/~1api~1v1~1admin~1jobs~1today/put",
             "/paths/~1api~1v1~1admin~1bootcamps/get",
@@ -93,6 +95,8 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1today-count/get",
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1status/patch",
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1memo/patch",
+            "/paths/~1api~1v1~1admin~1company-content-priority/get",
+            "/paths/~1api~1v1~1admin~1company-content-priority/put",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -297,6 +301,60 @@ class AdminOpenApiContractTest @Autowired constructor(
             .response
             .contentAsString,
     )
+
+    @Test
+    fun `채용공고 검수 완료는 본문 없는 PUT과 DELETE이고 목록과 상세에 검수 완료 일시를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val mark = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/put")
+        val clear = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1inspection/delete")
+
+        // then
+        assertEquals("replaceJobInspection", mark.at("/operationId").asText())
+        assertEquals("deleteJobInspection", clear.at("/operationId").asText())
+        listOf(mark, clear).forEach { operation ->
+            assertTrue(operation.at("/requestBody").isMissingNode)
+            assertEquals(listOf("jobId"), operation.at("/parameters").map { it["name"].asText() })
+            assertTrue(operation.at("/responses/404/description").asText().startsWith("JOB_NOT_FOUND"))
+        }
+        assertTrue(document.at("/components/schemas/AdminJobSummaryResponse/properties/inspectedAt").isObject)
+        assertTrue(document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1analysis/put/security/0/BearerAuth").isArray)
+        assertTrue(document.at("/components/schemas/AdminJobDetailResponse/properties/inspectedAt").isObject)
+    }
+
+    @Test
+    fun `채용공고 분석 수정은 AI 서버 저장과 같은 분석 스키마를 받고 상세는 같은 스키마로 분석과 최신 여부를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}~1analysis/put")
+        val detail = document.at("/components/schemas/AdminJobDetailResponse/properties")
+
+        // then
+        assertEquals("replaceJobAnalysis", operation.at("/operationId").asText())
+        assertEquals(listOf("jobId"), operation.at("/parameters").map { it["name"].asText() })
+        assertEquals(
+            "#/components/schemas/Analysis",
+            operation.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+        )
+        assertEquals(
+            "#/components/schemas/Analysis",
+            document.at("/components/schemas/AiJobAnalysisRequest/properties/analysis/\$ref").asText(),
+        )
+        assertEquals("#/components/schemas/Analysis", detail.at("/analysis/\$ref").asText())
+        assertEquals("boolean", detail.at("/analysisCurrent/type").asText())
+        assertTrue(detail.at("/analysisEditedAt").isObject)
+        assertTrue(detail.at("/contentEditedAt").isObject)
+        assertEquals(3, document.at("/components/schemas/Analysis/properties/tasks/maxItems").asInt())
+        assertTrue(operation.at("/responses/404/description").asText().startsWith("JOB_NOT_FOUND"))
+        assertTrue(
+            document.at("/paths/~1api~1v1~1internal~1jobs~1{jobId}~1analysis/put/responses/409/description").asText()
+                .contains("JOB_ANALYSIS_EDITED_BY_ADMIN"),
+        )
+    }
 
     @Test
     fun `관리자 OpenAPI는 독립된 정보와 인증 스키마를 제공하고 health를 제외한다`() {

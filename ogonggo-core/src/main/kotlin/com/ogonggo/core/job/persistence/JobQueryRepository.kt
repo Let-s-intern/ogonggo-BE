@@ -50,14 +50,18 @@ internal class JobQueryRepository(
      * 우선 여부를 정렬식으로 앞에 두면 정렬 키 인덱스를 타지 못해 조건에 맞는 공고를 전부 읽어 정렬해야 한다.
      * 비즈니스 등록 공고는 소수이므로 두 묶음을 따로 읽어 이어 붙이고, 나머지 공고는 지금처럼 인덱스 순서로 읽는다.
      * 우선 공고 수를 세어 요청한 페이지가 어느 묶음의 어디부터인지 정한다.
+     *
+     * [companyFirst]가 거짓이면(운영자가 우선 노출을 끄면) 묶음을 나누지 않고 모든 공고를 고른 정렬로 한 번에 읽는다.
      */
     fun findPublishedPage(
         condition: JobSearchCondition,
         sortType: JobSortType,
         now: LocalDateTime,
+        companyFirst: Boolean,
         pageable: Pageable,
     ): Page<Job> {
         val predicates = publishedPredicates(condition)
+        if (!companyFirst) return findPage(predicates, sortType, PUBLISHED_LATEST, pageable)
         val prioritized = companyRecruiting(now)
         val prioritizedCount = queryFactory.select(job.count())
             .from(job)
@@ -309,6 +313,9 @@ internal class JobQueryRepository(
             condition.jobField?.let(job.jobField::eq),
             condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
             keywordContains(condition.keyword),
+            condition.registeredFrom?.let { job.createdAt.goe(it.atStartOfDay()) },
+            condition.registeredTo?.let { job.createdAt.lt(it.plusDays(1).atStartOfDay()) },
+            condition.inspected?.let { if (it) job.inspectedAt.isNotNull else job.inspectedAt.isNull },
         )
 
     private fun employmentTypeEq(employmentType: JobEmploymentType?): BooleanExpression? =

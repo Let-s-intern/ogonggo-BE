@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.implement.dto.JobAnalysisCandidateDto
+import com.ogonggo.core.job.implement.dto.JobAnalysisViewDto
 import com.ogonggo.core.job.persistence.JobAnalysisJpaRepository
 import com.ogonggo.core.job.persistence.JobJpaRepository
 import org.slf4j.LoggerFactory
@@ -32,6 +33,24 @@ class JobAnalysisReader internal constructor(
         return runCatching { JobAnalysisContentJson.read(objectMapper.readTree(analysis.content)) }
             .onFailure { log.warn("공고 분석을 읽지 못했습니다. jobId={}", jobId, it) }
             .getOrNull()
+    }
+
+    /**
+     * 운영자가 볼 저장된 분석이다. 본문이 바뀌었어도 저장된 분석을 주고 낡았는지 함께 알린다.
+     * 운영자는 "분석이 낡았다"는 사실도 봐야 하기 때문이다. 분석이 없거나 저장된 내용을 읽지 못하면 `null`이다.
+     */
+    fun readForAdmin(job: Job): JobAnalysisViewDto? {
+        val jobId = job.id ?: return null
+        val analysis = jobAnalysisRepository.findByJobId(jobId) ?: return null
+        val content = runCatching { JobAnalysisContentJson.read(objectMapper.readTree(analysis.content)) }
+            .onFailure { log.warn("공고 분석을 읽지 못했습니다. jobId={}", jobId, it) }
+            .getOrNull()
+            ?: return null
+        return JobAnalysisViewDto(
+            content = content,
+            current = analysis.contentHash == job.contentHash(),
+            editedAt = analysis.editedAt,
+        )
     }
 
     /**

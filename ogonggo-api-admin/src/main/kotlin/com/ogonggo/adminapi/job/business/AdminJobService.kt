@@ -2,14 +2,19 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.error.InvalidRequestFieldException
+import com.ogonggo.adminapi.job.implement.JobSourceHtmlSanitizer
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSortType
+import com.ogonggo.core.job.domain.JobAnalysisContent
+import com.ogonggo.core.job.implement.JobAnalysisManager
+import com.ogonggo.core.job.implement.JobAnalysisReader
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
 import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.TodayJobManager
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
@@ -29,6 +34,9 @@ class AdminJobService(
     private val jobMetricReader: JobMetricReader,
     private val todayJobManager: TodayJobManager,
     private val jobSourceReader: JobSourceReader,
+    private val jobAnalysisReader: JobAnalysisReader,
+    private val jobAnalysisManager: JobAnalysisManager,
+    private val jobSourceManager: JobSourceManager,
     private val clock: Clock,
 ) {
 
@@ -45,18 +53,28 @@ class AdminJobService(
         )
     }
 
-    fun getJob(jobId: Long): AdminJobResult =
-        AdminJobResult.from(jobReader.read(jobId), jobMetricReader.read(jobId), jobSourceReader.readHtml(jobId))
+    fun getJob(jobId: Long): AdminJobResult {
+        val job = jobReader.read(jobId)
+        return AdminJobResult.from(
+            job = job,
+            metric = jobMetricReader.read(jobId),
+            sourceHtml = jobSourceReader.readHtml(jobId),
+            analysis = jobAnalysisReader.readForAdmin(job),
+        )
+    }
 
     /**
      * 검수 상태를 먼저 바꾸고 노출을 바꾼다. 승인은 곧 노출이므로 승인과 숨김을 함께 보내면 숨김이 남아야 한다.
      * 이미 같은 검수 상태면 다시 전이하지 않는다. 화면이 현재 값을 함께 보내도 노출이 되돌아가지 않게 하기 위해서다.
      * 공고 정보는 내용을 고친 뒤 현재 값에 덮어 한 번에 고친다. 모집 종료 일시가 바뀌면 모집 상태와 마감 알림도 다시 정해진다.
+     * 제목·본문·공고 정보·원문 중 하나라도 고치면 운영자 내용 수정으로 남긴다. 그 뒤로 AI 서버의 다시 수집은 이 공고의 내용과 원문을 바꾸지 않는다.
+     * 본문 해시가 바뀌면 운영자가 고친 분석을 새 해시로 옮긴다([JobAnalysisManager.keepAdminEditCurrent]).
      */
     @Transactional
-    fun updateJob(jobId: Long, command: AdminJobUpdateCommand) {
+    fun updateJob(jobId: Long, command: AdminJobUpdateCommand, adminUserId: Long) {
         val now = LocalDateTime.now(clock)
         val job = jobReader.readForUpdate(jobId)
+        val previousContentHash = job.contentHash()
 
         command.reviewStatus
             ?.takeIf { it != job.reviewStatus }
@@ -68,6 +86,24 @@ class AdminJobService(
         if (!command.details.isEmpty()) {
             jobManager.update(job, command.details.mergeInto(job), now)
         }
+        command.sourceHtml?.let { saveSourceHtml(job, it) }
+        if (command.editsContent()) {
+            jobManager.markContentEdited(job, adminUserId, now)
+        }
+        if (job.contentHash() != previousContentHash) {
+            jobAnalysisManager.keepAdminEditCurrent(job, previousContentHash)
+        }
+    }
+
+    /**
+     * AI 서버 원문과 같은 거르기를 거쳐 저장한다. 상대 주소는 수정을 반영한 원문 URL 기준으로 바꾼다.
+     * 원문은 공고 분석의 본문 해시에 들어가지 않으므로 원문을 고쳐도 분석은 그대로 보인다.
+     * 걸러서 그릴 것이 남지 않으면 원문을 지우지 않고 400으로 거절한다. 원문은 지우는 경로를 두지 않았다.
+     */
+    private fun saveSourceHtml(job: Job, sourceHtml: String) {
+        val sanitized = JobSourceHtmlSanitizer.sanitize(sourceHtml, job.sourceUrl)
+            ?: throw InvalidRequestFieldException("sourceHtml", "안전한 태그만 남기면 보여 줄 내용이 없습니다.")
+        jobSourceManager.save(job.requiredId(), sanitized)
     }
 
     /**
@@ -80,6 +116,28 @@ class AdminJobService(
         jobReader.readAllForUpdate(command.jobIds)
             .filter { job -> job.visibility() != command.visibility }
             .forEach { job -> changeVisibility(job, command.visibility) }
+    }
+
+    /**
+     * 운영자가 고친 공고 분석을 지금 본문에 대한 분석으로 저장한다. 사용자 상세에 바로 보인다.
+     * 본문이 바뀌기 전까지 AI 서버는 이 분석을 덮어쓰지 못한다. 본문이 바뀌면 평소처럼 다시 분석된다.
+     * AI 서버 분석 저장과 같이 공고 행을 잠가 차례로 돈다.
+     */
+    @Transactional
+    fun replaceAnalysis(jobId: Long, content: JobAnalysisContent, adminUserId: Long) {
+        jobAnalysisManager.edit(jobReader.readForUpdate(jobId), content, adminUserId, LocalDateTime.now(clock))
+    }
+
+    /** 노출·검수 상태는 바꾸지 않는다. 이미 검수 완료한 공고는 처음 확인한 시각과 관리자를 지킨다. */
+    @Transactional
+    fun markInspected(jobId: Long, adminUserId: Long) {
+        jobManager.markInspected(jobReader.readForUpdate(jobId), adminUserId, LocalDateTime.now(clock))
+    }
+
+    /** 검수 완료가 없어도 성공한다. 마지막 동작 되돌리기가 같은 요청을 반복해도 결과가 같게 하기 위해서다. */
+    @Transactional
+    fun clearInspection(jobId: Long) {
+        jobManager.clearInspection(jobReader.readForUpdate(jobId))
     }
 
     /** 반려 기록은 지우지 않는다. 반려 보관에서 "반려하고 지웠다"는 기록으로 남는다. */

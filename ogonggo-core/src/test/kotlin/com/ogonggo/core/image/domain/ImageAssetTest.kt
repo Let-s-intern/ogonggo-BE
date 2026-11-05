@@ -46,6 +46,30 @@ class ImageAssetTest {
         assertEquals(null, asset.unreferencedAt)
     }
 
+    @Test
+    fun `삭제 대기 이미지는 URL로 쓸 수 없지만 공고가 쓰고 있으면 첨부로 되돌리고 지운 이미지는 되돌리지 않는다`() {
+        // given
+        val pending = asset().also {
+            it.markUploaded()
+            it.markDeletePending()
+        }
+        val deleted = asset().also {
+            it.markUploaded()
+            it.markDeletePending()
+            it.markDeleted(LocalDateTime.of(2026, 9, 12, 10, 0))
+        }
+
+        // when
+        val pendingAvailable = pending.isAvailable()
+        pending.restoreAttached()
+
+        // then
+        assertEquals(false, pendingAvailable)
+        assertEquals(ImageAssetStatus.ATTACHED, pending.status)
+        assertEquals(false, deleted.isAvailable())
+        assertThrows(IllegalStateException::class.java) { deleted.restoreAttached() }
+    }
+
     private fun asset() = ImageAsset.uploading(
         id = "image-id",
         ownerUserId = 17L,

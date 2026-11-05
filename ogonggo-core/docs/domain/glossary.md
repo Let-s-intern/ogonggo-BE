@@ -17,7 +17,7 @@
 | 고용 형태 | `JobEmploymentType` | 정규직, 계약직, 인턴, 파트타임, 일학습병행, 미래내일 일경험, 기타 |
 | 경력 유형 | `JobExperienceType` | 신입, 경력, 신입·경력, 경력 무관 |
 | 모집 기간 유형 | `JobRecruitmentType`, `BootcampRecruitmentType` | 기간 모집(마감일 있음) 또는 상시 모집 |
-| 공고 분석 | `JobAnalysis` | 채용공고를 AI로 요약한 결과. AI 서버가 만들어 보내며, 공고마다 하나입니다. 본문 해시가 달라지면 보여 주지 않고 다시 요약합니다. |
+| 공고 분석 | `JobAnalysis` | 채용공고를 AI로 요약한 결과. AI 서버가 만들어 보내며, 공고마다 하나입니다. 본문 해시가 달라지면 보여 주지 않고 다시 요약합니다. 운영자가 고친 분석(`editedAt`)은 본문이 바뀌기 전까지 AI 서버가 덮어쓰지 않습니다(LC-3567). |
 | 태그 | `Tag`, `JobTag` | 공고에 붙는 자유 태그 |
 | 공고 본문 항목 | `JobContentField` | 회사 및 팀 소개, 주요 업무, 자격 요건, 우대 사항 등 공고 상세의 구획 |
 | 부트캠프 | `Bootcamp` | 취업 준비생을 위한 교육 과정. 공고처럼 외부 페이지에서 신청합니다. |
@@ -37,6 +37,8 @@
 | 게시 상태 | `JobPublicationStatus`, `BootcampPublicationStatus`, `RecruitmentPostPublicationStatus` | 초안(임시저장), 게시(공개), 숨김(비공개) | 회원에게 보이는지 여부입니다. |
 | 검수 상태 | `ContentReviewStatus` | 검수 대기, 승인, 반려 | 기업 회원이 올린 콘텐츠에만 있고 나머지는 `null`입니다. 승인해야 게시할 수 있습니다. |
 | 반려 사유 | `ContentRejection` | | 관리자가 반려하며 남긴 말. 콘텐츠마다 한 행입니다. |
+| 검수 완료(공고 점검) | `Job.inspectedAt`, `Job.inspectedByUserId` | 검수 완료, 미검수(`null`) | 운영자가 이미 게시된 채용공고를 어드민 `오늘 올라온 공고` 화면에서 직접 훑어봤다는 기록입니다. 위 검수 상태(기업회원 공고의 게시 전 승인)와 다른 개념이라 코드·API 이름은 `inspection`으로 가릅니다. 노출을 바꾸지 않고, 운영자가 내용을 고쳐도 지우지 않습니다. AI 서버가 다시 수집해 본문이나 원문이 바뀌면 지웁니다(LC-3567). |
+| 운영자 내용 수정 | `Job.contentEditedAt`, `Job.contentEditedByUserId` | 운영자 수정, 수정 없음(`null`) | 운영자가 관리자 콘솔에서 공고의 제목·본문·공고 정보·원문을 마지막으로 고친 기록입니다. 값이 있으면 AI 서버가 다시 수집해도 공고 내용과 원문을 바꾸지 않습니다. 자동으로 풀리지 않습니다(LC-3567). |
 | 등록 경로 | `ContentSource` | 크롤링(`CRAWLER`), 고용24(`WORK24`), 비즈니스 등록(`COMPANY`) | 콘텐츠가 들어온 곳. 등록 후 바뀌지 않습니다. |
 | 회원 상태 | `UserStatus` | 활성, 탈퇴, 정지 | |
 
@@ -141,8 +143,9 @@
 | 광고 문의 회원 구분 | `AdvertisementInquiryMemberType` | 기업 회원(`COMPANY`), 일반 회원(`USER`), 비회원(`GUEST`). 저장할 때 토큰으로 정한 문의 시점의 값입니다. |
 | 광고 문의 회사명 입력 방식 | `AdvertisementInquiryCompanyNameSource` | 검색(`SEARCH`, 오공고 회사명 검색에서 고름), 직접 입력(`MANUAL`), 회원 정보(`MEMBER_PROFILE`, 기업 회원 정보로 채움). 클라이언트가 보낸 값을 그대로 저장하며 보내지 않으면 직접 입력입니다. 영업이 표기를 정리할 행을 고르는 표시입니다. |
 | 광고 문의 유입 경로 | `AdvertisementInquiryInflowChannel` | 콜드메일·인스타그램·카카오톡·뉴스레터·기타 UTM·오공고 사이트·렛츠커리어·검색·외부 사이트·직접 접속. UTM과 referrer 원본으로 저장할 때 한 번 판정합니다. 회원의 유입 구분(`UserInflowSource`)과 다릅니다. |
-| 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. |
+| 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. 채용공고·부트캠프의 로고·대표 이미지는 URL만 가지며, 저장할 때 그 URL의 이미지를 첨부하고 이미 지워진 이미지 URL이면 막습니다. 이 URL로 쓰이는 이미지는 참조를 풀지 않고 정리 작업도 지우지 않습니다. |
 | 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |
 | 지역 | `Region`, `SubRegion` | 시·도와 시·군·구. 행정 코드를 함께 가집니다. |
 | 스케줄 작업 | `ScheduledJob` | 주기 작업의 실행 주기와 켜짐 여부. 운영자가 DB에서 바꿉니다. |
+| 기업회원 공고 우선 노출 | `CompanyContentPriority` | 기업회원이 비즈니스로 등록한 마감 전 채용공고·부트캠프를 공개 목록 맨 앞에 두는 혜택의 켜짐 여부. 유료 광고 구좌가 나오기 전까지의 임시 혜택이며, 행이 없으면 켜진 것으로 봅니다. |
 | 관리 목록 / 콘솔 목록 | `*ManagementSearchCondition`, `*ConsoleSearchCondition` | 게시 상태와 무관하게 콘텐츠를 관리할 때 쓰는 목록 조건. 관리자 콘솔이나 작성자 본인의 관리 화면에서 씁니다. |

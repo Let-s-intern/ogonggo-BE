@@ -337,7 +337,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(todayJobs.at("/parameters").isMissingNode)
         // 항목은 목록 항목의 필드를 같은 높이에 펼치고 추천 문구를 더한다. 중첩된 job 필드로 드러나면 계약과 다르다.
         val todayJobProperties = document.at("/components/schemas/UserTodayJobSummaryResponse/properties")
-        listOf("id", "title", "bookmarked", "recommendationTitle", "recommendationDescription").forEach { field ->
+        listOf("id", "title", "bookmarked", "registeredAt", "recommendationTitle", "recommendationDescription").forEach { field ->
             assertTrue(todayJobProperties.has(field), field)
         }
         assertFalse(todayJobProperties.has("job"))
@@ -371,6 +371,18 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(createServiceFeedback.at("/security/0/BearerAuth").isArray)
         assertTrue(createServiceFeedback.at("/responses/201/content/application~1json/schema").isObject)
         assertTrue(createServiceFeedback.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+
+        // 기업 공고·부트캠프 등록·수정은 정리 작업이 지운 로고·대표 이미지 URL을 400으로 막는다(LC-3564). FE가 이 코드로 다시 올리게 한다.
+        listOf(
+            "/paths/~1api~1v1~1users~1me~1jobs/post" to "201",
+            "/paths/~1api~1v1~1users~1me~1jobs~1{jobId}/put" to "200",
+            "/paths/~1api~1v1~1users~1me~1bootcamps/post" to "201",
+            "/paths/~1api~1v1~1users~1me~1bootcamps~1{bootcampId}/put" to "200",
+        ).forEach { (path, successCode) ->
+            val operation = document.at(path)
+            assertTrue(operation.at("/responses/$successCode/content/application~1json/schema").isObject, path)
+            assertTrue(operation.at("/responses/400/description").asText().startsWith("IMAGE_ASSET_NOT_AVAILABLE"), path)
+        }
 
         // 부트캠프 목록·상세도 토큰을 보내면 북마크 여부가 채워지므로 공고와 같은 선택적 인증을 노출한다.
         val bootcampList = document.at("/paths/~1api~1v1~1bootcamps/get")
@@ -513,6 +525,9 @@ class UserOpenApiContractTest @Autowired constructor(
         assertFalse(jobDetailProperties.has("content"))
         assertTrue(jobDetailProperties.has("bookmarked"))
         assertTrue(document.at("/components/schemas/UserJobSummaryResponse/properties/bookmarked").isObject)
+        // 웹의 NEW 배지가 쓰는 등록 일시는 목록·상세 모두에 있다(LC-3567).
+        assertTrue(document.at("/components/schemas/UserJobSummaryResponse/properties/registeredAt").isObject)
+        assertTrue(document.at("/components/schemas/UserJobDetailResponse/properties/registeredAt").isObject)
         assertTrue(document.at("/components/schemas/UserBootcampSummaryResponse/properties/bookmarked").isObject)
         assertTrue(document.at("/components/schemas/UserBootcampDetailResponse/properties/bookmarked").isObject)
 

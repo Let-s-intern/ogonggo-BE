@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.job.presentation
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.job.presentation.request.AiJobAnalysisRequest
 import com.ogonggo.adminapi.job.presentation.request.ChangeAdminJobVisibilityRequest
 import com.ogonggo.adminapi.job.presentation.request.ReplaceAdminTodayJobsRequest
 import com.ogonggo.adminapi.job.presentation.request.UpdateAdminJobRequest
@@ -18,6 +19,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -30,6 +32,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
+import java.time.LocalDate
 
 private const val ADMIN_AUTH_DESCRIPTION = "UNAUTHORIZED: 액세스 토큰이 없거나 올바르지 않습니다."
 private const val ADMIN_FORBIDDEN_DESCRIPTION = "FORBIDDEN: 활성 상태의 관리자 계정이 아닙니다."
@@ -53,6 +56,9 @@ interface AdminJobApi {
             jobField(직군), jobRole(직무)은 GET /api/v1/enums(사용자 API)의 JobField·JobRole 값을 보냅니다.
             jobField만 보내면 그 직군의 직무 공고도 함께 걸립니다.
             jobRole은 jobRole=IT_BACKEND&jobRole=IT_FRONTEND처럼 여러 번 보내 여러 개를 고를 수 있고, 그중 하나라도 맞는 공고가 걸립니다.
+            registeredFrom·registeredTo는 등록일(YYYY-MM-DD, 한국 시간) 범위이며 두 날짜를 모두 포함합니다. 항목의 registeredAt과 같은 값으로 거릅니다.
+            오늘 등록분만 보려면 두 값에 같은 날짜를 보냅니다. 시작일이 종료일보다 늦으면 400입니다.
+            inspected는 true면 검수 완료한 공고만, false면 미검수 공고만 고릅니다.
 
             정렬 기본값은 REGISTERED_AT(등록일 역순)이며, VIEW_COUNT는 조회 수가 같으면 등록일 역순입니다.
             마지막 페이지를 넘는 page는 빈 items를 반환합니다.
@@ -89,6 +95,9 @@ interface AdminJobApi {
         recruitmentStatus: JobRecruitmentStatus?,
         jobField: JobField?,
         jobRoles: List<JobRole>?,
+        @Parameter(description = "등록일 시작(포함)") registeredFrom: LocalDate?,
+        @Parameter(description = "등록일 끝(포함)") registeredTo: LocalDate?,
+        @Parameter(description = "검수 완료 여부") inspected: Boolean?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminJobSummaryResponse>>>
 
     @Operation(
@@ -208,6 +217,17 @@ interface AdminJobApi {
             직군·시·도를 바꾸면서 직무·시·군·구를 보내지 않으면, 바뀐 직군·시·도에 맞지 않는 기존 직무·시·군·구는 지웁니다.
             직무·시·군·구만 보내면 직군·시·도도 그에 맞춰 바뀝니다. 모집 기간 유형을 ALWAYS_OPEN으로 바꾸면 모집 종료 일시를 지웁니다.
             모집 종료 일시를 바꾸면 모집 상태를 다시 정합니다. 종료 일시가 지난 공고의 마감일을 미루면 모집 중으로 돌아가며, 직접 마감한 공고는 마감으로 남습니다.
+
+            sourceHtml은 원문 HTML을 바꿉니다. AI 서버 원문과 같이 안전한 태그만 남겨 저장하고 상대 주소는 sourceUrl 기준 절대 주소로 바꿉니다.
+            보내지 않거나 null이면 그대로 두고, 비울 수 없어 공백이거나 걸러서 남는 글·이미지가 없으면 400입니다.
+            원문은 공고 분석의 본문 해시에 들어가지 않아 원문만 고치면 분석(analysisCurrent)은 그대로입니다.
+            제목·본문 칸(title, fields)이나 recruitmentNotice를 고치면 AI 서버가 만든 분석은 낡아(analysisCurrent=false) 다시 분석을 기다립니다.
+            운영자가 고친 분석(analysisEditedAt이 있고 analysisCurrent=true)은 새 본문으로 옮겨 그대로 보이며 AI 서버가 덮지 못합니다.
+            내용을 고쳐도 검수 완료(inspectedAt)는 풀리지 않습니다.
+
+            제목·본문·공고 정보·원문을 하나라도 고치면 운영자 내용 수정으로 남습니다(상세의 contentEditedAt).
+            그 뒤로 AI 서버가 같은 공고를 다시 수집해도 공고 내용과 원문은 바뀌지 않습니다. 이 표시는 자동으로 풀리지 않습니다.
+            visibility·reviewStatus만 보내면 내용 수정으로 남지 않습니다.
         """,
     )
     @ApiResponses(
@@ -215,7 +235,7 @@ interface AdminJobApi {
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 제목이 비었거나, reviewStatus에 REJECTED를 보냈거나, 공고 정보 값이 올바르지 않거나 서로 맞지 않습니다(직군과 직무, 시·도와 시·군·구, 모집 시작·종료 일시, 상시 채용의 종료 일시).",
+                description = "BAD_REQUEST: 제목이 비었거나, reviewStatus에 REJECTED를 보냈거나, 공고 정보 값이 올바르지 않거나 서로 맞지 않습니다(직군과 직무, 시·도와 시·군·구, 모집 시작·종료 일시, 상시 채용의 종료 일시). sourceHtml이 공백이거나 걸러서 남는 내용이 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -233,7 +253,89 @@ interface AdminJobApi {
     fun updateJob(
         @Positive jobId: Long,
         @Valid request: UpdateAdminJobRequest,
+        @Parameter(hidden = true) adminUserId: Long,
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>>
+
+    @Operation(
+        operationId = "replaceJobAnalysis",
+        summary = "채용공고 공고 분석 수정",
+        description = """
+            운영자가 고친 공고 분석으로 통째로 바꾸고 바뀐 공고 전체를 반환합니다. 본문은 상세 응답의 analysis와 같은 칸이며,
+            AI 서버 분석 저장(PUT /api/v1/internal/jobs/{jobId}/analysis)의 analysis와 같은 개수 제한과 검증을 따릅니다.
+            tasks 3개, required·preferred 각 8개, competencies 3개, 역량마다 experiences 3개까지이고 글은 1000자까지입니다.
+            employment·submission의 칸마다 value가 비었거나 공백이면 공고에서 확인할 수 없는 값(null)으로 저장합니다.
+
+            지금 본문 해시로 저장하므로 사용자 상세에 바로 보이고 analysisCurrent가 true가 됩니다. 분석이 없던 공고에도 저장합니다.
+            운영자가 고친 분석은 본문(제목과 본문 여덟 칸)이 바뀌기 전까지 AI 서버의 분석 대상에서 빠지고 AI 서버 저장은 409로 거절합니다.
+            본문이 바뀌면 평소처럼 AI 서버가 다시 분석해 바꿉니다. 같은 요청을 반복해도 결과가 같습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "저장 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 분석 칸이 없거나, 항목 개수를 넘었거나, 글이 비었거나 깁니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun replaceJobAnalysis(
+        @Positive jobId: Long,
+        @Valid request: AiJobAnalysisRequest.Analysis,
+        @Parameter(hidden = true) adminUserId: Long,
+    ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>>
+
+    @Operation(
+        operationId = "replaceJobInspection",
+        summary = "채용공고 검수 완료 표시",
+        description = """
+            운영자가 공고를 직접 확인했다고 남깁니다(어드민 오늘 올라온 공고 화면의 검수 완료). 본문 없이 보내며 성공하면 data 없이 응답합니다.
+            이미 검수 완료한 공고에 다시 보내도 200이며 처음 확인한 시각(inspectedAt)을 지킵니다.
+            등록 경로와 무관하게 받고, 노출(visibility)과 검수 상태(reviewStatus)는 바꾸지 않습니다. 숨긴 공고도 표시할 수 있습니다.
+            내용을 고치거나 AI 서버가 다시 수집해도 검수 완료는 풀리지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "표시 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "404",
+                description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun markJobInspected(
+        @Positive jobId: Long,
+        @Parameter(hidden = true) adminUserId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "deleteJobInspection",
+        summary = "채용공고 검수 완료 해제",
+        description = """
+            검수 완료 표시를 지워 미검수로 되돌립니다. 성공하면 data 없이 응답합니다. 표시가 없어도 200입니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "해제 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "404",
+                description = JOB_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun clearJobInspection(
+        @Positive jobId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(
         operationId = "deleteJob",

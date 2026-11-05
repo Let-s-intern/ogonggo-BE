@@ -78,14 +78,19 @@ class JobReader internal constructor(
         sortType: JobSortType,
         page: Int,
         size: Int,
-    ): JobPageDto = readPublishedPage(condition, sortType, page, size, LocalDateTime.now(clock))
+        companyFirst: Boolean,
+    ): JobPageDto = readPublishedPage(condition, sortType, page, size, companyFirst, LocalDateTime.now(clock))
 
-    /** 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. 마감 여부는 [now] 기준이다. */
+    /**
+     * 게시 상태와 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. 마감 여부는 [now] 기준이다.
+     * [companyFirst]가 참이면 마감되지 않은 기업회원 공고를 맨 앞에 둔다.
+     */
     fun readPublishedPage(
         condition: JobSearchCondition,
         sortType: JobSortType,
         page: Int,
         size: Int,
+        companyFirst: Boolean,
         now: LocalDateTime,
     ): JobPageDto {
         validatePageRequest(page, size)
@@ -93,6 +98,7 @@ class JobReader internal constructor(
             condition = condition,
             sortType = sortType,
             now = now,
+            companyFirst = companyFirst,
             pageable = PageRequest.of(page, size),
         )
         return JobPageDto(

@@ -2,6 +2,7 @@ package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
@@ -18,6 +19,8 @@ import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
+import jakarta.persistence.EntityManager
+import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -41,7 +44,58 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     private val jobReader: JobReader,
     private val jobAppender: JobAppender,
     private val jobManager: JobManager,
+    private val entityManager: EntityManager,
 ) {
+
+    @Test
+    fun `등록일 범위는 두 날짜를 모두 포함하고 검수 완료 여부로 거른다`() {
+        // given
+        jobAppender.append(command()).also { registeredAt(it, LocalDateTime.of(2026, 11, 3, 23, 59, 59)) }
+        val start = jobAppender.append(command()).also { registeredAt(it, LocalDateTime.of(2026, 11, 4, 0, 0)) }
+        val end = jobAppender.append(command()).also { registeredAt(it, LocalDateTime.of(2026, 11, 4, 23, 59, 59)) }
+        jobAppender.append(command()).also { registeredAt(it, LocalDateTime.of(2026, 11, 5, 0, 0)) }
+        jobManager.markInspected(end, userId = 1L, now = NOW)
+        entityManager.flush()
+        val today = LocalDate.of(2026, 11, 4)
+
+        // when
+        val all = ids(JobManagementSearchCondition(registeredFrom = today, registeredTo = today))
+        val inspected = ids(JobManagementSearchCondition(registeredFrom = today, registeredTo = today, inspected = true))
+        val notInspected = ids(JobManagementSearchCondition(registeredFrom = today, registeredTo = today, inspected = false))
+
+        // then
+        assertEquals(listOf(end.id, start.id), all)
+        assertEquals(listOf(end.id), inspected)
+        assertEquals(listOf(start.id), notInspected)
+    }
+
+    @Test
+    fun `검수 완료와 해제는 처음 확인한 기록을 지키고 공고 수정 일시를 바꾸지 않는다`() {
+        // given
+        val jobId = checkNotNull(jobAppender.append(command(publicationStatus = JobPublicationStatus.PUBLISHED)).id)
+        entityManager.flush()
+        entityManager.clear()
+        val updatedAt = jobReader.read(jobId).updatedAt
+
+        // when
+        jobManager.markInspected(jobReader.readForUpdate(jobId), userId = 3L, now = NOW)
+        jobManager.markInspected(jobReader.readForUpdate(jobId), userId = 5L, now = NOW.plusHours(1))
+        entityManager.flush()
+        entityManager.clear()
+        val inspected = jobReader.read(jobId).let { Triple(it.inspectedAt, it.inspectedByUserId, it.updatedAt) }
+        entityManager.clear()
+        jobManager.clearInspection(jobReader.readForUpdate(jobId))
+        jobManager.clearInspection(jobReader.readForUpdate(jobId))
+        entityManager.flush()
+        entityManager.clear()
+        val cleared = jobReader.read(jobId)
+
+        // then
+        assertEquals(Triple(NOW, 3L, updatedAt), inspected)
+        assertNull(cleared.inspectedAt)
+        assertNull(cleared.inspectedByUserId)
+        assertEquals(updatedAt, cleared.updatedAt)
+    }
 
     @Test
     fun `관리 목록은 게시 상태와 무관하게 미삭제 공고를 읽고 필터를 AND로 묶는다`() {
@@ -193,6 +247,15 @@ internal class JobManagementPersistenceTest @Autowired constructor(
             jobReader.readAllForUpdate(listOf(999_999L, first, checkNotNull(deleted.id)))
         }
         assertEquals("일자리 공고를 찾을 수 없습니다. (id: ${deleted.id}, 999999)", exception.message)
+    }
+
+    private fun registeredAt(job: Job, createdAt: LocalDateTime) {
+        entityManager.flush()
+        entityManager.createQuery("update Job j set j.createdAt = :createdAt where j.id = :id")
+            .setParameter("createdAt", createdAt)
+            .setParameter("id", job.id)
+            .executeUpdate()
+        entityManager.clear()
     }
 
     private fun ids(condition: JobManagementSearchCondition): List<Long?> =
