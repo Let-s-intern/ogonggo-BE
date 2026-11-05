@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 
 /**
@@ -22,5 +23,14 @@ data class AdminBootcampUpdateCommand(
 /** 관리자가 고른 부트캠프들의 노출을 한꺼번에 바꾼다. 하나라도 바꿀 수 없으면 아무것도 바꾸지 않는다. */
 data class AdminBootcampVisibilityChangeCommand(
     val bootcampIds: List<Long>,
+    val visibility: AdminContentVisibility,
+)
+
+/**
+ * 운영자가 비즈니스 회원 대신 부트캠프를 등록한다. 내용은 기업회원 등록과 같은 값이다.
+ * 검수 없이 승인으로 등록되며 [visibility]로 바로 노출할지 정한다.
+ */
+data class AdminProxyBootcampCreateCommand(
+    val bootcamp: BootcampAppendDto,
     val visibility: AdminContentVisibility,
 )
