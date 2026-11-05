@@ -29,16 +29,16 @@ stateDiagram-v2
     분석없음 --> 운영자수정: 관리자 분석 수정
     AI분석 --> AI분석: AI 서버 저장(같은 본문, 다시 분석)
     AI분석 --> 운영자수정: 관리자 분석 수정
-    운영자수정 --> 운영자수정: 관리자 분석 수정 / AI 서버 저장은 409
+    운영자수정 --> 운영자수정: 관리자 분석 수정 / 관리자 본문 수정(새 해시로 옮김) / AI 서버 저장은 409
     AI분석 --> 낡은분석: 본문 변경
-    운영자수정 --> 낡은분석: 본문 변경
+    운영자수정 --> 낡은분석: AI 서버 재수집으로 본문 변경
     낡은분석 --> AI분석: AI 서버 다시 분석(운영자 수정 표시 지움)
     낡은분석 --> 운영자수정: 관리자 분석 수정
 ```
 
 - 상태는 칼럼 하나가 아니라 `job_analyses` 행의 유무, `content_hash`와 지금 본문 해시([`Job.contentHash`](../../src/main/kotlin/com/ogonggo/core/job/domain/Job.kt))의 일치, `edited_at` 유무로 정해집니다. 근거는 [`JobAnalysis`](../../src/main/kotlin/com/ogonggo/core/job/domain/JobAnalysis.kt)와 [`JobAnalysisManager`](../../src/main/kotlin/com/ogonggo/core/job/implement/JobAnalysisManager.kt)입니다.
 - 낡은 분석은 사용자 상세에 보이지 않고 AI 서버 분석 대상이 됩니다. 관리자 상세는 낡은 분석도 싣고 `analysisCurrent=false`로 알립니다.
-- 운영자 수정은 늘 지금 본문 해시로 저장하므로 곧바로 사용자에게 보입니다. 본문 해시가 그대로인 동안 AI 서버 분석 대상에서 빠지고 AI 서버 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다(LC-3567).
+- 운영자 수정은 늘 지금 본문 해시로 저장하므로 곧바로 사용자에게 보입니다. 운영자가 관리자 콘솔에서 본문을 고치면 고친 분석을 새 본문 해시로 옮깁니다(`JobAnalysisManager.keepAdminEditCurrent`). 운영자가 내용을 고친 공고는 AI 서버 재수집이 본문을 바꾸지 않으므로, 운영자 수정이 낡는 것은 운영자가 분석만 고치고 내용은 고치지 않은 공고를 AI 서버가 다시 수집해 본문이 바뀐 경우뿐입니다. 본문 해시가 그대로인 동안 AI 서버 분석 대상에서 빠지고 AI 서버 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다(LC-3567).
 - 운영자 분석 수정과 AI 서버 저장은 공고 행을 잠가(`JobReader.readForUpdate`) 차례로 돕니다. 분석 행은 첫 저장 전에는 없어 잠글 수 없으므로 공고 행으로 묶습니다. 그래서 겹쳐 들어와도 AI 저장이 막 고친 운영자 수정을 지우지 않고, 첫 저장 둘이 `job_id` 유일 제약에 걸려 500이 나지 않습니다. 검증은 `concurrency` 태그의 `JobAnalysisConcurrencyTest`입니다.
 
 ### 알림 발송 기록

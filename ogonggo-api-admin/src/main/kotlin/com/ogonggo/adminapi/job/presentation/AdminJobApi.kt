@@ -220,7 +220,9 @@ interface AdminJobApi {
 
             sourceHtml은 원문 HTML을 바꿉니다. AI 서버 원문과 같이 안전한 태그만 남겨 저장하고 상대 주소는 sourceUrl 기준 절대 주소로 바꿉니다.
             보내지 않거나 null이면 그대로 두고, 비울 수 없어 공백이거나 걸러서 남는 글·이미지가 없으면 400입니다.
-            원문은 공고 분석의 본문 해시에 들어가지 않아 원문만 고치면 분석(analysisCurrent)은 그대로입니다. 본문 칸(fields)을 고치면 분석이 낡습니다.
+            원문은 공고 분석의 본문 해시에 들어가지 않아 원문만 고치면 분석(analysisCurrent)은 그대로입니다.
+            제목·본문 칸(title, fields)이나 recruitmentNotice를 고치면 AI 서버가 만든 분석은 낡아(analysisCurrent=false) 다시 분석을 기다립니다.
+            운영자가 고친 분석(analysisEditedAt이 있고 analysisCurrent=true)은 새 본문으로 옮겨 그대로 보이며 AI 서버가 덮지 못합니다.
             내용을 고쳐도 검수 완료(inspectedAt)는 풀리지 않습니다.
 
             제목·본문·공고 정보·원문을 하나라도 고치면 운영자 내용 수정으로 남습니다(상세의 contentEditedAt).

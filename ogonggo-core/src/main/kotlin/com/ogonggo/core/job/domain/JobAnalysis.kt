@@ -96,6 +96,16 @@ internal class JobAnalysis(
         this.editedAt = now
     }
 
+    /**
+     * 운영자가 고친 분석을 운영자가 고친 새 본문으로 옮긴다. 고친 사람과 일시는 지킨다.
+     * 운영자가 분석을 고친 뒤 제목이나 본문을 고쳐도 자기 분석이 낡아 사라지거나 AI 서버에 덮이지 않게 하기 위해서다.
+     */
+    fun restamp(contentHash: String, jobUpdatedAt: LocalDateTime) {
+        check(editedAt != null) { "운영자가 고친 분석만 옮길 수 있습니다." }
+        this.contentHash = contentHash
+        this.jobUpdatedAt = jobUpdatedAt
+    }
+
     /** 운영자가 이 본문에 대해 고친 분석인지. 참이면 AI 서버가 덮어쓰지 못한다. */
     fun isEditedByAdminFor(contentHash: String): Boolean = editedAt != null && this.contentHash == contentHash
 

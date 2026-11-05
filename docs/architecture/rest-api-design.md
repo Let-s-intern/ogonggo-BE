@@ -350,7 +350,7 @@ PUT /api/v1/admin/jobs/{jobId}/analysis
 - 운영자가 어드민 `오늘 올라온 공고` 화면에서 AI 분석의 잘못을 바로잡습니다. AI 분석을 사람이 확인하는 마지막 방어선이라, 고친 분석을 AI 서버가 덮어쓰지 못하게 합니다.
 - 공고마다 하나인 분석을 통째로 바꾸므로 PUT입니다. 본문은 상세 응답의 `analysis`, AI 서버 저장의 `analysis`와 같은 `Analysis` 모양이며 같은 개수 제한과 검증을 따릅니다. 같은 요청을 반복해도 결과가 같고, 콘솔의 부분 수정처럼 바뀐 공고 전체를 `data`로 돌려줍니다.
 - 지금 본문 해시로 저장하므로 사용자 상세에 바로 보입니다. 분석이 없던 공고에도 저장합니다. `job_analyses`에 고친 관리자(`edited_by_user_id`)와 일시(`edited_at`)를 남기고, 분석 방법 판 번호는 비우며 모델 칸에는 `admin`을 둡니다.
-- 본문 해시가 그대로인 동안 AI 서버는 이 분석을 바꾸지 못합니다. 대상 조회에 나오지 않고, 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다. 본문(제목과 본문 여덟 칸)이 바뀌면 분석이 낡은 것이 되어 평소처럼 AI 서버가 다시 분석하고, 그 저장이 고친 표시를 지웁니다. 낡은 분석을 계속 보여 주면 본문과 어긋나기 때문입니다. 전이는 [라이프사이클의 공고 분석](../../ogonggo-core/docs/domain/lifecycles.md#공고-분석)에 있습니다.
+- 본문 해시가 그대로인 동안 AI 서버는 이 분석을 바꾸지 못합니다. 대상 조회에 나오지 않고, 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다. 운영자가 부분 수정(`PATCH`)으로 본문(제목과 본문 여덟 칸)을 고치면 고친 분석을 새 본문 해시로 옮겨 그대로 보이게 하고 AI 서버가 계속 덮지 못하게 합니다(2026-11-05, LC-3567). 운영자 자신의 본문 수정이 자기 분석을 버리게 하지 않기 위해서이며, 분석과 본문을 맞추는 일은 운영자 몫입니다. AI 서버 교체가 본문을 바꾸면(운영자가 내용을 고치지 않은 공고만 바뀝니다) 분석이 낡은 것이 되어 평소처럼 AI 서버가 다시 분석하고, 그 저장이 고친 표시를 지웁니다. 낡은 분석을 계속 보여 주면 본문과 어긋나기 때문입니다. AI 서버가 만든 분석은 운영자가 본문을 고쳐도 옮기지 않고 다시 분석을 기다립니다. 전이는 [라이프사이클의 공고 분석](../../ogonggo-core/docs/domain/lifecycles.md#공고-분석)에 있습니다.
 - 없거나 지워진 공고는 404 `JOB_NOT_FOUND`입니다. 게시 상태는 보지 않습니다.
 - 목록 요소(`required`·`preferred`의 글, 역량의 `experiences`)의 빈 글·1000자 제한은 Kotlin 1.9가 형식 인자 주석을 바이트코드에 남기지 않아 Bean Validation이 보지 못합니다. 그래서 도메인 [`JobAnalysisContent`](../../ogonggo-core/src/main/kotlin/com/ogonggo/core/job/domain/JobAnalysisContent.kt)가 막고, 요청 변환(`AiJobAnalysisRequest.Analysis.toContent`)이 그 거절을 400 `[analysis]`로 알립니다. AI 서버 저장도 같습니다.
 

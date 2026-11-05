@@ -119,6 +119,19 @@ class AdminJobServiceTest {
     }
 
     @Test
+    fun `본문을 고쳐 본문 해시가 바뀌면 운영자가 고친 분석을 새 본문으로 옮기게 한다`() {
+        // given
+        val job = lockedJob(reviewStatus = null)
+        Mockito.`when`(job.contentHash()).thenReturn("before", "after")
+
+        // when
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목"), ADMIN_ID)
+
+        // then
+        Mockito.verify(jobAnalysisManager).keepAdminEditCurrent(job, "before")
+    }
+
+    @Test
     fun `공고 정보를 보내면 보낸 값만 바꾸고 나머지는 현재 값으로 한 번에 고친다`() {
         val job = lockedJob(reviewStatus = null).also(::stubDetails)
         val endAt = LocalDateTime.of(2026, 9, 30, 23, 59)
