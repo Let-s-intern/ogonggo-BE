@@ -48,6 +48,8 @@ data class AdminJobSummaryResponse(
     val registeredAt: LocalDateTime,
     @Schema(description = "검수 완료 일시(한국 시간). 미검수면 null입니다. 기업회원 공고의 검수 상태(reviewStatus)와 다른 값입니다.")
     val inspectedAt: LocalDateTime?,
+    @Schema(description = "공고 원문 주소입니다. 원문 주소가 없는 공고는 null입니다.")
+    val sourceUrl: String?,
 ) {
     companion object {
         internal fun from(result: AdminJobSummary): AdminJobSummaryResponse = AdminJobSummaryResponse(
@@ -74,6 +76,7 @@ data class AdminJobSummaryResponse(
             recruitmentStatus = result.recruitmentStatus,
             registeredAt = result.registeredAt,
             inspectedAt = result.inspectedAt,
+            sourceUrl = result.sourceUrl,
         )
     }
 }
@@ -201,7 +204,7 @@ data class AdminJobDetailResponse(
                 applicationMethod = result.applicationMethod,
                 applyEmail = result.applyEmail,
                 inquiryEmail = result.inquiryEmail,
-                sourceUrl = result.sourceUrl,
+                sourceUrl = summary.sourceUrl,
                 sourceHtml = result.sourceHtml,
                 analysis = result.analysis?.let(AiJobAnalysisRequest.Analysis::from),
                 analysisCurrent = result.analysisCurrent,

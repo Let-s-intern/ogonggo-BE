@@ -42,6 +42,7 @@ internal object AdminJobFixtures {
         recruitmentStatus = JobRecruitmentStatus.RECRUITING,
         registeredAt = LocalDateTime.of(2026, 9, 10, 10, 48),
         inspectedAt = inspectedAt,
+        sourceUrl = "https://example.com/jobs/$id",
     )
 
     fun detail(
@@ -70,7 +71,6 @@ internal object AdminJobFixtures {
         benefits = null,
         hiringProcess = null,
         recruitmentNotice = null,
-        sourceUrl = "https://example.com/jobs/693",
         sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
         analysis = analysis,
         analysisCurrent = analysisCurrent,
