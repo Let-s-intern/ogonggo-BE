@@ -70,7 +70,7 @@ data class UserJobSummaryResponse(
     val recruitmentStartAt: LocalDateTime?,
     val recruitmentEndAt: LocalDateTime?,
     val closedAt: LocalDateTime?,
-    @field:Schema(description = "공고 등록 일시(한국 시간). 오공고에 들어온 시각이며 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
+    @field:Schema(description = "공고 등록 일시(한국 시간). 사용자에게 보이기 시작한 시각으로, 수집 공고는 오공고에 들어온 시각이고 기업회원 공고는 처음 승인된 시각입니다. 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
     val registeredAt: LocalDateTime,
     val bookmarked: Boolean,
     val viewCount: Long,
@@ -154,7 +154,7 @@ data class UserJobDetailResponse(
     val sourceHtml: String?,
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
-    @field:Schema(description = "공고 등록 일시(한국 시간). 오공고에 들어온 시각이며 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
+    @field:Schema(description = "공고 등록 일시(한국 시간). 사용자에게 보이기 시작한 시각으로, 수집 공고는 오공고에 들어온 시각이고 기업회원 공고는 처음 승인된 시각입니다. 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
     val registeredAt: LocalDateTime,
     val bookmarked: Boolean,
     val viewCount: Long,

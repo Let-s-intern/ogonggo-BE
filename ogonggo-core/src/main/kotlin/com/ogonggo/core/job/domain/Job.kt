@@ -393,6 +393,14 @@ class Job internal constructor(
         protected set
 
     /**
+     * 기업회원 공고가 처음 검수 승인되어 게시된 일시다. 다시 승인해도 바꾸지 않는다. 수집 공고와 이 칸을 두기 전에 승인한 공고는 null이다.
+     * 기업회원 공고는 승인되어야 사용자에게 보이므로, 사용자에게 보이는 등록 일시([publicRegisteredAt])로 쓴다.
+     */
+    @Column(name = "first_approved_at")
+    var firstApprovedAt: LocalDateTime? = null /* 처음 검수 승인 일시 */
+        protected set
+
+    /**
      * 운영자가 관리자 콘솔에서 공고 내용(제목·본문·공고 정보·원문)을 마지막으로 고친 일시와 관리자다.
      * 운영자 수정은 크롤링·AI 값을 바로잡는 마지막 방어선이라, 값이 있는 동안 AI 서버의 다시 수집은 공고 내용과 원문을 바꾸지 않는다.
      * 자동으로 풀리지 않는다. 원문 페이지가 바뀌었는지 서버가 알 수 없고, 운영자가 고친 내용을 조용히 덮는 것보다
@@ -598,8 +606,17 @@ class Job internal constructor(
     }
 
     /** 승인하면 곧바로 노출한다. 승인 결과를 알릴 경로가 없어 다시 게시하게 하면 공고가 비노출로 남는다. */
-    fun approveReview() {
+    /**
+     * 사용자에게 보이는 등록 일시다. 기업회원 공고는 승인 전에 보이지 않으므로 처음 승인한 일시이고, 그 밖에는 등록 일시([createdAt])다.
+     * 수집 공고는 등록과 함께 게시된다. 관리자 화면의 등록 일시는 오공고에 들어온 시각이라 늘 [createdAt]이다.
+     */
+    fun publicRegisteredAt(): LocalDateTime = firstApprovedAt ?: createdAt
+
+    fun approveReview(now: LocalDateTime) {
         checkReviewable()
+        if (firstApprovedAt == null) {
+            firstApprovedAt = now
+        }
         reviewStatus = ContentReviewStatus.APPROVED
         publicationStatus = JobPublicationStatus.PUBLISHED
     }

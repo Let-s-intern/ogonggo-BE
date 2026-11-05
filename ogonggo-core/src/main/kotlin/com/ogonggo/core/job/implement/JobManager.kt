@@ -102,7 +102,7 @@ class JobManager internal constructor(
 
     /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
     fun approveReview(job: Job, now: LocalDateTime) {
-        change(job) { approveReview() }
+        change(job) { approveReview(now) }
         contentRejectionManager.clear(ContentReviewTargetType.JOB, job.requiredId(), now)
     }
 
