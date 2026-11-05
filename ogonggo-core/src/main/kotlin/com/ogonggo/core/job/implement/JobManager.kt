@@ -74,6 +74,9 @@ class JobManager internal constructor(
 
     fun markContentEdited(job: Job, userId: Long, now: LocalDateTime) = change(job) { markContentEdited(userId, now) }
 
+    fun markProxyRegistered(job: Job, adminUserId: Long, now: LocalDateTime) =
+        change(job) { markProxyRegistered(adminUserId, now) }
+
     fun publish(job: Job) = change(job) { publish() }
 
     fun hide(job: Job) = change(job) { hide() }

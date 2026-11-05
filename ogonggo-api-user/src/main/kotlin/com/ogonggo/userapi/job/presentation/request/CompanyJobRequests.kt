@@ -7,6 +7,7 @@ import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.job.implement.JobWriteValidator
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.region.domain.Region
@@ -69,53 +70,8 @@ interface CompanyJobWriteRequest {
 private fun CompanyJobWriteRequest.educationLevelOrAny(): JobEducationLevel =
     educationLevel ?: JobEducationLevel.ANY
 
-/**
- * 상시 채용은 종료 일시가 없어야 하고, 시작 일시는 종료 일시보다 늦을 수 없다.
- * 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다.
- */
-private fun CompanyJobWriteRequest.validRecruitmentEndAt(): LocalDateTime? {
-    if (recruitmentType == JobRecruitmentType.ALWAYS_OPEN && recruitmentEndAt != null) {
-        throw InvalidRequestFieldException("recruitmentEndAt", "상시 채용에는 모집 종료 일시를 둘 수 없습니다.")
-    }
-    val start = recruitmentStartAt
-    val end = recruitmentEndAt
-    if (start != null && end != null && start.isAfter(end)) {
-        throw InvalidRequestFieldException("recruitmentStartAt", "모집 종료 일시보다 늦을 수 없습니다.")
-    }
-    return end
-}
-
-/** 직무는 함께 보낸 직군에 속해야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
-private fun CompanyJobWriteRequest.validJobRole(): JobRole? {
-    if (jobRole != null && jobRole?.jobField != jobField) {
-        throw InvalidRequestFieldException("jobRole", "jobField와 같은 직군의 직무여야 합니다.")
-    }
-    return jobRole
-}
-
-/** 시·군·구는 함께 보낸 시·도에 속해야 한다. 도메인도 막지만 요청 단계에서 어느 필드가 틀렸는지 알린다. */
-private fun CompanyJobWriteRequest.validSubRegion(): SubRegion? {
-    if (subRegion != null && subRegion?.region != region) {
-        throw InvalidRequestFieldException("subRegion", "region과 같은 시·도의 시·군·구여야 합니다.")
-    }
-    return subRegion
-}
-
-/** 이메일 지원을 고르면 지원서를 받을 주소가 있어야 지원자가 지원할 수 있다. */
-private fun CompanyJobWriteRequest.validApplyEmail(): String? {
-    if (applicationMethod == JobApplicationMethod.EMAIL && applyEmail == null) {
-        throw InvalidRequestFieldException("applyEmail", "이메일 지원에는 지원 이메일이 필요합니다.")
-    }
-    return validOptionalText("applyEmail", applyEmail)
-}
-
-/** 빈 문자열은 `@Email`·`@URL`을 통과하지만 도메인은 공백 값을 막으므로, 요청 단계에서 어느 필드인지 알린다. */
-private fun validOptionalText(field: String, value: String?): String? {
-    if (value != null && value.isBlank()) {
-        throw InvalidRequestFieldException(field, "공백일 수 없습니다.")
-    }
-    return value
-}
+/** 칸 사이 규칙은 관리자 대리 등록과 같이 core의 [JobWriteValidator]가 정한다. */
+private fun invalid(field: String, reason: String): Nothing = throw InvalidRequestFieldException(field, reason)
 
 data class CreateCompanyJobRequest(
     @field:NotBlank @field:Size(max = 150) override val companyName: String,
@@ -157,20 +113,20 @@ data class CreateCompanyJobRequest(
         parentCompanyName = parentCompanyName,
         title = title,
         jobField = jobField,
-        jobRole = validJobRole(),
+        jobRole = jobRole,
         industry = industry,
         coverImageUrl = coverImageUrl,
-        logoUrl = validOptionalText("logoUrl", logoUrl),
+        logoUrl = logoUrl,
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = experienceMinYears,
         educationLevel = educationLevelOrAny(),
         region = region,
-        subRegion = validSubRegion(),
+        subRegion = subRegion,
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
-        recruitmentEndAt = validRecruitmentEndAt(),
+        recruitmentEndAt = recruitmentEndAt,
         closesWhenFilled = closesWhenFilled,
         autoCloseEnabled = autoCloseEnabled,
         companyAndTeamIntroduction = companyAndTeamIntroduction,
@@ -182,9 +138,9 @@ data class CreateCompanyJobRequest(
         hiringProcess = hiringProcess,
         recruitmentNotice = recruitmentNotice,
         applicationMethod = applicationMethod,
-        applyEmail = validApplyEmail(),
+        applyEmail = applyEmail,
         sourceUrl = sourceUrl,
-    )
+    ).also { JobWriteValidator.validate(it, ::invalid) }
 }
 
 data class UpdateCompanyJobRequest(
@@ -227,20 +183,20 @@ data class UpdateCompanyJobRequest(
         parentCompanyName = parentCompanyName,
         title = title,
         jobField = jobField,
-        jobRole = validJobRole(),
+        jobRole = jobRole,
         industry = industry,
         coverImageUrl = coverImageUrl,
-        logoUrl = validOptionalText("logoUrl", logoUrl),
+        logoUrl = logoUrl,
         employmentType = employmentType,
         experienceType = experienceType,
         experienceMinYears = experienceMinYears,
         educationLevel = educationLevelOrAny(),
         region = region,
-        subRegion = validSubRegion(),
+        subRegion = subRegion,
         recruitmentType = recruitmentType,
         recruitmentHeadcount = recruitmentHeadcount,
         recruitmentStartAt = recruitmentStartAt,
-        recruitmentEndAt = validRecruitmentEndAt(),
+        recruitmentEndAt = recruitmentEndAt,
         closesWhenFilled = closesWhenFilled,
         autoCloseEnabled = autoCloseEnabled,
         companyAndTeamIntroduction = companyAndTeamIntroduction,
@@ -252,7 +208,7 @@ data class UpdateCompanyJobRequest(
         hiringProcess = hiringProcess,
         recruitmentNotice = recruitmentNotice,
         applicationMethod = applicationMethod,
-        applyEmail = validApplyEmail(),
+        applyEmail = applyEmail,
         sourceUrl = sourceUrl,
-    )
+    ).also { JobWriteValidator.validate(it, ::invalid) }
 }

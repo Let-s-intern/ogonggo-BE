@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
@@ -104,5 +105,14 @@ enum class AdminJobClearableField(val fieldName: String) {
 /** 관리자가 고른 채용공고들의 노출을 한꺼번에 바꾼다. 하나라도 바꿀 수 없으면 아무것도 바꾸지 않는다. */
 data class AdminJobVisibilityChangeCommand(
     val jobIds: List<Long>,
+    val visibility: AdminContentVisibility,
+)
+
+/**
+ * 운영자가 비즈니스 회원 대신 채용공고를 등록한다. 공고 내용은 기업회원 등록과 같은 값이다.
+ * 검수 없이 승인으로 등록되며 [visibility]로 바로 노출할지 정한다.
+ */
+data class AdminProxyJobCreateCommand(
+    val job: JobAppendDto,
     val visibility: AdminContentVisibility,
 )

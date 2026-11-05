@@ -260,6 +260,25 @@ class JobDomainTest {
     }
 
     @Test
+    fun `대리 등록은 기업회원 공고에만 한 번 남고 수집 공고나 삭제한 공고에는 남길 수 없다`() {
+        // given
+        val company = createJob(ownerUserId = 7L)
+        val proxyAt = LocalDateTime.of(2026, 11, 5, 10, 0)
+
+        // when
+        company.markProxyRegistered(42L, proxyAt)
+
+        // then
+        assertEquals(proxyAt, company.proxyRegisteredAt)
+        assertEquals(42L, company.proxyRegisteredByUserId)
+        assertThrows(IllegalStateException::class.java) { company.markProxyRegistered(43L, proxyAt.plusDays(1)) }
+        assertEquals(42L, company.proxyRegisteredByUserId)
+        assertThrows(IllegalStateException::class.java) { createJob().markProxyRegistered(42L, proxyAt) }
+        val deleted = createJob(ownerUserId = 7L).also { it.delete(proxyAt) }
+        assertThrows(IllegalStateException::class.java) { deleted.markProxyRegistered(42L, proxyAt) }
+    }
+
+    @Test
     fun `삭제는 멱등하며 삭제 후 변경을 차단한다`() {
         val job = createJob()
         val firstDeletedAt = LocalDateTime.of(2026, 9, 1, 0, 0)
