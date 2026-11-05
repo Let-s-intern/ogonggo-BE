@@ -141,49 +141,23 @@ internal class JobAnalysisPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `운영자가 고친 분석은 운영자가 본문을 고쳐도 새 본문 해시로 옮겨 보이고 AI 서버가 덮지 못한다`() {
+    fun `운영자가 고친 분석도 본문이 바뀌면 낡아 사용자에게 숨기고 AI 서버가 다시 분석해 바꾼다`() {
         // given
         val job = publishedJob()
         val edited = CONTENT.copy(required = listOf("운영자가 고친 조건"))
         jobAnalysisManager.edit(job, edited, userId = 1L, now = NOW)
         flush()
-        val previousHash = job.contentHash()
 
         // when
         job.editContent(title = "운영자가 고친 제목", contents = emptyMap())
-        jobAnalysisManager.keepAdminEditCurrent(job, previousHash)
-        flush()
 
         // then
-        assertEquals(edited, jobAnalysisReader.readCurrent(job))
-        assertEquals(JobAnalysisViewDto(edited, current = true, editedAt = NOW), jobAnalysisReader.readForAdmin(job))
-        val error = assertThrows(ConflictException::class.java) {
-            jobAnalysisManager.save(job, CONTENT, guideVersion = 4, model = "deepseek")
-        }
-        assertEquals(JobErrorCode.JOB_ANALYSIS_EDITED_BY_ADMIN, error.errorCode)
-    }
+        assertNull(jobAnalysisReader.readCurrent(job))
+        assertEquals(JobAnalysisViewDto(edited, current = false, editedAt = NOW), jobAnalysisReader.readForAdmin(job))
 
-    @Test
-    fun `AI 서버 분석과 이미 낡은 운영자 분석은 운영자가 본문을 고치면 낡은 채로 둔다`() {
-        // given
-        val aiJob = publishedJob()
-        jobAnalysisManager.save(aiJob, CONTENT, guideVersion = 3, model = "deepseek")
-        val staleJob = publishedJob()
-        jobAnalysisManager.edit(staleJob, CONTENT, userId = 1L, now = NOW)
-        staleJob.editContent(title = "AI 서버가 바꾼 제목", contents = emptyMap())
+        jobAnalysisManager.save(job, CONTENT, guideVersion = 4, model = "deepseek")
         flush()
-
-        // when
-        listOf(aiJob, staleJob).forEach { job ->
-            val previousHash = job.contentHash()
-            job.editContent(title = "운영자가 고친 제목", contents = emptyMap())
-            jobAnalysisManager.keepAdminEditCurrent(job, previousHash)
-        }
-        flush()
-
-        // then
-        assertNull(jobAnalysisReader.readCurrent(aiJob))
-        assertNull(jobAnalysisReader.readCurrent(staleJob))
+        assertEquals(JobAnalysisViewDto(CONTENT, current = true, editedAt = null), jobAnalysisReader.readForAdmin(job))
     }
 
     @Test
