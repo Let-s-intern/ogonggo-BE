@@ -255,6 +255,29 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `우선 노출 여부를 보내면 수정 명령에 담고 목록과 상세에 저장된 값을 싣는다`() {
+        // given
+        Mockito.`when`(adminJobService.getJob(693L))
+            .thenReturn(AdminJobFixtures.detail().let { it.copy(summary = it.summary.copy(priorityExposed = false)) })
+        Mockito.`when`(adminJobService.getJobs(JobManagementSearchCondition(), JobSortType.LATEST, 0, 20))
+            .thenReturn(pageOf(AdminJobFixtures.summary(priorityExposed = false), AdminJobFixtures.summary(id = 7L)))
+
+        // when
+        val patched = mockMvc.perform(signedInAdmin(patchJson(mapOf("priorityExposed" to false))))
+        val listed = mockMvc.perform(admin(get("/api/v1/admin/jobs")))
+
+        // then
+        patched
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.priorityExposed").value(false))
+        Mockito.verify(adminJobService).updateJob(693L, AdminJobUpdateCommand(priorityExposed = false), ADMIN_USER_ID)
+        listed
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].priorityExposed").value(false))
+            .andExpect(jsonPath("$.data.items[1].priorityExposed").value(true))
+    }
+
+    @Test
     fun `원문 HTML을 보내면 수정 명령에 담고 공백이면 400이다`() {
         Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
 

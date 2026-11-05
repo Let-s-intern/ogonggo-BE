@@ -61,6 +61,9 @@ class AdminBootcampService(
             ?.takeIf { it != bootcamp.reviewStatus }
             ?.let { changeReview(bootcamp, it, now) }
         command.visibility?.let { changeVisibility(bootcamp, it) }
+        command.priorityExposed
+            ?.takeIf { it != bootcamp.priorityExposed }
+            ?.let { bootcampManager.changePriorityExposed(bootcamp, it) }
         if (command.title != null || command.contents.isNotEmpty()) {
             bootcampManager.editContent(
                 bootcamp,

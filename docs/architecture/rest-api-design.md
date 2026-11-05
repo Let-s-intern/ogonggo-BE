@@ -378,6 +378,7 @@ PUT /api/v1/admin/company-content-priority
 - 공개 목록의 기업회원 공고 우선 노출([API 성공 응답](api-response.md#기업회원-공고-우선-노출)) 설정은 하나뿐이라 단수 리소스로 두고 통째로 바꾸는 PUT을 씁니다. 바뀐 값을 `data`로 돌려줍니다.
 - 칸은 `enabled` 하나이고 필수입니다. 빠졌거나 `null`이거나 참·거짓이 아니면 400 `BAD_REQUEST`입니다.
 - 채용공고와 부트캠프를 한 값으로 켜고 끕니다. 따로 끌 이유가 생기면 칸을 더합니다.
+- 이 설정은 전체 스위치입니다. 공고·과정마다 끄는 값(`priorityExposed`)은 새 리소스로 두지 않고 관리자 부분 수정(`PATCH /api/v1/admin/jobs/{jobId}`, `PATCH /api/v1/admin/bootcamps/{bootcampId}`)의 선택 칸으로 받습니다. 노출(`visibility`)처럼 공고의 운영 값이라 같은 요청에서 함께 고칠 수 있게 하기 위해서입니다. `null`이거나 보내지 않으면 그대로 두고, 운영자 내용 수정(`contentEditedAt`)으로 남지 않습니다(2026-11-05, LC-3573).
 - 바꾼 값은 다음 공개 목록 요청부터 씁니다. 사용자 API가 요청마다 한 행을 읽습니다.
 
 ### AI 서버 렛츠커리어 콘텐츠 태그

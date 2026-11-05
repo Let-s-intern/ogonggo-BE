@@ -78,6 +78,8 @@ class JobManager internal constructor(
 
     fun hide(job: Job) = change(job) { hide() }
 
+    fun changePriorityExposed(job: Job, priorityExposed: Boolean) = change(job) { changePriorityExposed(priorityExposed) }
+
 
     fun close(job: Job, now: LocalDateTime) = change(job) { close(now) }
 

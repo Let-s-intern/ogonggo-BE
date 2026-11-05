@@ -133,6 +133,7 @@ interface AdminBootcampApi {
             fields는 content, eligibilityAndSelectionProcess만 반영하고 나머지 키는 버립니다.
             빈 문자열은 그 칸을 비우지만 content는 비울 수 없어 400입니다.
             커리큘럼과 파트너사는 이 API로 고치지 않습니다.
+            priorityExposed는 채용공고와 같이 기업회원 과정의 우선 노출을 과정마다 켜고 끕니다.
         """,
     )
     @ApiResponses(

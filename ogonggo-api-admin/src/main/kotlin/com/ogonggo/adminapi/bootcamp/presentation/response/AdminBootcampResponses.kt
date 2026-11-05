@@ -45,6 +45,8 @@ data class AdminBootcampSummaryResponse(
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ContentReviewStatus?,
     val registeredAt: LocalDateTime,
+    @Schema(description = PRIORITY_EXPOSED_DESCRIPTION)
+    val priorityExposed: Boolean,
 ) {
     companion object {
         internal fun from(result: AdminBootcampSummary): AdminBootcampSummaryResponse = AdminBootcampSummaryResponse(
@@ -72,6 +74,7 @@ data class AdminBootcampSummaryResponse(
             source = result.source,
             reviewStatus = result.reviewStatus,
             registeredAt = result.registeredAt,
+            priorityExposed = result.priorityExposed,
         )
     }
 }
@@ -104,6 +107,8 @@ data class AdminBootcampDetailResponse(
     @Schema(description = "크롤링·고용24 수집분은 null입니다.")
     val reviewStatus: ContentReviewStatus?,
     val registeredAt: LocalDateTime,
+    @Schema(description = PRIORITY_EXPOSED_DESCRIPTION)
+    val priorityExposed: Boolean,
     val content: String,
     val eligibilityAndSelectionProcess: String?,
     val logoUrl: String?,
@@ -150,6 +155,7 @@ data class AdminBootcampDetailResponse(
                 source = summary.source,
                 reviewStatus = summary.reviewStatus,
                 registeredAt = summary.registeredAt,
+                priorityExposed = summary.priorityExposed,
                 content = result.content,
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
                 logoUrl = result.logoUrl,
@@ -209,3 +215,8 @@ data class AdminBootcampCurriculumResponse(
             )
     }
 }
+
+private const val PRIORITY_EXPOSED_DESCRIPTION =
+    "기업회원 공고 우선 노출을 이 과정에 줄지입니다. 기업회원 과정(source = COMPANY)에만 영향이 있고, " +
+        "다른 경로 과정은 저장한 값(기본 true)을 그대로 보여 줍니다. 전체 설정(company-content-priority)이 켜져 있고 " +
+        "이 값이 true인 마감 전 과정만 공개 목록 맨 앞에 둡니다."

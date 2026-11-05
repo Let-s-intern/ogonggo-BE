@@ -80,6 +80,9 @@ class AdminJobService(
             ?.takeIf { it != job.reviewStatus }
             ?.let { changeReview(job, it, now) }
         command.visibility?.let { changeVisibility(job, it) }
+        command.priorityExposed
+            ?.takeIf { it != job.priorityExposed }
+            ?.let { jobManager.changePriorityExposed(job, it) }
         if (command.title != null || command.contents.isNotEmpty()) {
             jobManager.editContent(job, JobContentEditDto(title = command.title, contents = command.contents))
         }

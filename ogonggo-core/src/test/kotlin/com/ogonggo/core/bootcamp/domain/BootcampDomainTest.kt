@@ -139,6 +139,24 @@ class BootcampDomainTest {
     }
 
     @Test
+    fun `과정별 우선 노출은 켜진 채로 시작하고 운영자가 끄고 다시 켤 수 있으며 삭제 후에는 바꿀 수 없다`() {
+        // given
+        val bootcamp = createBootcamp()
+
+        // when
+        bootcamp.changePriorityExposed(false)
+        val turnedOff = bootcamp.priorityExposed
+        bootcamp.changePriorityExposed(true)
+
+        // then
+        assertEquals(true, createBootcamp().priorityExposed)
+        assertEquals(false, turnedOff)
+        assertEquals(true, bootcamp.priorityExposed)
+        bootcamp.delete(LocalDateTime.of(2026, 9, 1, 0, 0))
+        assertThrows(IllegalStateException::class.java) { bootcamp.changePriorityExposed(false) }
+    }
+
+    @Test
     fun `삭제는 멱등하며 삭제 후 변경을 차단한다`() {
         val bootcamp = createBootcamp()
         val firstDeletedAt = LocalDateTime.of(2026, 9, 1, 0, 0)

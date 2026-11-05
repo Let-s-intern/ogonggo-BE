@@ -381,6 +381,27 @@ internal class BootcampImplementPersistenceTest @Autowired constructor(
         )
     }
 
+    @Test
+    fun `과정별 우선 노출을 끈 비즈니스 등록 과정은 전체 설정이 켜져 있어도 앞에 두지 않고 다시 켜면 다음 조회부터 앞에 둔다`() {
+        // given
+        val companyExposed = approvedCompanyBootcamp()
+        val companyOptedOut = approvedCompanyBootcamp()
+        val linked = bootcampAppender.append(work24Command("A-1", enterpriseLinked = true))
+        bootcampManager.startRecruitment(linked)
+        val beforeDeadline = LocalDateTime.of(2026, 8, 15, 12, 0)
+
+        // when
+        bootcampManager.changePriorityExposed(bootcampReader.read(checkNotNull(companyOptedOut.id)), false)
+        val optedOut = publicPage(now = beforeDeadline).bootcamps.map { it.id }
+        bootcampManager.changePriorityExposed(bootcampReader.read(checkNotNull(companyOptedOut.id)), true)
+        val restored = publicPage(now = beforeDeadline).bootcamps.map { it.id }
+
+        // then
+        // 끈 과정은 기업 연계 과정 뒤, 다른 과정과 같은 자리로 간다.
+        assertEquals(listOf(companyExposed.id, linked.id, companyOptedOut.id), optedOut)
+        assertEquals(listOf(companyOptedOut.id, companyExposed.id, linked.id), restored)
+    }
+
     /** 비즈니스 등록 부트캠프는 검수를 승인해야 게시된다. */
     private fun approvedCompanyBootcamp(): Bootcamp {
         val bootcamp = bootcampAppender.append(

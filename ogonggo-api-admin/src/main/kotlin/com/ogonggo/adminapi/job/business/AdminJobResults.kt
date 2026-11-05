@@ -79,6 +79,8 @@ data class AdminJobSummary(
     val inspectedAt: LocalDateTime?,
     /** 공고 원문 주소다. 운영자가 목록에서 원문을 열어 볼 수 있게 싣는다. */
     val sourceUrl: String?,
+    /** 기업회원 공고 우선 노출을 이 공고에 줄지다. 기업회원 공고에만 영향이 있다. */
+    val priorityExposed: Boolean,
 ) {
     companion object {
         internal fun from(job: Job, metric: JobMetricDto): AdminJobSummary = AdminJobSummary(
@@ -106,6 +108,7 @@ data class AdminJobSummary(
             registeredAt = job.createdAt,
             inspectedAt = job.inspectedAt,
             sourceUrl = job.sourceUrl,
+            priorityExposed = job.priorityExposed,
         )
     }
 }

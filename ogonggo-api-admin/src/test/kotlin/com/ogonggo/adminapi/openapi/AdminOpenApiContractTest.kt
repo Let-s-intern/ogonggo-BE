@@ -340,6 +340,41 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `채용공고와 부트캠프 수정은 공고별 우선 노출 여부를 선택 칸으로 받고 목록과 상세는 늘 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val jobPatch = document.at("/paths/~1api~1v1~1admin~1jobs~1{jobId}/patch")
+        val bootcampPatch = document.at("/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/patch")
+
+        // then
+        assertEquals(
+            "#/components/schemas/UpdateAdminJobRequest",
+            jobPatch.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+        )
+        assertEquals(
+            "#/components/schemas/UpdateAdminBootcampRequest",
+            bootcampPatch.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+        )
+        listOf("UpdateAdminJobRequest", "UpdateAdminBootcampRequest").forEach { name ->
+            val schema = document.at("/components/schemas/$name")
+            assertEquals("boolean", schema.at("/properties/priorityExposed/type").asText(), name)
+            assertFalse(schema.at("/required").any { it.asText() == "priorityExposed" }, name)
+        }
+        listOf(
+            "AdminJobSummaryResponse",
+            "AdminJobDetailResponse",
+            "AdminBootcampSummaryResponse",
+            "AdminBootcampDetailResponse",
+        ).forEach { name ->
+            val schema = document.at("/components/schemas/$name")
+            assertEquals("boolean", schema.at("/properties/priorityExposed/type").asText(), name)
+            assertTrue(schema.at("/required").any { it.asText() == "priorityExposed" }, name)
+        }
+    }
+
+    @Test
     fun `채용공고 분석 수정은 AI 서버 저장과 같은 분석 스키마를 받고 상세는 같은 스키마로 분석과 최신 여부를 싣는다`() {
         // given
         val document = openApiDocument()
