@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.business
 
+import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobEmploymentType
@@ -30,9 +31,13 @@ class UserJobService(
     private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val userProfileReader: UserProfileReader,
     private val eventPublisher: ApplicationEventPublisher,
+    private val companyContentPriorityReader: CompanyContentPriorityReader,
 ) {
 
-    /** 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다. */
+    /**
+     * 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다.
+     * 마감 전 기업회원 공고를 맨 앞에 둘지는 운영자가 관리자 콘솔에서 정한 값을 요청마다 읽는다.
+     */
     fun getJobs(
         userId: Long?,
         condition: JobSearchCondition,
@@ -40,7 +45,7 @@ class UserJobService(
         page: Int,
         size: Int,
     ): UserJobPageResult {
-        val result = jobReader.readPublishedPage(condition, sortType, page, size)
+        val result = jobReader.readPublishedPage(condition, sortType, page, size, companyContentPriorityReader.isEnabledOrDefault())
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,

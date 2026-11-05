@@ -7,6 +7,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
 import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import org.springframework.context.ApplicationEventPublisher
@@ -20,9 +21,13 @@ class UserBootcampService(
     private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val bootcampMetricReader: BootcampMetricReader,
     private val eventPublisher: ApplicationEventPublisher,
+    private val companyContentPriorityReader: CompanyContentPriorityReader,
 ) {
 
-    /** 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다. */
+    /**
+     * 로그인 없이 조회할 수 있어 userId가 없을 수 있고, 그때는 북마크가 하나도 없는 것으로 본다.
+     * 마감 전 기업회원 부트캠프를 맨 앞에 둘지는 운영자가 관리자 콘솔에서 정한 값을 요청마다 읽는다.
+     */
     fun getBootcamps(
         userId: Long?,
         condition: BootcampSearchCondition,
@@ -30,7 +35,7 @@ class UserBootcampService(
         page: Int,
         size: Int,
     ): UserBootcampPageResult {
-        val result = bootcampReader.readPublicPage(condition, sortType, page, size)
+        val result = bootcampReader.readPublicPage(condition, sortType, page, size, companyContentPriorityReader.isEnabledOrDefault())
         val bootcampIds = result.bootcamps.map(Bootcamp::requiredId)
         return UserBootcampPageResult.from(
             result = result,

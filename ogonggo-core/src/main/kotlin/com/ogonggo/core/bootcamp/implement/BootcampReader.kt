@@ -77,14 +77,19 @@ class BootcampReader internal constructor(
         sortType: BootcampSortType,
         page: Int,
         size: Int,
-    ): BootcampPageDto = readPublicPage(condition, sortType, page, size, LocalDateTime.now(clock))
+        companyFirst: Boolean,
+    ): BootcampPageDto = readPublicPage(condition, sortType, page, size, companyFirst, LocalDateTime.now(clock))
 
-    /** 공개 조건과 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다. */
+    /**
+     * 공개 조건과 정렬은 조회 쿼리가 정하므로 Pageable에는 페이지 범위만 넘긴다.
+     * [companyFirst]가 참이면 마감되지 않은 기업회원 부트캠프를 맨 앞에 둔다.
+     */
     fun readPublicPage(
         condition: BootcampSearchCondition,
         sortType: BootcampSortType,
         page: Int,
         size: Int,
+        companyFirst: Boolean,
         now: LocalDateTime,
     ): BootcampPageDto {
         validatePageRequest(page, size)
@@ -93,6 +98,7 @@ class BootcampReader internal constructor(
             sortType = sortType,
             publicStatuses = PUBLIC_STATUSES,
             now = now,
+            companyFirst = companyFirst,
             pageable = PageRequest.of(page, size),
         ).toPageDto()
     }

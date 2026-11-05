@@ -221,6 +221,31 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         )
     }
 
+    @Test
+    fun `우선 노출을 끄면 마감되지 않은 기업회원 공고도 같은 날 등록한 크롤링 공고와 섞이고 페이지를 넘겨도 빠지거나 겹치지 않는다`() {
+        // given
+        val oldCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 28, 10, 0))
+        val companyOld = appendAndApprove(createCommand(ownerUserId = USER_ID), LocalDateTime.of(2026, 9, 1, 10, 0))
+        val sameDay = LocalDateTime.of(2026, 9, 29, 10, 0)
+        val sameDayIds = (1..4).map { appendAndPublish(createCommand(), sameDay) } +
+            (1..4).map { appendAndApprove(createCommand(ownerUserId = USER_ID), sameDay) }
+        val work24 = appendAndPublish(
+            createCommand().copy(source = ContentSource.WORK24, externalId = "K1"),
+            LocalDateTime.of(2026, 9, 30, 10, 0),
+        )
+
+        // when
+        val pages = (0..3).map { readPage(page = it, size = 3, now = LocalDateTime.of(2026, 10, 1, 12, 0), companyFirst = false) }
+        val listed = pages.flatMap { page -> page.jobs.map { checkNotNull(it.id) } }
+
+        // then
+        // 9월 29일 공고는 경로와 관계없이 그날의 무작위 순서로 섞이고, 그 뒤에 등록일 순서대로 이어진다.
+        assertEquals(sameDayIds.toSet(), listed.take(8).toSet())
+        assertEquals(listOf(oldCrawled, companyOld, work24), listed.drop(8))
+        assertEquals(11L, pages.first().totalElements)
+        assertEquals(listOf(true, true, true, false), pages.map { it.hasNext })
+    }
+
     /** 비즈니스 등록 공고는 검수를 승인해야 게시된다. */
     private fun appendAndApprove(command: JobAppendDto, registeredAt: LocalDateTime): Long {
         val job = jobAppender.append(command, registeredAt)
@@ -1180,7 +1205,8 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         sortType: JobSortType = JobSortType.LATEST,
         condition: JobSearchCondition = JobSearchCondition.NONE,
         now: LocalDateTime = NOW,
-    ): JobPageDto = jobReader.readPublishedPage(condition, sortType, page, size, now)
+        companyFirst: Boolean = true,
+    ): JobPageDto = jobReader.readPublishedPage(condition, sortType, page, size, companyFirst, now)
 
     private fun createCommand(
         recruitmentType: JobRecruitmentType = JobRecruitmentType.PERIOD,

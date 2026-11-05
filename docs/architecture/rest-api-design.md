@@ -334,6 +334,19 @@ PUT /api/v1/admin/lets-career-content-recommend-weights
 - 칸은 `roleScore`, `fieldScore`, `topicScore`, `maxTopicMatches`, `programBonus`, `materialBonus`, `blogBonus`, `maxPerGroup`이고 모두 필수입니다. 점수는 0~100, `maxTopicMatches`는 0~10, `maxPerGroup`은 1~10이며 벗어나면 400 `BAD_REQUEST`입니다.
 - 바꾼 값은 다음 추천 요청부터 씁니다. 사용자 API가 요청마다 한 행을 읽습니다.
 
+### 기업회원 공고 우선 노출
+
+```text
+GET /api/v1/admin/company-content-priority
+PUT /api/v1/admin/company-content-priority
+```
+
+- 결정일: 2026-11-04 / 리뷰 상태: 팀 리뷰 필요
+- 공개 목록의 기업회원 공고 우선 노출([API 성공 응답](api-response.md#기업회원-공고-우선-노출)) 설정은 하나뿐이라 단수 리소스로 두고 통째로 바꾸는 PUT을 씁니다. 바뀐 값을 `data`로 돌려줍니다.
+- 칸은 `enabled` 하나이고 필수입니다. 빠졌거나 `null`이거나 참·거짓이 아니면 400 `BAD_REQUEST`입니다.
+- 채용공고와 부트캠프를 한 값으로 켜고 끕니다. 따로 끌 이유가 생기면 칸을 더합니다.
+- 바꾼 값은 다음 공개 목록 요청부터 씁니다. 사용자 API가 요청마다 한 행을 읽습니다.
+
 ### AI 서버 렛츠커리어 콘텐츠 태그
 
 ```text
