@@ -77,6 +77,8 @@ data class AdminJobSummary(
     val registeredAt: LocalDateTime,
     /** 운영자가 검수 완료한 일시다. 미검수면 null이다. */
     val inspectedAt: LocalDateTime?,
+    /** 공고 원문 주소다. 운영자가 목록에서 원문을 열어 볼 수 있게 싣는다. */
+    val sourceUrl: String?,
     /** 기업회원 공고 우선 노출을 이 공고에 줄지다. 기업회원 공고에만 영향이 있다. */
     val priorityExposed: Boolean,
 ) {
@@ -105,12 +107,13 @@ data class AdminJobSummary(
             recruitmentStatus = job.recruitmentStatus,
             registeredAt = job.createdAt,
             inspectedAt = job.inspectedAt,
+            sourceUrl = job.sourceUrl,
             priorityExposed = job.priorityExposed,
         )
     }
 }
 
-/** 목록 항목에 수정할 수 있는 공고 정보, 본문 칸과 원문 주소·원문을 더한 값이다. AI 서버가 못 읽어 온 본문 칸은 비어 있을 수 있다. */
+/** 목록 항목에 수정할 수 있는 공고 정보, 본문 칸과 원문을 더한 값이다. AI 서버가 못 읽어 온 본문 칸은 비어 있을 수 있다. */
 data class AdminJobResult(
     val summary: AdminJobSummary,
     val parentCompanyName: String?,
@@ -132,7 +135,6 @@ data class AdminJobResult(
     val benefits: String?,
     val hiringProcess: String?,
     val recruitmentNotice: String?,
-    val sourceUrl: String?,
     /** AI 서버가 보낸 원문 HTML이다. 원문이 없는 공고는 null이다. */
     val sourceHtml: String?,
     /** 저장된 공고 분석이다. 본문이 바뀌어도 싣는다. 분석이 없으면 null이다. */
@@ -171,7 +173,6 @@ data class AdminJobResult(
             benefits = job.benefits,
             hiringProcess = job.hiringProcess,
             recruitmentNotice = job.recruitmentNotice,
-            sourceUrl = job.sourceUrl,
             sourceHtml = sourceHtml,
             analysis = analysis?.content,
             analysisCurrent = analysis?.current ?: false,
