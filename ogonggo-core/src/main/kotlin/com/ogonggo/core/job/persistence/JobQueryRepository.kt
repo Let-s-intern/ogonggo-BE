@@ -44,7 +44,7 @@ internal class JobQueryRepository(
 ) {
 
     /**
-     * 공개 목록은 어느 정렬이든 마감되지 않은 비즈니스 등록 공고를 먼저 두고([companyRecruiting]), 그 뒤에 나머지 공고를 둔다.
+     * 공개 목록은 어느 정렬이든 마감되지 않은 비즈니스 등록 공고 중 우선 노출을 끄지 않은 공고를 먼저 두고([companyRecruiting]), 그 뒤에 나머지 공고를 둔다.
      * 두 묶음 안에서는 고른 정렬을 따른다.
      *
      * 우선 여부를 정렬식으로 앞에 두면 정렬 키 인덱스를 타지 못해 조건에 맞는 공고를 전부 읽어 정렬해야 한다.
@@ -93,12 +93,14 @@ internal class JobQueryRepository(
     }
 
     /**
-     * 기업이 비즈니스로 등록했고 아직 마감되지 않은 공고다. 마감 처리됐거나 모집 종료 일시가 지나면 다른 공고와 같이 정렬한다.
+     * 기업이 비즈니스로 등록했고 아직 마감되지 않았으며 운영자가 우선 노출을 끄지 않은 공고다([Job.priorityExposed]).
+     * 마감 처리됐거나 모집 종료 일시가 지나면 다른 공고와 같이 정렬한다.
      * 자동 마감 작업은 매시 돌므로 그 사이에 종료 일시가 지난 공고도 바로 빼도록 종료 일시를 함께 본다.
      * 상시 모집처럼 종료 일시가 없는 공고는 마감 처리 전까지 마감되지 않은 것으로 본다.
      */
     private fun companyRecruiting(now: LocalDateTime): BooleanExpression =
         job.source.eq(ContentSource.COMPANY)
+            .and(job.priorityExposed.isTrue)
             .and(recruiting())
             .and(job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)))
 

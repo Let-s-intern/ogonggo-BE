@@ -346,6 +346,16 @@ class Job internal constructor(
     var listSortKey: Long = listSortKey /* 목록 정렬 키 */
         protected set
 
+    /**
+     * 기업회원 공고 우선 노출([com.ogonggo.core.companycontentpriority.domain.CompanyContentPriority])을 이 공고에 줄지다.
+     * 전체 설정이 켜져 있고 이 값도 참일 때만 마감 전 기업회원 공고를 공개 목록 맨 앞에 둔다. 운영자가 공고마다 끈다.
+     * 등록할 때 참으로 시작해 칸을 두기 전처럼 앞에 둔다. 기업회원 공고(`source = COMPANY`)에만 영향이 있고 다른 경로 공고는 값만 저장한다.
+     * 정렬 키가 아니라 목록 조회 조건에서 보므로 바꾼 값은 다음 목록 요청부터 반영된다.
+     */
+    @Column(name = "priority_exposed", nullable = false)
+    var priorityExposed: Boolean = true /* 기업회원 공고 우선 노출 여부 */
+        protected set
+
     @Enumerated(EnumType.STRING)
     @Column(name = "publication_status", nullable = false, length = 20)
     var publicationStatus: JobPublicationStatus = publicationStatus /* 채용공고 게시 상태 */
@@ -589,6 +599,11 @@ class Job internal constructor(
     fun hide() {
         checkNotDeleted()
         publicationStatus = JobPublicationStatus.HIDDEN
+    }
+
+    fun changePriorityExposed(priorityExposed: Boolean) {
+        checkNotDeleted()
+        this.priorityExposed = priorityExposed
     }
 
     fun close(now: LocalDateTime) {

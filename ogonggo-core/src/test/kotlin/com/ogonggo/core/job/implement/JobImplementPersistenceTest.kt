@@ -246,6 +246,27 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         assertEquals(listOf(true, true, true, false), pages.map { it.hasNext })
     }
 
+    @Test
+    fun `공고별 우선 노출을 끈 기업회원 공고는 전체 설정이 켜져 있어도 앞에 두지 않고 다시 켜면 다음 조회부터 앞에 둔다`() {
+        // given
+        val crawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 29, 10, 0))
+        val companyExposed = appendAndApprove(createCommand(ownerUserId = USER_ID), LocalDateTime.of(2026, 9, 1, 10, 0))
+        val companyOptedOut = appendAndApprove(createCommand(ownerUserId = USER_ID), LocalDateTime.of(2026, 9, 2, 10, 0))
+        val now = LocalDateTime.of(2026, 10, 1, 12, 0)
+
+        // when
+        jobManager.changePriorityExposed(jobReader.read(companyOptedOut), false)
+        val optedOutPages = (0..2).map { readPage(page = it, size = 1, now = now) }
+        jobManager.changePriorityExposed(jobReader.read(companyOptedOut), true)
+        val restored = readPage(page = 0, size = 10, now = now)
+
+        // then
+        // 끈 공고는 다른 공고와 같이 최신순(등록일) 자리로 가고, 페이지를 넘겨도 빠지거나 겹치지 않는다.
+        assertEquals(listOf(companyExposed, crawled, companyOptedOut), optedOutPages.flatMap { page -> page.jobs.map { it.id } })
+        assertEquals(3L, optedOutPages.first().totalElements)
+        assertEquals(listOf(companyOptedOut, companyExposed, crawled), restored.jobs.map { it.id })
+    }
+
     /** 비즈니스 등록 공고는 검수를 승인해야 게시된다. */
     private fun appendAndApprove(command: JobAppendDto, registeredAt: LocalDateTime): Long {
         val job = jobAppender.append(command, registeredAt)

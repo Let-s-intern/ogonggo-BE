@@ -227,7 +227,10 @@ interface AdminJobApi {
 
             제목·본문·공고 정보·원문을 하나라도 고치면 운영자 내용 수정으로 남습니다(상세의 contentEditedAt).
             그 뒤로 AI 서버가 같은 공고를 다시 수집해도 공고 내용과 원문은 바뀌지 않습니다. 이 표시는 자동으로 풀리지 않습니다.
-            visibility·reviewStatus만 보내면 내용 수정으로 남지 않습니다.
+            visibility·reviewStatus·priorityExposed만 보내면 내용 수정으로 남지 않습니다.
+
+            priorityExposed는 기업회원 공고 우선 노출을 이 공고에 줄지입니다. 기업회원 공고(source = COMPANY)에만 영향이 있고,
+            전체 설정(company-content-priority)이 켜져 있을 때 이 값이 true인 마감 전 공고만 공개 목록 맨 앞에 둡니다. 다음 목록 요청부터 반영됩니다.
         """,
     )
     @ApiResponses(
