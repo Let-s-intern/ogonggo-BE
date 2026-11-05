@@ -72,6 +72,8 @@ class JobManager internal constructor(
 
     fun editContent(job: Job, command: JobContentEditDto) = change(job) { editContent(command.title, command.contents) }
 
+    fun markContentEdited(job: Job, userId: Long, now: LocalDateTime) = change(job) { markContentEdited(userId, now) }
+
     fun publish(job: Job) = change(job) { publish() }
 
     fun hide(job: Job) = change(job) { hide() }

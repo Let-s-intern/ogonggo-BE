@@ -37,7 +37,8 @@
 | 게시 상태 | `JobPublicationStatus`, `BootcampPublicationStatus`, `RecruitmentPostPublicationStatus` | 초안(임시저장), 게시(공개), 숨김(비공개) | 회원에게 보이는지 여부입니다. |
 | 검수 상태 | `ContentReviewStatus` | 검수 대기, 승인, 반려 | 기업 회원이 올린 콘텐츠에만 있고 나머지는 `null`입니다. 승인해야 게시할 수 있습니다. |
 | 반려 사유 | `ContentRejection` | | 관리자가 반려하며 남긴 말. 콘텐츠마다 한 행입니다. |
-| 검수 완료(공고 점검) | `Job.inspectedAt`, `Job.inspectedByUserId` | 검수 완료, 미검수(`null`) | 운영자가 이미 게시된 채용공고를 어드민 `오늘 올라온 공고` 화면에서 직접 훑어봤다는 기록입니다. 위 검수 상태(기업회원 공고의 게시 전 승인)와 다른 개념이라 코드·API 이름은 `inspection`으로 가릅니다. 노출을 바꾸지 않고, 내용을 고치거나 AI 서버가 다시 수집해도 지우지 않습니다(LC-3567). |
+| 검수 완료(공고 점검) | `Job.inspectedAt`, `Job.inspectedByUserId` | 검수 완료, 미검수(`null`) | 운영자가 이미 게시된 채용공고를 어드민 `오늘 올라온 공고` 화면에서 직접 훑어봤다는 기록입니다. 위 검수 상태(기업회원 공고의 게시 전 승인)와 다른 개념이라 코드·API 이름은 `inspection`으로 가릅니다. 노출을 바꾸지 않고, 운영자가 내용을 고쳐도 지우지 않습니다. AI 서버가 다시 수집해 본문이나 원문이 바뀌면 지웁니다(LC-3567). |
+| 운영자 내용 수정 | `Job.contentEditedAt`, `Job.contentEditedByUserId` | 운영자 수정, 수정 없음(`null`) | 운영자가 관리자 콘솔에서 공고의 제목·본문·공고 정보·원문을 마지막으로 고친 기록입니다. 값이 있으면 AI 서버가 다시 수집해도 공고 내용과 원문을 바꾸지 않습니다. 자동으로 풀리지 않습니다(LC-3567). |
 | 등록 경로 | `ContentSource` | 크롤링(`CRAWLER`), 고용24(`WORK24`), 비즈니스 등록(`COMPANY`) | 콘텐츠가 들어온 곳. 등록 후 바뀌지 않습니다. |
 | 회원 상태 | `UserStatus` | 활성, 탈퇴, 정지 | |
 

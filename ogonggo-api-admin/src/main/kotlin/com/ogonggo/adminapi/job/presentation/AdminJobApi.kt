@@ -222,6 +222,10 @@ interface AdminJobApi {
             보내지 않거나 null이면 그대로 두고, 비울 수 없어 공백이거나 걸러서 남는 글·이미지가 없으면 400입니다.
             원문은 공고 분석의 본문 해시에 들어가지 않아 원문만 고치면 분석(analysisCurrent)은 그대로입니다. 본문 칸(fields)을 고치면 분석이 낡습니다.
             내용을 고쳐도 검수 완료(inspectedAt)는 풀리지 않습니다.
+
+            제목·본문·공고 정보·원문을 하나라도 고치면 운영자 내용 수정으로 남습니다(상세의 contentEditedAt).
+            그 뒤로 AI 서버가 같은 공고를 다시 수집해도 공고 내용과 원문은 바뀌지 않습니다. 이 표시는 자동으로 풀리지 않습니다.
+            visibility·reviewStatus만 보내면 내용 수정으로 남지 않습니다.
         """,
     )
     @ApiResponses(
@@ -247,6 +251,7 @@ interface AdminJobApi {
     fun updateJob(
         @Positive jobId: Long,
         @Valid request: UpdateAdminJobRequest,
+        @Parameter(hidden = true) adminUserId: Long,
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>>
 
     @Operation(

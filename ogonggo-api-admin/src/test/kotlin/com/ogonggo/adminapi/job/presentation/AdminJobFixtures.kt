@@ -48,6 +48,7 @@ internal object AdminJobFixtures {
         id: Long = 693L,
         analysis: JobAnalysisContent? = null,
         analysisCurrent: Boolean = false,
+        contentEditedAt: LocalDateTime? = null,
     ): AdminJobResult = AdminJobResult(
         summary = summary(id),
         parentCompanyName = null,
@@ -73,6 +74,7 @@ internal object AdminJobFixtures {
         sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
         analysis = analysis,
         analysisCurrent = analysisCurrent,
+        contentEditedAt = contentEditedAt,
     )
 
     private val NOT_STATED = JobAnalysisContent.Fact(value = null, note = null)

@@ -68,6 +68,7 @@ class AdminJobServiceTest {
         service.updateJob(
             JOB_ID,
             AdminJobUpdateCommand(visibility = AdminContentVisibility.HIDDEN, reviewStatus = ContentReviewStatus.APPROVED),
+            ADMIN_ID,
         )
 
         val order = Mockito.inOrder(jobManager)
@@ -80,7 +81,7 @@ class AdminJobServiceTest {
     fun `이미 같은 검수 상태면 다시 전이하지 않아 노출이 되돌아가지 않는다`() {
         lockedJob(reviewStatus = ContentReviewStatus.APPROVED)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.APPROVED))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.APPROVED), ADMIN_ID)
 
         Mockito.verifyNoInteractions(jobManager)
     }
@@ -89,7 +90,7 @@ class AdminJobServiceTest {
     fun `검수 대기로 바꾸면 검수를 다시 요청한다`() {
         val job = lockedJob(reviewStatus = ContentReviewStatus.APPROVED)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.PENDING))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(reviewStatus = ContentReviewStatus.PENDING), ADMIN_ID)
 
         Mockito.verify(jobManager).requestReview(job, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
@@ -99,7 +100,7 @@ class AdminJobServiceTest {
     fun `노출만 보내면 게시 상태만 바꾼다`() {
         val job = lockedJob(reviewStatus = null)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE), ADMIN_ID)
 
         Mockito.verify(jobManager).publish(job)
         Mockito.verifyNoMoreInteractions(jobManager)
@@ -110,9 +111,10 @@ class AdminJobServiceTest {
         val job = lockedJob(reviewStatus = null)
         val contents = mapOf(JobContentField.RESPONSIBILITIES to "고친 업무", JobContentField.BENEFITS to null)
 
-        service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목", contents = contents))
+        service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목", contents = contents), ADMIN_ID)
 
         Mockito.verify(jobManager).editContent(job, JobContentEditDto(title = "고친 제목", contents = contents))
+        Mockito.verify(jobManager).markContentEdited(job, ADMIN_ID, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
     }
 
@@ -124,6 +126,7 @@ class AdminJobServiceTest {
         service.updateJob(
             JOB_ID,
             AdminJobUpdateCommand(details = AdminJobDetailsPatch(experienceMinYears = 5, recruitmentEndAt = endAt)),
+            ADMIN_ID,
         )
 
         Mockito.verify(jobManager).update(
@@ -131,6 +134,7 @@ class AdminJobServiceTest {
             currentValues().copy(experienceMinYears = 5, recruitmentEndAt = endAt),
             NOW,
         )
+        Mockito.verify(jobManager).markContentEdited(job, ADMIN_ID, NOW)
         Mockito.verifyNoMoreInteractions(jobManager)
     }
 
@@ -340,10 +344,14 @@ class AdminJobServiceTest {
             AdminJobUpdateCommand(
                 sourceHtml = "<h2 onclick=\"x()\">주요 업무</h2><script>alert(1)</script><img src=\"/logo.png\">",
             ),
+            ADMIN_ID,
         )
 
         Mockito.verify(jobSourceManager).save(JOB_ID, "<h2>주요 업무</h2><img src=\"https://example.com/logo.png\">")
-        Mockito.verifyNoInteractions(jobManager, jobAnalysisManager)
+        // 원문만 고쳐도 운영자 내용 수정이라 AI 서버의 다시 수집이 덮지 못한다.
+        Mockito.verify(jobManager).markContentEdited(job, ADMIN_ID, NOW)
+        Mockito.verifyNoMoreInteractions(jobManager)
+        Mockito.verifyNoInteractions(jobAnalysisManager)
     }
 
     @Test
@@ -351,7 +359,7 @@ class AdminJobServiceTest {
         lockedJob(reviewStatus = null)
 
         val error = assertThrows(InvalidRequestFieldException::class.java) {
-            service.updateJob(JOB_ID, AdminJobUpdateCommand(sourceHtml = "<script>alert(1)</script><style>p{}</style>"))
+            service.updateJob(JOB_ID, AdminJobUpdateCommand(sourceHtml = "<script>alert(1)</script><style>p{}</style>"), ADMIN_ID)
         }
 
         assertEquals("sourceHtml", error.fieldName)
@@ -367,6 +375,7 @@ class AdminJobServiceTest {
 
     companion object {
         private const val JOB_ID = 1L
+        private const val ADMIN_ID = 9L
         private val NOW = LocalDateTime.of(2026, 8, 27, 12, 0)
     }
 }

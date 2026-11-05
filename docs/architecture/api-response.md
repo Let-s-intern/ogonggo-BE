@@ -326,6 +326,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 채용공고 등록일 `registeredFrom`·`registeredTo`(`YYYY-MM-DD`, 한국 시간)는 항목의 `registeredAt`(`jobs.created_at`)으로 거르며 두 날짜를 모두 포함합니다. 회원 가입일·광고 문의 접수일 필터와 같은 형식입니다. 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[registeredFrom]`으로 시작합니다. `inspected`는 `true`면 검수 완료한 공고만, `false`면 미검수 공고만 고릅니다(2026-11-04, LC-3567). 어드민 `오늘 올라온 공고` 화면은 `registeredFrom`·`registeredTo`에 오늘 날짜를 넣어 부릅니다. `created_at`·`inspected_at`에는 인덱스를 두지 않았습니다. **확인 필요:** 공고 수가 늘어 이 필터의 조회가 느려지면 인덱스를 정합니다.
 - 채용공고 부분 수정(`PATCH /api/v1/admin/jobs/{jobId}`)은 원문 HTML `sourceHtml`도 받습니다(2026-11-04, LC-3567). AI 서버 원문과 같은 거르기(`JobSourceHtmlSanitizer`)로 안전한 태그만 남기고, 상대 주소는 수정을 반영한 `sourceUrl` 기준 절대 주소로 바꿔 `job_sources`에 저장합니다. `null`이거나 보내지 않으면 그대로 둡니다. 원문은 지우는 경로를 두지 않아(`job_sources`에 삭제 일시가 없습니다) 공백이거나 걸러서 남는 글·이미지가 없으면 400 `BAD_REQUEST`(`[sourceHtml]`)입니다. 원문은 공고 분석의 본문 해시(제목과 본문 여덟 칸)에 들어가지 않으므로 원문만 고치면 분석은 낡지 않습니다. 내용 수정은 검수 완료를 풀지 않습니다.
 - 채용공고 목록·상세·오늘의 공고 항목은 검수 완료 일시 `inspectedAt`(한국 시간, 미검수면 `null`)을 싣습니다(2026-11-04, LC-3567). 표시와 해제는 [REST API 설계의 관리자 채용공고 검수 완료](rest-api-design.md#관리자-채용공고-검수-완료)를 따릅니다.
+- 채용공고 상세는 운영자가 공고 내용(제목·본문·공고 정보·원문)을 마지막으로 고친 일시 `contentEditedAt`(한국 시간, 고친 적이 없으면 `null`)을 싣습니다(2026-11-05, LC-3567). 값이 있으면 AI 서버의 다시 수집이 내용과 원문을 바꾸지 않습니다([REST API 설계의 AI 서버 채용공고](rest-api-design.md#ai-서버-채용공고)).
 - 검수 대기(`GET /api/v1/admin/content-reviews`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
 - 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다. 노출 일괄 변경(`PATCH /visibility`)은 여러 건이라 `data: null`로 응답합니다([REST API 설계](rest-api-design.md#관리자-콘솔-노출-일괄-변경)).
 - 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.
@@ -583,7 +584,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 | 기업회원 수정, 운영자 판정 되돌리기 | `PENDING` | 비노출 |
 
 - 승인되지 않은 기업회원 콘텐츠의 게시는 도메인이 막습니다(409 `REVIEW_NOT_APPROVED`). 게시 요청이 사용자 API에서 오든 관리자 API에서 오든 같습니다.
-- AI 서버 교체는 값만 바꾸고 노출은 바꾸지 않습니다. 운영자가 관리자 콘솔에서 고친 내용은 AI 서버 교체가 덮어씁니다.
+- AI 서버 교체는 값만 바꾸고 노출은 바꾸지 않습니다. 운영자가 관리자 콘솔에서 내용을 고친 공고(`jobs.content_edited_at`)는 AI 서버 교체가 내용과 원문을 바꾸지 않습니다([REST API 설계의 AI 서버 채용공고](rest-api-design.md#ai-서버-채용공고), 2026-11-05, LC-3567).
 - 승인과 동시에 게시하는 이유는 승인 결과를 기업회원에게 알릴 경로가 아직 없어서입니다. 다시 게시를 누르게 하면 승인된 콘텐츠가 비노출로 남습니다.
 - 반려 기록은 `content_rejections`에 콘텐츠마다 한 행으로 둡니다. 반려가 풀리면 소프트 삭제했다가 다시 반려하면 되살리고, 콘텐츠를 삭제해도 기록은 남깁니다.
 - 부트캠프도 채용공고와 같은 `publication_status`·`review_status` 칼럼을 둡니다. 사용자 공개 조회는 게시 상태, 모집 상태, 공개 기간을 모두 확인합니다.

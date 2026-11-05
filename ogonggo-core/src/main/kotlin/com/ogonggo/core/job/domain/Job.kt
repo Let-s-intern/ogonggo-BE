@@ -381,6 +381,7 @@ class Job internal constructor(
     /**
      * 운영자가 게시된 공고를 직접 훑어보고 확인했다는 기록이다(검수 완료). 검수 상태([reviewStatus])는 기업회원 공고의
      * 게시 전 승인이라 다른 개념이다. 노출과 무관하며, 운영자가 내용을 고쳐도 지우지 않는다. "누가 언제 봤다"는 기록이기 때문이다.
+     * AI 서버가 다시 수집해 본문이나 원문이 바뀌면 운영자가 본 내용이 아니므로 지운다.
      * 검수 완료·해제는 공고 내용이 아니라 수정 일시([updatedAt])를 바꾸지 않도록 `JobManager`의 대상 UPDATE로만 쓴다.
      */
     @Column(name = "inspected_at")
@@ -389,6 +390,20 @@ class Job internal constructor(
 
     @Column(name = "inspected_by_user_id")
     var inspectedByUserId: Long? = null /* 검수 완료한 관리자 식별자 */
+        protected set
+
+    /**
+     * 운영자가 관리자 콘솔에서 공고 내용(제목·본문·공고 정보·원문)을 마지막으로 고친 일시와 관리자다.
+     * 운영자 수정은 크롤링·AI 값을 바로잡는 마지막 방어선이라, 값이 있는 동안 AI 서버의 다시 수집은 공고 내용과 원문을 바꾸지 않는다.
+     * 자동으로 풀리지 않는다. 원문 페이지가 바뀌었는지 서버가 알 수 없고, 운영자가 고친 내용을 조용히 덮는 것보다
+     * 다시 수집이 반영되지 않는 쪽이 덜 위험하기 때문이다.
+     */
+    @Column(name = "content_edited_at")
+    var contentEditedAt: LocalDateTime? = null /* 운영자가 공고 내용을 마지막으로 고친 일시 */
+        protected set
+
+    @Column(name = "content_edited_by_user_id")
+    var contentEditedByUserId: Long? = null /* 공고 내용을 마지막으로 고친 관리자 식별자 */
         protected set
 
     fun update(
@@ -486,6 +501,17 @@ class Job internal constructor(
      * 제목과 본문 칸 중 넘어온 것만 바꾼다. 본문 값이 null이면 그 칸을 비운다.
      * 수집한 공고도 고칠 수 있다. 크롤러가 원문 구조를 잘못 읽어 왔을 때 통째로 내리지 않게 하기 위해서다.
      */
+    /** 운영자가 공고 내용을 고쳤다. 마지막으로 고친 일시와 관리자를 남긴다. */
+    fun markContentEdited(userId: Long, now: LocalDateTime) {
+        checkNotDeleted()
+        require(userId > 0) { "관리자 식별자는 양수여야 합니다." }
+        contentEditedAt = now
+        contentEditedByUserId = userId
+    }
+
+    /** 운영자가 고친 내용이 있는지. 참이면 AI 서버의 다시 수집이 공고 내용과 원문을 바꾸지 않는다. */
+    fun isContentEditedByAdmin(): Boolean = contentEditedAt != null
+
     fun editContent(title: String?, contents: Map<JobContentField, String?>) {
         checkNotDeleted()
         require(title == null || title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }

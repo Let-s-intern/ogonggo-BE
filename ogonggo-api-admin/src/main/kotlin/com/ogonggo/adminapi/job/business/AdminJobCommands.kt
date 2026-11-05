@@ -28,7 +28,10 @@ data class AdminJobUpdateCommand(
     val details: AdminJobDetailsPatch = AdminJobDetailsPatch(),
     /** 원문 HTML. null이면 그대로 둔다. 크롤러 원문과 같이 안전한 태그만 남겨 저장한다. */
     val sourceHtml: String? = null,
-)
+) {
+    /** 노출·검수 상태가 아닌 공고 내용(제목·본문·공고 정보·원문)을 고치는지. */
+    fun editsContent(): Boolean = title != null || contents.isNotEmpty() || !details.isEmpty() || sourceHtml != null
+}
 
 /**
  * 제목·본문 밖의 공고 정보(경력, 모집 기간, 직군·직무, 지역 등)다. null인 값은 그대로 두고,

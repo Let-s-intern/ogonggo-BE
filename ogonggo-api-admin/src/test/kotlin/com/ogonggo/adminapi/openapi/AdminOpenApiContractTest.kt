@@ -339,6 +339,7 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertEquals("#/components/schemas/Analysis", detail.at("/analysis/\$ref").asText())
         assertEquals("boolean", detail.at("/analysisCurrent/type").asText())
         assertTrue(detail.at("/analysisEditedAt").isObject)
+        assertTrue(detail.at("/contentEditedAt").isObject)
         assertEquals(3, document.at("/components/schemas/Analysis/properties/tasks/maxItems").asInt())
         assertTrue(operation.at("/responses/404/description").asText().startsWith("JOB_NOT_FOUND"))
         assertTrue(

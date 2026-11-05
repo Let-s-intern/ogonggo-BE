@@ -196,11 +196,24 @@ class AdminJobControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `상세는 운영자가 공고 내용을 마지막으로 고친 일시를 싣고 고친 적이 없으면 null이다`() {
+        Mockito.`when`(adminJobService.getJob(693L))
+            .thenReturn(AdminJobFixtures.detail(contentEditedAt = LocalDateTime.of(2026, 11, 4, 10, 15)))
+        Mockito.`when`(adminJobService.getJob(7L)).thenReturn(AdminJobFixtures.detail(id = 7L))
+
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/693")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.contentEditedAt").value("2026-11-04T10:15:00"))
+        mockMvc.perform(admin(get("/api/v1/admin/jobs/7")))
+            .andExpect(jsonPath("$.data.contentEditedAt").value(null as Any?))
+    }
+
+    @Test
     fun `수정은 허용한 본문 칸만 반영하고 빈 문자열은 그 칸을 비우며 수정된 공고를 돌려준다`() {
         Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
 
         mockMvc.perform(
-            admin(
+            signedInAdmin(
                 patch("/api/v1/admin/jobs/693")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
@@ -236,6 +249,7 @@ class AdminJobControllerTest @Autowired constructor(
                     JobContentField.COMPENSATION to null,
                 ),
             ),
+            ADMIN_USER_ID,
         )
     }
 
@@ -243,11 +257,11 @@ class AdminJobControllerTest @Autowired constructor(
     fun `원문 HTML을 보내면 수정 명령에 담고 공백이면 400이다`() {
         Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
 
-        mockMvc.perform(admin(patchJson(mapOf("sourceHtml" to "<p>고친 원문</p>"))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("sourceHtml" to "<p>고친 원문</p>"))))
             .andExpect(status().isOk)
-        Mockito.verify(adminJobService).updateJob(693L, AdminJobUpdateCommand(sourceHtml = "<p>고친 원문</p>"))
+        Mockito.verify(adminJobService).updateJob(693L, AdminJobUpdateCommand(sourceHtml = "<p>고친 원문</p>"), ADMIN_USER_ID)
 
-        mockMvc.perform(admin(patchJson(mapOf("sourceHtml" to " "))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("sourceHtml" to " "))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value(startsWith("[sourceHtml]")))
     }
@@ -257,7 +271,7 @@ class AdminJobControllerTest @Autowired constructor(
         Mockito.`when`(adminJobService.getJob(693L)).thenReturn(AdminJobFixtures.detail())
 
         mockMvc.perform(
-            admin(
+            signedInAdmin(
                 patchJson(
                     mapOf(
                         "experienceType" to "EXPERIENCED",
@@ -283,24 +297,25 @@ class AdminJobControllerTest @Autowired constructor(
                     cleared = setOf(AdminJobClearableField.RECRUITMENT_HEADCOUNT, AdminJobClearableField.APPLY_EMAIL),
                 ),
             ),
+            ADMIN_USER_ID,
         )
     }
 
     @Test
     fun `비울 수 없는 이름을 clear에 담거나 보낸 값을 함께 비우거나 공백만 보내면 400으로 응답한다`() {
-        mockMvc.perform(admin(patchJson(mapOf("clear" to listOf("companyName")))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("clear" to listOf("companyName")))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("[clear] 비울 수 없는 필드입니다: companyName"))
 
-        mockMvc.perform(admin(patchJson(mapOf("experienceMinYears" to 2, "clear" to listOf("experienceMinYears")))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("experienceMinYears" to 2, "clear" to listOf("experienceMinYears")))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("[experienceMinYears] 값을 보내면서 비울 수 없습니다."))
 
-        mockMvc.perform(admin(patchJson(mapOf("industry" to " "))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("industry" to " "))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("[industry] 공백일 수 없습니다. 비우려면 clear에 담아 주세요."))
 
-        mockMvc.perform(admin(patchJson(mapOf("experienceMinYears" to -1))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("experienceMinYears" to -1))))
             .andExpect(status().isBadRequest)
 
         Mockito.verifyNoInteractions(adminJobService)
@@ -308,11 +323,11 @@ class AdminJobControllerTest @Autowired constructor(
 
     @Test
     fun `제목을 비우거나 수정 요청으로 반려하면 400으로 응답한다`() {
-        mockMvc.perform(admin(patchJson(mapOf("title" to " "))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("title" to " "))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("[title] 제목을 입력해 주세요."))
 
-        mockMvc.perform(admin(patchJson(mapOf("reviewStatus" to "REJECTED"))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("reviewStatus" to "REJECTED"))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("[reviewStatus] 반려는 검수 화면에서 사유와 함께 처리해 주세요."))
 
@@ -323,9 +338,9 @@ class AdminJobControllerTest @Autowired constructor(
     fun `승인 전에 노출하려 하면 409로 응답한다`() {
         Mockito.doThrow(ConflictException(ContentReviewErrorCode.REVIEW_NOT_APPROVED))
             .`when`(adminJobService)
-            .updateJob(693L, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE))
+            .updateJob(693L, AdminJobUpdateCommand(visibility = AdminContentVisibility.VISIBLE), ADMIN_USER_ID)
 
-        mockMvc.perform(admin(patchJson(mapOf("visibility" to "VISIBLE"))))
+        mockMvc.perform(signedInAdmin(patchJson(mapOf("visibility" to "VISIBLE"))))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("REVIEW_NOT_APPROVED"))
     }

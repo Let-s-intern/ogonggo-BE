@@ -138,6 +138,8 @@ data class AdminJobResult(
     val analysisCurrent: Boolean,
     /** 운영자가 고친 분석이면 고친 일시다. AI 서버 분석이거나 분석이 없으면 null이다. */
     val analysisEditedAt: LocalDateTime? = null,
+    /** 운영자가 공고 내용을 마지막으로 고친 일시다. 값이 있으면 AI 서버의 다시 수집이 내용과 원문을 바꾸지 않는다. */
+    val contentEditedAt: LocalDateTime? = null,
 ) {
     companion object {
         internal fun from(
@@ -171,6 +173,7 @@ data class AdminJobResult(
             analysis = analysis?.content,
             analysisCurrent = analysis?.current ?: false,
             analysisEditedAt = analysis?.editedAt,
+            contentEditedAt = job.contentEditedAt,
         )
     }
 }

@@ -232,6 +232,24 @@ class JobDomainTest {
     }
 
     @Test
+    fun `운영자 내용 수정은 마지막으로 고친 일시와 관리자를 남긴다`() {
+        // given
+        val job = createJob()
+        val first = LocalDateTime.of(2026, 11, 4, 9, 0)
+
+        // when
+        val before = job.isContentEditedByAdmin()
+        job.markContentEdited(userId = 3L, now = first)
+        job.markContentEdited(userId = 5L, now = first.plusHours(1))
+
+        // then
+        assertEquals(false, before)
+        assertEquals(true, job.isContentEditedByAdmin())
+        assertEquals(first.plusHours(1), job.contentEditedAt)
+        assertEquals(5L, job.contentEditedByUserId)
+    }
+
+    @Test
     fun `등록 경로는 비즈니스 등록만 소유자가 있고 고용24 수집만 외부 식별값을 가진다`() {
         // 등록 경로를 정하지 않으면 소유자 유무로 정한다.
         assertEquals(ContentSource.CRAWLER, createJob().source)

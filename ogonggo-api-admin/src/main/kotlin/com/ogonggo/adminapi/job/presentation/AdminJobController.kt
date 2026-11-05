@@ -123,8 +123,9 @@ class AdminJobController(
     override fun updateJob(
         @PathVariable("jobId") jobId: Long,
         @RequestBody request: UpdateAdminJobRequest,
+        @AuthenticationPrincipal adminUserId: Long,
     ): ResponseEntity<SuccessResponse<AdminJobDetailResponse>> {
-        adminJobService.updateJob(jobId, request.toCommand())
+        adminJobService.updateJob(jobId, request.toCommand(), adminUserId)
         return SuccessResponse.ok(AdminJobDetailResponse.from(adminJobService.getJob(jobId)))
     }
 
