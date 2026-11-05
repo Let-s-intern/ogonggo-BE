@@ -9,9 +9,9 @@ class CompanyContentPriorityManager internal constructor(
     private val priorityRepository: CompanyContentPriorityJpaRepository,
 ) {
 
-    /** 켜짐 여부를 바꾼다. 행이 없으면 만든다. */
+    /** 켜짐 여부를 바꾼다. 행이 없으면 고정 식별자로 만든다. */
     fun replace(enabled: Boolean) {
-        val priority = priorityRepository.findFirstByOrderByIdAsc()
+        val priority = priorityRepository.findById(CompanyContentPriority.SINGLETON_ID).orElse(null)
         if (priority == null) {
             priorityRepository.save(CompanyContentPriority(enabled))
             return

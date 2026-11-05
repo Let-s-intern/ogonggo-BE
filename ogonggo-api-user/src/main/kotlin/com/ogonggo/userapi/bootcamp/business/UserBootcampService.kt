@@ -35,7 +35,7 @@ class UserBootcampService(
         page: Int,
         size: Int,
     ): UserBootcampPageResult {
-        val result = bootcampReader.readPublicPage(condition, sortType, page, size, companyContentPriorityReader.isEnabled())
+        val result = bootcampReader.readPublicPage(condition, sortType, page, size, companyContentPriorityReader.isEnabledOrDefault())
         val bootcampIds = result.bootcamps.map(Bootcamp::requiredId)
         return UserBootcampPageResult.from(
             result = result,

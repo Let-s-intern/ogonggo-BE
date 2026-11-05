@@ -45,7 +45,7 @@ class UserJobService(
         page: Int,
         size: Int,
     ): UserJobPageResult {
-        val result = jobReader.readPublishedPage(condition, sortType, page, size, companyContentPriorityReader.isEnabled())
+        val result = jobReader.readPublishedPage(condition, sortType, page, size, companyContentPriorityReader.isEnabledOrDefault())
         val jobIds = result.jobs.map(Job::requiredId)
         return UserJobPageResult.from(
             result = result,

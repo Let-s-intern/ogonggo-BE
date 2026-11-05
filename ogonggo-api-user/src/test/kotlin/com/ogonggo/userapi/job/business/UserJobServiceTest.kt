@@ -136,7 +136,7 @@ class UserJobServiceTest {
     @Test
     fun `게시된 공고 목록을 운영자가 정한 우선 노출 여부로 읽어 페이지 결과로 변환한다`() {
         val job = createJobMock()
-        Mockito.`when`(companyContentPriorityReader.isEnabled()).thenReturn(false)
+        Mockito.`when`(companyContentPriorityReader.isEnabledOrDefault()).thenReturn(false)
         Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20, false)).thenReturn(
             JobPageDto(
                 jobs = listOf(job),
@@ -167,7 +167,7 @@ class UserJobServiceTest {
     fun `비로그인 조회는 북마크 저장소를 조회하지 않고 모두 북마크되지 않은 것으로 본다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
-        Mockito.`when`(companyContentPriorityReader.isEnabled()).thenReturn(true)
+        Mockito.`when`(companyContentPriorityReader.isEnabledOrDefault()).thenReturn(true)
         Mockito.`when`(jobReader.readPublishedPage(JobSearchCondition.NONE, JobSortType.LATEST, 0, 20, true)).thenReturn(
             JobPageDto(
                 jobs = listOf(job),

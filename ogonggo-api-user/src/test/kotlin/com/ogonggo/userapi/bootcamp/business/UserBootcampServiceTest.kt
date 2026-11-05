@@ -99,7 +99,7 @@ class UserBootcampServiceTest {
     @Test
     fun `게시된 부트캠프 목록을 운영자가 정한 우선 노출 여부로 읽어 페이지 결과로 변환한다`() {
         val bootcamp = createBootcampMock()
-        Mockito.`when`(companyContentPriorityReader.isEnabled()).thenReturn(false)
+        Mockito.`when`(companyContentPriorityReader.isEnabledOrDefault()).thenReturn(false)
         Mockito.`when`(
             bootcampReader.readPublicPage(BootcampSearchCondition.NONE, BootcampSortType.LATEST, 0, 20, false),
         ).thenReturn(
