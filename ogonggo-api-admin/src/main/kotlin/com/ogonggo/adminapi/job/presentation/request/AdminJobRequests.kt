@@ -38,6 +38,7 @@ private const val MAX_VISIBILITY_CHANGE_IDS = 1000
  * 빈 문자열은 그 칸을 비우라는 뜻이다.
  *
  * 공고 정보(회사명부터 `sourceUrl`까지)는 null이면 그대로 두고, 비우려면 필드 이름을 `clear`에 담는다.
+ * 원문 HTML(`sourceHtml`)은 null이면 그대로 두며 비울 수 없다.
  */
 data class UpdateAdminJobRequest(
     val visibility: AdminContentVisibility?,
@@ -79,6 +80,11 @@ data class UpdateAdminJobRequest(
             "autoCloseEnabled, recruitmentNotice, applicationMethod, applyEmail, inquiryEmail, sourceUrl을 보낼 수 있습니다.",
     )
     val clear: List<String>? = null,
+    @field:Schema(
+        description = "원문 HTML입니다. 크롤러 원문과 같이 서버가 안전한 태그만 남겨 저장하고, 상대 주소는 sourceUrl 기준 절대 주소로 바꿉니다. " +
+            "null이면 그대로 둡니다. 비울 수 없어 공백이거나 걸러서 남는 글·이미지가 없으면 400입니다. 공고 분석에는 영향이 없습니다.",
+    )
+    val sourceHtml: String? = null,
 ) {
     fun toCommand(): AdminJobUpdateCommand {
         if (title != null && title.isBlank()) {
@@ -86,6 +92,9 @@ data class UpdateAdminJobRequest(
         }
         if (reviewStatus == ContentReviewStatus.REJECTED) {
             throw InvalidRequestFieldException("reviewStatus", "반려는 검수 화면에서 사유와 함께 처리해 주세요.")
+        }
+        if (sourceHtml != null && sourceHtml.isBlank()) {
+            throw InvalidRequestFieldException("sourceHtml", "원문은 비울 수 없습니다.")
         }
         return AdminJobUpdateCommand(
             visibility = visibility,
@@ -97,6 +106,7 @@ data class UpdateAdminJobRequest(
                 }
                 .toMap(),
             details = toDetailsPatch(),
+            sourceHtml = sourceHtml,
         )
     }
 

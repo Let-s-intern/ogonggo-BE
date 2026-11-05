@@ -4,6 +4,7 @@ import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobContentField
 import com.ogonggo.core.job.domain.JobField
@@ -126,6 +127,17 @@ data class JobMetricDto(
 data class JobAnalysisCandidateDto(
     val targets: List<Job>,
     val unchanged: List<Job>,
+)
+
+/**
+ * 운영자가 보는 저장된 공고 분석이다. 사용자 화면과 달리 본문이 바뀌어도 저장된 분석을 주고 [current]로 낡았는지 알린다.
+ */
+data class JobAnalysisViewDto(
+    val content: JobAnalysisContent,
+    /** 지금 본문 해시로 만든 분석인지. 본문이 바뀌어 다시 분석을 기다리면 false다. */
+    val current: Boolean,
+    /** 운영자가 고친 분석이면 고친 일시다. AI 서버 분석이면 null이다. */
+    val editedAt: LocalDateTime? = null,
 )
 
 /** 오늘의 공고 한 건이다. 고른 공고와 그 카드에 보여 줄 추천 문구를 함께 담는다. */

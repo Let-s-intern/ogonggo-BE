@@ -11,6 +11,8 @@ import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.job.domain.JobAnalysisContent
+import com.ogonggo.core.job.implement.dto.JobAnalysisViewDto
 import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.JobPageDto
 import com.ogonggo.core.region.domain.Region
@@ -73,6 +75,8 @@ data class AdminJobSummary(
     val reviewStatus: ContentReviewStatus?,
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
+    /** 운영자가 검수 완료한 일시다. 미검수면 null이다. */
+    val inspectedAt: LocalDateTime?,
 ) {
     companion object {
         internal fun from(job: Job, metric: JobMetricDto): AdminJobSummary = AdminJobSummary(
@@ -98,6 +102,7 @@ data class AdminJobSummary(
             reviewStatus = job.reviewStatus,
             recruitmentStatus = job.recruitmentStatus,
             registeredAt = job.createdAt,
+            inspectedAt = job.inspectedAt,
         )
     }
 }
@@ -127,9 +132,22 @@ data class AdminJobResult(
     val sourceUrl: String?,
     /** AI 서버가 보낸 원문 HTML이다. 원문이 없는 공고는 null이다. */
     val sourceHtml: String?,
+    /** 저장된 공고 분석이다. 본문이 바뀌어도 싣는다. 분석이 없으면 null이다. */
+    val analysis: JobAnalysisContent?,
+    /** 분석이 지금 본문으로 만든 것인지. 분석이 없거나 다시 분석을 기다리면 false다. */
+    val analysisCurrent: Boolean,
+    /** 운영자가 고친 분석이면 고친 일시다. AI 서버 분석이거나 분석이 없으면 null이다. */
+    val analysisEditedAt: LocalDateTime? = null,
+    /** 운영자가 공고 내용을 마지막으로 고친 일시다. 값이 있으면 AI 서버의 다시 수집이 내용과 원문을 바꾸지 않는다. */
+    val contentEditedAt: LocalDateTime? = null,
 ) {
     companion object {
-        internal fun from(job: Job, metric: JobMetricDto, sourceHtml: String?): AdminJobResult = AdminJobResult(
+        internal fun from(
+            job: Job,
+            metric: JobMetricDto,
+            sourceHtml: String?,
+            analysis: JobAnalysisViewDto?,
+        ): AdminJobResult = AdminJobResult(
             summary = AdminJobSummary.from(job, metric),
             parentCompanyName = job.parentCompanyName,
             industry = job.industry,
@@ -152,6 +170,10 @@ data class AdminJobResult(
             recruitmentNotice = job.recruitmentNotice,
             sourceUrl = job.sourceUrl,
             sourceHtml = sourceHtml,
+            analysis = analysis?.content,
+            analysisCurrent = analysis?.current ?: false,
+            analysisEditedAt = analysis?.editedAt,
+            contentEditedAt = job.contentEditedAt,
         )
     }
 }

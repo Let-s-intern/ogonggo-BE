@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.job.presentation.request
 
+import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.adminapi.job.business.AiJobAnalysisCommand
 import com.ogonggo.core.job.domain.JobAnalysisContent
 import io.swagger.v3.oas.annotations.media.Schema
@@ -8,7 +9,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 
-private const val TEXT_MAX = 1000
+private const val TEXT_MAX = JobAnalysisContent.TEXT_MAX_LENGTH
 
 /** AI 서버가 만든 공고 분석이다. 칸 이름과 개수는 사용자 상세 응답의 `analysis`와 같다. */
 data class AiJobAnalysisRequest(
@@ -36,6 +37,7 @@ data class AiJobAnalysisRequest(
         content = analysis.toContent(),
     )
 
+    /** 공고 분석의 칸이다. AI 서버 저장, 관리자 상세 응답(`analysis`), 관리자 분석 수정 본문이 같은 모양을 쓴다. */
     data class Analysis(
         @field:Size(max = JobAnalysisContent.MAX_TASKS)
         @field:Valid
@@ -57,7 +59,17 @@ data class AiJobAnalysisRequest(
         @field:Valid
         val competencies: List<Competency>,
     ) {
-        fun toContent(): JobAnalysisContent = JobAnalysisContent(
+        /**
+         * 목록 원소(`required`·`preferred`의 글, 역량 `experiences`)의 공백·길이는 Bean Validation이 보지 못해
+         * 도메인이 거절하고, 그 거절을 다른 검증 오류와 같은 400으로 알린다.
+         */
+        fun toContent(): JobAnalysisContent = try {
+            createContent()
+        } catch (exception: IllegalArgumentException) {
+            throw InvalidRequestFieldException("analysis", exception.message ?: "공고 분석 값이 올바르지 않습니다.")
+        }
+
+        private fun createContent(): JobAnalysisContent = JobAnalysisContent(
             tasks = tasks.map { JobAnalysisContent.Task(it.tag, it.text) },
             required = required,
             preferred = preferred,
@@ -77,6 +89,21 @@ data class AiJobAnalysisRequest(
                 JobAnalysisContent.Competency(it.name, it.quote, it.description, it.experiences)
             },
         )
+
+        companion object {
+            fun from(content: JobAnalysisContent): Analysis = Analysis(
+                tasks = content.tasks.map { Task(it.tag, it.text) },
+                required = content.required,
+                preferred = content.preferred,
+                employment = content.employment.let {
+                    Employment(Fact.from(it.type), Fact.from(it.conversion), Fact.from(it.salary), Fact.from(it.affiliation))
+                },
+                submission = content.submission.let {
+                    Submission(Fact.from(it.documents), Fact.from(it.essay), Fact.from(it.process), Fact.from(it.deadline))
+                },
+                competencies = content.competencies.map { Competency(it.name, it.quote, it.description, it.experiences) },
+            )
+        }
     }
 
     data class Task(
@@ -91,6 +118,10 @@ data class AiJobAnalysisRequest(
     ) {
         fun toFact(): JobAnalysisContent.Fact =
             JobAnalysisContent.Fact(value = value?.takeIf(String::isNotBlank), note = note?.takeIf(String::isNotBlank))
+
+        companion object {
+            fun from(fact: JobAnalysisContent.Fact): Fact = Fact(value = fact.value, note = fact.note)
+        }
     }
 
     data class Employment(

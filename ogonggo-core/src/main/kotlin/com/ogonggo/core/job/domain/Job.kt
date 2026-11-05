@@ -378,6 +378,42 @@ class Job internal constructor(
     var deletedAt: LocalDateTime? = null /* 공고 삭제 일시 */
         protected set
 
+    /**
+     * 운영자가 게시된 공고를 직접 훑어보고 확인했다는 기록이다(검수 완료). 검수 상태([reviewStatus])는 기업회원 공고의
+     * 게시 전 승인이라 다른 개념이다. 노출과 무관하며, 운영자가 내용을 고쳐도 지우지 않는다. "누가 언제 봤다"는 기록이기 때문이다.
+     * AI 서버가 다시 수집해 본문이나 원문이 바뀌면 운영자가 본 내용이 아니므로 지운다.
+     * 검수 완료·해제는 공고 내용이 아니라 수정 일시([updatedAt])를 바꾸지 않도록 `JobManager`의 대상 UPDATE로만 쓴다.
+     */
+    @Column(name = "inspected_at")
+    var inspectedAt: LocalDateTime? = null /* 검수 완료 일시 */
+        protected set
+
+    @Column(name = "inspected_by_user_id")
+    var inspectedByUserId: Long? = null /* 검수 완료한 관리자 식별자 */
+        protected set
+
+    /**
+     * 기업회원 공고가 처음 검수 승인되어 게시된 일시다. 다시 승인해도 바꾸지 않는다. 수집 공고와 이 칸을 두기 전에 승인한 공고는 null이다.
+     * 기업회원 공고는 승인되어야 사용자에게 보이므로, 사용자에게 보이는 등록 일시([publicRegisteredAt])로 쓴다.
+     */
+    @Column(name = "first_approved_at")
+    var firstApprovedAt: LocalDateTime? = null /* 처음 검수 승인 일시 */
+        protected set
+
+    /**
+     * 운영자가 관리자 콘솔에서 공고 내용(제목·본문·공고 정보·원문)을 마지막으로 고친 일시와 관리자다.
+     * 운영자 수정은 크롤링·AI 값을 바로잡는 마지막 방어선이라, 값이 있는 동안 AI 서버의 다시 수집은 공고 내용과 원문을 바꾸지 않는다.
+     * 자동으로 풀리지 않는다. 원문 페이지가 바뀌었는지 서버가 알 수 없고, 운영자가 고친 내용을 조용히 덮는 것보다
+     * 다시 수집이 반영되지 않는 쪽이 덜 위험하기 때문이다.
+     */
+    @Column(name = "content_edited_at")
+    var contentEditedAt: LocalDateTime? = null /* 운영자가 공고 내용을 마지막으로 고친 일시 */
+        protected set
+
+    @Column(name = "content_edited_by_user_id")
+    var contentEditedByUserId: Long? = null /* 공고 내용을 마지막으로 고친 관리자 식별자 */
+        protected set
+
     fun update(
         companyName: String,
         parentCompanyName: String?,
@@ -473,6 +509,17 @@ class Job internal constructor(
      * 제목과 본문 칸 중 넘어온 것만 바꾼다. 본문 값이 null이면 그 칸을 비운다.
      * 수집한 공고도 고칠 수 있다. 크롤러가 원문 구조를 잘못 읽어 왔을 때 통째로 내리지 않게 하기 위해서다.
      */
+    /** 운영자가 공고 내용을 고쳤다. 마지막으로 고친 일시와 관리자를 남긴다. */
+    fun markContentEdited(userId: Long, now: LocalDateTime) {
+        checkNotDeleted()
+        require(userId > 0) { "관리자 식별자는 양수여야 합니다." }
+        contentEditedAt = now
+        contentEditedByUserId = userId
+    }
+
+    /** 운영자가 고친 내용이 있는지. 참이면 AI 서버의 다시 수집이 공고 내용과 원문을 바꾸지 않는다. */
+    fun isContentEditedByAdmin(): Boolean = contentEditedAt != null
+
     fun editContent(title: String?, contents: Map<JobContentField, String?>) {
         checkNotDeleted()
         require(title == null || title.isNotBlank()) { "채용공고 제목은 비어 있을 수 없습니다." }
@@ -559,8 +606,17 @@ class Job internal constructor(
     }
 
     /** 승인하면 곧바로 노출한다. 승인 결과를 알릴 경로가 없어 다시 게시하게 하면 공고가 비노출로 남는다. */
-    fun approveReview() {
+    /**
+     * 사용자에게 보이는 등록 일시다. 기업회원 공고는 승인 전에 보이지 않으므로 처음 승인한 일시이고, 그 밖에는 등록 일시([createdAt])다.
+     * 수집 공고는 등록과 함께 게시된다. 관리자 화면의 등록 일시는 오공고에 들어온 시각이라 늘 [createdAt]이다.
+     */
+    fun publicRegisteredAt(): LocalDateTime = firstApprovedAt ?: createdAt
+
+    fun approveReview(now: LocalDateTime) {
         checkReviewable()
+        if (firstApprovedAt == null) {
+            firstApprovedAt = now
+        }
         reviewStatus = ContentReviewStatus.APPROVED
         publicationStatus = JobPublicationStatus.PUBLISHED
     }

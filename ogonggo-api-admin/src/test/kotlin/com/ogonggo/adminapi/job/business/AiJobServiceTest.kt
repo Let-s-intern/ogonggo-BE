@@ -15,6 +15,7 @@ import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.JobSourceManager
+import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.job.implement.JobTagAppender
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
@@ -72,8 +73,10 @@ class AiJobServiceTest {
         null
     })
 
+    private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-14T03:00:00Z"), ZoneId.of("Asia/Seoul"))
-    private val service = AiJobService(jobReader, jobAppender, jobManager, jobTagAppender, jobSourceManager, clock)
+    private val service =
+        AiJobService(jobReader, jobAppender, jobManager, jobTagAppender, jobSourceManager, jobSourceReader, clock)
 
     @Test
     fun `수집한 공고를 검수 없이 게시 상태로 저장하고 보낸 값을 그대로 옮긴다`() {
@@ -139,6 +142,53 @@ class AiJobServiceTest {
 
         assertEquals(listOf("update"), managerCalls)
         assertEquals(listOf(JOB_ID to "<h2>주요 업무</h2><p>백엔드 개발</p>"), savedSources)
+    }
+
+    @Test
+    fun `운영자가 내용을 고친 공고는 다시 수집해도 내용과 원문을 바꾸지 않고 성공한다`() {
+        // given
+        val job = stubCrawledJob()
+        Mockito.`when`(job.isContentEditedByAdmin()).thenReturn(true)
+
+        // when
+        service.replace(JOB_ID, command(title = "AI가 다시 뽑은 제목"))
+        service.changeSourceHtml(JOB_ID, "<p>다시 받은 원문</p>")
+
+        // then
+        assertNull(updatedCommand)
+        assertEquals(emptyList<String>(), managerCalls)
+        assertEquals(emptyList<Pair<Long, String>>(), savedSources)
+    }
+
+    @Test
+    fun `검수 완료한 공고의 본문이 다시 수집으로 바뀌면 검수 완료를 지운다`() {
+        // given
+        val job = stubCrawledJob()
+        Mockito.`when`(job.inspectedAt).thenReturn(LocalDateTime.of(2026, 9, 14, 9, 0))
+        Mockito.`when`(job.contentHash()).thenReturn("before", "after")
+
+        // when
+        service.replace(JOB_ID, command(title = "바뀐 제목", sourceHtml = null))
+
+        // then
+        assertEquals(listOf("update", "clearInspection"), managerCalls)
+    }
+
+    @Test
+    fun `검수 완료한 공고의 원문이 다시 수집으로 바뀌면 검수 완료를 지우고 그대로면 지킨다`() {
+        // given
+        val job = stubCrawledJob()
+        Mockito.`when`(job.inspectedAt).thenReturn(LocalDateTime.of(2026, 9, 14, 9, 0))
+        Mockito.`when`(jobSourceReader.readHtml(JOB_ID)).thenReturn("<p>예전 원문</p>")
+
+        // when
+        service.replace(JOB_ID, command(sourceHtml = "<p>예전 원문</p>"))
+        val unchanged = managerCalls.toList()
+        service.replace(JOB_ID, command(sourceHtml = "<p>새 원문</p>"))
+
+        // then
+        assertEquals(listOf("update"), unchanged)
+        assertEquals(listOf("update", "update", "clearInspection"), managerCalls)
     }
 
     @Test
@@ -210,10 +260,13 @@ class AiJobServiceTest {
         assertEquals(JOB_ID, service.getJobId(SOURCE_URL))
     }
 
-    private fun stubCrawledJob() {
+    private fun stubCrawledJob(): Job {
         val job = Mockito.mock(Job::class.java)
+        Mockito.`when`(job.id).thenReturn(JOB_ID)
         Mockito.`when`(job.sourceUrl).thenReturn(SOURCE_URL)
+        Mockito.`when`(job.contentHash()).thenReturn("hash")
         Mockito.`when`(jobReader.readCrawledForUpdate(JOB_ID)).thenReturn(job)
+        return job
     }
 
     private fun command(

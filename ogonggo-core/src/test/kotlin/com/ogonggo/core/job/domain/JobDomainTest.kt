@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDateTime
 
 class JobDomainTest {
@@ -144,14 +145,35 @@ class JobDomainTest {
         val exception = assertThrows(ConflictException::class.java) { job.publish() }
         assertEquals(ContentReviewErrorCode.REVIEW_NOT_APPROVED, exception.errorCode)
 
-        job.approveReview()
+        job.approveReview(APPROVED_AT)
         assertEquals(ContentReviewStatus.APPROVED, job.reviewStatus)
         assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
     }
 
     @Test
+    fun `사용자에게 보이는 등록 일시는 기업회원 공고면 처음 승인한 일시이고 다시 승인해도 바뀌지 않는다`() {
+        // given
+        val company = createJob(ownerUserId = 7L)
+        val crawled = createJob()
+        ReflectionTestUtils.setField(company, "createdAt", CREATED_AT)
+        ReflectionTestUtils.setField(crawled, "createdAt", CREATED_AT)
+
+        // when
+        val beforeApproval = company.publicRegisteredAt()
+        company.approveReview(APPROVED_AT)
+        company.requestReview()
+        company.approveReview(APPROVED_AT.plusDays(3))
+
+        // then
+        assertEquals(CREATED_AT, beforeApproval)
+        assertEquals(APPROVED_AT, company.firstApprovedAt)
+        assertEquals(APPROVED_AT, company.publicRegisteredAt())
+        assertEquals(CREATED_AT, crawled.publicRegisteredAt())
+    }
+
+    @Test
     fun `반려하거나 검수 대기로 되돌리면 노출을 끈다`() {
-        val rejected = createJob(ownerUserId = 7L).apply { approveReview() }
+        val rejected = createJob(ownerUserId = 7L).apply { approveReview(APPROVED_AT) }
         rejected.rejectReview()
         assertEquals(ContentReviewStatus.REJECTED, rejected.reviewStatus)
         assertEquals(JobPublicationStatus.HIDDEN, rejected.publicationStatus)
@@ -161,7 +183,7 @@ class JobDomainTest {
         // 게시한 적 없는 초안은 숨김으로 바꾸지 않고 그대로 둔다.
         assertEquals(JobPublicationStatus.DRAFT, draft.publicationStatus)
 
-        val approved = createJob(ownerUserId = 7L).apply { approveReview() }
+        val approved = createJob(ownerUserId = 7L).apply { approveReview(APPROVED_AT) }
         approved.requestReview()
         assertEquals(ContentReviewStatus.PENDING, approved.reviewStatus)
         assertEquals(JobPublicationStatus.HIDDEN, approved.publicationStatus)
@@ -169,7 +191,7 @@ class JobDomainTest {
 
     @Test
     fun `수집한 공고는 검수할 수 없다`() {
-        val exception = assertThrows(ConflictException::class.java) { createJob().approveReview() }
+        val exception = assertThrows(ConflictException::class.java) { createJob().approveReview(APPROVED_AT) }
 
         assertEquals(ContentReviewErrorCode.CONTENT_NOT_REVIEWABLE, exception.errorCode)
     }
@@ -229,6 +251,24 @@ class JobDomainTest {
 
         assertEquals(firstDeletedAt, job.deletedAt)
         assertThrows(IllegalStateException::class.java) { job.publish() }
+    }
+
+    @Test
+    fun `운영자 내용 수정은 마지막으로 고친 일시와 관리자를 남긴다`() {
+        // given
+        val job = createJob()
+        val first = LocalDateTime.of(2026, 11, 4, 9, 0)
+
+        // when
+        val before = job.isContentEditedByAdmin()
+        job.markContentEdited(userId = 3L, now = first)
+        job.markContentEdited(userId = 5L, now = first.plusHours(1))
+
+        // then
+        assertEquals(false, before)
+        assertEquals(true, job.isContentEditedByAdmin())
+        assertEquals(first.plusHours(1), job.contentEditedAt)
+        assertEquals(5L, job.contentEditedByUserId)
     }
 
     @Test
@@ -317,4 +357,9 @@ class JobDomainTest {
         listSortKey = 0L,
         now = now,
     )
+
+    private companion object {
+        val CREATED_AT: LocalDateTime = LocalDateTime.of(2026, 11, 1, 9, 0)
+        val APPROVED_AT: LocalDateTime = LocalDateTime.of(2026, 11, 3, 14, 0)
+    }
 }

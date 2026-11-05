@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.job.business.AdminJobResult
 import com.ogonggo.adminapi.job.business.AdminJobSummary
 import com.ogonggo.adminapi.job.business.AdminTodayJobSummary
+import com.ogonggo.adminapi.job.presentation.request.AiJobAnalysisRequest
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.ogonggo.core.job.domain.JobApplicationMethod
 import com.ogonggo.core.job.domain.JobEducationLevel
@@ -45,6 +46,8 @@ data class AdminJobSummaryResponse(
     @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
+    @Schema(description = "검수 완료 일시(한국 시간). 미검수면 null입니다. 기업회원 공고의 검수 상태(reviewStatus)와 다른 값입니다.")
+    val inspectedAt: LocalDateTime?,
 ) {
     companion object {
         internal fun from(result: AdminJobSummary): AdminJobSummaryResponse = AdminJobSummaryResponse(
@@ -70,6 +73,7 @@ data class AdminJobSummaryResponse(
             reviewStatus = result.reviewStatus,
             recruitmentStatus = result.recruitmentStatus,
             registeredAt = result.registeredAt,
+            inspectedAt = result.inspectedAt,
         )
     }
 }
@@ -126,6 +130,8 @@ data class AdminJobDetailResponse(
     @Schema(description = "저장된 모집 상태입니다. 모집 종료 일시가 지난 공고는 매시 정각에 CLOSED로 바뀝니다.")
     val recruitmentStatus: JobRecruitmentStatus,
     val registeredAt: LocalDateTime,
+    @Schema(description = "검수 완료 일시(한국 시간). 미검수면 null입니다. 기업회원 공고의 검수 상태(reviewStatus)와 다른 값입니다.")
+    val inspectedAt: LocalDateTime?,
     val companyAndTeamIntroduction: String?,
     val responsibilities: String?,
     val qualifications: String?,
@@ -140,6 +146,14 @@ data class AdminJobDetailResponse(
     val sourceUrl: String?,
     @Schema(description = "채용공고 원문 HTML입니다. 원문 페이지의 본문 영역을 안전한 태그만 남긴 것이며, 원문이 없는 공고와 기업회원 공고는 null입니다.")
     val sourceHtml: String?,
+    @Schema(description = "저장된 공고 분석입니다. 사용자 상세의 analysis와 같은 칸이며 PUT /api/v1/admin/jobs/{jobId}/analysis 본문과도 같습니다. 사용자 상세와 달리 본문이 바뀌어도 저장된 분석을 싣고 analysisCurrent로 알립니다. 분석이 없으면 null입니다.")
+    val analysis: AiJobAnalysisRequest.Analysis?,
+    @Schema(description = "analysis가 지금 본문(제목과 본문 여덟 칸)으로 만든 것인지입니다. false면 사용자에게 보이지 않고 AI 서버의 다시 분석을 기다립니다. 분석이 없으면 false입니다.")
+    val analysisCurrent: Boolean,
+    @Schema(description = "운영자가 고친 분석이면 고친 일시(한국 시간)입니다. AI 서버가 만든 분석이거나 분석이 없으면 null입니다. 본문이 바뀌기 전까지 AI 서버는 운영자가 고친 분석을 덮어쓰지 않습니다.")
+    val analysisEditedAt: LocalDateTime?,
+    @Schema(description = "운영자가 공고 내용(제목·본문·공고 정보·원문)을 마지막으로 고친 일시(한국 시간)입니다. 값이 있으면 AI 서버가 다시 수집해도 공고 내용과 원문을 바꾸지 않습니다. 고친 적이 없으면 null입니다.")
+    val contentEditedAt: LocalDateTime?,
 ) {
     companion object {
         internal fun from(result: AdminJobResult): AdminJobDetailResponse {
@@ -175,6 +189,7 @@ data class AdminJobDetailResponse(
                 reviewStatus = summary.reviewStatus,
                 recruitmentStatus = summary.recruitmentStatus,
                 registeredAt = summary.registeredAt,
+                inspectedAt = summary.inspectedAt,
                 companyAndTeamIntroduction = result.companyAndTeamIntroduction,
                 responsibilities = result.responsibilities,
                 qualifications = result.qualifications,
@@ -188,6 +203,10 @@ data class AdminJobDetailResponse(
                 inquiryEmail = result.inquiryEmail,
                 sourceUrl = result.sourceUrl,
                 sourceHtml = result.sourceHtml,
+                analysis = result.analysis?.let(AiJobAnalysisRequest.Analysis::from),
+                analysisCurrent = result.analysisCurrent,
+                analysisEditedAt = result.analysisEditedAt,
+                contentEditedAt = result.contentEditedAt,
             )
         }
     }

@@ -2,6 +2,7 @@ package com.ogonggo.core.job.domain
 
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import java.time.LocalDate
 
 /**
  * 게시 상태와 무관하게 모든 미삭제 채용공고를 관리할 때 고르는 선택 필터다.
@@ -19,6 +20,11 @@ data class JobManagementSearchCondition(
     val jobRoles: Set<JobRole> = emptySet(),
     /** 회사명 또는 공고 제목에 포함되는지로 찾는다. 비어 있으면 검색하지 않는다. */
     val keyword: String? = null,
+    /** 등록일(한국 시간) 범위다. 두 날짜를 모두 포함한다. */
+    val registeredFrom: LocalDate? = null,
+    val registeredTo: LocalDate? = null,
+    /** true면 검수 완료한 공고만, false면 미검수 공고만 고른다. */
+    val inspected: Boolean? = null,
 ) {
     companion object {
         val NONE = JobManagementSearchCondition()

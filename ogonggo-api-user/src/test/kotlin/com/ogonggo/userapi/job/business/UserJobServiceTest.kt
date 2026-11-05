@@ -59,6 +59,7 @@ class UserJobServiceTest {
     fun `게시된 공고를 조회해 사용자 결과로 변환한다`() {
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(job.id).thenReturn(1L)
+        Mockito.`when`(job.publicRegisteredAt()).thenReturn(REGISTERED_AT)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
@@ -92,6 +93,7 @@ class UserJobServiceTest {
         assertEquals(3L, result.bookmarkCount)
         assertEquals(1L, result.commentCount)
         assertEquals("<h2>주요 업무</h2>", result.sourceHtml)
+        assertEquals(REGISTERED_AT, result.registeredAt)
         Mockito.verify(jobReader).readPublished(1L)
     }
 
@@ -416,6 +418,7 @@ class UserJobServiceTest {
 
     private fun createJobMock(id: Long = 1L): Job = Mockito.mock(Job::class.java).also { job ->
         Mockito.`when`(job.id).thenReturn(id)
+        Mockito.`when`(job.publicRegisteredAt()).thenReturn(REGISTERED_AT)
         Mockito.`when`(job.companyName).thenReturn("오공고")
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
@@ -427,5 +430,6 @@ class UserJobServiceTest {
 
     companion object {
         private const val USER_ID = 17L
+        private val REGISTERED_AT = LocalDateTime.of(2026, 11, 4, 4, 10)
     }
 }

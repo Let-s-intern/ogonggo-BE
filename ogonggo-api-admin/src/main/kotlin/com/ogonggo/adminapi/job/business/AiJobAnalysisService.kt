@@ -40,10 +40,14 @@ class AiJobAnalysisService(
         return targets.take(size)
     }
 
-    /** 분석을 저장한다. 분석한 본문이 지금 본문과 다르면 저장하지 않고 충돌로 알린다. 공고가 지워졌으면 찾지 않는다. */
+    /**
+     * 분석을 저장한다. 분석한 본문이 지금 본문과 다르면 저장하지 않고 충돌로 알린다. 공고가 지워졌으면 찾지 않는다.
+     * 공고 행을 잠가 운영자 분석 수정·공고 수정과 차례로 돈다. 그래야 운영자가 막 고친 분석을 덮지 않고,
+     * 분석이 없던 공고에 두 저장이 겹쳐 `job_id` 유일 제약으로 실패하지 않는다.
+     */
     @Transactional
     fun saveAnalysis(jobId: Long, command: AiJobAnalysisCommand) {
-        val job = jobReader.read(jobId)
+        val job = jobReader.readForUpdate(jobId)
         if (job.contentHash() != command.contentHash) {
             throw ConflictException(JobErrorCode.JOB_ANALYSIS_OUTDATED)
         }

@@ -1,6 +1,6 @@
 # 오공고 라이프사이클
 
-- 최종 변경일: 2026-10-28
+- 최종 변경일: 2026-11-05
 - 예상 독자: 상태가 있는 엔티티를 고치거나 리뷰하는 개발자
 - 리뷰 상태: 팀 리뷰 필요
 
@@ -15,9 +15,31 @@
 | 이미지 | [image-asset.html](lifecycles/image-asset.html) | 업로드 → 임시 → 첨부 순으로 바뀝니다. 첨부되지 않은 채 보존 기간이 지나면 정리 작업이 S3에서 지웁니다. |
 | 렛츠커리어 전송 대기 | [letscareer-outbox.html](lifecycles/letscareer-outbox.html) | 회원마다 한 행이고, 실패하면 대기로 남아 다음 실행에서 다시 보냅니다. 닉네임 전송 대기(`LetsCareerNicknameOutbox`)도 같은 방식으로 움직입니다. |
 | 렛츠커리어 콘텐츠 | [letscareer-content.html](lifecycles/letscareer-content.html) | 목록 상태와 태그 상태가 따로 움직입니다. 목록에 있고 태그가 최신이며 모집 기간인 콘텐츠만 공고별로 추천됩니다. 제목·설명이 바뀌면 다시 태그할 때까지 추천에서 빠집니다. |
+| 공고 분석 | [아래 상태도](#공고-분석) | AI 서버 분석과 운영자 수정이 본문 해시를 기준으로 움직입니다. 운영자가 고친 분석은 본문이 바뀌기 전까지 AI 서버가 덮어쓰지 못합니다. |
 | 알림 발송 기록 | [아래 상태도](#알림-발송-기록) | 발송 전에 `PROCESSING`으로 선점하며, stale 복구와 늦은 provider 결과를 attempt 단위로 구분합니다. |
 
 분리된 Archify 다이어그램의 `SRC` 배지를 누르면 근거가 된 코드 줄로 이동합니다. GitHub에서는 HTML이 렌더링되지 않으니 내려받아 브라우저로 엽니다. 알림 상태도의 근거는 [`Notification`](../../src/main/kotlin/com/ogonggo/core/notification/domain/Notification.kt)과 [`NotificationManager`](../../src/main/kotlin/com/ogonggo/core/notification/delivery/implement/NotificationManager.kt)입니다.
+
+### 공고 분석
+
+```mermaid
+stateDiagram-v2
+    [*] --> 분석없음: 공고 등록
+    분석없음 --> AI분석: AI 서버 저장
+    분석없음 --> 운영자수정: 관리자 분석 수정
+    AI분석 --> AI분석: AI 서버 저장(같은 본문, 다시 분석)
+    AI분석 --> 운영자수정: 관리자 분석 수정
+    운영자수정 --> 운영자수정: 관리자 분석 수정 / 관리자 본문 수정(새 해시로 옮김) / AI 서버 저장은 409
+    AI분석 --> 낡은분석: 본문 변경
+    운영자수정 --> 낡은분석: AI 서버 재수집으로 본문 변경
+    낡은분석 --> AI분석: AI 서버 다시 분석(운영자 수정 표시 지움)
+    낡은분석 --> 운영자수정: 관리자 분석 수정
+```
+
+- 상태는 칼럼 하나가 아니라 `job_analyses` 행의 유무, `content_hash`와 지금 본문 해시([`Job.contentHash`](../../src/main/kotlin/com/ogonggo/core/job/domain/Job.kt))의 일치, `edited_at` 유무로 정해집니다. 근거는 [`JobAnalysis`](../../src/main/kotlin/com/ogonggo/core/job/domain/JobAnalysis.kt)와 [`JobAnalysisManager`](../../src/main/kotlin/com/ogonggo/core/job/implement/JobAnalysisManager.kt)입니다.
+- 낡은 분석은 사용자 상세에 보이지 않고 AI 서버 분석 대상이 됩니다. 관리자 상세는 낡은 분석도 싣고 `analysisCurrent=false`로 알립니다.
+- 운영자 수정은 늘 지금 본문 해시로 저장하므로 곧바로 사용자에게 보입니다. 운영자가 관리자 콘솔에서 본문을 고치면 고친 분석을 새 본문 해시로 옮깁니다(`JobAnalysisManager.keepAdminEditCurrent`). 운영자가 내용을 고친 공고는 AI 서버 재수집이 본문을 바꾸지 않으므로, 운영자 수정이 낡는 것은 운영자가 분석만 고치고 내용은 고치지 않은 공고를 AI 서버가 다시 수집해 본문이 바뀐 경우뿐입니다. 본문 해시가 그대로인 동안 AI 서버 분석 대상에서 빠지고 AI 서버 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다(LC-3567).
+- 운영자 분석 수정과 AI 서버 저장은 공고 행을 잠가(`JobReader.readForUpdate`) 차례로 돕니다. 분석 행은 첫 저장 전에는 없어 잠글 수 없으므로 공고 행으로 묶습니다. 그래서 겹쳐 들어와도 AI 저장이 막 고친 운영자 수정을 지우지 않고, 첫 저장 둘이 `job_id` 유일 제약에 걸려 500이 나지 않습니다. 검증은 `concurrency` 태그의 `JobAnalysisConcurrencyTest`입니다.
 
 ### 알림 발송 기록
 
@@ -44,6 +66,8 @@ stateDiagram-v2
 | 공고·부트캠프 북마크 | 지원 단계 / 신청 단계 | 회원이 아무 단계로나 옮길 수 있어 전이 규칙이 없습니다. 북마크를 다시 하면 스크랩으로 돌아갑니다. |
 | 모집글 지원 기록 | 진행 단계 | 북마크와 같이 규칙 없이 옮깁니다. 삭제된 기록만 바꿀 수 없습니다. |
 | 공지, 취준고민 | 노출 / 숨김 | 운영자가 켜고 끄는 값 하나뿐입니다. |
+| 채용공고 검수 완료 `Job.inspectedAt` | 미검수 / 검수 완료 | 운영자가 켜고 끄는 값 하나뿐입니다. 이미 완료한 공고를 다시 완료해도 처음 시각과 관리자를 지킵니다. 노출·검수 상태와 따로 움직이며, 운영자 내용 수정은 이 값을 지우지 않습니다. AI 서버 재수집이 본문(제목과 본문 여덟 칸)이나 원문을 바꾸면 지웁니다. 검수 완료·해제는 공고 수정 일시(`updated_at`)를 바꾸지 않아 공고 분석 후보로 다시 읽히지 않습니다(LC-3567). |
+| 채용공고 운영자 내용 수정 `Job.contentEditedAt` | 수정 없음 / 운영자 수정 | 관리자 콘솔의 부분 수정이 제목·본문·공고 정보·원문을 하나라도 고치면 켜지고 마지막 시각과 관리자로 바뀝니다. 끄는 경로가 없습니다. 켜져 있는 동안 AI 서버 교체·원문 변경은 공고 내용과 원문을 바꾸지 않습니다(`AiJobService.replace`, LC-3567). |
 | 광고 문의 `AdvertisementInquiry` | 접수 / 연락함 / 집행 완료 / 반려 | 새 문의는 접수로 시작하고, 영업이 잘못 바꾼 상태를 되돌릴 수 있도록 어느 상태로든 옮깁니다. 전이 규칙이 없습니다. 메뉴의 오늘 문의 수는 반려한 문의를 빼고 세므로 반려로 바꾸면 줄고 반려에서 되돌리면 다시 늡니다. |
 
 ### 전체 토픽 구독 동기화

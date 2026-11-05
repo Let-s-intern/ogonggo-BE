@@ -64,7 +64,7 @@ class AiJobAnalysisServiceTest {
     @Test
     fun `분석한 본문이 지금 본문과 같으면 저장한다`() {
         val job = job(7, hash = "now")
-        Mockito.`when`(jobReader.read(7L)).thenReturn(job)
+        Mockito.`when`(jobReader.readForUpdate(7L)).thenReturn(job)
 
         service.saveAnalysis(7L, command(contentHash = "now"))
 
@@ -74,7 +74,7 @@ class AiJobAnalysisServiceTest {
     @Test
     fun `분석한 뒤로 본문이 바뀌었으면 저장하지 않고 충돌로 알린다`() {
         val job = job(7, hash = "now")
-        Mockito.`when`(jobReader.read(7L)).thenReturn(job)
+        Mockito.`when`(jobReader.readForUpdate(7L)).thenReturn(job)
 
         val exception = assertThrows<ConflictException> { service.saveAnalysis(7L, command(contentHash = "old")) }
 

@@ -96,6 +96,27 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     ): Int
 
     /**
+     * 검수 완료를 남긴다. 이미 완료한 공고는 처음 기록을 지킨다.
+     * 검수는 공고 내용이 아니라 운영 기록이라 수정 일시를 바꾸지 않는다. 수정 일시가 바뀌면 공고 분석 후보로 다시 읽힌다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update Job job
+        set job.inspectedAt = :now,
+            job.inspectedByUserId = :userId
+        where job.id = :jobId
+          and job.inspectedAt is null
+        """,
+    )
+    fun markInspected(@Param("jobId") jobId: Long, @Param("userId") userId: Long, @Param("now") now: LocalDateTime): Int
+
+    /** 검수 완료를 지운다. 수정 일시는 바꾸지 않는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Job job set job.inspectedAt = null, job.inspectedByUserId = null where job.id = :jobId")
+    fun clearInspection(@Param("jobId") jobId: Long): Int
+
+    /**
      * 정렬 키의 PICK 직군 비트([JobListSortKey.PICK_FIELD_BIT])를 넘어온 직군의 공고에 켠다.
      * 비트 연산은 MySQL과 H2의 문법이 달라 나머지 연산으로 비트가 꺼진 행만 골라 더한다.
      * 정렬 키는 공고 내용이 아니므로 수정 일시를 바꾸지 않는다. 공고 분석이 수정 일시로 다시 볼 공고를 고르기 때문이다.

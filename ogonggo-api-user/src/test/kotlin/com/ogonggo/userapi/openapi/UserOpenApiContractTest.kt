@@ -337,7 +337,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(todayJobs.at("/parameters").isMissingNode)
         // 항목은 목록 항목의 필드를 같은 높이에 펼치고 추천 문구를 더한다. 중첩된 job 필드로 드러나면 계약과 다르다.
         val todayJobProperties = document.at("/components/schemas/UserTodayJobSummaryResponse/properties")
-        listOf("id", "title", "bookmarked", "recommendationTitle", "recommendationDescription").forEach { field ->
+        listOf("id", "title", "bookmarked", "registeredAt", "recommendationTitle", "recommendationDescription").forEach { field ->
             assertTrue(todayJobProperties.has(field), field)
         }
         assertFalse(todayJobProperties.has("job"))
@@ -525,6 +525,9 @@ class UserOpenApiContractTest @Autowired constructor(
         assertFalse(jobDetailProperties.has("content"))
         assertTrue(jobDetailProperties.has("bookmarked"))
         assertTrue(document.at("/components/schemas/UserJobSummaryResponse/properties/bookmarked").isObject)
+        // 웹의 NEW 배지가 쓰는 등록 일시는 목록·상세 모두에 있다(LC-3567).
+        assertTrue(document.at("/components/schemas/UserJobSummaryResponse/properties/registeredAt").isObject)
+        assertTrue(document.at("/components/schemas/UserJobDetailResponse/properties/registeredAt").isObject)
         assertTrue(document.at("/components/schemas/UserBootcampSummaryResponse/properties/bookmarked").isObject)
         assertTrue(document.at("/components/schemas/UserBootcampDetailResponse/properties/bookmarked").isObject)
 
