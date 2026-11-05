@@ -112,10 +112,11 @@ class AdminJobService(
     /**
      * 운영자가 고친 공고 분석을 지금 본문에 대한 분석으로 저장한다. 사용자 상세에 바로 보인다.
      * 본문이 바뀌기 전까지 AI 서버는 이 분석을 덮어쓰지 못한다. 본문이 바뀌면 평소처럼 다시 분석된다.
+     * AI 서버 분석 저장과 같이 공고 행을 잠가 차례로 돈다.
      */
     @Transactional
     fun replaceAnalysis(jobId: Long, content: JobAnalysisContent, adminUserId: Long) {
-        jobAnalysisManager.edit(jobReader.read(jobId), content, adminUserId, LocalDateTime.now(clock))
+        jobAnalysisManager.edit(jobReader.readForUpdate(jobId), content, adminUserId, LocalDateTime.now(clock))
     }
 
     /** 노출·검수 상태는 바꾸지 않는다. 이미 검수 완료한 공고는 처음 확인한 시각과 관리자를 지킨다. */
