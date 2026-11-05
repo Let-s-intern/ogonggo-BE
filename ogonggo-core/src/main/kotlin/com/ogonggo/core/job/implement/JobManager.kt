@@ -81,9 +81,19 @@ class JobManager internal constructor(
 
     fun delete(job: Job, now: LocalDateTime) = change(job) { delete(now) }
 
-    fun markInspected(job: Job, userId: Long, now: LocalDateTime) = change(job) { markInspected(userId, now) }
+    /**
+     * 이미 검수 완료한 공고는 처음 확인한 시각과 관리자를 지킨다. 공고 수정 일시는 바꾸지 않는다.
+     * 공고를 잠가 읽은 뒤 부르며, 이 뒤로 [job] 객체는 영속성 컨텍스트에서 떨어진다.
+     */
+    fun markInspected(job: Job, userId: Long, now: LocalDateTime) {
+        require(userId > 0) { "관리자 식별자는 양수여야 합니다." }
+        jobRepository.markInspected(job.requiredId(), userId, now)
+    }
 
-    fun clearInspection(job: Job) = change(job) { clearInspection() }
+    /** 검수 완료가 없어도 성공한다. 공고 수정 일시는 바꾸지 않는다. */
+    fun clearInspection(job: Job) {
+        jobRepository.clearInspection(job.requiredId())
+    }
 
     /** 모집 종료 일시가 지난 모집 중 공고를 마감하고 마감한 건수를 돌려준다. 직접 마감한 것이 아니므로 마감 처리 일시는 남기지 않는다. */
     fun closeExpired(now: LocalDateTime): Int = jobRepository.closeExpired(now)

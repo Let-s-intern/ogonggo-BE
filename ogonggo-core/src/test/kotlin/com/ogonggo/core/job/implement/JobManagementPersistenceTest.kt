@@ -70,6 +70,34 @@ internal class JobManagementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `검수 완료와 해제는 처음 확인한 기록을 지키고 공고 수정 일시를 바꾸지 않는다`() {
+        // given
+        val jobId = checkNotNull(jobAppender.append(command(publicationStatus = JobPublicationStatus.PUBLISHED)).id)
+        entityManager.flush()
+        entityManager.clear()
+        val updatedAt = jobReader.read(jobId).updatedAt
+
+        // when
+        jobManager.markInspected(jobReader.readForUpdate(jobId), userId = 3L, now = NOW)
+        jobManager.markInspected(jobReader.readForUpdate(jobId), userId = 5L, now = NOW.plusHours(1))
+        entityManager.flush()
+        entityManager.clear()
+        val inspected = jobReader.read(jobId).let { Triple(it.inspectedAt, it.inspectedByUserId, it.updatedAt) }
+        entityManager.clear()
+        jobManager.clearInspection(jobReader.readForUpdate(jobId))
+        jobManager.clearInspection(jobReader.readForUpdate(jobId))
+        entityManager.flush()
+        entityManager.clear()
+        val cleared = jobReader.read(jobId)
+
+        // then
+        assertEquals(Triple(NOW, 3L, updatedAt), inspected)
+        assertNull(cleared.inspectedAt)
+        assertNull(cleared.inspectedByUserId)
+        assertEquals(updatedAt, cleared.updatedAt)
+    }
+
+    @Test
     fun `관리 목록은 게시 상태와 무관하게 미삭제 공고를 읽고 필터를 AND로 묶는다`() {
         val crawledPublished = jobAppender.append(command(publicationStatus = JobPublicationStatus.PUBLISHED))
         val companyPending = jobAppender.append(command(ownerUserId = OWNER_ID))

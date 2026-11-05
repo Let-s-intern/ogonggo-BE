@@ -232,37 +232,6 @@ class JobDomainTest {
     }
 
     @Test
-    fun `검수 완료는 처음 확인한 시각과 관리자를 지키고 해제는 반복해도 같다`() {
-        // given
-        val job = createJob(publicationStatus = JobPublicationStatus.PUBLISHED)
-        val first = LocalDateTime.of(2026, 11, 4, 9, 0)
-
-        // when
-        job.markInspected(userId = 3L, now = first)
-        job.markInspected(userId = 5L, now = first.plusHours(1))
-
-        // then
-        assertEquals(first, job.inspectedAt)
-        assertEquals(3L, job.inspectedByUserId)
-        assertEquals(JobPublicationStatus.PUBLISHED, job.publicationStatus)
-
-        job.clearInspection()
-        job.clearInspection()
-        assertNull(job.inspectedAt)
-        assertNull(job.inspectedByUserId)
-    }
-
-    @Test
-    fun `내용을 고쳐도 검수 완료 기록은 남는다`() {
-        val job = createJob()
-        job.markInspected(userId = 3L, now = LocalDateTime.of(2026, 11, 4, 9, 0))
-
-        job.editContent(title = "바뀐 제목", contents = mapOf(JobContentField.QUALIFICATIONS to "바뀐 자격 요건"))
-
-        assertEquals(LocalDateTime.of(2026, 11, 4, 9, 0), job.inspectedAt)
-    }
-
-    @Test
     fun `등록 경로는 비즈니스 등록만 소유자가 있고 고용24 수집만 외부 식별값을 가진다`() {
         // 등록 경로를 정하지 않으면 소유자 유무로 정한다.
         assertEquals(ContentSource.CRAWLER, createJob().source)

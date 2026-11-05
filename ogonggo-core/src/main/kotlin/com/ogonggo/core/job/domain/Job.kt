@@ -380,8 +380,8 @@ class Job internal constructor(
 
     /**
      * 운영자가 게시된 공고를 직접 훑어보고 확인했다는 기록이다(검수 완료). 검수 상태([reviewStatus])는 기업회원 공고의
-     * 게시 전 승인이라 다른 개념이다. 노출과 무관하며, 내용을 고치거나 AI 서버가 다시 수집해도 지우지 않는다.
-     * "누가 언제 봤다"는 기록이기 때문이다.
+     * 게시 전 승인이라 다른 개념이다. 노출과 무관하며, 운영자가 내용을 고쳐도 지우지 않는다. "누가 언제 봤다"는 기록이기 때문이다.
+     * 검수 완료·해제는 공고 내용이 아니라 수정 일시([updatedAt])를 바꾸지 않도록 `JobManager`의 대상 UPDATE로만 쓴다.
      */
     @Column(name = "inspected_at")
     var inspectedAt: LocalDateTime? = null /* 검수 완료 일시 */
@@ -563,22 +563,6 @@ class Job internal constructor(
             closedAt = now
         }
         recruitmentStatus = JobRecruitmentStatus.CLOSED
-    }
-
-    /** 이미 검수 완료한 공고는 처음 확인한 시각과 관리자를 지킨다. 같은 요청을 반복해도 결과가 같다. */
-    fun markInspected(userId: Long, now: LocalDateTime) {
-        checkNotDeleted()
-        require(userId > 0) { "관리자 식별자는 양수여야 합니다." }
-        if (inspectedAt == null) {
-            inspectedAt = now
-            inspectedByUserId = userId
-        }
-    }
-
-    fun clearInspection() {
-        checkNotDeleted()
-        inspectedAt = null
-        inspectedByUserId = null
     }
 
     fun delete(now: LocalDateTime) {
