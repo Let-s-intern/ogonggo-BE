@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.Job
@@ -33,9 +34,10 @@ class CompanyJobServiceTest {
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val jobAppender = Mockito.mock(JobAppender::class.java)
     private val jobManager = Mockito.mock(JobManager::class.java)
+    private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZONE)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
-    private val service = CompanyJobService(userReader, jobReader, jobAppender, jobManager, clock, eventPublisher)
+    private val service = CompanyJobService(userReader, jobReader, jobAppender, jobManager, imageAssetManager, clock, eventPublisher)
 
     @Test
     fun `등록한 공고에 소유자를 채운다`() {
@@ -82,6 +84,45 @@ class CompanyJobServiceTest {
         assertEquals(UserErrorCode.COMPANY_ROLE_REQUIRED, exception.errorCode)
         Mockito.verifyNoInteractions(jobAppender)
         Mockito.verifyNoInteractions(eventPublisher)
+        Mockito.verifyNoInteractions(imageAssetManager)
+    }
+
+    @Test
+    fun `등록하면 로고와 대표 이미지로 올린 이미지를 첨부해 정리 작업이 지우지 않게 한다`() {
+        // given
+        givenAccount(role = UserRole.COMPANY)
+        val saved = Mockito.mock(Job::class.java)
+        Mockito.`when`(saved.id).thenReturn(JOB_ID)
+        val withImages = command().copy(logoUrl = LOGO_URL, coverImageUrl = COVER_URL)
+        Mockito.`when`(jobAppender.append(withImages.copy(ownerUserId = USER_ID))).thenReturn(saved)
+
+        // when
+        service.create(USER_ID, withImages)
+
+        // then
+        Mockito.verify(imageAssetManager).attachImageUrls(USER_ID, listOf(LOGO_URL, COVER_URL))
+    }
+
+    @Test
+    fun `수정하면 바꾼 로고와 대표 이미지를 첨부한다`() {
+        // given
+        givenAccount(role = UserRole.COMPANY)
+        Mockito.`when`(jobReader.readOwnedForUpdate(USER_ID, JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
+        val update = JobUpdateDto(
+            companyName = "오공고",
+            title = "백엔드 개발자",
+            employmentType = JobEmploymentType.FULL_TIME,
+            experienceType = JobExperienceType.EXPERIENCED,
+            recruitmentType = JobRecruitmentType.PERIOD,
+            coverImageUrl = COVER_URL,
+            logoUrl = LOGO_URL,
+        )
+
+        // when
+        service.update(USER_ID, JOB_ID, update)
+
+        // then
+        Mockito.verify(imageAssetManager).attachImageUrls(USER_ID, listOf(LOGO_URL, COVER_URL))
     }
 
     @Test
@@ -171,5 +212,7 @@ class CompanyJobServiceTest {
         private const val USER_ID = 17L
         private const val JOB_ID = 3L
         private const val ACCOUNT_EMAIL = "company@example.com"
+        private const val LOGO_URL = "https://bucket.example.com/ogonggo/etc/logo.png"
+        private const val COVER_URL = "https://bucket.example.com/ogonggo/etc/cover.png"
     }
 }

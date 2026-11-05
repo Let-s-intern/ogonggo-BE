@@ -25,6 +25,8 @@ import org.springframework.http.ResponseEntity
 
 private const val COMPANY_FORBIDDEN_DESCRIPTION =
     "COMPANY_ROLE_REQUIRED, USER_SUSPENDED 또는 USER_WITHDRAWN"
+private const val IMAGE_NOT_AVAILABLE_DESCRIPTION =
+    "IMAGE_ASSET_NOT_AVAILABLE: 로고·대표 이미지 URL이 오공고에 올린 이미지인데 정리 작업이 이미 지웠거나 지우는 중입니다. 다시 올린 이미지 URL로 저장하세요. 외부 URL은 막지 않습니다."
 private const val JOB_NOT_FOUND_DESCRIPTION =
     "JOB_NOT_FOUND: 채용공고를 찾을 수 없거나 내 공고가 아닙니다."
 
@@ -42,6 +44,11 @@ interface CompanyJobApi {
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "등록 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = IMAGE_NOT_AVAILABLE_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "403",
                 description = COMPANY_FORBIDDEN_DESCRIPTION,
@@ -93,6 +100,11 @@ summary = "내 채용공고 수정", description = "보낸 값으로 공고 전�
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = IMAGE_NOT_AVAILABLE_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = JOB_NOT_FOUND_DESCRIPTION,

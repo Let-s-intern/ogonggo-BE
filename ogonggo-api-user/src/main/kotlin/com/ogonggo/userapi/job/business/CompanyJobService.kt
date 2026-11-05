@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.job.business
 
 import com.ogonggo.core.error.ForbiddenException
+import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
@@ -32,6 +33,7 @@ class CompanyJobService(
     private val jobReader: JobReader,
     private val jobAppender: JobAppender,
     private val jobManager: JobManager,
+    private val imageAssetManager: ImageAssetManager,
     private val clock: Clock,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
@@ -40,6 +42,7 @@ class CompanyJobService(
     fun create(userId: Long, command: JobAppendDto): Long {
         val account = verifyCompany(userId)
         val job = jobAppender.append(command.copy(ownerUserId = userId))
+        imageAssetManager.attachImageUrls(userId, listOf(command.logoUrl, command.coverImageUrl))
         eventPublisher.publishEvent(
             CompanyPostingRegisteredEvent(
                 type = CompanyPostingType.JOB,
@@ -71,6 +74,7 @@ class CompanyJobService(
         val job = jobReader.readOwnedForUpdate(userId, jobId)
         val now = LocalDateTime.now(clock)
         jobManager.update(job, command, now)
+        imageAssetManager.attachImageUrls(userId, listOf(command.logoUrl, command.coverImageUrl))
         jobManager.requestReview(job, now)
     }
 
