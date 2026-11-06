@@ -340,6 +340,18 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 광고주 목록의 광고 수(`bannerCount` 등)에는 채널 광고를 넣지 않습니다.
 - 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다. 없는 채널·유형·채널 광고는 404 `AD_CHANNEL_NOT_FOUND`·`AD_CHANNEL_FORMAT_NOT_FOUND`·`CHANNEL_AD_NOT_FOUND`입니다.
 
+### 관리자 캘린더
+
+관리자 콘솔 헤더 `캘린더` 탭의 API입니다. 경로는 [REST API 설계](rest-api-design.md#관리자-캘린더)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3579) / 리뷰 상태: 팀 리뷰 필요
+- 할 일 목록은 날짜(시작·끝 포함)가 `[from, to)`와 겹치는(`startDate < to`이고 `endDate >= from`) 할 일을 `startDate`, `id` 순의 배열로 줍니다. 할 일은 운영자 모두가 같은 목록을 보고 쓴 사람을 싣지 않습니다. `content`는 없으면 `null`입니다.
+- 광고 일정(`GET /api/v1/admin/ad-calendar`)의 `data`는 `contracts`, `banners`, `adPostings`, `channelAds` 네 배열입니다. 계약은 `startAt < to 00:00`이고 `endAt > from 00:00`인 것을 시작, `id` 순으로, 한 건은 `id`, `name`, `startAt`, `endAt`, `advertiserId`, `advertiser`(`id`, `name`, `type`, 없으면 `null`), `amount`, `paid`, `products`입니다.
+- 배너·광고 공고는 같은 조건에서 `startAt`·`endAt`이 `null`이면 그쪽이 열린 것으로 보고, 꺼진 것도 담아 자리 선언 순서, 자리 안 순서로 줍니다. 한 건은 관리자 배너·광고 공고 목록 항목과 같습니다.
+- 채널 광고는 `postDate` ~ `endDate ?? postDate`(둘 다 포함)가 `[from, to)`와 겹치는 것을 모든 플랫폼, 취소한 것까지 `postDate`, `id` 순으로 줍니다. 한 건은 관리자 채널 광고 목록 항목과 같습니다.
+- 광고주·계약·대상·채널·게재 유형은 종류마다 한 번에 읽어 붙이므로 항목 수만큼 조회가 늘지 않습니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 할 일은 404 `CALENDAR_TODO_NOT_FOUND`(`할 일을 찾을 수 없습니다.`)입니다.
+
 ### 회사명 검색
 
 `GET /api/v1/company-names?keyword=`는 `keyword`를 포함하는 회사명을 최대 10개 문자열 배열로 반환합니다. 페이지가 없으므로 `data`는 배열입니다.

@@ -246,6 +246,27 @@ internal class AdPostingPersistenceTest @Autowired constructor(
         assertEquals(1L, adPosting.targetId)
     }
 
+    @Test
+    fun `기간이 겹치는 광고 공고는 꺼진 것과 열린 기간을 담고 끝이 조회 시작과 같거나 시작이 조회 끝과 같으면 뺀다`() {
+        // given
+        val from = LocalDateTime.of(2026, 11, 1, 0, 0)
+        val to = LocalDateTime.of(2026, 11, 8, 0, 0)
+        val bootcampList = append(AdPostingPlacement.BOOTCAMP_LIST, targetId = 901, period = AdPostingPeriod(to.minusHours(1), null))
+        val disabled = append(targetId = 902, enabled = false, period = AdPostingPeriod(null, from.plusMinutes(1)))
+        val open = append(targetId = 903)
+        append(targetId = 904, period = AdPostingPeriod(null, from))
+        append(targetId = 905, period = AdPostingPeriod(to, null))
+        val deleted = append(targetId = 906)
+        manager.delete(reader.readForDelete(deleted), NOW)
+        flushAndClear()
+
+        // when
+        val adPostings = reader.readAllOverlapping(from, to)
+
+        // then
+        assertEquals(listOf(disabled, open, bootcampList), adPostings.map { it.id })
+    }
+
     private fun append(
         placement: AdPostingPlacement = AdPostingPlacement.JOB_LIST,
         targetId: Long,

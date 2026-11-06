@@ -94,6 +94,28 @@ internal class AdvertiserContractPersistenceTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun `기간이 겹치는 계약을 시작 순으로 읽고 끝이 조회 시작과 같거나 시작이 조회 끝과 같거나 지운 계약은 뺀다`() {
+        // given
+        val from = LocalDateTime.of(2026, 12, 1, 0, 0)
+        val to = LocalDateTime.of(2026, 12, 8, 0, 0)
+        append(startAt = from.minusMonths(1))
+        append(startAt = to)
+        val late = append(startAt = to.minusHours(1), products = listOf(AdContractProduct.BANNER_HOME_TOP))
+        val early = append(startAt = from.minusDays(10), advertiserId = ADVERTISER_ID + 1)
+        val deleted = append(startAt = from.minusDays(5))
+        manager.delete(reader.readForDelete(deleted), NOW)
+        entityManager.flush()
+        entityManager.clear()
+
+        // when
+        val contracts = reader.readAllOverlapping(from, to)
+
+        // then
+        assertEquals(listOf(early, late), contracts.map { it.id })
+        assertEquals(listOf(AdContractProduct.BANNER_HOME_TOP), contracts.last().products)
+    }
+
     private fun append(
         advertiserId: Long = ADVERTISER_ID,
         startAt: LocalDateTime = START,

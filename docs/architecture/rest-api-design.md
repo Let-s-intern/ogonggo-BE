@@ -358,6 +358,23 @@ DELETE /api/v1/admin/channel-ads/{adId}              채널 광고 삭제
 - 삭제(DELETE)는 소프트 삭제이고 `{ "id": number }`를 돌려주며 다시 지워도 200입니다. 채널 광고가 잡힌 채널·유형은 400입니다. 채널을 지우면 유형의 `channelIds`에서, 유형을 지우면 같은 플랫폼의 순서를 다시 매기고 계약의 `channelFormatIds`에서 뺍니다. 광고 계약을 지우면 채널 광고는 남기고 `contractId`만 비웁니다.
 - 응답 계약은 [API 성공 응답의 채널 광고](api-response.md#채널-광고)를 따릅니다.
 
+### 관리자 캘린더
+
+```text
+GET    /api/v1/admin/calendar-todos?from=&to=        기간과 겹치는 할 일
+POST   /api/v1/admin/calendar-todos                  할 일 등록
+PATCH  /api/v1/admin/calendar-todos/{todoId}         할 일 수정
+DELETE /api/v1/admin/calendar-todos/{todoId}         할 일 삭제
+GET    /api/v1/admin/ad-calendar?from=&to=           기간과 겹치는 광고 계약·배너·광고 공고·채널 광고
+```
+
+- 결정일: 2026-11-06 (LC-3579) / 리뷰 상태: 팀 리뷰 필요
+- 경로와 본문은 관리자 콘솔의 목 계약을 따릅니다. `from`·`to`는 KST 날짜이고 `from` 포함, `to` 미포함이며 93일까지입니다.
+- 광고 일정은 새로 저장하는 것 없이 기존 광고를 기간으로 모아 읽는 조회라 리소스 하나(`ad-calendar`)로 두고 단수형입니다.
+- 할 일 수정(PATCH)은 보낸 칸만 바꾸고 `content`에 `null`을 보내면 지웁니다. 검증은 저장된 값과 합친 결과로 합니다.
+- 할 일 삭제(DELETE)는 소프트 삭제이고 광고주 API처럼 `{ "id": number }`를 돌려주며 다시 지워도 200입니다.
+- 응답 계약은 [API 성공 응답의 관리자 캘린더](api-response.md#관리자-캘린더)를 따릅니다.
+
 ### 회사명 검색
 
 ```text

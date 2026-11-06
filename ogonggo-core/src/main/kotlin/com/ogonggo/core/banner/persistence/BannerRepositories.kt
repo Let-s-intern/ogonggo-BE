@@ -59,4 +59,14 @@ internal class BannerQueryRepository(
             )
             .orderBy(banner.displayOrder.asc(), banner.id.asc())
             .fetch()
+
+    /** 노출 기간이 `[from, toExclusive)`와 겹치는 배너다. 꺼진 것도 담고, 시작·끝이 null이면 그쪽이 열린 것으로 본다. */
+    fun findOverlapping(from: LocalDateTime, toExclusive: LocalDateTime): List<Banner> =
+        queryFactory.selectFrom(banner)
+            .where(
+                banner.deletedAt.isNull,
+                banner.startAt.isNull.or(banner.startAt.lt(toExclusive)),
+                banner.endAt.isNull.or(banner.endAt.gt(from)),
+            )
+            .fetch()
 }

@@ -6,6 +6,7 @@ import com.ogonggo.core.adposting.error.AdPostingErrorCode
 import com.ogonggo.core.adposting.persistence.AdPostingJpaRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 @Component
 class AdPostingReader internal constructor(
@@ -41,6 +42,14 @@ class AdPostingReader internal constructor(
     fun readAllByAdvertiser(advertiserId: Long, placement: AdPostingPlacement?): List<AdPosting> =
         adPostingRepository.findAllByAdvertiserIdAndDeletedAtIsNull(advertiserId)
             .filter { placement == null || it.placement == placement }
+            .sortedWith(compareBy<AdPosting>({ it.placement.ordinal }, { it.displayOrder }, { it.id }))
+
+    /**
+     * 노출 기간이 `[from, toExclusive)`와 겹치는 광고 공고 전부(꺼진 것 포함)를 자리 선언 순서, 자리 안 순서대로 읽는다.
+     * 시작·끝이 null이면 그쪽이 열린 것으로 본다.
+     */
+    fun readAllOverlapping(from: LocalDateTime, toExclusive: LocalDateTime): List<AdPosting> =
+        adPostingRepository.findAllOverlapping(from, toExclusive)
             .sortedWith(compareBy<AdPosting>({ it.placement.ordinal }, { it.displayOrder }, { it.id }))
 
     /** 같은 자리에 같은 대상이 이미 있는가. 지운 광고 공고는 보지 않는다. */
