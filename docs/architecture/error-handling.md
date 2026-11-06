@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-10-01
+- 최종 변경일: 2026-11-06
 - 적용 범위: `ogonggo-server`
 - 예상 독자: 오공고 서버와 API 클라이언트를 개발·리뷰하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -73,6 +73,8 @@ Bean Validation 오류는 필드명 순으로 정렬하고 `, `로 연결한다.
 두 파라미터의 관계처럼 단일 필드 제약으로 선언할 수 없는 Query Parameter 규칙은 각 API가 소유한 `InvalidRequestParameterException(parameterName, reason)`으로 전달한다. 이 예외도 같은 `[파라미터명] 검증 메시지` 형식의 400으로 응답하므로 클라이언트는 Bean Validation 실패와 구분하지 않아도 된다. 채용공고 달력의 `from`·`to` 관계와 기간 상한이 이 경우다.
 
 요청 본문 필드의 규칙 중 Bean Validation으로 선언할 수 없는 것은 각 API가 소유한 `InvalidRequestFieldException(fieldName, reason)`으로 전달하고, 같은 `[필드명] 검증 메시지` 형식의 400으로 응답한다. 채용공고 모집 시작·종료 일시의 관계, 모집글·공지 본문(`content`)의 에디터 JSON 형식이 이 경우다. 본문 형식 검사는 core의 `LexicalEditorStateValidator`가 하지만, 실패를 어떤 예외로 알릴지는 응답 형식을 정하는 API가 넘겨준다.
+
+관리자 콘솔의 광고주·광고 계약·광고주 메모 API는 프런트 계약이 화면에 그대로 보일 문구를 `필드: 설명`(예: `name: 같은 이름의 광고주가 이미 있습니다.`)으로 정해 두었습니다. 이 API의 요청 칸 검증은 Bean Validation 대신 관리자 API의 서비스가 하고, `AdminConsoleBadRequestException`으로 그 문구를 바꾸지 않고 400 `BAD_REQUEST`로 응답합니다. 필드에 딸리지 않은 문구(회원 광고주 수정 거절)도 같은 예외를 씁니다. 다른 API의 `[필드] 설명` 형식은 그대로입니다. 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요.
 
 ## 5. require와 check
 

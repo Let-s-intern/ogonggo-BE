@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-11-05
+- 최종 변경일: 2026-11-06
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -292,6 +292,18 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 메일은 응답의 정확성에 필요하지 않고 SMTP 응답이 늦어질 수 있어 전용 실행기에서 비동기로 보냅니다. 지표 실행기는 스레드가 하나뿐이고 큐가 차면 버리도록 되어 있어 함께 쓰지 않습니다. 확인 메일은 버리면 담당자가 접수 여부를 알 수 없으므로 큐가 차면 호출한 스레드가 직접 보냅니다. 공통 발신 주소(`ogonggo.mail.from`)가 비어 있으면 발송을 건너뜁니다.
 
 **확인 필요:** 외부 알림 연동(슬랙·메일 등)의 배치, 실패 처리, 동기·비동기 선택, 메일 본문과 발신 주소 관리는 아직 팀 규칙으로 문서화되어 있지 않습니다. 위 내용은 이 엔드포인트의 응답 계약을 설명한 것이며 팀 규칙으로 확정된 것이 아닙니다. 현재 SMTP는 렛츠커리어와 같은 SES 계정과 발신 주소(`official@letscareer.co.kr`)를 함께 쓰고 있어, 오공고 전용 발신 도메인이 필요한지도 함께 확인이 필요합니다.
+
+### 광고주·광고 계약·광고주 메모
+
+관리자 콘솔 `비즈니스 > 광고 > 광고 계약` 화면의 API입니다. 경로는 [REST API 설계](rest-api-design.md#광고주광고-계약광고주-메모)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요
+- 광고주 목록은 비즈니스 회원(`MEMBER`·`COMPANY_MEMBER`), 광고 문의 기업(`NON_MEMBER`·`AD_INQUIRY`), 직접 추가한 기업(`NON_MEMBER`·`MANUAL`)을 합칩니다. 탈퇴한 회원은 빼고, 기업 회원의 문의와 반려한 문의는 광고주가 되지 않습니다. 문의 기업은 회사 이름(공백·대소문자 무시)마다 하나이고 `adInquiryId`는 가장 최근 문의입니다.
+- 목록은 `PageResponse`가 아닌 배열이고 최대 50건입니다. 진행 중 계약이 있는 곳, 계약만 있는 곳, 계약이 없는 곳 순이며 같은 무리 안에서는 계약 `endAt`이 가장 늦은 곳, 그다음 이름(한국어) 순입니다. 50건은 정렬한 뒤 자릅니다. `keyword`는 이름·담당자 이름·담당자 메일 부분 일치(대소문자 무시)이고, `type`이 `MEMBER`·`NON_MEMBER`가 아니면 400입니다.
+- 광고주 응답은 광고 수(`bannerCount`, `activeBannerCount`, `adPostingCount`, `activeAdPostingCount`, `latestEndAt`)와 계약 합계(`contractCount`, `activeContractCount`, `contractTotalAmount`, `contractVatMixed`)를 싣습니다. 배너·광고 공고가 아직 없어 광고 수는 0, `latestEndAt`은 `null`입니다(LC-3576·LC-3577에서 채움). 계약 금액 합은 부가세 포함·별도를 가리지 않고 더합니다. `companyMemberUserId`, `adInquiryId`, `contactName`, `contactEmail`, `contactPhone`은 값이 없으면 응답에서 뺍니다(콘솔 계약의 선택 칸). 광고주에 한 칸짜리 메모는 없고 광고주 메모로 남깁니다.
+- 광고 계약 목록은 `startAt`이 늦은 것이 먼저(같으면 `id`가 큰 것)입니다. `products`는 `AdContractProduct` 선언 순서로 정렬해 저장하고 돌려줍니다. 계약 응답의 `bannerCount`·`adPostingCount`는 지금 0입니다.
+- 광고주 메모 목록은 `createdAt`이 늦은 것이 먼저입니다. `authorName`은 메모를 쓴 관리자(관리자 토큰의 회원)의 프로필 이름이고 모르면 `null`입니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고주·계약·메모는 404 `ADVERTISER_NOT_FOUND`·`ADVERTISER_CONTRACT_NOT_FOUND`·`ADVERTISER_NOTE_NOT_FOUND`입니다.
 
 ### 회사명 검색
 

@@ -56,6 +56,12 @@ class AdminApiExceptionHandler {
         return badRequest(validationMessage(listOf(exception.fieldName to exception.reason)))
     }
 
+    @ExceptionHandler(AdminConsoleBadRequestException::class)
+    fun handleConsoleBadRequest(exception: AdminConsoleBadRequestException): ResponseEntity<ErrorResponse> {
+        log.error("handle: AdminConsoleBadRequestException", exception)
+        return badRequest(exception.message)
+    }
+
     @ExceptionHandler(ConstraintViolationException::class)
     fun handleConstraintViolation(exception: ConstraintViolationException): ResponseEntity<ErrorResponse> {
         log.error("handle: ConstraintViolationException", exception)
@@ -133,3 +139,18 @@ class InvalidRequestFieldException(
     val fieldName: String,
     val reason: String,
 ) : RuntimeException(reason)
+
+/**
+ * 관리자 콘솔 화면이 `message`를 그대로 보이는 400이다. 메시지를 손대지 않고 `BAD_REQUEST`로 응답한다.
+ *
+ * 광고주·광고 계약·광고주 메모 화면은 프런트 계약이 문구를 `필드: 설명`으로 정해 두어 [field]로 만든다.
+ * 다른 화면의 `[필드] 설명` 형식(Bean Validation, [InvalidRequestFieldException])과 다르다(error-handling.md 4절).
+ */
+class AdminConsoleBadRequestException(
+    override val message: String,
+) : RuntimeException(message) {
+    companion object {
+        fun field(fieldName: String, reason: String): AdminConsoleBadRequestException =
+            AdminConsoleBadRequestException("$fieldName: $reason")
+    }
+}
