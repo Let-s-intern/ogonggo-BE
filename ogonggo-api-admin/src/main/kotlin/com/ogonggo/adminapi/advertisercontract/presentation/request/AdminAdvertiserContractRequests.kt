@@ -31,6 +31,10 @@ data class CreateAdminAdvertiserContractRequest(
     val products: List<AdContractProduct?>? = null,
     @Schema(description = "메모. 500자 이하, 앞뒤 공백을 빼고 비면 null로 저장합니다.", nullable = true)
     val memo: String? = null,
+    @ArraySchema(
+        arraySchema = Schema(description = "산 채널 게재 유형(모든 플랫폼). 있는 유형 id를 겹치지 않게 보냅니다. 보내지 않으면 빈 목록입니다."),
+    )
+    val channelFormatIds: List<Long?>? = null,
 ) {
     fun toCommand(): AdminAdvertiserContractCreateCommand = AdminAdvertiserContractCreateCommand(
         name = name,
@@ -42,6 +46,7 @@ data class CreateAdminAdvertiserContractRequest(
         paidDate = paidDate,
         products = products,
         memo = memo,
+        channelFormatIds = channelFormatIds,
     )
 }
 
@@ -62,6 +67,7 @@ data class UpdateAdminAdvertiserContractRequest(
     val products: List<AdContractProduct?>? = null,
     @Schema(implementation = String::class, nullable = true, description = "null을 보내면 메모를 지웁니다.")
     val memo: Optional<String>? = null,
+    val channelFormatIds: List<Long?>? = null,
 ) {
     fun toCommand(): AdminAdvertiserContractUpdateCommand = AdminAdvertiserContractUpdateCommand(
         name = name,
@@ -73,5 +79,6 @@ data class UpdateAdminAdvertiserContractRequest(
         paidDate = paidDate,
         products = products,
         memo = memo,
+        channelFormatIds = channelFormatIds,
     )
 }

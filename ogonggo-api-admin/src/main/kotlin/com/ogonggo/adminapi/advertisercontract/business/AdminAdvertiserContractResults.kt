@@ -20,11 +20,19 @@ data class AdminAdvertiserContractResult(
     val memo: String?,
     val bannerCount: Int,
     val adPostingCount: Int,
+    val channelFormatIds: List<Long> = emptyList(),
+    val channelAdCount: Int = 0,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
 ) {
     companion object {
-        internal fun of(contract: AdvertiserContract, adCount: AdvertiserContractAdCountDto): AdminAdvertiserContractResult =
+        /** [channelFormatOrder]는 유형 목록 순서의 유형 식별자다. 산 유형을 이 순서로 두고 지운 유형은 뺀다. */
+        internal fun of(
+            contract: AdvertiserContract,
+            adCount: AdvertiserContractAdCountDto,
+            channelFormatOrder: List<Long>,
+            channelAdCount: Int,
+        ): AdminAdvertiserContractResult =
             AdminAdvertiserContractResult(
                 id = contract.requiredId(),
                 advertiserId = contract.advertiserId,
@@ -39,6 +47,8 @@ data class AdminAdvertiserContractResult(
                 memo = contract.memo,
                 bannerCount = adCount.bannerCount,
                 adPostingCount = adCount.adPostingCount,
+                channelFormatIds = channelFormatOrder.filter { it in contract.channelFormatIds },
+                channelAdCount = channelAdCount,
                 createdAt = contract.createdAt,
                 updatedAt = contract.updatedAt,
             )

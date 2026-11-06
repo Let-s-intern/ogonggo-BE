@@ -88,6 +88,14 @@ class AdvertiserContract internal constructor(
     var memo: String? = terms.memo /* 운영자 메모 */
         protected set
 
+    @ElementCollection
+    @BatchSize(size = 100)
+    @CollectionTable(name = "advertiser_contract_channel_formats", joinColumns = [JoinColumn(name = "contract_id")])
+    @Column(name = "format_id", nullable = false)
+    var channelFormatIds: MutableList<Long> = terms.channelFormatIds.toMutableList() /* 산 채널 게재 유형. 순서는 응답할 때 유형 순서로 맞춘다 */
+        get() = field.toMutableList()
+        protected set
+
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 삭제 일시 */
         protected set
@@ -103,6 +111,7 @@ class AdvertiserContract internal constructor(
             paidDate = paidDate,
             products = products,
             memo = memo,
+            channelFormatIds = channelFormatIds,
         )
 
     /** 계약 내용을 통째로 바꾼다. 부분 수정은 저장된 값과 합친 [terms]를 넘긴다. */
@@ -119,6 +128,16 @@ class AdvertiserContract internal constructor(
             products = terms.products.toMutableList()
         }
         memo = terms.memo
+        if (channelFormatIds.toSet() != terms.channelFormatIds.toSet()) {
+            channelFormatIds = terms.channelFormatIds.toMutableList()
+        }
+    }
+
+    /** 지운 채널 게재 유형을 산 유형에서 뺀다. 없으면 그대로 둔다. */
+    fun removeChannelFormat(formatId: Long) {
+        if (formatId in channelFormatIds) {
+            channelFormatIds = channelFormatIds.filter { it != formatId }.toMutableList()
+        }
     }
 
     /** 지금이 계약 기간 안인가. 시작은 포함하고 끝은 포함하지 않는다. */
@@ -134,6 +153,7 @@ class AdvertiserContract internal constructor(
 
 /**
  * 계약 내용이다. 이름·메모는 앞뒤 공백을 빼고 비면 null로, 결제 전이면 결제일을 null로, 산 자리는 겹치지 않게 선언 순서로 맞춘다.
+ * 산 채널 게재 유형(`channelFormatIds`)은 겹치지 않게 둔다. 유형은 운영자가 더하고 지워 고정된 자리 값인 [products]와 따로 둔다.
  */
 class AdvertiserContractTerms(
     name: String?,
@@ -145,17 +165,20 @@ class AdvertiserContractTerms(
     paidDate: LocalDate?,
     products: Collection<AdContractProduct>,
     memo: String?,
+    channelFormatIds: Collection<Long> = emptyList(),
 ) {
     val name: String? = name?.trim()?.ifEmpty { null }
     val paidDate: LocalDate? = paidDate.takeIf { paid }
     val products: List<AdContractProduct> = products.distinct().sortedBy { it.ordinal }
     val memo: String? = memo?.trim()?.ifEmpty { null }
+    val channelFormatIds: List<Long> = channelFormatIds.distinct()
 
     init {
         require((this.name?.length ?: 0) <= MAX_NAME_LENGTH) { "계약명은 ${MAX_NAME_LENGTH}자 이하여야 합니다." }
         require(startAt.isBefore(endAt)) { "광고 끝은 시작보다 뒤여야 합니다." }
         require(amount in 0..MAX_AMOUNT) { "금액은 0 이상 ${MAX_AMOUNT}원 이하여야 합니다." }
         require((this.memo?.length ?: 0) <= MAX_MEMO_LENGTH) { "메모는 ${MAX_MEMO_LENGTH}자 이하여야 합니다." }
+        require(this.channelFormatIds.all { it > 0 }) { "채널 게재 유형 식별자는 양수여야 합니다." }
     }
 
     companion object {
