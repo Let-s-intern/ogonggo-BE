@@ -29,6 +29,10 @@ data class AdminAdvertiserContractResponse(
     val bannerCount: Int,
     @Schema(description = "이 계약에 이어 둔 광고 공고 수")
     val adPostingCount: Int,
+    @Schema(description = "산 채널 게재 유형(모든 플랫폼). 유형 목록 순서(플랫폼, 그 안의 순서)대로입니다.")
+    val channelFormatIds: List<Long>,
+    @Schema(description = "이 계약에 이어 둔 채널 광고 수")
+    val channelAdCount: Int,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
 ) {
@@ -47,6 +51,8 @@ data class AdminAdvertiserContractResponse(
             memo = result.memo,
             bannerCount = result.bannerCount,
             adPostingCount = result.adPostingCount,
+            channelFormatIds = result.channelFormatIds,
+            channelAdCount = result.channelAdCount,
             createdAt = result.createdAt,
             updatedAt = result.updatedAt,
         )

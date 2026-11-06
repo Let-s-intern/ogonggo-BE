@@ -74,7 +74,7 @@ Bean Validation 오류는 필드명 순으로 정렬하고 `, `로 연결한다.
 
 요청 본문 필드의 규칙 중 Bean Validation으로 선언할 수 없는 것은 각 API가 소유한 `InvalidRequestFieldException(fieldName, reason)`으로 전달하고, 같은 `[필드명] 검증 메시지` 형식의 400으로 응답한다. 채용공고 모집 시작·종료 일시의 관계, 모집글·공지 본문(`content`)의 에디터 JSON 형식이 이 경우다. 본문 형식 검사는 core의 `LexicalEditorStateValidator`가 하지만, 실패를 어떤 예외로 알릴지는 응답 형식을 정하는 API가 넘겨준다.
 
-관리자 콘솔의 광고주·광고 계약·광고주 메모 API는 프런트 계약이 화면에 그대로 보일 문구를 `필드: 설명`(예: `name: 같은 이름의 광고주가 이미 있습니다.`)으로 정해 두었습니다. 이 API의 요청 칸 검증은 Bean Validation 대신 관리자 API의 서비스가 하고, `AdminConsoleBadRequestException`으로 그 문구를 바꾸지 않고 400 `BAD_REQUEST`로 응답합니다. 필드에 딸리지 않은 문구(회원 광고주 수정 거절)도 같은 예외를 씁니다. 다른 API의 `[필드] 설명` 형식은 그대로입니다. 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요.
+관리자 콘솔의 광고주·광고 계약·광고주 메모 API와 채널 광고 API(LC-3578)는 프런트 계약이 화면에 그대로 보일 문구를 `필드: 설명`(예: `name: 같은 이름의 광고주가 이미 있습니다.`)으로 정해 두었습니다. 이 API의 요청 칸 검증은 Bean Validation 대신 관리자 API의 서비스가 하고, `AdminConsoleBadRequestException`으로 그 문구를 바꾸지 않고 400 `BAD_REQUEST`로 응답합니다. 필드에 딸리지 않은 문구(회원 광고주 수정 거절)도 같은 예외를 씁니다. 다른 API의 `[필드] 설명` 형식은 그대로입니다. 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요.
 
 ## 5. require와 check
 

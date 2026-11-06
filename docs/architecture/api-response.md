@@ -305,6 +305,18 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 광고주 메모 목록은 `createdAt`이 늦은 것이 먼저입니다. `authorName`은 메모를 쓴 관리자(관리자 토큰의 회원)의 프로필 이름이고 모르면 `null`입니다.
 - 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고주·계약·메모는 404 `ADVERTISER_NOT_FOUND`·`ADVERTISER_CONTRACT_NOT_FOUND`·`ADVERTISER_NOTE_NOT_FOUND`입니다.
 
+### 채널 광고
+
+관리자 콘솔 `광고 > 채널 등록`, `광고 > 채널 광고` 화면과 광고 계약 상세의 API입니다. 경로는 [REST API 설계](rest-api-design.md#채널-광고)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3578) / 리뷰 상태: 팀 리뷰 필요
+- 채널 응답은 `adCount`(잡힌 채널 광고 수)를 싣습니다. 인스타그램 채널의 `handle`은 `@`를 뗀 계정 이름이고 오픈채팅은 `null`입니다. 목록은 모든 플랫폼, 사용 안 함 포함, 등록 순입니다.
+- 게재 유형 응답은 `displayOrder`(플랫폼 안에서 1부터), `channelIds`(채널 등록 순, 비면 그 플랫폼의 모든 채널), `adCount`를 싣습니다. 목록은 플랫폼 순(`INSTAGRAM`, `KAKAO_OPENCHAT`), 그 안에서 `displayOrder` 순입니다.
+- 채널 광고 응답은 `advertiser`(`id`, `name`, `type`), `contract`(`id`, `name`, `startAt`, `endAt`), `channel`(`id`, `platform`, `name`, `handle`), `format`(`id`, `platform`, `name`) 요약과 채널의 `platform`을 싣습니다. 찾을 수 없는 대상의 요약은 `null`입니다. 목록은 `postDate`, `id` 순입니다. `month`(`YYYY-MM`)는 `postDate` ~ `endDate ?? postDate`가 그달에 걸친 광고입니다.
+- 광고 계약 응답은 `channelFormatIds`(유형 목록 순서)와 `channelAdCount`를 더 싣습니다. 칸이 생기기 전 계약은 빈 배열입니다.
+- 광고주 목록의 광고 수(`bannerCount` 등)에는 채널 광고를 넣지 않습니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다. 없는 채널·유형·채널 광고는 404 `AD_CHANNEL_NOT_FOUND`·`AD_CHANNEL_FORMAT_NOT_FOUND`·`CHANNEL_AD_NOT_FOUND`입니다.
+
 ### 회사명 검색
 
 `GET /api/v1/company-names?keyword=`는 `keyword`를 포함하는 회사명을 최대 10개 문자열 배열로 반환합니다. 페이지가 없으므로 `data`는 배열입니다.

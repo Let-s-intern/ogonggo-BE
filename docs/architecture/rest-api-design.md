@@ -298,6 +298,31 @@ DELETE /api/v1/admin/advertiser-notes/{noteId}               광고주 메모 �
 - 삭제(DELETE)는 소프트 삭제이고, 콘솔 계약을 따라 3절의 `data: null` 대신 `{ "id": number }`를 돌려줍니다. 이미 지운 계약·메모를 다시 지워도 200입니다. 계약을 지워도 이어 둔 배너·광고 공고는 지우지 않고 계약 연결만 끊습니다.
 - 응답 계약은 [API 성공 응답의 광고주·광고 계약·광고주 메모](api-response.md#광고주광고-계약광고주-메모)를 따릅니다.
 
+### 채널 광고
+
+```text
+GET    /api/v1/admin/ad-channels                     채널 목록(모든 플랫폼, 등록 순)
+POST   /api/v1/admin/ad-channels                     채널 등록
+PATCH  /api/v1/admin/ad-channels/{channelId}         채널 수정
+DELETE /api/v1/admin/ad-channels/{channelId}         채널 삭제
+GET    /api/v1/admin/ad-channel-formats              게재 유형 목록(플랫폼 순, 그 안에서 순서대로)
+POST   /api/v1/admin/ad-channel-formats              게재 유형 등록(그 플랫폼의 맨 뒤)
+PUT    /api/v1/admin/ad-channel-formats/order        한 플랫폼의 게재 유형 순서 바꾸기
+PATCH  /api/v1/admin/ad-channel-formats/{formatId}   게재 유형 수정
+DELETE /api/v1/admin/ad-channel-formats/{formatId}   게재 유형 삭제
+GET    /api/v1/admin/channel-ads?month=&advertiserId=&contractId=&platform=&channelId=&formatId=&status=   채널 광고 목록
+POST   /api/v1/admin/channel-ads                     채널 광고 등록
+PATCH  /api/v1/admin/channel-ads/{adId}              채널 광고 수정
+DELETE /api/v1/admin/channel-ads/{adId}              채널 광고 삭제
+```
+
+- 결정일: 2026-11-06 (LC-3578) / 리뷰 상태: 팀 리뷰 필요
+- 경로와 본문은 관리자 콘솔의 목 계약을 따릅니다. 목록은 페이지 없이 배열입니다.
+- 순서 바꾸기는 한 플랫폼의 순서 전체를 바꾸므로 `PUT .../order`이고 본문은 `{ platform, formatIds }`입니다. 그 플랫폼의 유형 id를 빠짐없이, 겹치지 않게 보내지 않으면 400입니다. 응답은 모든 유형 목록입니다. 식별자 경로(`/{formatId}`)는 숫자만 받아 `order`를 식별자로 읽지 않습니다.
+- 수정(PATCH)은 보낸 칸만 바꾸고 바뀐 리소스 전체를 돌려줍니다. 칸을 지우려면 `null`을 보냅니다(채널 `profileImageUrl`·`memberCount`·`memo`, 유형 `description`·`defaultPrice`, 채널 광고 `contractId`·`endDate`·`postUrl`·`creativeMemo`·`adminMemo`). 채널·유형의 `platform`을 다른 값으로 보내면 400입니다. 채널 광고의 광고주만 바꾸고 `contractId`를 보내지 않으면 계약을 끊습니다.
+- 삭제(DELETE)는 소프트 삭제이고 `{ "id": number }`를 돌려주며 다시 지워도 200입니다. 채널 광고가 잡힌 채널·유형은 400입니다. 채널을 지우면 유형의 `channelIds`에서, 유형을 지우면 같은 플랫폼의 순서를 다시 매기고 계약의 `channelFormatIds`에서 뺍니다. 광고 계약을 지우면 채널 광고는 남기고 `contractId`만 비웁니다.
+- 응답 계약은 [API 성공 응답의 채널 광고](api-response.md#채널-광고)를 따릅니다.
+
 ### 회사명 검색
 
 ```text

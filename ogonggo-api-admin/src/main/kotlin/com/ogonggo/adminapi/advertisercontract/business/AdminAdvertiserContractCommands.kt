@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 import java.util.Optional
 
 /**
- * 계약 등록 본문이다. 검증 전 값을 그대로 담는다. 산 자리를 보내지 않으면 빈 목록이다.
+ * 계약 등록 본문이다. 검증 전 값을 그대로 담는다. 산 자리·채널 게재 유형을 보내지 않으면 빈 목록이다.
  * 요소가 null인 산 자리는 겹친 값과 같이 거절한다.
  */
 data class AdminAdvertiserContractCreateCommand(
@@ -22,6 +22,7 @@ data class AdminAdvertiserContractCreateCommand(
     val paidDate: LocalDate?,
     val products: List<AdContractProduct?>?,
     val memo: String?,
+    val channelFormatIds: List<Long?>? = null,
 ) {
     internal fun toDraft(): AdminAdvertiserContractDraft = AdminAdvertiserContractDraft(
         name = name,
@@ -33,6 +34,7 @@ data class AdminAdvertiserContractCreateCommand(
         paidDate = paidDate,
         products = products.orEmpty(),
         memo = memo,
+        channelFormatIds = channelFormatIds.orEmpty(),
     )
 }
 
@@ -50,6 +52,7 @@ data class AdminAdvertiserContractUpdateCommand(
     val paidDate: Optional<LocalDate>? = null,
     val products: List<AdContractProduct?>? = null,
     val memo: Optional<String>? = null,
+    val channelFormatIds: List<Long?>? = null,
 ) {
     /** 저장된 값 위에 보낸 칸을 얹는다. 검증은 합친 결과로 한다. */
     internal fun mergeInto(contract: AdvertiserContract): AdminAdvertiserContractDraft = AdminAdvertiserContractDraft(
@@ -62,6 +65,7 @@ data class AdminAdvertiserContractUpdateCommand(
         paidDate = if (paidDate == null) contract.paidDate else paidDate.orElse(null),
         products = products ?: contract.products,
         memo = if (memo == null) contract.memo else memo.orElse(null),
+        channelFormatIds = channelFormatIds ?: contract.channelFormatIds,
     )
 }
 
@@ -76,8 +80,12 @@ internal data class AdminAdvertiserContractDraft(
     val paidDate: LocalDate?,
     val products: List<AdContractProduct?>,
     val memo: String?,
+    val channelFormatIds: List<Long?> = emptyList(),
 ) {
-    fun toTerms(): AdvertiserContractTerms {
+    /**
+     * [channelFormats]는 고를 수 있는 채널 게재 유형이다. 기본값은 유형을 보지 않는 계약(유형을 보내지 않은 본문)에 쓴다.
+     */
+    fun toTerms(channelFormats: AdminContractChannelFormats = AdminContractChannelFormats.NONE): AdvertiserContractTerms {
         if ((name?.trim()?.length ?: 0) > AdvertiserContractTerms.MAX_NAME_LENGTH) {
             throw AdminConsoleBadRequestException.field("name", "${AdvertiserContractTerms.MAX_NAME_LENGTH}자까지 보낼 수 있습니다.")
         }
@@ -97,6 +105,14 @@ internal data class AdminAdvertiserContractDraft(
                 "${AdContractProduct.entries.joinToString(", ") { it.name }} 가운데 겹치지 않게 보내 주세요.",
             )
         }
+        if (channelFormatIds.any { it == null || it !in channelFormats.existingIds } ||
+            channelFormatIds.distinct().size != channelFormatIds.size
+        ) {
+            throw AdminConsoleBadRequestException.field("channelFormatIds", "있는 채널 게재 유형 id 를 겹치지 않게 보내 주세요.")
+        }
+        if (channelFormatIds.any { it !in channelFormats.enabledIds && it !in channelFormats.previousIds }) {
+            throw AdminConsoleBadRequestException.field("channelFormatIds", "사용 안 함인 게재 유형은 새로 고를 수 없습니다.")
+        }
         if ((memo?.trim()?.length ?: 0) > AdvertiserContractTerms.MAX_MEMO_LENGTH) {
             throw AdminConsoleBadRequestException.field("memo", "${AdvertiserContractTerms.MAX_MEMO_LENGTH}자까지 보낼 수 있습니다.")
         }
@@ -110,6 +126,7 @@ internal data class AdminAdvertiserContractDraft(
             paidDate = paidDate,
             products = products.filterNotNull(),
             memo = memo,
+            channelFormatIds = channelFormatIds.filterNotNull(),
         )
     }
 
@@ -117,4 +134,17 @@ internal data class AdminAdvertiserContractDraft(
         AdminConsoleBadRequestException.field(fieldName, "YYYY-MM-DDTHH:mm:ss(KST) 로 보내 주세요.")
 
     private fun booleanError(fieldName: String) = AdminConsoleBadRequestException.field(fieldName, "참·거짓 값을 보내 주세요.")
+}
+
+/**
+ * 계약이 고를 수 있는 채널 게재 유형이다. 있는 유형만 고를 수 있고, 사용 안 함인 유형은 이미 산 것([previousIds])만 남길 수 있다.
+ */
+internal data class AdminContractChannelFormats(
+    val existingIds: Set<Long>,
+    val enabledIds: Set<Long>,
+    val previousIds: Set<Long> = emptySet(),
+) {
+    companion object {
+        val NONE = AdminContractChannelFormats(emptySet(), emptySet())
+    }
 }
