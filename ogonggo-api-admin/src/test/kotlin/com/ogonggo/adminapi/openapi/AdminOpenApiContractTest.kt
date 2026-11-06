@@ -119,6 +119,19 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1ad-postings~1{adPostingId}/patch",
             "/paths/~1api~1v1~1admin~1ad-postings~1{adPostingId}/delete",
             "/paths/~1api~1v1~1admin~1ad-postings~1order/put",
+            "/paths/~1api~1v1~1admin~1ad-channels/get",
+            "/paths/~1api~1v1~1admin~1ad-channels/post",
+            "/paths/~1api~1v1~1admin~1ad-channels~1{channelId}/patch",
+            "/paths/~1api~1v1~1admin~1ad-channels~1{channelId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats/get",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats/post",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats~1order/put",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats~1{formatId}/patch",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats~1{formatId}/delete",
+            "/paths/~1api~1v1~1admin~1channel-ads/get",
+            "/paths/~1api~1v1~1admin~1channel-ads/post",
+            "/paths/~1api~1v1~1admin~1channel-ads~1{adId}/patch",
+            "/paths/~1api~1v1~1admin~1channel-ads~1{adId}/delete",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -419,6 +432,36 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertEquals("integer", update.at("/contractId/type").asText())
         assertFalse(update.has("placement"))
         assertFalse(update.has("targetId"))
+    }
+
+    @Test
+    fun `채널 광고는 채널·게재 유형·광고 일정의 프런트 계약 칸을 싣고 계약은 산 채널 게재 유형과 채널 광고 수를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val channel = document.at("/components/schemas/AdminAdChannelResponse/properties")
+        val format = document.at("/components/schemas/AdminAdChannelFormatResponse/properties")
+        val ad = document.at("/components/schemas/AdminChannelAdResponse/properties")
+        val contract = document.at("/components/schemas/AdminAdvertiserContractResponse/properties")
+        val contractRequest = document.at("/components/schemas/CreateAdminAdvertiserContractRequest/properties")
+        val listParameters = document.at("/paths/~1api~1v1~1admin~1channel-ads/get/parameters").map { it["name"].asText() }
+
+        // then
+        listOf("id", "platform", "name", "handle", "url", "profileImageUrl", "memberCount", "enabled", "memo", "adCount", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(channel.has(field), field) }
+        assertEquals(listOf("INSTAGRAM", "KAKAO_OPENCHAT"), channel.at("/platform/enum").map { it.asText() })
+        listOf("id", "platform", "name", "description", "enabled", "defaultPrice", "channelIds", "displayOrder", "adCount", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(format.has(field), field) }
+        listOf(
+            "id", "advertiserId", "advertiser", "contractId", "contract", "platform", "channelId", "channel", "formatId", "format",
+            "postDate", "endDate", "status", "postUrl", "creativeMemo", "adminMemo", "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(ad.has(field), field) }
+        assertEquals(listOf("SCHEDULED", "PUBLISHED", "CANCELED"), ad.at("/status/enum").map { it.asText() })
+        assertEquals(listOf("month", "advertiserId", "contractId", "platform", "channelId", "formatId", "status"), listParameters)
+        assertTrue(contract.has("channelFormatIds"))
+        assertTrue(contract.has("channelAdCount"))
+        assertTrue(contractRequest.has("channelFormatIds"))
     }
 
     private fun openApiDocument() = objectMapper.readTree(
