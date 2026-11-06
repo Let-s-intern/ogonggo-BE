@@ -84,6 +84,14 @@
 - 광고 계약은 기간(시작 포함·끝 미포함)·금액·부가세 포함 여부·결제·산 자리(`AdContractProduct`)를 적습니다. 지금이 기간 안이면 진행 중입니다. 계약을 지워도 이어 둔 광고는 지우지 않습니다.
 - 광고주 메모는 쓴 관리자를 관리자 토큰으로 정합니다.
 
+### 광고 공고: `adposting`
+
+**광고 공고**(`AdPosting`)는 운영자가 사용자 웹 목록 자리(`AdPostingPlacement`)마다 고른 채용공고·부트캠프를 그 목록 맨 앞 칸부터 순서대로 싣는 광고입니다.
+
+- 자리가 대상 종류를 정합니다. 부트캠프 목록 자리만 부트캠프이고 나머지 다섯 자리는 채용공고입니다. 자리와 대상은 등록한 뒤 바꾸지 않고, 같은 자리에 같은 대상은 한 번만 둡니다.
+- 광고주는 꼭 있고, 같은 광고주의 광고 계약을 이을 수 있습니다. 계약을 지우면 광고 공고는 남기고 계약 연결만 끊습니다.
+- 켜져 있고 기간 안이며 대상이 공개이고 모집 중일 때만 사용자에게 나갑니다. 사용자 API는 자리마다 결과를 30초 캐시합니다.
+
 ### 채널 광고: `adchannel`, `adchannelformat`, `channelad`
 
 **채널 광고**(`ChannelAd`)는 광고주의 홍보를 우리 **채널**(`AdChannel`, 인스타그램 계정이나 카카오톡 오픈채팅방)에 **게재 유형**(`AdChannelFormat`, 피드 게시물·릴스·오픈채팅 공지 등)으로 올리는 일정 한 건입니다. 운영자가 관리자 콘솔에서 채널과 유형을 정하고 광고주마다 게시 일정을 잡습니다.
@@ -123,6 +131,7 @@
 | 비즈니스 회원, 광고 문의 기업, 관리자 | 광고주가 된다 / 더한다 | 광고주 | 회원마다 하나, 문의 기업은 이름마다 하나. 비회원과 회원을 합치지 않음 | `Advertiser.companyMemberUserId`, `adInquiryId`, `source` |
 | 광고주 | 맺는다 | 광고 계약 | 1 : N. 관리자가 적음 | `AdvertiserContract.advertiserId` |
 | 관리자 | 광고주마다 남긴다 | 광고주 메모 | 1 : N. 쓴 관리자는 토큰으로 정함 | `AdvertiserNote.advertiserId`, `authorUserId` |
+| 관리자 | 자리마다 고르고 순서를 정한다 | 광고 공고 | 자리 하나에 N, 같은 자리에 같은 대상은 한 번. 광고주 필수, 계약은 같은 광고주의 것만 | `AdPosting.placement`, `targetId`, `advertiserId`, `contractId` |
 | 광고 계약 | 산다 | 게재 유형 | N : M. 유형을 지우면 계약에서도 뺌 | `AdvertiserContract.channelFormatIds` |
 | 광고주 | 올린다 | 채널 광고 | 1 : N. 계약은 같은 광고주의 것만, 0..1 | `ChannelAd.advertiserId`, `contractId` |
 | 채널 광고 | 채널에 유형으로 올라간다 | 채널, 게재 유형 | 각각 1. 같은 플랫폼, 유형이 허용한 채널 | `ChannelAd.channelId`, `formatId`, `AdChannelFormat.channelIds` |

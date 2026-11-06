@@ -315,6 +315,24 @@ DELETE /api/v1/admin/advertiser-notes/{noteId}               광고주 메모 �
 - 삭제(DELETE)는 소프트 삭제이고, 콘솔 계약을 따라 3절의 `data: null` 대신 `{ "id": number }`를 돌려줍니다. 이미 지운 계약·메모를 다시 지워도 200입니다. 계약을 지워도 이어 둔 배너·광고 공고는 지우지 않고 계약 연결만 끊습니다.
 - 응답 계약은 [API 성공 응답의 광고주·광고 계약·광고주 메모](api-response.md#광고주광고-계약광고주-메모)를 따릅니다.
 
+### 광고 공고
+
+```text
+GET    /api/v1/admin/ad-postings?placement=&advertiserId=   자리별 또는 광고주별 광고 공고 목록
+POST   /api/v1/admin/ad-postings                            등록(그 자리 맨 뒤)
+PATCH  /api/v1/admin/ad-postings/{adPostingId}              광고주·계약·기간·켜짐 수정
+DELETE /api/v1/admin/ad-postings/{adPostingId}              삭제(남은 순서를 1부터 다시 매김)
+PUT    /api/v1/admin/ad-postings/order                      자리 안 순서 통째로 바꾸기
+GET    /api/v1/ad-postings?placement=                       사용자 웹 자리별 공개 조회(로그인 없음)
+```
+
+- 결정일: 2026-11-06 (LC-3577) / 리뷰 상태: 팀 리뷰 필요
+- 경로와 본문은 관리자 콘솔·사용자 웹의 목 계약을 따릅니다. 순서 바꾸기는 자리 전체를 새 순서로 바꾸는 교체라 `PUT`이고, `/order`는 `{adPostingId}`와 메서드가 달라 겹치지 않습니다.
+- 관리자 목록은 `placement`와 `advertiserId` 가운데 하나가 있어야 합니다. 둘 다 없으면 400입니다.
+- 자리와 대상은 등록한 뒤 바꾸지 않습니다. 바꾸려면 지우고 다시 등록합니다. 수정(PATCH)은 보낸 칸만 바꾸고 `contractId`·`startAt`·`endAt`에 `null`을 보내면 지웁니다. 계약과 기간은 저장된 값과 합친 결과로 검증합니다.
+- 삭제(DELETE)는 소프트 삭제이고 광고주 API처럼 `{ "id": number }`를 돌려줍니다. 이미 지운 광고 공고를 다시 지워도 200입니다.
+- 응답 계약은 [API 성공 응답의 광고 공고](api-response.md#광고-공고)를 따릅니다.
+
 ### 채널 광고
 
 ```text

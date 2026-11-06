@@ -1,5 +1,8 @@
 package com.ogonggo.core.banner.implement
 
+import com.ogonggo.core.adposting.implement.AdPostingCountReader
+import com.ogonggo.core.adposting.implement.AdPostingManager
+import com.ogonggo.core.adposting.implement.AdPostingTargetReader
 import com.ogonggo.core.advertiser.implement.AdvertiserAdCountReader
 import com.ogonggo.core.advertisercontract.domain.AdvertiserContractTerms
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractAppender
@@ -32,6 +35,9 @@ import java.time.LocalDateTime
     AdvertiserContractReader::class,
     AdvertiserContractAppender::class,
     AdvertiserContractManager::class,
+    AdPostingManager::class,
+    AdPostingCountReader::class,
+    AdPostingTargetReader::class,
 )
 internal class BannerPersistenceTest @Autowired constructor(
     private val reader: BannerReader,

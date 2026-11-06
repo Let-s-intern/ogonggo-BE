@@ -1,6 +1,7 @@
 package com.ogonggo.core.channelad.implement
 
 import com.ogonggo.core.adchannel.domain.AdChannelPlatform
+import com.ogonggo.core.adposting.implement.AdPostingManager
 import com.ogonggo.core.advertisercontract.domain.AdvertiserContractTerms
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractAppender
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractManager
@@ -37,6 +38,7 @@ import java.time.LocalDateTime
     AdvertiserContractAppender::class,
     AdvertiserContractManager::class,
     BannerManager::class,
+    AdPostingManager::class,
 )
 internal class ChannelAdPersistenceTest @Autowired constructor(
     private val reader: ChannelAdReader,
