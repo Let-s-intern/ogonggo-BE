@@ -318,10 +318,10 @@ class UserJobServiceTest {
     }
 
     @Test
-    fun `희망 직무를 오공고 직무로 옮겨 맞는 모집 중 공고 수를 준다`() {
+    fun `희망 직무를 오공고 직무로 옮겨 서울 월요일 0시부터 올라온 맞는 공고 수를 준다`() {
         // given
         givenProfile(wishJob = "백엔드/서버 개발", wishIndustry = null)
-        Mockito.`when`(jobReader.countRecruitingByJobRoles(setOf(JobRole.IT_BACKEND))).thenReturn(12L)
+        Mockito.`when`(jobReader.countOpenByJobRolesRegisteredSince(setOf(JobRole.IT_BACKEND), WEEK_START, NOW)).thenReturn(12L)
 
         // when
         val result = service.getHeadlineJobCount(USER_ID)
@@ -333,7 +333,7 @@ class UserJobServiceTest {
     @Test
     fun `비로그인이면 서울 0시부터 올라온 공고 수를 준다`() {
         // given
-        Mockito.`when`(jobReader.countRecruitingRegisteredSince(TODAY_START)).thenReturn(7L)
+        Mockito.`when`(jobReader.countOpenRegisteredSince(TODAY_START, NOW)).thenReturn(7L)
 
         // when
         val result = service.getHeadlineJobCount(null)
@@ -344,7 +344,7 @@ class UserJobServiceTest {
 
     @Test
     fun `희망 직무가 없거나 옮길 직무가 없거나 맞는 공고가 0건이면 오늘 올라온 공고 수로 대신한다`() {
-        Mockito.`when`(jobReader.countRecruitingRegisteredSince(TODAY_START)).thenReturn(7L)
+        Mockito.`when`(jobReader.countOpenRegisteredSince(TODAY_START, NOW)).thenReturn(7L)
         val today = UserJobHeadlineCount(count = 7L, matchedWishJob = false)
 
         // 프로필이 없는 회원(기업 회원)
@@ -357,7 +357,7 @@ class UserJobServiceTest {
         assertEquals(today, service.getHeadlineJobCount(USER_ID))
 
         givenProfile(wishJob = "iOS 개발", wishIndustry = null)
-        Mockito.`when`(jobReader.countRecruitingByJobRoles(setOf(JobRole.IT_IOS))).thenReturn(0L)
+        Mockito.`when`(jobReader.countOpenByJobRolesRegisteredSince(setOf(JobRole.IT_IOS), WEEK_START, NOW)).thenReturn(0L)
         assertEquals(today, service.getHeadlineJobCount(USER_ID))
     }
 
@@ -482,6 +482,10 @@ class UserJobServiceTest {
 
         /** 서울 2026-11-06 08:30. UTC로는 전날이라 서울 날짜로 0시를 잡는지 드러난다. */
         private val CLOCK = Clock.fixed(Instant.parse("2026-11-05T23:30:00Z"), ZoneId.of("Asia/Seoul"))
+        private val NOW = LocalDateTime.of(2026, 11, 6, 8, 30)
         private val TODAY_START = LocalDateTime.of(2026, 11, 6, 0, 0)
+
+        /** 2026-11-06 은 금요일이라 이번 주는 11-02 월요일 0시부터다. */
+        private val WEEK_START = LocalDateTime.of(2026, 11, 2, 0, 0)
     }
 }

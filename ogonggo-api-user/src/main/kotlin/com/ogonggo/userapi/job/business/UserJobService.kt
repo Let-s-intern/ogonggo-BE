@@ -19,7 +19,10 @@ import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
 import com.ogonggo.core.user.implement.UserProfileReader
 import java.time.Clock
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.temporal.TemporalAdjusters
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
@@ -105,23 +108,26 @@ class UserJobService(
     }
 
     /**
-     * 홈 히어로의 `채용공고가 NN개 올라왔어요` 숫자(LC-3580).
-     * 희망 직무를 오공고 직무로 옮길 수 있는 회원은 그 직무의 모집 중 공고 수다. 비로그인, 기업 회원, 희망 직무가 비었거나
-     * 옮길 직무가 없는 회원, 맞는 공고가 0건인 회원은 오늘(서울 0시부터) 올라온 모집 중 공고 수로 대신한다.
+     * 홈 히어로의 `채용공고가 NN개 올라왔어요` 숫자(LC-3580, LC-3581).
+     * 희망 직무를 오공고 직무로 옮길 수 있는 회원은 이번 주(서울 월요일 0시부터) 올라온 그 직무의 마감 전 공고 수다.
+     * 비로그인, 기업 회원, 희망 직무가 비었거나 옮길 직무가 없는 회원, 맞는 공고가 0건인 회원은 오늘(서울 0시부터) 올라온
+     * 마감 전 공고 수로 대신한다. 마감 전은 모집 중이고 모집 종료 일시가 지나지 않은 공고다.
      */
     fun getHeadlineJobCount(userId: Long?): UserJobHeadlineCount {
+        val now = LocalDateTime.now(clock)
         val jobRoles = userId
             ?.let(userProfileReader::read)
             ?.let { LetsCareerWishJobCatalog.jobRolesOf(it.wishJob) }
             .orEmpty()
         if (jobRoles.isNotEmpty()) {
-            val matched = jobReader.countRecruitingByJobRoles(jobRoles)
+            val weekStart = now.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay()
+            val matched = jobReader.countOpenByJobRolesRegisteredSince(jobRoles, weekStart, now)
             if (matched > 0) {
                 return UserJobHeadlineCount(count = matched, matchedWishJob = true)
             }
         }
-        val todayStart = LocalDate.now(clock).atStartOfDay()
-        return UserJobHeadlineCount(count = jobReader.countRecruitingRegisteredSince(todayStart), matchedWishJob = false)
+        val todayStart = now.toLocalDate().atStartOfDay()
+        return UserJobHeadlineCount(count = jobReader.countOpenRegisteredSince(todayStart, now), matchedWishJob = false)
     }
 
     /**
