@@ -143,6 +143,8 @@
 | 광고 문의 회원 구분 | `AdvertisementInquiryMemberType` | 기업 회원(`COMPANY`), 일반 회원(`USER`), 비회원(`GUEST`). 저장할 때 토큰으로 정한 문의 시점의 값입니다. |
 | 광고 문의 회사명 입력 방식 | `AdvertisementInquiryCompanyNameSource` | 검색(`SEARCH`, 오공고 회사명 검색에서 고름), 직접 입력(`MANUAL`), 회원 정보(`MEMBER_PROFILE`, 기업 회원 정보로 채움). 클라이언트가 보낸 값을 그대로 저장하며 보내지 않으면 직접 입력입니다. 영업이 표기를 정리할 행을 고르는 표시입니다. |
 | 광고 문의 유입 경로 | `AdvertisementInquiryInflowChannel` | 콜드메일·인스타그램·카카오톡·뉴스레터·기타 UTM·오공고 사이트·렛츠커리어·검색·외부 사이트·직접 접속. UTM과 referrer 원본으로 저장할 때 한 번 판정합니다. 회원의 유입 구분(`UserInflowSource`)과 다릅니다. |
+| 배너 | `Banner` | 운영자가 사용자 웹의 한 자리에 거는 이미지 배너(PC·모바일 이미지, 링크, 대체 텍스트, 광고 표시, 노출 기간, 켜기, 자리 안 순서). 노출 중은 켜져 있고 기간 안(시작 포함·끝 미포함)인 것입니다. 광고 표시가 켜진 배너는 광고주가 있어야 하고, 광고 계약은 같은 광고주의 것만 잇습니다. 이미지는 URL로만 가지며 그 URL의 이미지는 정리 작업이 지우지 않습니다. |
+| 배너 자리 | `BannerPlacement` | 채용공고 홈 위·아래(`HOME_TOP`·`HOME_BOTTOM`), 공고 상세 사이드(`JOB_DETAIL_SIDE`), 부트캠프 목록 위·아래(`BOOTCAMP_TOP`·`BOOTCAMP_BOTTOM`), 부트캠프 상세 사이드(`BOOTCAMP_DETAIL_SIDE`). 상세 사이드 자리는 모바일 이미지가 꼭 있어야 합니다. 등록 뒤 바꾸지 않습니다. |
 | 광고주 | `Advertiser` | 배너·광고 공고를 맡긴 기업. 비즈니스 회원, 광고 문의로 들어온 비회원 기업, 운영자가 직접 더한 기업을 한 테이블에 둡니다. 회원 광고주는 회원 정보(기관명·담당자)를 따르고, 비회원과 회원을 합치지 않습니다. |
 | 광고주 구분 | `AdvertiserType` | 회원(`MEMBER`), 비회원(`NON_MEMBER`). 들어온 길이 정합니다. |
 | 광고주 들어온 길 | `AdvertiserSource` | 비즈니스 회원(`COMPANY_MEMBER`), 광고 문의(`AD_INQUIRY`, 무료 홍보 신청 포함), 직접 추가(`MANUAL`). 기업 회원과 반려한 문의는 광고 문의 광고주가 되지 않습니다. |
@@ -155,7 +157,7 @@
 | 채널 광고 | `ChannelAd` | 광고주의 홍보를 채널 하나에 게재 유형 하나로 올리는 일정. 게시일(`postDate`)부터 노출 끝 날(`endDate`, 그날 포함)까지 차지하고 끝 날이 없으면 하루짜리입니다. 계약은 같은 광고주의 것만 잇습니다. 광고주 목록의 광고 수에는 넣지 않습니다. |
 | 채널 광고 상태 | `ChannelAdStatus` | 예정(`SCHEDULED`), 게시 완료(`PUBLISHED`), 취소(`CANCELED`). 운영자가 바꾸며 날짜로 저절로 바뀌지 않습니다. |
 | 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. 채용공고·부트캠프의 로고·대표 이미지는 URL만 가지며, 저장할 때 그 URL의 이미지를 첨부하고 이미 지워진 이미지 URL이면 막습니다. 이 URL로 쓰이는 이미지는 참조를 풀지 않고 정리 작업도 지우지 않습니다. |
-| 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |
+| 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`), 푸시 알림(`ogonggo/notification`), 배너(`ogonggo/banner`, JPEG·PNG·WEBP). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |
 | 지역 | `Region`, `SubRegion` | 시·도와 시·군·구. 행정 코드를 함께 가집니다. |
 | 스케줄 작업 | `ScheduledJob` | 주기 작업의 실행 주기와 켜짐 여부. 운영자가 DB에서 바꿉니다. |
 | 기업회원 공고 우선 노출 | `CompanyContentPriority` | 기업회원이 비즈니스로 등록한 마감 전 채용공고·부트캠프를 공개 목록 맨 앞에 두는 혜택의 켜짐 여부. 유료 광고 구좌가 나오기 전까지의 임시 혜택이며, 행이 없으면 켜진 것으로 봅니다. 전체 스위치이며 공고별 우선 노출과 함께 켜져 있어야 앞에 둡니다. |

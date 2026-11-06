@@ -32,10 +32,6 @@ class AdvertiserReader internal constructor(
         }
     }
 
-    /** 식별자마다 광고주를 둔다. 없는 광고주는 결과에 없다. 탈퇴한 비즈니스 회원의 광고주도 읽는다. */
-    fun readAllByIds(advertiserIds: Collection<Long>): Map<Long, Advertiser> =
-        if (advertiserIds.isEmpty()) emptyMap() else advertiserRepository.findAllById(advertiserIds).associateBy { checkNotNull(it.id) }
-
     /** 조건에 맞는 광고주 전부다. 탈퇴한 비즈니스 회원의 광고주는 뺀다. */
     fun readAll(condition: AdvertiserSearchCondition): List<Advertiser> = advertiserQueryRepository.findAll(condition)
 
@@ -47,4 +43,8 @@ class AdvertiserReader internal constructor(
         val nameKey = Advertiser.nameKeyOf(name)
         return advertiserRepository.findAll().any { it.id != exceptAdvertiserId && Advertiser.nameKeyOf(it.name) == nameKey }
     }
+
+    /** 광고를 표에 보일 때 광고주를 한 번에 읽는다. 탈퇴한 회원의 광고주도 읽는다. 없는 식별자는 결과에 없다. */
+    fun readAllByIds(advertiserIds: Collection<Long>): Map<Long, Advertiser> =
+        if (advertiserIds.isEmpty()) emptyMap() else advertiserRepository.findAllById(advertiserIds.toSet()).associateBy { checkNotNull(it.id) }
 }

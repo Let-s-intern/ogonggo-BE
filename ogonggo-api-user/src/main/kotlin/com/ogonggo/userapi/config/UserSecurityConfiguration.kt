@@ -134,6 +134,8 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/bootcamps", "/api/v1/bootcamps/**").permitAll()
                 // enum 선택지는 사용자와 무관한 고정 값이라 로그인 없이 연다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/enums").permitAll()
+                // 배너는 홈·상세 서버 렌더가 로그인 없이 부른다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/banners").permitAll()
                 // 공지는 관리자 API에서만 작성하고 사용자는 로그인 없이 읽기만 한다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/announcements", "/api/v1/announcements/*").permitAll()
                 // 추천 챌린지는 채용공고 조회처럼 로그인 없이 연다. 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘긴다.

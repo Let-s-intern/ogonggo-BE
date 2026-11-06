@@ -1,6 +1,9 @@
 package com.ogonggo.core.image.implement
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.core.banner.domain.Banner
+import com.ogonggo.core.banner.domain.BannerPlacement
+import com.ogonggo.core.banner.domain.BannerSettings
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
@@ -118,6 +121,43 @@ internal class ImageAssetPersistenceTest @Autowired constructor(
         assertEquals(ImageAssetStatus.ATTACHED, repository.findById(temporary.id).orElseThrow().status)
         assertEquals(ImageAssetStatus.DELETED, repository.findById(notUsed.id).orElseThrow().status)
         Mockito.verify(storage, Mockito.never()).delete(temporary.storageKey)
+    }
+
+    @Test
+    fun `배너가 URL로 쓰는 이미지는 첨부하지 않았어도 정리 작업이 지우지 않고 첨부로 되돌린다`() {
+        // given
+        val pcImage = upload("banner-pc", OWNER_ID)
+        val mobileImage = upload("banner-mobile", OWNER_ID)
+        val notUsed = upload("banner-not-used", OWNER_ID)
+        Banner(
+            placement = BannerPlacement.JOB_DETAIL_SIDE,
+            settings = BannerSettings(
+                name = "공고 상세 배너",
+                pcImageUrl = pcImage.url,
+                mobileImageUrl = mobileImage.url,
+                linkUrl = "https://example.com",
+                openInNewTab = true,
+                altText = "광고",
+                showAdLabel = false,
+                startAt = null,
+                endAt = null,
+                enabled = true,
+                advertiserId = null,
+                contractId = null,
+            ),
+            displayOrder = 1,
+        ).also(entityManager::persist)
+        flush()
+
+        // when
+        val deletedCount = manager.cleanup(LocalDateTime.now().plusDays(2), Duration.ofHours(24))
+        flush()
+
+        // then
+        assertEquals(1, deletedCount)
+        assertEquals(ImageAssetStatus.ATTACHED, repository.findById(pcImage.id).orElseThrow().status)
+        assertEquals(ImageAssetStatus.ATTACHED, repository.findById(mobileImage.id).orElseThrow().status)
+        assertEquals(ImageAssetStatus.DELETED, repository.findById(notUsed.id).orElseThrow().status)
     }
 
     @Test

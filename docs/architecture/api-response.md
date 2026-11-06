@@ -293,6 +293,17 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 **확인 필요:** 외부 알림 연동(슬랙·메일 등)의 배치, 실패 처리, 동기·비동기 선택, 메일 본문과 발신 주소 관리는 아직 팀 규칙으로 문서화되어 있지 않습니다. 위 내용은 이 엔드포인트의 응답 계약을 설명한 것이며 팀 규칙으로 확정된 것이 아닙니다. 현재 SMTP는 렛츠커리어와 같은 SES 계정과 발신 주소(`official@letscareer.co.kr`)를 함께 쓰고 있어, 오공고 전용 발신 도메인이 필요한지도 함께 확인이 필요합니다.
 
+### 배너
+
+관리자 콘솔 배너 세팅과 사용자 웹의 배너 자리 API입니다. 경로는 [REST API 설계](rest-api-design.md#배너)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3576) / 리뷰 상태: 팀 리뷰 필요
+- 공개 조회(`GET /api/v1/banners?placement=`)는 그 자리에 지금 노출 중인(켜져 있고 기간 안, 시작 포함·끝 미포함) 배너만 `displayOrder` 순서의 배열로 줍니다. 항목은 `id`, `placement`, `pcImageUrl`, `mobileImageUrl`, `linkUrl`, `openInNewTab`, `altText`, `showAdLabel`뿐이고 운영 칸은 싣지 않습니다. `mobileImageUrl`은 `null`일 수 있습니다. `placement`가 없거나 모르는 값이면 기본 문구의 400입니다.
+- 공개 조회는 사용자 API 프로세스 메모리에 자리마다 30초 캐시합니다. 배너를 바꾸는 쓰기는 관리자 API(다른 프로세스)에서 일어나 그 캐시를 비울 수 없으므로, 관리자 변경과 기간 경계는 최대 30초 늦게 보입니다.
+- 관리자 목록은 페이지 없는 배열이고 꺼진 것·기간이 지난 것도 담습니다. `advertiserId`만 주면 모든 자리에서 `BannerPlacement` 선언 순서, 자리 안 순서로 줍니다. 관리자 응답은 공개 칸에 `name`, `startAt`, `endAt`, `enabled`, `displayOrder`, `advertiserId`, `advertiser`(`id`, `name`, `type`), `contractId`, `contract`(`id`, `name`, `startAt`, `endAt`), `createdAt`, `updatedAt`을 더합니다. 광고주·계약이 없으면 `advertiser`·`contract`는 `null`입니다.
+- 등록은 201이고 그 자리 맨 뒤에 붙습니다. 순서 바꾸기는 그 자리 배너 전부를 새 순서로 돌려주고, 삭제는 소프트 삭제 뒤 남은 배너 순서를 1부터 다시 매기며 `{ "id": number }`를 돌려줍니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 배너는 404 `BANNER_NOT_FOUND`입니다.
+
 ### 광고주·광고 계약·광고주 메모
 
 관리자 콘솔 `비즈니스 > 광고 > 광고 계약` 화면의 API입니다. 경로는 [REST API 설계](rest-api-design.md#광고주광고-계약광고주-메모)에 있습니다.
@@ -300,8 +311,8 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요
 - 광고주 목록은 비즈니스 회원(`MEMBER`·`COMPANY_MEMBER`), 광고 문의 기업(`NON_MEMBER`·`AD_INQUIRY`), 직접 추가한 기업(`NON_MEMBER`·`MANUAL`)을 합칩니다. 탈퇴한 회원은 빼고, 기업 회원의 문의와 반려한 문의는 광고주가 되지 않습니다. 문의 기업은 회사 이름(공백·대소문자 무시)마다 하나이고 `adInquiryId`는 가장 최근 문의입니다.
 - 목록은 `PageResponse`가 아닌 배열이고 최대 50건입니다. 진행 중 계약이 있는 곳, 계약만 있는 곳, 계약이 없는 곳 순이며 같은 무리 안에서는 계약 `endAt`이 가장 늦은 곳, 그다음 이름(한국어) 순입니다. 50건은 정렬한 뒤 자릅니다. `keyword`는 이름·담당자 이름·담당자 메일 부분 일치(대소문자 무시)이고, `type`이 `MEMBER`·`NON_MEMBER`가 아니면 400입니다.
-- 광고주 응답은 광고 수(`bannerCount`, `activeBannerCount`, `adPostingCount`, `activeAdPostingCount`, `latestEndAt`)와 계약 합계(`contractCount`, `activeContractCount`, `contractTotalAmount`, `contractVatMixed`)를 싣습니다. 배너·광고 공고가 아직 없어 광고 수는 0, `latestEndAt`은 `null`입니다(LC-3576·LC-3577에서 채움). 계약 금액 합은 부가세 포함·별도를 가리지 않고 더합니다. `companyMemberUserId`, `adInquiryId`, `contactName`, `contactEmail`, `contactPhone`은 값이 없으면 응답에서 뺍니다(콘솔 계약의 선택 칸). 광고주에 한 칸짜리 메모는 없고 광고주 메모로 남깁니다.
-- 광고 계약 목록은 `startAt`이 늦은 것이 먼저(같으면 `id`가 큰 것)입니다. `products`는 `AdContractProduct` 선언 순서로 정렬해 저장하고 돌려줍니다. 계약 응답의 `bannerCount`·`adPostingCount`는 지금 0입니다.
+- 광고주 응답은 광고 수(`bannerCount`, `activeBannerCount`, `adPostingCount`, `activeAdPostingCount`, `latestEndAt`)와 계약 합계(`contractCount`, `activeContractCount`, `contractTotalAmount`, `contractVatMixed`)를 싣습니다. 배너는 지운 것을 빼고 세며 노출 중은 켜져 있고 기간 안인 배너입니다. `latestEndAt`은 배너 `endAt` 가운데 가장 늦은 것입니다. 광고 공고는 아직 없어 0입니다(LC-3577에서 채움). 계약 금액 합은 부가세 포함·별도를 가리지 않고 더합니다. `companyMemberUserId`, `adInquiryId`, `contactName`, `contactEmail`, `contactPhone`은 값이 없으면 응답에서 뺍니다(콘솔 계약의 선택 칸). 광고주에 한 칸짜리 메모는 없고 광고주 메모로 남깁니다.
+- 광고 계약 목록은 `startAt`이 늦은 것이 먼저(같으면 `id`가 큰 것)입니다. `products`는 `AdContractProduct` 선언 순서로 정렬해 저장하고 돌려줍니다. 계약 응답의 `bannerCount`는 그 계약에 이어 둔(지우지 않은) 배너 수이고 `adPostingCount`는 지금 0입니다.
 - 광고주 메모 목록은 `createdAt`이 늦은 것이 먼저입니다. `authorName`은 메모를 쓴 관리자(관리자 토큰의 회원)의 프로필 이름이고 모르면 `null`입니다.
 - 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고주·계약·메모는 404 `ADVERTISER_NOT_FOUND`·`ADVERTISER_CONTRACT_NOT_FOUND`·`ADVERTISER_NOTE_NOT_FOUND`입니다.
 

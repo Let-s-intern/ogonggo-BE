@@ -81,6 +81,7 @@ class AdminChannelAdServiceTest {
         stubFormat(id = 3, platform = AdChannelPlatform.INSTAGRAM, name = "스토리", enabled = false)
         val stored = Mockito.mock(ChannelAd::class.java)
         Mockito.`when`(stored.advertiserId).thenReturn(ADVERTISER_ID)
+        Mockito.`when`(stored.contractId).thenReturn(null)
         Mockito.`when`(stored.channelId).thenReturn(2)
         Mockito.`when`(stored.formatId).thenReturn(3)
         Mockito.`when`(stored.postDate).thenReturn(LocalDate.of(2026, 11, 10))

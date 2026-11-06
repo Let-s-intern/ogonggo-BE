@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisercontract.implement.AdvertiserContractAppender
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractManager
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractReader
 import com.ogonggo.core.advertisercontract.implement.dto.AdvertiserContractAppendDto
+import com.ogonggo.core.banner.implement.BannerManager
 import com.ogonggo.core.channelad.domain.ChannelAdSearchCondition
 import com.ogonggo.core.channelad.domain.ChannelAdStatus
 import com.ogonggo.core.channelad.domain.ChannelAdTerms
@@ -35,6 +36,7 @@ import java.time.LocalDateTime
     AdvertiserContractReader::class,
     AdvertiserContractAppender::class,
     AdvertiserContractManager::class,
+    BannerManager::class,
 )
 internal class ChannelAdPersistenceTest @Autowired constructor(
     private val reader: ChannelAdReader,

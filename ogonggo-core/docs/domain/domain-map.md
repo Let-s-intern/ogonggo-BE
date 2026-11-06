@@ -67,6 +67,14 @@
 - 관리자(영업)가 **처리 상태**(접수·연락함·집행 완료·반려)와 메모를 바꿉니다. 문의 내용은 바꾸지 않습니다.
 - 가격·결제·집행 기록은 두지 않습니다. 유료 상품이 생기면 상품·주문을 따로 두고 문의는 그 앞단으로 남깁니다.
 
+### 배너: `banner`
+
+**배너**(`Banner`)는 운영자가 관리자 콘솔에서 사용자 웹의 자리(**배너 자리**, `BannerPlacement`)마다 거는 이미지 배너입니다. 한 자리에 여럿이면 자리 안 순서대로 웹이 넘깁니다.
+
+- 노출 중은 켜져 있고 기간 안(시작 포함·끝 미포함)인 것입니다. 사용자 API는 노출 중인 배너만 운영 칸 없이 줍니다.
+- 돈을 받고 싣는 배너는 광고 표시를 켜고 광고주를 고릅니다. 광고 계약을 이을 수 있고, 계약이 지워지면 연결만 끊습니다.
+- 이미지는 식별자가 아니라 URL로 가집니다. 오공고에 올린 이미지이거나 사용자 웹의 기본 소재(`/banners/...`)입니다.
+
 ### 광고주와 광고 계약: `advertiser`, `advertisercontract`, `advertisernote`
 
 **광고주**(`Advertiser`)는 배너·광고 공고를 맡긴 기업입니다. 운영자가 관리자 콘솔에서 광고주마다 **광고 계약**(`AdvertiserContract`)과 **광고주 메모**(`AdvertiserNote`)를 남깁니다.
@@ -109,6 +117,9 @@
 | 렛츠커리어 | 사본을 보낸다 | 렛츠커리어 콘텐츠 | 주기적으로 덮어씀 | `LetsCareerContent.externalId` |
 | 회원·비회원 기업 담당자 | 남긴다 | 광고 문의 | 1 : N. 비회원이면 회원 없음. 회원 구분은 서버가 토큰으로 정함 | `AdvertisementInquiry.userId`, `memberType` |
 | 관리자 | 처리 상태와 메모를 바꾼다 | 광고 문의 | 상태 사이 전이를 막지 않음 | `AdvertisementInquiry.status`, `memo` |
+| 관리자 | 자리마다 걸고 순서를 정한다 | 배너 | 자리 하나에 여럿. 자리는 바꾸지 않음 | `Banner.placement`, `displayOrder` |
+| 광고주 | 맡긴다 | 배너 | 1 : N. 광고 표시가 켜진 배너는 광고주 필수 | `Banner.advertiserId` |
+| 광고 계약 | 잇는다 | 배너 | 1 : N. 같은 광고주의 계약만. 계약을 지우면 연결만 끊음 | `Banner.contractId` |
 | 비즈니스 회원, 광고 문의 기업, 관리자 | 광고주가 된다 / 더한다 | 광고주 | 회원마다 하나, 문의 기업은 이름마다 하나. 비회원과 회원을 합치지 않음 | `Advertiser.companyMemberUserId`, `adInquiryId`, `source` |
 | 광고주 | 맺는다 | 광고 계약 | 1 : N. 관리자가 적음 | `AdvertiserContract.advertiserId` |
 | 관리자 | 광고주마다 남긴다 | 광고주 메모 | 1 : N. 쓴 관리자는 토큰으로 정함 | `AdvertiserNote.advertiserId`, `authorUserId` |
