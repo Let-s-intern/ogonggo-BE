@@ -5,6 +5,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
 import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
+import com.ogonggo.core.bootcamp.implement.BootcampWriteValidator
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampCurriculumDto
 import com.ogonggo.core.bootcamp.implement.dto.BootcampPartnerDto
@@ -53,7 +54,6 @@ data class CreateCompanyBootcampRequest(
     val status: BootcampRecruitmentStatus,
 ) : CompanyBootcampWriteRequest {
     fun toCommand(): BootcampAppendDto {
-        validateRelations()
         return BootcampAppendDto(
             companyName = companyName,
             title = title,
@@ -85,7 +85,7 @@ data class CreateCompanyBootcampRequest(
             partners = partners.map(CompanyBootcampPartnerRequest::toCommand),
             curriculums = curriculums.map(CompanyBootcampCurriculumRequest::toCommand),
             status = status,
-        )
+        ).also { BootcampWriteValidator.validate(it, ::invalid) }
     }
 }
 
@@ -121,7 +121,6 @@ data class UpdateCompanyBootcampRequest(
     @field:Valid @field:Size(max = 100) override val curriculums: List<CompanyBootcampCurriculumRequest>,
 ) : CompanyBootcampWriteRequest {
     fun toCommand(): BootcampUpdateDto {
-        validateRelations()
         return BootcampUpdateDto(
             companyName = companyName,
             title = title,
@@ -152,7 +151,7 @@ data class UpdateCompanyBootcampRequest(
             sourceUrl = sourceUrl,
             partners = partners.map(CompanyBootcampPartnerRequest::toCommand),
             curriculums = curriculums.map(CompanyBootcampCurriculumRequest::toCommand),
-        )
+        ).also { BootcampWriteValidator.validate(it, ::invalid) }
     }
 }
 
@@ -213,57 +212,5 @@ private interface CompanyBootcampWriteRequest {
     val curriculums: List<CompanyBootcampCurriculumRequest>
 }
 
-private fun CompanyBootcampWriteRequest.validateRelations() {
-    val recruitmentStart = recruitmentStartAt
-    val recruitmentEnd = recruitmentEndAt
-    val publicationStart = publicationStartAt
-    val publicationEnd = publicationEndAt
-    if (recruitmentType == BootcampRecruitmentType.PERIOD && recruitmentStart == null) {
-        invalid("recruitmentStartAt", "기간 모집의 시작 일시는 필수입니다.")
-    }
-    if (recruitmentType == BootcampRecruitmentType.PERIOD && recruitmentEnd == null) {
-        invalid("recruitmentEndAt", "기간 모집의 종료 일시는 필수입니다.")
-    }
-    if (recruitmentType == BootcampRecruitmentType.ALWAYS_OPEN && recruitmentEnd != null) {
-        invalid("recruitmentEndAt", "상시 모집에는 모집 종료 일시를 둘 수 없습니다.")
-    }
-    if (recruitmentStart != null && recruitmentEnd != null && recruitmentStart.isAfter(recruitmentEnd)) {
-        invalid("recruitmentStartAt", "모집 종료 일시보다 늦을 수 없습니다.")
-    }
-    if (programStartDate.isAfter(programEndDate)) {
-        invalid("programStartDate", "교육 종료일보다 늦을 수 없습니다.")
-    }
-    if (publicationStart != null && publicationEnd != null && publicationStart.isAfter(publicationEnd)) {
-        invalid("publicationStartAt", "공개 종료 일시보다 늦을 수 없습니다.")
-    }
-    if (applicationMethod == BootcampApplicationMethod.EXTERNAL_PAGE && applicationUrl.isNullOrBlank()) {
-        invalid("applicationUrl", "외부 페이지 지원 링크는 필수입니다.")
-    }
-    if (applicationMethod == BootcampApplicationMethod.EMAIL && applicationUrl != null) {
-        invalid("applicationUrl", "이메일 지원에는 외부 지원 링크를 설정할 수 없습니다.")
-    }
-    optionalTextValues().firstOrNull { (_, value) -> value != null && value.isBlank() }?.let { (field, _) ->
-        invalid(field, "공백일 수 없습니다.")
-    }
-    if (partners.map { it.partnerName }.distinct().size != partners.size) {
-        invalid("partners", "중복된 파트너사명은 등록할 수 없습니다.")
-    }
-    curriculums.forEachIndexed { index, curriculum ->
-        if (curriculum.startWeek > curriculum.endWeek) {
-            invalid("curriculums[$index].startWeek", "종료 주차보다 클 수 없습니다.")
-        }
-    }
-}
-
-private fun CompanyBootcampWriteRequest.optionalTextValues(): List<Pair<String, String?>> = listOf(
-    "eligibilityAndSelectionProcess" to eligibilityAndSelectionProcess,
-    "logoUrl" to logoUrl,
-    "instructorInfo" to instructorInfo,
-    "programFeatures" to programFeatures,
-    "completionRequirements" to completionRequirements,
-    "managerEmail" to managerEmail,
-    "inquiryUrl" to inquiryUrl,
-    "sourceUrl" to sourceUrl,
-)
-
+/** 칸 사이 규칙은 관리자 대리 등록과 같이 core의 [BootcampWriteValidator]가 정한다. */
 private fun invalid(field: String, reason: String): Nothing = throw InvalidRequestFieldException(field, reason)

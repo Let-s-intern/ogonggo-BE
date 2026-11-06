@@ -157,6 +157,25 @@ class BootcampDomainTest {
     }
 
     @Test
+    fun `대리 등록은 기업회원 과정에만 한 번 남고 수집 과정이나 삭제한 과정에는 남길 수 없다`() {
+        // given
+        val company = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY)
+        val proxyAt = LocalDateTime.of(2026, 11, 5, 10, 0)
+
+        // when
+        company.markProxyRegistered(42L, proxyAt)
+
+        // then
+        assertEquals(proxyAt, company.proxyRegisteredAt)
+        assertEquals(42L, company.proxyRegisteredByUserId)
+        assertThrows(IllegalStateException::class.java) { company.markProxyRegistered(43L, proxyAt.plusDays(1)) }
+        assertEquals(42L, company.proxyRegisteredByUserId)
+        assertThrows(IllegalStateException::class.java) { createBootcamp().markProxyRegistered(42L, proxyAt) }
+        val deleted = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY).also { it.delete(proxyAt) }
+        assertThrows(IllegalStateException::class.java) { deleted.markProxyRegistered(42L, proxyAt) }
+    }
+
+    @Test
     fun `삭제는 멱등하며 삭제 후 변경을 차단한다`() {
         val bootcamp = createBootcamp()
         val firstDeletedAt = LocalDateTime.of(2026, 9, 1, 0, 0)
@@ -185,6 +204,7 @@ class BootcampDomainTest {
     }
 
     private fun createBootcamp(
+        ownerUserId: Long? = null,
         source: ContentSource = ContentSource.CRAWLER,
         externalId: String? = null,
         programType: String = "개발",
@@ -203,6 +223,7 @@ class BootcampDomainTest {
         publicationStartAt: LocalDateTime? = null,
         publicationEndAt: LocalDateTime? = null,
     ): Bootcamp = Bootcamp(
+        ownerUserId = ownerUserId,
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = programType,

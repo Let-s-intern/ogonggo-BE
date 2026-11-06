@@ -424,6 +424,18 @@ class Job internal constructor(
     var contentEditedByUserId: Long? = null /* 공고 내용을 마지막으로 고친 관리자 식별자 */
         protected set
 
+    /**
+     * 운영자가 기업회원 대신 등록한 공고면 등록한 관리자와 일시다(대리 등록). 기업회원이 직접 등록했거나 수집한 공고는 null이다.
+     * 등록할 때 한 번만 남기며 기업회원이 나중에 고쳐도 지우지 않는다. "누가 대신 올렸다"는 기록이기 때문이다.
+     */
+    @Column(name = "proxy_registered_at")
+    var proxyRegisteredAt: LocalDateTime? = null /* 대리 등록 일시 */
+        protected set
+
+    @Column(name = "proxy_registered_by_user_id")
+    var proxyRegisteredByUserId: Long? = null /* 대리 등록한 관리자 식별자 */
+        protected set
+
     fun update(
         companyName: String,
         parentCompanyName: String?,
@@ -525,6 +537,16 @@ class Job internal constructor(
         require(userId > 0) { "관리자 식별자는 양수여야 합니다." }
         contentEditedAt = now
         contentEditedByUserId = userId
+    }
+
+    /** 운영자가 기업회원 대신 등록했다고 남긴다. 기업회원 공고에만, 한 번만 남긴다. */
+    fun markProxyRegistered(adminUserId: Long, now: LocalDateTime) {
+        checkNotDeleted()
+        require(adminUserId > 0) { "관리자 식별자는 양수여야 합니다." }
+        check(ownerUserId != null) { "기업회원 공고만 대리 등록으로 남깁니다." }
+        check(proxyRegisteredAt == null) { "이미 대리 등록으로 남긴 공고입니다." }
+        proxyRegisteredAt = now
+        proxyRegisteredByUserId = adminUserId
     }
 
     /** 운영자가 고친 내용이 있는지. 참이면 AI 서버의 다시 수집이 공고 내용과 원문을 바꾸지 않는다. */

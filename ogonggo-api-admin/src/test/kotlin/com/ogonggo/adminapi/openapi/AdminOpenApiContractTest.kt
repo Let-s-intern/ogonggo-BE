@@ -375,6 +375,56 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `비즈니스 회원 공고 대리 등록은 회원 하위 컬렉션에 201로 상세를 돌려주고 목록과 상세에 대리 등록 기록을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operations = mapOf(
+            "jobs" to Triple("createCompanyMemberJob", "CreateProxyJobRequest", "AdminJobDetailResponse"),
+            "bootcamps" to Triple("createCompanyMemberBootcamp", "CreateProxyBootcampRequest", "AdminBootcampDetailResponse"),
+        )
+
+        // then
+        operations.forEach { (collection, contract) ->
+            val (operationId, request, response) = contract
+            val operation = document.at("/paths/~1api~1v1~1admin~1company-members~1{userId}~1$collection/post")
+            val userId = operation.at("/parameters").first { it["name"].asText() == "userId" }
+            assertEquals(operationId, operation.at("/operationId").asText())
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(userId.at("/schema/minimum").asDouble() > 0)
+            assertEquals(
+                "#/components/schemas/$request",
+                operation.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+            )
+            val wrapper = operation.at("/responses/201/content/application~1json/schema/\$ref").asText().substringAfterLast('/')
+            assertEquals(
+                "#/components/schemas/$response",
+                document.at("/components/schemas/$wrapper/properties/data/\$ref").asText(),
+                operationId,
+            )
+            assertTrue(operation.at("/responses/404/description").asText().contains("USER_NOT_FOUND"))
+            assertTrue(operation.at("/responses/409/description").asText().contains("COMPANY_MEMBER_NOT_ACTIVE"))
+            val requestSchema = document.at("/components/schemas/$request")
+            assertEquals(listOf("HIDDEN", "VISIBLE"), requestSchema.at("/properties/visibility/enum").map { it.asText() }.sorted())
+            assertFalse(requestSchema.at("/required").any { it.asText() == "visibility" }, request)
+        }
+        listOf(
+            "AdminJobSummaryResponse",
+            "AdminJobDetailResponse",
+            "AdminBootcampSummaryResponse",
+            "AdminBootcampDetailResponse",
+        ).forEach { name ->
+            val schema = document.at("/components/schemas/$name")
+            assertEquals("date-time", schema.at("/properties/proxyRegisteredAt/format").asText(), name)
+            assertEquals("integer", schema.at("/properties/proxyRegisteredByUserId/type").asText(), name)
+            val required = schema.at("/required").map { it.asText() }
+            assertFalse(required.contains("proxyRegisteredAt"), name)
+            assertFalse(required.contains("proxyRegisteredByUserId"), name)
+        }
+    }
+
+    @Test
     fun `채용공고 분석 수정은 AI 서버 저장과 같은 분석 스키마를 받고 상세는 같은 스키마로 분석과 최신 여부를 싣는다`() {
         // given
         val document = openApiDocument()

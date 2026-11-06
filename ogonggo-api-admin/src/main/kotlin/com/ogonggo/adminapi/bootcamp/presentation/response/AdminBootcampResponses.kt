@@ -47,6 +47,10 @@ data class AdminBootcampSummaryResponse(
     val registeredAt: LocalDateTime,
     @Schema(description = PRIORITY_EXPOSED_DESCRIPTION)
     val priorityExposed: Boolean,
+    @Schema(description = PROXY_REGISTERED_AT_DESCRIPTION)
+    val proxyRegisteredAt: LocalDateTime?,
+    @Schema(description = PROXY_REGISTERED_BY_DESCRIPTION)
+    val proxyRegisteredByUserId: Long?,
 ) {
     companion object {
         internal fun from(result: AdminBootcampSummary): AdminBootcampSummaryResponse = AdminBootcampSummaryResponse(
@@ -75,6 +79,8 @@ data class AdminBootcampSummaryResponse(
             reviewStatus = result.reviewStatus,
             registeredAt = result.registeredAt,
             priorityExposed = result.priorityExposed,
+            proxyRegisteredAt = result.proxyRegisteredAt,
+            proxyRegisteredByUserId = result.proxyRegisteredByUserId,
         )
     }
 }
@@ -109,6 +115,10 @@ data class AdminBootcampDetailResponse(
     val registeredAt: LocalDateTime,
     @Schema(description = PRIORITY_EXPOSED_DESCRIPTION)
     val priorityExposed: Boolean,
+    @Schema(description = PROXY_REGISTERED_AT_DESCRIPTION)
+    val proxyRegisteredAt: LocalDateTime?,
+    @Schema(description = PROXY_REGISTERED_BY_DESCRIPTION)
+    val proxyRegisteredByUserId: Long?,
     val content: String,
     val eligibilityAndSelectionProcess: String?,
     val logoUrl: String?,
@@ -156,6 +166,8 @@ data class AdminBootcampDetailResponse(
                 reviewStatus = summary.reviewStatus,
                 registeredAt = summary.registeredAt,
                 priorityExposed = summary.priorityExposed,
+                proxyRegisteredAt = summary.proxyRegisteredAt,
+                proxyRegisteredByUserId = summary.proxyRegisteredByUserId,
                 content = result.content,
                 eligibilityAndSelectionProcess = result.eligibilityAndSelectionProcess,
                 logoUrl = result.logoUrl,
@@ -220,3 +232,9 @@ private const val PRIORITY_EXPOSED_DESCRIPTION =
     "기업회원 공고 우선 노출을 이 과정에 줄지입니다. 기업회원 과정(source = COMPANY)에만 영향이 있고, " +
         "다른 경로 과정은 저장한 값(기본 true)을 그대로 보여 줍니다. 전체 설정(company-content-priority)이 켜져 있고 " +
         "이 값이 true인 마감 전 과정만 공개 목록 맨 앞에 둡니다."
+
+private const val PROXY_REGISTERED_AT_DESCRIPTION =
+    "운영자가 비즈니스 회원 대신 등록한 과정(대리 등록)이면 등록 일시(한국 시간)입니다. 회원이 직접 등록했거나 수집한 과정은 null입니다. " +
+        "회원이 나중에 고쳐도 지우지 않습니다."
+private const val PROXY_REGISTERED_BY_DESCRIPTION =
+    "대리 등록한 관리자의 회원 식별자입니다. 대리 등록이 아니면 null입니다."
