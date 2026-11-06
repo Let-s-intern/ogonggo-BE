@@ -300,10 +300,22 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요
 - 광고주 목록은 비즈니스 회원(`MEMBER`·`COMPANY_MEMBER`), 광고 문의 기업(`NON_MEMBER`·`AD_INQUIRY`), 직접 추가한 기업(`NON_MEMBER`·`MANUAL`)을 합칩니다. 탈퇴한 회원은 빼고, 기업 회원의 문의와 반려한 문의는 광고주가 되지 않습니다. 문의 기업은 회사 이름(공백·대소문자 무시)마다 하나이고 `adInquiryId`는 가장 최근 문의입니다.
 - 목록은 `PageResponse`가 아닌 배열이고 최대 50건입니다. 진행 중 계약이 있는 곳, 계약만 있는 곳, 계약이 없는 곳 순이며 같은 무리 안에서는 계약 `endAt`이 가장 늦은 곳, 그다음 이름(한국어) 순입니다. 50건은 정렬한 뒤 자릅니다. `keyword`는 이름·담당자 이름·담당자 메일 부분 일치(대소문자 무시)이고, `type`이 `MEMBER`·`NON_MEMBER`가 아니면 400입니다.
-- 광고주 응답은 광고 수(`bannerCount`, `activeBannerCount`, `adPostingCount`, `activeAdPostingCount`, `latestEndAt`)와 계약 합계(`contractCount`, `activeContractCount`, `contractTotalAmount`, `contractVatMixed`)를 싣습니다. 배너·광고 공고가 아직 없어 광고 수는 0, `latestEndAt`은 `null`입니다(LC-3576·LC-3577에서 채움). 계약 금액 합은 부가세 포함·별도를 가리지 않고 더합니다. `companyMemberUserId`, `adInquiryId`, `contactName`, `contactEmail`, `contactPhone`은 값이 없으면 응답에서 뺍니다(콘솔 계약의 선택 칸). 광고주에 한 칸짜리 메모는 없고 광고주 메모로 남깁니다.
-- 광고 계약 목록은 `startAt`이 늦은 것이 먼저(같으면 `id`가 큰 것)입니다. `products`는 `AdContractProduct` 선언 순서로 정렬해 저장하고 돌려줍니다. 계약 응답의 `bannerCount`·`adPostingCount`는 지금 0입니다.
+- 광고주 응답은 광고 수(`bannerCount`, `activeBannerCount`, `adPostingCount`, `activeAdPostingCount`, `latestEndAt`)와 계약 합계(`contractCount`, `activeContractCount`, `contractTotalAmount`, `contractVatMixed`)를 싣습니다. 배너가 아직 없어 배너 수는 0입니다(LC-3576에서 채움). 광고 공고 수는 [광고 공고](#광고-공고)를 봅니다. 계약 금액 합은 부가세 포함·별도를 가리지 않고 더합니다. `companyMemberUserId`, `adInquiryId`, `contactName`, `contactEmail`, `contactPhone`은 값이 없으면 응답에서 뺍니다(콘솔 계약의 선택 칸). 광고주에 한 칸짜리 메모는 없고 광고주 메모로 남깁니다.
+- 광고 계약 목록은 `startAt`이 늦은 것이 먼저(같으면 `id`가 큰 것)입니다. `products`는 `AdContractProduct` 선언 순서로 정렬해 저장하고 돌려줍니다. 계약 응답의 `bannerCount`는 지금 0이고 `adPostingCount`는 이 계약을 이은 광고 공고 수입니다.
 - 광고주 메모 목록은 `createdAt`이 늦은 것이 먼저입니다. `authorName`은 메모를 쓴 관리자(관리자 토큰의 회원)의 프로필 이름이고 모르면 `null`입니다.
 - 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고주·계약·메모는 404 `ADVERTISER_NOT_FOUND`·`ADVERTISER_CONTRACT_NOT_FOUND`·`ADVERTISER_NOTE_NOT_FOUND`입니다.
+
+### 광고 공고
+
+관리자 콘솔 `비즈니스 > 광고` 자리별 광고 공고 세팅과 사용자 웹 목록의 광고 칸 API입니다. 경로는 [REST API 설계](rest-api-design.md#광고-공고)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3577) / 리뷰 상태: 팀 리뷰 필요
+- 관리자 목록·순서 바꾸기 응답은 `PageResponse`가 아닌 배열이고 자리 안 순서(`displayOrder`, 1부터)대로입니다. `advertiserId`로 거르고 자리를 주지 않으면 자리 선언 순서(`JOB_LIST`, `JOB_PICK`, `BOOTCAMP_LIST`, `JOB_DETAIL_SIDE`, `CALENDAR`, `MYPAGE_SCRAP`), 자리 안 순서대로입니다.
+- 관리자 응답 한 건은 대상 제목·회사(`targetTitle`, `targetCompanyName`, 대상이 지워졌으면 빈 문자열), 대상이 지금 공개이고 모집 중인지(`targetAvailable`), 광고주 요약(`advertiser`), 계약 요약(`contract`)을 싣습니다. 열린 기간(`startAt`, `endAt`)과 없는 계약은 `null`로 싣습니다.
+- 사용자 공개 조회(`GET /api/v1/ad-postings`)의 `data`는 배열이고, 한 건은 `id`(광고 공고 식별자), `placement`, `targetType`과 대상 요약 하나(`job`은 `UserJobSummaryResponse`, `bootcamp`는 `UserBootcampSummaryResponse`)입니다. 대상 종류가 아닌 쪽 요약은 칸을 뺍니다. 광고주·기간·켜짐·순서는 싣지 않습니다.
+- 공개 조회는 로그인과 무관하게 같은 결과라 사용자 API가 자리마다 30초 메모리 캐시합니다. 관리자 API는 다른 프로세스라 쓰기 때 캐시를 비우지 못하므로 바꾼 값은 길어야 30초 늦게 나갑니다. 대상 요약의 `bookmarked`는 늘 `false`이고, 조회 수·북마크 수도 캐시 시간만큼 늦을 수 있습니다.
+- 400 `message`는 광고주 API와 같은 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고 공고는 404 `AD_POSTING_NOT_FOUND`입니다. 사용자 공개 조회의 `placement` 오류는 사용자 API 형식(`[placement] ...`)입니다.
+- 광고주 응답의 `adPostingCount`·`activeAdPostingCount`·`latestEndAt`(광고 공고 몫)과 광고 계약 응답의 `adPostingCount`를 채웁니다. 노출 중 광고 공고는 켜져 있고 기간 안이며 대상이 공개이고 모집 중인 것입니다.
 
 ### 회사명 검색
 

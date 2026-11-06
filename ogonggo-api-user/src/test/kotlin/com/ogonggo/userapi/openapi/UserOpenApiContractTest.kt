@@ -594,6 +594,27 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(parameterEnum.contains("| `FULL_TIME` | 1 | 정규직 |"))
     }
 
+    @Test
+    fun `광고 공고 공개 조회는 인증 없이 자리를 enum으로 받고 목록 항목 모양의 대상 요약을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1ad-postings/get")
+        val properties = document.at("/components/schemas/UserAdPostingResponse/properties")
+
+        // then
+        assertEquals("listPublicAdPostings", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security").isMissingNode)
+        assertEquals(
+            listOf("JOB_LIST", "JOB_PICK", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "CALENDAR", "MYPAGE_SCRAP"),
+            operation.parameter("placement").at("/schema/enum").map { it.asText() },
+        )
+        assertEquals("#/components/schemas/UserJobSummaryResponse", properties.at("/job/\$ref").asText())
+        assertEquals("#/components/schemas/UserBootcampSummaryResponse", properties.at("/bootcamp/\$ref").asText())
+        listOf("advertiserId", "startAt", "endAt", "enabled", "displayOrder").forEach { field -> assertFalse(properties.has(field), field) }
+    }
+
     private fun openApiDocument(): JsonNode {
         val response = mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)

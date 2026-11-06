@@ -109,6 +109,11 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/post",
             "/paths/~1api~1v1~1admin~1advertiser-notes~1{noteId}/patch",
             "/paths/~1api~1v1~1admin~1advertiser-notes~1{noteId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-postings/get",
+            "/paths/~1api~1v1~1admin~1ad-postings/post",
+            "/paths/~1api~1v1~1admin~1ad-postings~1{adPostingId}/patch",
+            "/paths/~1api~1v1~1admin~1ad-postings~1{adPostingId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-postings~1order/put",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -351,6 +356,31 @@ class AdminOpenApiContractTest @Autowired constructor(
             document.at("/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/post/parameters")
                 .none { it["name"].asText() == "adminUserId" },
         )
+    }
+
+    @Test
+    fun `광고 공고는 자리를 enum으로 받고 대상·광고주·계약 요약을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val placement = document.at("/paths/~1api~1v1~1admin~1ad-postings/get/parameters").first { it["name"].asText() == "placement" }
+        val properties = document.at("/components/schemas/AdminAdPostingResponse/properties")
+        val update = document.at("/components/schemas/UpdateAdminAdPostingRequest/properties")
+
+        // then
+        assertEquals(
+            listOf("JOB_LIST", "JOB_PICK", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "CALENDAR", "MYPAGE_SCRAP"),
+            placement.at("/schema/enum").map { it.asText() },
+        )
+        listOf(
+            "id", "placement", "targetType", "targetId", "targetTitle", "targetCompanyName", "targetAvailable",
+            "startAt", "endAt", "enabled", "displayOrder", "advertiserId", "advertiser", "contractId", "contract",
+            "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(properties.has(field), field) }
+        assertEquals("integer", update.at("/contractId/type").asText())
+        assertFalse(update.has("placement"))
+        assertFalse(update.has("targetId"))
     }
 
     private fun openApiDocument() = objectMapper.readTree(
