@@ -132,6 +132,11 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1channel-ads/post",
             "/paths/~1api~1v1~1admin~1channel-ads~1{adId}/patch",
             "/paths/~1api~1v1~1admin~1channel-ads~1{adId}/delete",
+            "/paths/~1api~1v1~1admin~1calendar-todos/get",
+            "/paths/~1api~1v1~1admin~1calendar-todos/post",
+            "/paths/~1api~1v1~1admin~1calendar-todos~1{todoId}/patch",
+            "/paths/~1api~1v1~1admin~1calendar-todos~1{todoId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-calendar/get",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -462,6 +467,36 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(contract.has("channelFormatIds"))
         assertTrue(contract.has("channelAdCount"))
         assertTrue(contractRequest.has("channelFormatIds"))
+    }
+
+    @Test
+    fun `캘린더 할 일과 광고 일정은 날짜 기간을 받고 프런트 계약의 칸을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val todoParameters = document.at("/paths/~1api~1v1~1admin~1calendar-todos/get/parameters")
+        val calendarParameters = document.at("/paths/~1api~1v1~1admin~1ad-calendar/get/parameters")
+        val todo = document.at("/components/schemas/AdminCalendarTodoResponse/properties")
+        val update = document.at("/components/schemas/UpdateAdminCalendarTodoRequest/properties")
+        val calendar = document.at("/components/schemas/AdminAdCalendarResponse/properties")
+        val contract = document.at("/components/schemas/AdminAdCalendarContractResponse/properties")
+
+        // then
+        listOf(todoParameters, calendarParameters).forEach { parameters ->
+            assertEquals(listOf("from", "to"), parameters.map { it["name"].asText() })
+            parameters.forEach { assertEquals("date", it.at("/schema/format").asText()) }
+        }
+        listOf("id", "title", "content", "startDate", "endDate", "done", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(todo.has(field), field) }
+        assertEquals("date", todo.at("/startDate/format").asText())
+        assertEquals("string", update.at("/content/type").asText())
+        assertEquals(listOf("adPostings", "banners", "channelAds", "contracts"), calendar.fieldNames().asSequence().toList().sorted())
+        assertEquals("#/components/schemas/AdminBannerResponse", calendar.at("/banners/items/\$ref").asText())
+        assertEquals("#/components/schemas/AdminAdPostingResponse", calendar.at("/adPostings/items/\$ref").asText())
+        assertEquals("#/components/schemas/AdminChannelAdResponse", calendar.at("/channelAds/items/\$ref").asText())
+        listOf("id", "name", "startAt", "endAt", "advertiserId", "advertiser", "amount", "paid", "products")
+            .forEach { field -> assertTrue(contract.has(field), field) }
     }
 
     private fun openApiDocument() = objectMapper.readTree(

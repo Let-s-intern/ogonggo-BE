@@ -145,6 +145,27 @@ internal class BannerPersistenceTest @Autowired constructor(
         assertEquals(ADVERTISER_ID, reader.read(banner).advertiserId)
     }
 
+    @Test
+    fun `기간이 겹치는 배너는 꺼진 것과 열린 기간을 담고 끝이 조회 시작과 같거나 시작이 조회 끝과 같으면 뺀다`() {
+        // given
+        val from = LocalDateTime.of(2026, 11, 1, 0, 0)
+        val to = LocalDateTime.of(2026, 11, 8, 0, 0)
+        val bottom = append(BannerPlacement.HOME_BOTTOM, startAt = to.minusHours(1))
+        val disabled = append(BannerPlacement.HOME_TOP, enabled = false, startAt = from.minusDays(3), endAt = from.plusMinutes(1))
+        val open = append(BannerPlacement.HOME_TOP)
+        append(BannerPlacement.HOME_TOP, endAt = from)
+        append(BannerPlacement.HOME_TOP, startAt = to)
+        val deleted = append(BannerPlacement.HOME_TOP)
+        manager.delete(reader.readForDelete(deleted), NOW)
+        flush()
+
+        // when
+        val banners = reader.readAllOverlapping(from, to)
+
+        // then
+        assertEquals(listOf(disabled, open, bottom), banners.map { it.id })
+    }
+
     private fun append(
         placement: BannerPlacement,
         advertiserId: Long? = null,

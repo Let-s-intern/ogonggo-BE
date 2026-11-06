@@ -5,6 +5,7 @@ import com.ogonggo.core.advertisercontract.error.AdvertiserContractErrorCode
 import com.ogonggo.core.advertisercontract.persistence.AdvertiserContractJpaRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 @Component
 class AdvertiserContractReader internal constructor(
@@ -26,6 +27,10 @@ class AdvertiserContractReader internal constructor(
         } else {
             advertiserContractRepository.findAllByAdvertiserIdInAndDeletedAtIsNull(advertiserIds).groupBy { it.advertiserId }
         }
+
+    /** 기간(시작 포함·끝 미포함)이 `[from, toExclusive)`와 겹치는 계약 전부다. 시작이 이른 것이 먼저이고 같으면 먼저 등록한 것이 먼저다. */
+    fun readAllOverlapping(from: LocalDateTime, toExclusive: LocalDateTime): List<AdvertiserContract> =
+        advertiserContractRepository.findAllOverlapping(from, toExclusive)
 
     /** 수정할 계약을 잠가 읽는다. 호출한 서비스의 트랜잭션 안에서 부른다. */
     fun readForUpdate(contractId: Long): AdvertiserContract =
