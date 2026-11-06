@@ -1,5 +1,8 @@
 package com.ogonggo.core.enumeration.catalog
 
+import com.ogonggo.core.advertiser.domain.AdvertiserSource
+import com.ogonggo.core.advertiser.domain.AdvertiserType
+import com.ogonggo.core.advertisercontract.domain.AdContractProduct
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
@@ -166,6 +169,10 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementInquiryMemberType>(),
             enumOptionsOf<AdvertisementInquiryInflowChannel>(),
             enumOptionsOf<AdvertisementInquiryCompanyNameSource>(),
+            // 광고주와 광고 계약
+            enumOptionsOf<AdvertiserType>(),
+            enumOptionsOf<AdvertiserSource>(),
+            enumOptionsOf<AdContractProduct>(),
         )
     }
 }

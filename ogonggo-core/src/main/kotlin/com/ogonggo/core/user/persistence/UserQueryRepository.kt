@@ -108,6 +108,16 @@ internal class UserQueryRepository(
             .fetchOne()
             ?.let { row -> checkNotNull(row.get(user)) to row.get(companyProfile) }
 
+    /** 탈퇴하지 않은 기업 회원 전부다. 광고주 목록이 회원 광고주를 맞출 때 쓴다. 기업 정보가 없는 회원도 싣는다. */
+    fun findCompanyMembersNotWithdrawn(): List<Pair<User, CompanyProfile?>> =
+        queryFactory.select(user, companyProfile)
+            .from(user)
+            .leftJoin(companyProfile).on(companyProfile.userId.eq(user.id))
+            .where(user.role.eq(UserRole.COMPANY), user.status.ne(UserStatus.WITHDRAWN))
+            .orderBy(user.id.asc())
+            .fetch()
+            .map { row -> checkNotNull(row.get(user)) to row.get(companyProfile) }
+
     /**
      * 알림 대상 고르기용 활성 일반 회원 목록. 회원 ID 순으로 렛츠커리어 회원 ID와 희망 직무 원문만 읽는다.
      * 프로필 행이 없는 회원도 대상이 될 수 있어 프로필은 left join 한다.

@@ -44,6 +44,10 @@ class UserManagementReader internal constructor(
         userQueryRepository.findCompanyMember(userId)?.let { (user, profile) -> CompanyMemberDto.of(user, profile) }
             ?: throw EntityNotFoundException(UserErrorCode.USER_NOT_FOUND)
 
+    /** 탈퇴하지 않은 기업 회원 전부다. 정지한 회원도 싣는다. */
+    fun readCompanyMembersNotWithdrawn(): List<CompanyMemberDto> =
+        userQueryRepository.findCompanyMembersNotWithdrawn().map { (user, companyProfile) -> CompanyMemberDto.of(user, companyProfile) }
+
     fun readCompanyMemberPage(condition: UserManagementSearchCondition, page: Int, size: Int): CompanyMemberPageDto {
         validatePageRequest(page, size)
         val result = userQueryRepository.findCompanyMemberPage(condition, PageRequest.of(page, size))
