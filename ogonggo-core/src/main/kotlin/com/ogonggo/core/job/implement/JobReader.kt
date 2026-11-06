@@ -138,6 +138,15 @@ class JobReader internal constructor(
         return jobQueryRepository.findRecruitingMatched(jobRoles, industries, excludedJobIds, limit)
     }
 
+    fun countRecruitingByJobRoles(jobRoles: Collection<JobRole>): Long {
+        require(jobRoles.isNotEmpty()) { "직무가 하나는 있어야 합니다." }
+        return jobQueryRepository.countRecruitingByJobRoles(jobRoles)
+    }
+
+    /** 사용자에게 보이는 등록 일시가 [since] 이후인 모집 중 공고 수. */
+    fun countRecruitingRegisteredSince(since: LocalDateTime): Long =
+        jobQueryRepository.countRecruitingRegisteredSince(since)
+
     /** 마감 공고 제외는 저장된 모집 상태로 판단한다. */
     fun readPublishedCalendar(
         condition: JobSearchCondition,

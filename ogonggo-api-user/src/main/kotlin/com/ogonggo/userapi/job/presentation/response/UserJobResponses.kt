@@ -10,6 +10,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
+import com.ogonggo.userapi.job.business.UserJobHeadlineCount
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobSummary
 import com.ogonggo.userapi.job.business.UserTodayJobSummary
@@ -260,5 +261,17 @@ data class UserJobAnalysisResponse(
         )
 
         private fun fact(fact: JobAnalysisContent.Fact) = Fact(fact.value, fact.note)
+    }
+}
+
+data class UserJobHeadlineCountResponse(
+    @field:Schema(description = "공고 수. matchedWishJob이 참이면 희망 직무에 맞는 모집 중 공고 수, 거짓이면 오늘 올라온 모집 중 공고 수")
+    val count: Long,
+    @field:Schema(description = "희망 직무에 맞는 공고 수인지. 거짓이면 비로그인과 같은 오늘 올라온 공고 수다")
+    val matchedWishJob: Boolean,
+) {
+    companion object {
+        fun from(result: UserJobHeadlineCount): UserJobHeadlineCountResponse =
+            UserJobHeadlineCountResponse(count = result.count, matchedWishJob = result.matchedWishJob)
     }
 }
