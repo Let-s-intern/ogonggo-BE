@@ -16,7 +16,9 @@ import com.ogonggo.core.job.implement.dto.JobMetricDto
 import com.ogonggo.core.job.implement.dto.TodayJobDto
 import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
 import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
+import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
 import com.ogonggo.core.user.implement.UserProfileReader
+import java.time.Clock
 import java.time.LocalDate
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -32,6 +34,7 @@ class UserJobService(
     private val userProfileReader: UserProfileReader,
     private val eventPublisher: ApplicationEventPublisher,
     private val companyContentPriorityReader: CompanyContentPriorityReader,
+    private val clock: Clock,
 ) {
 
     /**
@@ -99,6 +102,26 @@ class UserJobService(
             )
         }
         return toSummaries(userId, jobs)
+    }
+
+    /**
+     * 홈 히어로의 `채용공고가 NN개 올라왔어요` 숫자(LC-3580).
+     * 희망 직무를 오공고 직무로 옮길 수 있는 회원은 그 직무의 모집 중 공고 수다. 비로그인, 기업 회원, 희망 직무가 비었거나
+     * 옮길 직무가 없는 회원, 맞는 공고가 0건인 회원은 오늘(서울 0시부터) 올라온 모집 중 공고 수로 대신한다.
+     */
+    fun getHeadlineJobCount(userId: Long?): UserJobHeadlineCount {
+        val jobRoles = userId
+            ?.let(userProfileReader::read)
+            ?.let { LetsCareerWishJobCatalog.jobRolesOf(it.wishJob) }
+            .orEmpty()
+        if (jobRoles.isNotEmpty()) {
+            val matched = jobReader.countRecruitingByJobRoles(jobRoles)
+            if (matched > 0) {
+                return UserJobHeadlineCount(count = matched, matchedWishJob = true)
+            }
+        }
+        val todayStart = LocalDate.now(clock).atStartOfDay()
+        return UserJobHeadlineCount(count = jobReader.countRecruitingRegisteredSince(todayStart), matchedWishJob = false)
     }
 
     /**

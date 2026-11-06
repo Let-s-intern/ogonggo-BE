@@ -24,8 +24,11 @@ import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
 import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import org.junit.jupiter.api.Assertions.assertEquals
 import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import org.junit.jupiter.api.Test
@@ -53,6 +56,7 @@ class UserJobServiceTest {
         userProfileReader,
         eventPublisher,
         companyContentPriorityReader,
+        CLOCK,
     )
 
     @Test
@@ -314,6 +318,50 @@ class UserJobServiceTest {
     }
 
     @Test
+    fun `희망 직무를 오공고 직무로 옮겨 맞는 모집 중 공고 수를 준다`() {
+        // given
+        givenProfile(wishJob = "백엔드/서버 개발", wishIndustry = null)
+        Mockito.`when`(jobReader.countRecruitingByJobRoles(setOf(JobRole.IT_BACKEND))).thenReturn(12L)
+
+        // when
+        val result = service.getHeadlineJobCount(USER_ID)
+
+        // then
+        assertEquals(UserJobHeadlineCount(count = 12L, matchedWishJob = true), result)
+    }
+
+    @Test
+    fun `비로그인이면 서울 0시부터 올라온 공고 수를 준다`() {
+        // given
+        Mockito.`when`(jobReader.countRecruitingRegisteredSince(TODAY_START)).thenReturn(7L)
+
+        // when
+        val result = service.getHeadlineJobCount(null)
+
+        // then
+        assertEquals(UserJobHeadlineCount(count = 7L, matchedWishJob = false), result)
+    }
+
+    @Test
+    fun `희망 직무가 없거나 옮길 직무가 없거나 맞는 공고가 0건이면 오늘 올라온 공고 수로 대신한다`() {
+        Mockito.`when`(jobReader.countRecruitingRegisteredSince(TODAY_START)).thenReturn(7L)
+        val today = UserJobHeadlineCount(count = 7L, matchedWishJob = false)
+
+        // 프로필이 없는 회원(기업 회원)
+        assertEquals(today, service.getHeadlineJobCount(USER_ID))
+
+        givenProfile(wishJob = null, wishIndustry = null)
+        assertEquals(today, service.getHeadlineJobCount(USER_ID))
+
+        givenProfile(wishJob = "직무 무관", wishIndustry = null)
+        assertEquals(today, service.getHeadlineJobCount(USER_ID))
+
+        givenProfile(wishJob = "iOS 개발", wishIndustry = null)
+        Mockito.`when`(jobReader.countRecruitingByJobRoles(setOf(JobRole.IT_IOS))).thenReturn(0L)
+        assertEquals(today, service.getHeadlineJobCount(USER_ID))
+    }
+
+    @Test
     fun `원문 이동은 게시된 공고를 확인한 뒤 사용자를 기록한다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
@@ -431,5 +479,9 @@ class UserJobServiceTest {
     companion object {
         private const val USER_ID = 17L
         private val REGISTERED_AT = LocalDateTime.of(2026, 11, 4, 4, 10)
+
+        /** 서울 2026-11-06 08:30. UTC로는 전날이라 서울 날짜로 0시를 잡는지 드러난다. */
+        private val CLOCK = Clock.fixed(Instant.parse("2026-11-05T23:30:00Z"), ZoneId.of("Asia/Seoul"))
+        private val TODAY_START = LocalDateTime.of(2026, 11, 6, 0, 0)
     }
 }

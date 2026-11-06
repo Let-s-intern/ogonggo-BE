@@ -222,6 +222,23 @@ internal class JobQueryRepository(
             .limit(limit.toLong())
             .fetch()
 
+    /** 직무가 주어진 값 중 하나인 모집 중 공고 수. 값 목록이 비면 조건 없이 세게 되므로 호출하는 쪽이 막는다. */
+    fun countRecruitingByJobRoles(jobRoles: Collection<JobRole>): Long =
+        queryFactory.select(job.count())
+            .from(job)
+            .where(*recruitingPredicates(), job.jobRole.`in`(jobRoles))
+            .fetchOne() ?: 0L
+
+    /**
+     * 사용자에게 보이는 등록 일시([com.ogonggo.core.job.domain.Job.publicRegisteredAt])가 [since] 이후인 모집 중 공고 수.
+     * 기업회원 공고는 처음 승인한 일시, 그 밖에는 등록 일시다.
+     */
+    fun countRecruitingRegisteredSince(since: LocalDateTime): Long =
+        queryFactory.select(job.count())
+            .from(job)
+            .where(*recruitingPredicates(), job.firstApprovedAt.coalesce(job.createdAt).goe(since))
+            .fetchOne() ?: 0L
+
     /**
      * 직무·산업이 주어진 값 중 하나와 정확히 같은 모집 중 공고를 조회수순으로 읽는다.
      * 값 목록이 비면 그 조건을 걸지 않으므로, 둘 다 비었는지는 호출하는 쪽이 막는다.

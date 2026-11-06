@@ -249,6 +249,48 @@ internal class JobManagementPersistenceTest @Autowired constructor(
         assertEquals("일자리 공고를 찾을 수 없습니다. (id: ${deleted.id}, 999999)", exception.message)
     }
 
+    @Test
+    fun `오늘 올라온 공고 수는 사용자에게 보이는 등록 일시가 기준 시각 이후인 모집 중 게시 공고만 센다`() {
+        // given
+        val todayStart = LocalDateTime.of(2026, 11, 6, 0, 0)
+        val published = JobPublicationStatus.PUBLISHED
+        jobAppender.append(command(publicationStatus = published)).also { registeredAt(it, todayStart) }
+        jobAppender.append(command(publicationStatus = published)).also { registeredAt(it, todayStart.minusSeconds(1)) }
+        jobAppender.append(command()).also { registeredAt(it, todayStart.plusHours(1)) }
+        val closed = jobAppender.append(command(publicationStatus = published)).also { registeredAt(it, todayStart.plusHours(1)) }
+        jobManager.close(jobReader.read(checkNotNull(closed.id)), todayStart.plusHours(2))
+        // 기업회원 공고는 어제 등록했어도 오늘 처음 승인했으면 오늘 올라온 공고다.
+        val company = jobAppender.append(command(ownerUserId = OWNER_ID)).also { registeredAt(it, todayStart.minusHours(10)) }
+        jobManager.approveReview(jobReader.read(checkNotNull(company.id)), todayStart.plusHours(9))
+        entityManager.flush()
+
+        // when
+        val count = jobReader.countRecruitingRegisteredSince(todayStart)
+
+        // then
+        assertEquals(2L, count)
+    }
+
+    @Test
+    fun `직무별 공고 수는 직무가 주어진 값 중 하나인 모집 중 게시 공고만 세고 직무 없이는 세지 않는다`() {
+        // given
+        val published = JobPublicationStatus.PUBLISHED
+        jobAppender.append(command(publicationStatus = published, jobRole = JobRole.IT_BACKEND, jobField = JobRole.IT_BACKEND.jobField))
+        jobAppender.append(command(publicationStatus = published, jobRole = JobRole.IT_IOS, jobField = JobRole.IT_IOS.jobField))
+        jobAppender.append(command(publicationStatus = published, jobRole = JobRole.MARKETING_BRAND, jobField = JobRole.MARKETING_BRAND.jobField))
+        jobAppender.append(command(jobRole = JobRole.IT_BACKEND, jobField = JobRole.IT_BACKEND.jobField))
+        val closed = jobAppender.append(command(publicationStatus = published, jobRole = JobRole.IT_BACKEND, jobField = JobRole.IT_BACKEND.jobField))
+        jobManager.close(closed, NOW)
+        entityManager.flush()
+
+        // when
+        val count = jobReader.countRecruitingByJobRoles(setOf(JobRole.IT_BACKEND, JobRole.IT_IOS))
+
+        // then
+        assertEquals(2L, count)
+        assertThrows(IllegalArgumentException::class.java) { jobReader.countRecruitingByJobRoles(emptySet()) }
+    }
+
     private fun registeredAt(job: Job, createdAt: LocalDateTime) {
         entityManager.flush()
         entityManager.createQuery("update Job j set j.createdAt = :createdAt where j.id = :id")

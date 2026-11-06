@@ -16,6 +16,7 @@ import com.ogonggo.userapi.error.UserApiErrorCode
 import com.ogonggo.userapi.job.business.UserJobService
 import com.ogonggo.userapi.job.presentation.response.UserJobCalendarItemResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobDetailResponse
+import com.ogonggo.userapi.job.presentation.response.UserJobHeadlineCountResponse
 import com.ogonggo.userapi.job.presentation.response.UserJobSummaryResponse
 import com.ogonggo.userapi.job.presentation.response.UserTodayJobSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
@@ -94,6 +95,12 @@ class UserJobController(
         @AuthenticationPrincipal userId: Long?,
     ): ResponseEntity<SuccessResponse<List<UserTodayJobSummaryResponse>>> =
         SuccessResponse.ok(userJobService.getTodayJobs(userId).map(UserTodayJobSummaryResponse::from))
+
+    @GetMapping("/headline-count")
+    override fun getHeadlineJobCount(
+        @AuthenticationPrincipal userId: Long?,
+    ): ResponseEntity<SuccessResponse<UserJobHeadlineCountResponse>> =
+        SuccessResponse.ok(UserJobHeadlineCountResponse.from(userJobService.getHeadlineJobCount(userId)))
 
     @GetMapping("/similar")
     override fun getSimilarJobs(
