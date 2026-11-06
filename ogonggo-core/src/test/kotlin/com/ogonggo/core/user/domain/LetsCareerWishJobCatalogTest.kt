@@ -1,5 +1,7 @@
 package com.ogonggo.core.user.domain
 
+import com.ogonggo.core.job.domain.JobRole
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -39,5 +41,32 @@ class LetsCareerWishJobCatalogTest {
         assertTrue(LetsCareerWishJobCatalog.isSelectable("CS 매니저"))
         assertFalse(LetsCareerWishJobCatalog.isSelectable(LetsCareerWishJobCatalog.ANY_JOB_ROLE))
         assertFalse(LetsCareerWishJobCatalog.isSelectable("마케팅"))
+    }
+
+    @Test
+    @DisplayName("렛츠커리어의 모든 직무가 오공고 직무 매핑표에 있다")
+    fun `모든 직무에 매핑이 있다`() {
+        val roles = LetsCareerWishJobCatalog.rolesByField.values.flatten().toSet()
+        assertEquals(roles, LetsCareerWishJobCatalog.jobRolesByWishJob.keys)
+    }
+
+    @Test
+    @DisplayName("희망 직무는 매핑표대로 오공고 직무가 되고 직군 전체는 그 직군 직무를 모두 합친다")
+    fun `희망 직무를 오공고 직무로 옮긴다`() {
+        assertEquals(setOf(JobRole.IT_BACKEND, JobRole.IT_IOS), LetsCareerWishJobCatalog.jobRolesOf("백엔드/서버 개발, iOS 개발"))
+        assertEquals(
+            setOf(JobRole.SALES_B2B, JobRole.SALES_TECH_IT, JobRole.SALES_OVERSEAS, JobRole.TRADE_OVERSEAS_TRADING_SALES,
+                JobRole.PLANNING_CONSULTING, JobRole.SALES_B2C, JobRole.SALES_GENERAL, JobRole.SALES_MANAGEMENT_SUPPORT,
+                JobRole.SALES_ETC, JobRole.SALES_PHARMA_MEDICAL),
+            LetsCareerWishJobCatalog.jobRolesOf("영업 직무 전체"),
+        )
+    }
+
+    @Test
+    @DisplayName("직무 무관, 비어 있는 값, 맞는 오공고 직무가 없는 값은 아무 직무도 되지 않는다")
+    fun `옮길 직무가 없으면 빈 집합이다`() {
+        assertEquals(emptySet<JobRole>(), LetsCareerWishJobCatalog.jobRolesOf(LetsCareerWishJobCatalog.ANY_JOB_ROLE))
+        assertEquals(emptySet<JobRole>(), LetsCareerWishJobCatalog.jobRolesOf(null))
+        assertEquals(emptySet<JobRole>(), LetsCareerWishJobCatalog.jobRolesOf("그래픽 디자인"))
     }
 }

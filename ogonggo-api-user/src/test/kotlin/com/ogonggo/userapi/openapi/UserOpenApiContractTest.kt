@@ -348,6 +348,14 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(similarJobs.at("/responses/401/description").asText().startsWith("UNAUTHORIZED"))
         assertTrue(similarJobs.at("/responses/200/content/application~1json/schema").isObject)
 
+        // 홈 히어로 공고 수는 토큰이 선택이라 인증 요구를 노출하고 401 응답은 없다. 클라이언트는 count와 matchedWishJob으로 문구를 고른다.
+        val headlineCount = document.at("/paths/~1api~1v1~1jobs~1headline-count/get")
+        assertEquals("getPublicJobHeadlineCount", headlineCount.at("/operationId").asText())
+        assertTrue(headlineCount.at("/security/0/BearerAuth").isArray)
+        assertTrue(headlineCount.at("/responses/401").isMissingNode)
+        val headlineCountProperties = document.at("/components/schemas/UserJobHeadlineCountResponse/properties")
+        listOf("count", "matchedWishJob").forEach { field -> assertTrue(headlineCountProperties.has(field), field) }
+
         // 공지는 토큰으로 달라지는 값이 없어 인증 요구를 노출하지 않는다.
         val announcementList = document.at("/paths/~1api~1v1~1announcements/get")
         assertTrue(announcementList.isObject)
