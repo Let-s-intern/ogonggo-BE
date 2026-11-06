@@ -36,4 +36,12 @@ class AdvertiserContractReader internal constructor(
     fun readForDelete(contractId: Long): AdvertiserContract =
         advertiserContractRepository.findIncludingDeletedForUpdate(contractId)
             ?: throw EntityNotFoundException(AdvertiserContractErrorCode.ADVERTISER_CONTRACT_NOT_FOUND)
+
+    /** 광고에 이어 둔 계약을 한 번에 읽는다. 지운 계약과 없는 식별자는 결과에 없다. */
+    fun readAllByIds(contractIds: Collection<Long>): Map<Long, AdvertiserContract> =
+        if (contractIds.isEmpty()) {
+            emptyMap()
+        } else {
+            advertiserContractRepository.findAllByIdInAndDeletedAtIsNull(contractIds.toSet()).associateBy { checkNotNull(it.id) }
+        }
 }
