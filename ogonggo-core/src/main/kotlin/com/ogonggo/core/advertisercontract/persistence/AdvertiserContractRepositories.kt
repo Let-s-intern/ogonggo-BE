@@ -14,6 +14,12 @@ internal interface AdvertiserContractJpaRepository : JpaRepository<AdvertiserCon
 
     fun findAllByAdvertiserIdInAndDeletedAtIsNull(advertiserIds: Collection<Long>): List<AdvertiserContract>
 
+    fun findAllByIdInAndDeletedAtIsNull(ids: Collection<Long>): List<AdvertiserContract>
+
+    /** 지운 채널 게재 유형을 산 계약이다. */
+    @Query("select distinct c from AdvertiserContract c join c.channelFormatIds f where f = :formatId and c.deletedAt is null")
+    fun findAllByChannelFormatId(@Param("formatId") formatId: Long): List<AdvertiserContract>
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from AdvertiserContract c where c.id = :contractId and c.deletedAt is null")
     fun findForUpdate(@Param("contractId") contractId: Long): AdvertiserContract?

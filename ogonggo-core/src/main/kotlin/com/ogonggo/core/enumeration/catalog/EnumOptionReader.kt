@@ -73,6 +73,8 @@ import com.ogonggo.core.usernotification.domain.UserNotificationType
 import com.ogonggo.core.usernotification.domain.UserNotificationPushSkipReason
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
+import com.ogonggo.core.adchannel.domain.AdChannelPlatform
+import com.ogonggo.core.channelad.domain.ChannelAdStatus
 import org.springframework.stereotype.Component
 
 /**
@@ -173,6 +175,9 @@ class EnumOptionReader {
             enumOptionsOf<AdvertiserType>(),
             enumOptionsOf<AdvertiserSource>(),
             enumOptionsOf<AdContractProduct>(),
+            // 채널 광고
+            enumOptionsOf<AdChannelPlatform>(),
+            enumOptionsOf<ChannelAdStatus>(),
         )
     }
 }
