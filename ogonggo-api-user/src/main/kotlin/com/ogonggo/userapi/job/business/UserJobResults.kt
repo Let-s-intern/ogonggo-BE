@@ -226,7 +226,7 @@ data class UserJobResult(
 
 internal fun Job.requiredId(): Long = checkNotNull(id) { "채용공고 식별자가 없습니다." }
 
-/** 홈 히어로 공고 수. [matchedWishJob]이 참이면 희망 직무에 맞는 공고 수이고, 거짓이면 오늘 올라온 공고 수다. */
+/** 홈 히어로 공고 수. [matchedWishJob]이 참이면 이번 주 올라온 희망 직무 공고 수이고, 거짓이면 오늘 올라온 공고 수다. */
 data class UserJobHeadlineCount(
     val count: Long,
     val matchedWishJob: Boolean,

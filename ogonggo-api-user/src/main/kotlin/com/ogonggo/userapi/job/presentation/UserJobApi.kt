@@ -141,15 +141,15 @@ interface UserJobApi {
             홈 히어로의 "채용공고가 NN개 올라왔어요"에 쓰는 공고 수를 반환합니다.
 
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내고 내 정보의 희망 직무(wishJob)가 오공고 직무로 옮겨지면
-            그 직무의 모집 중 공고 수를 주고 matchedWishJob이 true입니다.
+            이번 주(Asia/Seoul 월요일 0시부터) 올라온 그 직무의 마감 전 공고 수를 주고 matchedWishJob이 true입니다.
             희망 직무는 렛츠커리어 직무 이름이라 서버의 매핑표로 오공고 직무(JobRole)로 옮깁니다. "<직군> 직무 전체"는
             그 직군의 직무를 모두 옮기고, "직무 무관"과 맞는 오공고 직무가 없는 값은 옮기지 않습니다.
 
             그 밖의 경우(비로그인, 기업 회원, 희망 직무가 비었거나 옮길 직무가 없음, 맞는 공고가 0건)는
-            오늘(Asia/Seoul 0시부터) 올라온 모집 중 공고 수를 주고 matchedWishJob이 false입니다.
+            오늘(Asia/Seoul 0시부터) 올라온 마감 전 공고 수를 주고 matchedWishJob이 false입니다.
             올라온 일시는 목록의 registeredAt과 같습니다(기업회원 공고는 처음 승인한 일시).
 
-            모집 중 공고는 게시 중이고 모집 상태가 RECRUITING인 공고입니다.
+            마감 전 공고는 게시 중이고 모집 상태가 RECRUITING이며 모집 종료 일시가 없거나 지나지 않은 공고입니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
