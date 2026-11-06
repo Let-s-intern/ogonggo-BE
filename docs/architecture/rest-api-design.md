@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-11-05
+- 최종 변경일: 2026-11-06
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -272,6 +272,31 @@ PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/memo   메모 저장
 - 두 PATCH는 콘솔의 부분 수정처럼 바뀐 문의 전체를 `data`로 돌려줍니다. 없는 문의는 404 `ADVERTISEMENT_INQUIRY_NOT_FOUND`입니다. 상태와 메모를 동시에 바꿔도 서로 덮지 않도록 행을 잠가 읽습니다.
 - 수정·삭제 경로는 두지 않습니다. 문의 내용은 남긴 그대로 둡니다.
 - 응답 계약은 [API 성공 응답의 B2B 광고 문의](api-response.md#b2b-광고-문의)를 따릅니다.
+
+### 광고주·광고 계약·광고주 메모
+
+```text
+GET    /api/v1/admin/advertisers?keyword=&type=              광고주 목록(최대 50건, 페이지 없음)
+POST   /api/v1/admin/advertisers                             비회원 광고주 추가
+GET    /api/v1/admin/advertisers/{advertiserId}              광고주 한 건
+PATCH  /api/v1/admin/advertisers/{advertiserId}              비회원 광고주 수정
+GET    /api/v1/admin/advertisers/{advertiserId}/contracts    광고 계약 목록
+POST   /api/v1/admin/advertisers/{advertiserId}/contracts    광고 계약 등록
+PATCH  /api/v1/admin/advertiser-contracts/{contractId}       광고 계약 수정
+DELETE /api/v1/admin/advertiser-contracts/{contractId}       광고 계약 삭제
+GET    /api/v1/admin/advertisers/{advertiserId}/notes        광고주 메모 목록
+POST   /api/v1/admin/advertisers/{advertiserId}/notes        광고주 메모 등록
+PATCH  /api/v1/admin/advertiser-notes/{noteId}               광고주 메모 수정
+DELETE /api/v1/admin/advertiser-notes/{noteId}               광고주 메모 삭제
+```
+
+- 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요
+- 경로와 본문은 관리자 콘솔의 목 계약을 따릅니다. 계약·메모의 목록과 등록은 광고주 아래에, 한 건의 수정·삭제는 그 식별자 하나로 둡니다.
+- 광고주 목록(GET)은 볼 때 비즈니스 회원과 광고 문의 기업의 광고주 행이 없으면 만들어 고정 식별자를 줍니다. 그래서 같은 요청을 반복해도 결과는 같지만 처음 한 번은 행을 씁니다.
+- 광고주는 지우는 경로가 없습니다. 회원 광고주의 수정은 400이며 비즈니스 회원 정보를 고쳐야 합니다.
+- 수정(PATCH)은 보낸 칸만 바꾸고 바뀐 리소스 전체를 `data`로 돌려줍니다. 광고주는 빈 문자열이 그 칸을 지우고, 광고 계약은 `name`·`paidDate`·`memo`에 `null`을 보내면 지웁니다. 계약 검증은 저장된 값과 합친 결과로 합니다.
+- 삭제(DELETE)는 소프트 삭제이고, 콘솔 계약을 따라 3절의 `data: null` 대신 `{ "id": number }`를 돌려줍니다. 이미 지운 계약·메모를 다시 지워도 200입니다. 계약을 지워도 이어 둔 배너·광고 공고는 지우지 않고 계약 연결만 끊습니다.
+- 응답 계약은 [API 성공 응답의 광고주·광고 계약·광고주 메모](api-response.md#광고주광고-계약광고주-메모)를 따릅니다.
 
 ### 회사명 검색
 

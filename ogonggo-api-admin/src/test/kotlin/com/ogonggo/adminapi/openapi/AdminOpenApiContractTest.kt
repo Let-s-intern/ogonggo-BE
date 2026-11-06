@@ -97,6 +97,18 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1memo/patch",
             "/paths/~1api~1v1~1admin~1company-content-priority/get",
             "/paths/~1api~1v1~1admin~1company-content-priority/put",
+            "/paths/~1api~1v1~1admin~1advertisers/get",
+            "/paths/~1api~1v1~1admin~1advertisers/post",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}/get",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}/patch",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1contracts/get",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1contracts/post",
+            "/paths/~1api~1v1~1admin~1advertiser-contracts~1{contractId}/patch",
+            "/paths/~1api~1v1~1admin~1advertiser-contracts~1{contractId}/delete",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/get",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/post",
+            "/paths/~1api~1v1~1admin~1advertiser-notes~1{noteId}/patch",
+            "/paths/~1api~1v1~1admin~1advertiser-notes~1{noteId}/delete",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -292,6 +304,53 @@ class AdminOpenApiContractTest @Autowired constructor(
             "managerPhone", "businessNumberType", "businessNumber", "companyType", "employeeCountRange", "industry",
             "address", "homepageUrl", "managerTitle", "managerDuty", "recommender",
         ).forEach { field -> assertTrue(properties.has(field), field) }
+    }
+
+    @Test
+    fun `광고주 목록은 종류를 enum으로 받고 광고 수와 계약 합계를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val type = document.at("/paths/~1api~1v1~1admin~1advertisers/get/parameters").first { it["name"].asText() == "type" }
+        val properties = document.at("/components/schemas/AdminAdvertiserResponse/properties")
+
+        // then
+        assertEquals(listOf("MEMBER", "NON_MEMBER"), type.at("/schema/enum").map { it.asText() })
+        listOf(
+            "id", "name", "type", "source", "companyMemberUserId", "adInquiryId", "contactName", "contactEmail", "contactPhone",
+            "bannerCount", "activeBannerCount", "adPostingCount", "activeAdPostingCount", "latestEndAt",
+            "contractCount", "activeContractCount", "contractTotalAmount", "contractVatMixed",
+        ).forEach { field -> assertTrue(properties.has(field), field) }
+        assertFalse(properties.has("memo"))
+    }
+
+    @Test
+    fun `광고 계약과 광고주 메모는 프런트 계약의 칸을 싣고 메모 쓴 사람은 본문으로 받지 않는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val contract = document.at("/components/schemas/AdminAdvertiserContractResponse/properties")
+        val update = document.at("/components/schemas/UpdateAdminAdvertiserContractRequest/properties")
+        val note = document.at("/components/schemas/AdminAdvertiserNoteResponse/properties")
+        val noteRequest = document.at("/components/schemas/CreateAdminAdvertiserNoteRequest/properties")
+        val products = document.at("/components/schemas/CreateAdminAdvertiserContractRequest/properties/products/items/enum")
+
+        // then
+        listOf(
+            "id", "advertiserId", "name", "startAt", "endAt", "amount", "vatIncluded", "paid", "paidDate", "products", "memo",
+            "bannerCount", "adPostingCount", "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(contract.has(field), field) }
+        assertEquals("string", update.at("/name/type").asText())
+        assertEquals(12, products.size())
+        listOf("id", "advertiserId", "title", "content", "authorName", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(note.has(field), field) }
+        assertFalse(noteRequest.has("authorName"))
+        assertTrue(
+            document.at("/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/post/parameters")
+                .none { it["name"].asText() == "adminUserId" },
+        )
     }
 
     private fun openApiDocument() = objectMapper.readTree(
