@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.error.AdminConsoleBadRequestException
 import com.ogonggo.core.advertiser.domain.Advertiser
 import com.ogonggo.core.advertiser.domain.AdvertiserContact
 import com.ogonggo.core.advertiser.domain.AdvertiserSearchCondition
+import com.ogonggo.core.adposting.implement.AdPostingCountReader
 import com.ogonggo.core.advertiser.implement.AdvertiserAdCountReader
 import com.ogonggo.core.advertiser.implement.AdvertiserAppender
 import com.ogonggo.core.advertiser.implement.AdvertiserManager
@@ -31,7 +32,7 @@ class AdminAdvertiserServiceTest {
         advertiserAppender = advertiserAppender,
         advertiserManager = advertiserManager,
         advertiserContractReader = advertiserContractReader,
-        advertiserAdCountReader = AdvertiserAdCountReader(),
+        advertiserAdCountReader = AdvertiserAdCountReader(Mockito.mock(AdPostingCountReader::class.java)),
         clock = Clock.fixed(NOW.atZone(SEOUL).toInstant(), SEOUL),
     )
 

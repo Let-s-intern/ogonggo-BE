@@ -43,4 +43,8 @@ class AdvertiserReader internal constructor(
         val nameKey = Advertiser.nameKeyOf(name)
         return advertiserRepository.findAll().any { it.id != exceptAdvertiserId && Advertiser.nameKeyOf(it.name) == nameKey }
     }
+
+    /** 식별자로 광고주를 읽는다. 없는 식별자는 결과에서 빠진다. 탈퇴한 비즈니스 회원의 광고주도 읽는다. */
+    fun readAllByIds(advertiserIds: Collection<Long>): List<Advertiser> =
+        if (advertiserIds.isEmpty()) emptyList() else advertiserRepository.findAllById(advertiserIds.toSet())
 }

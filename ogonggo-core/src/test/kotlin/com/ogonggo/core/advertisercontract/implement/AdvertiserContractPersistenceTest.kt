@@ -1,5 +1,6 @@
 package com.ogonggo.core.advertisercontract.implement
 
+import com.ogonggo.core.adposting.implement.AdPostingManager
 import com.ogonggo.core.advertisercontract.domain.AdContractProduct
 import com.ogonggo.core.advertisercontract.domain.AdvertiserContractTerms
 import com.ogonggo.core.advertisercontract.error.AdvertiserContractErrorCode
@@ -19,7 +20,7 @@ import java.time.LocalDateTime
 
 @DataJpaTest(showSql = false)
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(AdvertiserContractReader::class, AdvertiserContractAppender::class, AdvertiserContractManager::class)
+@Import(AdvertiserContractReader::class, AdvertiserContractAppender::class, AdvertiserContractManager::class, AdPostingManager::class)
 internal class AdvertiserContractPersistenceTest @Autowired constructor(
     private val reader: AdvertiserContractReader,
     private val appender: AdvertiserContractAppender,

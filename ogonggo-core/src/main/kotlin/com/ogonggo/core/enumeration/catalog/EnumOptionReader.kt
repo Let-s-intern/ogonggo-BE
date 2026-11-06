@@ -1,5 +1,7 @@
 package com.ogonggo.core.enumeration.catalog
 
+import com.ogonggo.core.adposting.domain.AdPostingPlacement
+import com.ogonggo.core.adposting.domain.AdPostingTargetType
 import com.ogonggo.core.advertiser.domain.AdvertiserSource
 import com.ogonggo.core.advertiser.domain.AdvertiserType
 import com.ogonggo.core.advertisercontract.domain.AdContractProduct
@@ -173,6 +175,9 @@ class EnumOptionReader {
             enumOptionsOf<AdvertiserType>(),
             enumOptionsOf<AdvertiserSource>(),
             enumOptionsOf<AdContractProduct>(),
+            // 광고 공고
+            enumOptionsOf<AdPostingPlacement>(),
+            enumOptionsOf<AdPostingTargetType>(),
         )
     }
 }
