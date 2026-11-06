@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-11-05
+- 최종 변경일: 2026-11-06
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -303,6 +303,65 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 메일은 응답의 정확성에 필요하지 않고 SMTP 응답이 늦어질 수 있어 전용 실행기에서 비동기로 보냅니다. 지표 실행기는 스레드가 하나뿐이고 큐가 차면 버리도록 되어 있어 함께 쓰지 않습니다. 확인 메일은 버리면 담당자가 접수 여부를 알 수 없으므로 큐가 차면 호출한 스레드가 직접 보냅니다. 공통 발신 주소(`ogonggo.mail.from`)가 비어 있으면 발송을 건너뜁니다.
 
 **확인 필요:** 외부 알림 연동(슬랙·메일 등)의 배치, 실패 처리, 동기·비동기 선택, 메일 본문과 발신 주소 관리는 아직 팀 규칙으로 문서화되어 있지 않습니다. 위 내용은 이 엔드포인트의 응답 계약을 설명한 것이며 팀 규칙으로 확정된 것이 아닙니다. 현재 SMTP는 렛츠커리어와 같은 SES 계정과 발신 주소(`official@letscareer.co.kr`)를 함께 쓰고 있어, 오공고 전용 발신 도메인이 필요한지도 함께 확인이 필요합니다.
+
+### 배너
+
+관리자 콘솔 배너 세팅과 사용자 웹의 배너 자리 API입니다. 경로는 [REST API 설계](rest-api-design.md#배너)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3576) / 리뷰 상태: 팀 리뷰 필요
+- 공개 조회(`GET /api/v1/banners?placement=`)는 그 자리에 지금 노출 중인(켜져 있고 기간 안, 시작 포함·끝 미포함) 배너만 `displayOrder` 순서의 배열로 줍니다. 항목은 `id`, `placement`, `pcImageUrl`, `mobileImageUrl`, `linkUrl`, `openInNewTab`, `altText`, `showAdLabel`뿐이고 운영 칸은 싣지 않습니다. `mobileImageUrl`은 `null`일 수 있습니다. `placement`가 없거나 모르는 값이면 기본 문구의 400입니다.
+- 공개 조회는 사용자 API 프로세스 메모리에 자리마다 30초 캐시합니다. 배너를 바꾸는 쓰기는 관리자 API(다른 프로세스)에서 일어나 그 캐시를 비울 수 없으므로, 관리자 변경과 기간 경계는 최대 30초 늦게 보입니다.
+- 관리자 목록은 페이지 없는 배열이고 꺼진 것·기간이 지난 것도 담습니다. `advertiserId`만 주면 모든 자리에서 `BannerPlacement` 선언 순서, 자리 안 순서로 줍니다. 관리자 응답은 공개 칸에 `name`, `startAt`, `endAt`, `enabled`, `displayOrder`, `advertiserId`, `advertiser`(`id`, `name`, `type`), `contractId`, `contract`(`id`, `name`, `startAt`, `endAt`), `createdAt`, `updatedAt`을 더합니다. 광고주·계약이 없으면 `advertiser`·`contract`는 `null`입니다.
+- 등록은 201이고 그 자리 맨 뒤에 붙습니다. 순서 바꾸기는 그 자리 배너 전부를 새 순서로 돌려주고, 삭제는 소프트 삭제 뒤 남은 배너 순서를 1부터 다시 매기며 `{ "id": number }`를 돌려줍니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 배너는 404 `BANNER_NOT_FOUND`입니다.
+
+### 광고주·광고 계약·광고주 메모
+
+관리자 콘솔 `비즈니스 > 광고 > 광고 계약` 화면의 API입니다. 경로는 [REST API 설계](rest-api-design.md#광고주광고-계약광고주-메모)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3575) / 리뷰 상태: 팀 리뷰 필요
+- 광고주 목록은 비즈니스 회원(`MEMBER`·`COMPANY_MEMBER`), 광고 문의 기업(`NON_MEMBER`·`AD_INQUIRY`), 직접 추가한 기업(`NON_MEMBER`·`MANUAL`)을 합칩니다. 탈퇴한 회원은 빼고, 기업 회원의 문의와 반려한 문의는 광고주가 되지 않습니다. 문의 기업은 회사 이름(공백·대소문자 무시)마다 하나이고 `adInquiryId`는 가장 최근 문의입니다.
+- 목록은 `PageResponse`가 아닌 배열이고 최대 50건입니다. 진행 중 계약이 있는 곳, 계약만 있는 곳, 계약이 없는 곳 순이며 같은 무리 안에서는 계약 `endAt`이 가장 늦은 곳, 그다음 이름(한국어) 순입니다. 50건은 정렬한 뒤 자릅니다. `keyword`는 이름·담당자 이름·담당자 메일 부분 일치(대소문자 무시)이고, `type`이 `MEMBER`·`NON_MEMBER`가 아니면 400입니다.
+- 광고주 응답은 광고 수(`bannerCount`, `activeBannerCount`, `adPostingCount`, `activeAdPostingCount`, `latestEndAt`)와 계약 합계(`contractCount`, `activeContractCount`, `contractTotalAmount`, `contractVatMixed`)를 싣습니다. 배너는 지운 것을 빼고 세며 노출 중은 켜져 있고 기간 안인 배너입니다. 광고 공고 수는 [광고 공고](#광고-공고)를 봅니다. `latestEndAt`은 배너와 광고 공고 `endAt` 가운데 가장 늦은 것입니다. 계약 금액 합은 부가세 포함·별도를 가리지 않고 더합니다. `companyMemberUserId`, `adInquiryId`, `contactName`, `contactEmail`, `contactPhone`은 값이 없으면 응답에서 뺍니다(콘솔 계약의 선택 칸). 광고주에 한 칸짜리 메모는 없고 광고주 메모로 남깁니다.
+- 광고 계약 목록은 `startAt`이 늦은 것이 먼저(같으면 `id`가 큰 것)입니다. `products`는 `AdContractProduct` 선언 순서로 정렬해 저장하고 돌려줍니다. 계약 응답의 `bannerCount`는 그 계약에 이어 둔(지우지 않은) 배너 수이고 `adPostingCount`는 이 계약을 이은 광고 공고 수입니다.
+- 광고주 메모 목록은 `createdAt`이 늦은 것이 먼저입니다. `authorName`은 메모를 쓴 관리자(관리자 토큰의 회원)의 프로필 이름이고 모르면 `null`입니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고주·계약·메모는 404 `ADVERTISER_NOT_FOUND`·`ADVERTISER_CONTRACT_NOT_FOUND`·`ADVERTISER_NOTE_NOT_FOUND`입니다.
+
+### 광고 공고
+
+관리자 콘솔 `비즈니스 > 광고` 자리별 광고 공고 세팅과 사용자 웹 목록의 광고 칸 API입니다. 경로는 [REST API 설계](rest-api-design.md#광고-공고)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3577) / 리뷰 상태: 팀 리뷰 필요
+- 관리자 목록·순서 바꾸기 응답은 `PageResponse`가 아닌 배열이고 자리 안 순서(`displayOrder`, 1부터)대로입니다. `advertiserId`로 거르고 자리를 주지 않으면 자리 선언 순서(`JOB_LIST`, `JOB_PICK`, `BOOTCAMP_LIST`, `JOB_DETAIL_SIDE`, `CALENDAR`, `MYPAGE_SCRAP`), 자리 안 순서대로입니다.
+- 관리자 응답 한 건은 대상 제목·회사(`targetTitle`, `targetCompanyName`, 대상이 지워졌으면 빈 문자열), 대상이 지금 공개이고 모집 중인지(`targetAvailable`), 광고주 요약(`advertiser`), 계약 요약(`contract`)을 싣습니다. 열린 기간(`startAt`, `endAt`)과 없는 계약은 `null`로 싣습니다.
+- 사용자 공개 조회(`GET /api/v1/ad-postings`)의 `data`는 배열이고, 한 건은 `id`(광고 공고 식별자), `placement`, `targetType`과 대상 요약 하나(`job`은 `UserJobSummaryResponse`, `bootcamp`는 `UserBootcampSummaryResponse`)입니다. 대상 종류가 아닌 쪽 요약은 칸을 뺍니다. 광고주·기간·켜짐·순서는 싣지 않습니다.
+- 공개 조회는 로그인과 무관하게 같은 결과라 사용자 API가 자리마다 30초 메모리 캐시합니다. 관리자 API는 다른 프로세스라 쓰기 때 캐시를 비우지 못하므로 바꾼 값은 길어야 30초 늦게 나갑니다. 대상 요약의 `bookmarked`는 늘 `false`이고, 조회 수·북마크 수도 캐시 시간만큼 늦을 수 있습니다.
+- 400 `message`는 광고주 API와 같은 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 광고 공고는 404 `AD_POSTING_NOT_FOUND`입니다. 사용자 공개 조회의 `placement` 오류는 사용자 API 형식(`[placement] ...`)입니다.
+- 광고주 응답의 `adPostingCount`·`activeAdPostingCount`·`latestEndAt`(광고 공고 몫)과 광고 계약 응답의 `adPostingCount`를 채웁니다. 노출 중 광고 공고는 켜져 있고 기간 안이며 대상이 공개이고 모집 중인 것입니다.
+
+### 채널 광고
+
+관리자 콘솔 `광고 > 채널 등록`, `광고 > 채널 광고` 화면과 광고 계약 상세의 API입니다. 경로는 [REST API 설계](rest-api-design.md#채널-광고)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3578) / 리뷰 상태: 팀 리뷰 필요
+- 채널 응답은 `adCount`(잡힌 채널 광고 수)를 싣습니다. 인스타그램 채널의 `handle`은 `@`를 뗀 계정 이름이고 오픈채팅은 `null`입니다. 목록은 모든 플랫폼, 사용 안 함 포함, 등록 순입니다.
+- 게재 유형 응답은 `displayOrder`(플랫폼 안에서 1부터), `channelIds`(채널 등록 순, 비면 그 플랫폼의 모든 채널), `adCount`를 싣습니다. 목록은 플랫폼 순(`INSTAGRAM`, `KAKAO_OPENCHAT`), 그 안에서 `displayOrder` 순입니다.
+- 채널 광고 응답은 `advertiser`(`id`, `name`, `type`), `contract`(`id`, `name`, `startAt`, `endAt`), `channel`(`id`, `platform`, `name`, `handle`), `format`(`id`, `platform`, `name`) 요약과 채널의 `platform`을 싣습니다. 찾을 수 없는 대상의 요약은 `null`입니다. 목록은 `postDate`, `id` 순입니다. `month`(`YYYY-MM`)는 `postDate` ~ `endDate ?? postDate`가 그달에 걸친 광고입니다.
+- 광고 계약 응답은 `channelFormatIds`(유형 목록 순서)와 `channelAdCount`를 더 싣습니다. 칸이 생기기 전 계약은 빈 배열입니다.
+- 광고주 목록의 광고 수(`bannerCount` 등)에는 채널 광고를 넣지 않습니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다. 없는 채널·유형·채널 광고는 404 `AD_CHANNEL_NOT_FOUND`·`AD_CHANNEL_FORMAT_NOT_FOUND`·`CHANNEL_AD_NOT_FOUND`입니다.
+
+### 관리자 캘린더
+
+관리자 콘솔 헤더 `캘린더` 탭의 API입니다. 경로는 [REST API 설계](rest-api-design.md#관리자-캘린더)에 있습니다.
+
+- 결정일: 2026-11-06 (LC-3579) / 리뷰 상태: 팀 리뷰 필요
+- 할 일 목록은 날짜(시작·끝 포함)가 `[from, to)`와 겹치는(`startDate < to`이고 `endDate >= from`) 할 일을 `startDate`, `id` 순의 배열로 줍니다. 할 일은 운영자 모두가 같은 목록을 보고 쓴 사람을 싣지 않습니다. `content`는 없으면 `null`입니다.
+- 광고 일정(`GET /api/v1/admin/ad-calendar`)의 `data`는 `contracts`, `banners`, `adPostings`, `channelAds` 네 배열입니다. 계약은 `startAt < to 00:00`이고 `endAt > from 00:00`인 것을 시작, `id` 순으로, 한 건은 `id`, `name`, `startAt`, `endAt`, `advertiserId`, `advertiser`(`id`, `name`, `type`, 없으면 `null`), `amount`, `paid`, `products`입니다.
+- 배너·광고 공고는 같은 조건에서 `startAt`·`endAt`이 `null`이면 그쪽이 열린 것으로 보고, 꺼진 것도 담아 자리 선언 순서, 자리 안 순서로 줍니다. 한 건은 관리자 배너·광고 공고 목록 항목과 같습니다.
+- 채널 광고는 `postDate` ~ `endDate ?? postDate`(둘 다 포함)가 `[from, to)`와 겹치는 것을 모든 플랫폼, 취소한 것까지 `postDate`, `id` 순으로 줍니다. 한 건은 관리자 채널 광고 목록 항목과 같습니다.
+- 광고주·계약·대상·채널·게재 유형은 종류마다 한 번에 읽어 붙이므로 항목 수만큼 조회가 늘지 않습니다.
+- 400 `message`는 화면이 그대로 보이는 `필드: 설명` 문구입니다([예외 처리 기준](error-handling.md#4-검증-오류)). 없는 할 일은 404 `CALENDAR_TODO_NOT_FOUND`(`할 일을 찾을 수 없습니다.`)입니다.
 
 ### 회사명 검색
 

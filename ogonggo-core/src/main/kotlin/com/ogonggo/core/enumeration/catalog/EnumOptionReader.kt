@@ -1,11 +1,17 @@
 package com.ogonggo.core.enumeration.catalog
 
+import com.ogonggo.core.adposting.domain.AdPostingPlacement
+import com.ogonggo.core.adposting.domain.AdPostingTargetType
+import com.ogonggo.core.advertiser.domain.AdvertiserSource
+import com.ogonggo.core.advertiser.domain.AdvertiserType
+import com.ogonggo.core.advertisercontract.domain.AdContractProduct
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.banner.domain.BannerPlacement
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
@@ -70,6 +76,8 @@ import com.ogonggo.core.usernotification.domain.UserNotificationType
 import com.ogonggo.core.usernotification.domain.UserNotificationPushSkipReason
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
+import com.ogonggo.core.adchannel.domain.AdChannelPlatform
+import com.ogonggo.core.channelad.domain.ChannelAdStatus
 import org.springframework.stereotype.Component
 
 /**
@@ -166,6 +174,18 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementInquiryMemberType>(),
             enumOptionsOf<AdvertisementInquiryInflowChannel>(),
             enumOptionsOf<AdvertisementInquiryCompanyNameSource>(),
+            // 배너
+            enumOptionsOf<BannerPlacement>(),
+            // 광고주와 광고 계약
+            enumOptionsOf<AdvertiserType>(),
+            enumOptionsOf<AdvertiserSource>(),
+            enumOptionsOf<AdContractProduct>(),
+            // 광고 공고
+            enumOptionsOf<AdPostingPlacement>(),
+            enumOptionsOf<AdPostingTargetType>(),
+            // 채널 광고
+            enumOptionsOf<AdChannelPlatform>(),
+            enumOptionsOf<ChannelAdStatus>(),
         )
     }
 }

@@ -1,6 +1,7 @@
 package com.ogonggo.core.advertisementinquiry.implement
 
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.error.AdvertisementInquiryErrorCode
@@ -25,6 +26,17 @@ class AdvertisementInquiryReader internal constructor(
     fun readForUpdate(inquiryId: Long): AdvertisementInquiry =
         advertisementInquiryRepository.findForUpdate(inquiryId)
             ?: throw EntityNotFoundException(AdvertisementInquiryErrorCode.ADVERTISEMENT_INQUIRY_NOT_FOUND)
+
+    /**
+     * 광고주로 옮길 비회원·일반 회원 문의 가운데 [afterInquiryId]보다 뒤에 들어온 것을 들어온 순서로 준다.
+     * 기업 회원의 문의와 반려한 문의는 뺀다.
+     */
+    fun readAdvertiserCandidatesAfter(afterInquiryId: Long): List<AdvertisementInquiry> =
+        advertisementInquiryRepository.findAllByIdGreaterThanAndMemberTypeNotAndStatusNotOrderByIdAsc(
+            afterInquiryId,
+            AdvertisementInquiryMemberType.COMPANY,
+            AdvertisementInquiryStatus.REJECTED,
+        )
 
     /** 최근에 들어온 문의부터 준다. */
     fun readPage(condition: AdvertisementInquirySearchCondition, page: Int, size: Int): AdvertisementInquiryPageDto {

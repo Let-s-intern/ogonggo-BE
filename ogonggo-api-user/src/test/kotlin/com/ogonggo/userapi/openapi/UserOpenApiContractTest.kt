@@ -586,6 +586,30 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `배너 공개 조회는 로그인 없이 자리를 enum으로 받고 운영 칸을 싣지 않는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val banners = document.at("/paths/~1api~1v1~1banners/get")
+        val placement = banners.parameter("placement")
+        val properties = document.at("/components/schemas/UserBannerResponse/properties")
+
+        // then
+        assertEquals("listPublicBanners", banners.at("/operationId").asText())
+        assertFalse(banners.has("security"))
+        assertTrue(placement.at("/required").asBoolean())
+        assertEquals(
+            listOf("HOME_TOP", "HOME_BOTTOM", "JOB_DETAIL_SIDE", "BOOTCAMP_TOP", "BOOTCAMP_BOTTOM", "BOOTCAMP_DETAIL_SIDE"),
+            placement.at("/schema/enum").map { it.asText() },
+        )
+        listOf("id", "placement", "pcImageUrl", "mobileImageUrl", "linkUrl", "openInNewTab", "altText", "showAdLabel")
+            .forEach { field -> assertTrue(properties.has(field), field) }
+        listOf("name", "startAt", "endAt", "enabled", "displayOrder", "advertiserId", "contractId")
+            .forEach { field -> assertFalse(properties.has(field), field) }
+    }
+
+    @Test
     fun `EnumField enum은 값과 code와 설명을 문서에 노출한다`() {
         val document = openApiDocument()
 
@@ -600,6 +624,27 @@ class UserOpenApiContractTest @Autowired constructor(
             .first { it.at("/name").asText() == "employmentType" }
             .at("/schema/description").asText()
         assertTrue(parameterEnum.contains("| `FULL_TIME` | 1 | 정규직 |"))
+    }
+
+    @Test
+    fun `광고 공고 공개 조회는 인증 없이 자리를 enum으로 받고 목록 항목 모양의 대상 요약을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1ad-postings/get")
+        val properties = document.at("/components/schemas/UserAdPostingResponse/properties")
+
+        // then
+        assertEquals("listPublicAdPostings", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security").isMissingNode)
+        assertEquals(
+            listOf("JOB_LIST", "JOB_PICK", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "CALENDAR", "MYPAGE_SCRAP"),
+            operation.parameter("placement").at("/schema/enum").map { it.asText() },
+        )
+        assertEquals("#/components/schemas/UserJobSummaryResponse", properties.at("/job/\$ref").asText())
+        assertEquals("#/components/schemas/UserBootcampSummaryResponse", properties.at("/bootcamp/\$ref").asText())
+        listOf("advertiserId", "startAt", "endAt", "enabled", "displayOrder").forEach { field -> assertFalse(properties.has(field), field) }
     }
 
     private fun openApiDocument(): JsonNode {

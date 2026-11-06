@@ -1,6 +1,7 @@
 package com.ogonggo.core.advertisementinquiry.persistence
 
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.QAdvertisementInquiry.advertisementInquiry
@@ -22,6 +23,13 @@ internal interface AdvertisementInquiryJpaRepository : JpaRepository<Advertiseme
         from: LocalDateTime,
         to: LocalDateTime,
     ): Long
+
+    /** 광고주로 옮길 문의다. 기업 회원의 문의는 회원 광고주가 있으므로, 반려한 문의는 광고하지 않을 곳이므로 뺀다. */
+    fun findAllByIdGreaterThanAndMemberTypeNotAndStatusNotOrderByIdAsc(
+        id: Long,
+        memberType: AdvertisementInquiryMemberType,
+        status: AdvertisementInquiryStatus,
+    ): List<AdvertisementInquiry>
 
     /** 상태와 메모를 동시에 바꿔도 한쪽 변경이 다른 쪽의 낡은 값으로 덮이지 않도록 잠근다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

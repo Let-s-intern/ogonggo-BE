@@ -97,6 +97,46 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1memo/patch",
             "/paths/~1api~1v1~1admin~1company-content-priority/get",
             "/paths/~1api~1v1~1admin~1company-content-priority/put",
+            "/paths/~1api~1v1~1admin~1banners/get",
+            "/paths/~1api~1v1~1admin~1banners/post",
+            "/paths/~1api~1v1~1admin~1banners~1order/put",
+            "/paths/~1api~1v1~1admin~1banners~1{bannerId}/patch",
+            "/paths/~1api~1v1~1admin~1banners~1{bannerId}/delete",
+            "/paths/~1api~1v1~1admin~1advertisers/get",
+            "/paths/~1api~1v1~1admin~1advertisers/post",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}/get",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}/patch",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1contracts/get",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1contracts/post",
+            "/paths/~1api~1v1~1admin~1advertiser-contracts~1{contractId}/patch",
+            "/paths/~1api~1v1~1admin~1advertiser-contracts~1{contractId}/delete",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/get",
+            "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/post",
+            "/paths/~1api~1v1~1admin~1advertiser-notes~1{noteId}/patch",
+            "/paths/~1api~1v1~1admin~1advertiser-notes~1{noteId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-postings/get",
+            "/paths/~1api~1v1~1admin~1ad-postings/post",
+            "/paths/~1api~1v1~1admin~1ad-postings~1{adPostingId}/patch",
+            "/paths/~1api~1v1~1admin~1ad-postings~1{adPostingId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-postings~1order/put",
+            "/paths/~1api~1v1~1admin~1ad-channels/get",
+            "/paths/~1api~1v1~1admin~1ad-channels/post",
+            "/paths/~1api~1v1~1admin~1ad-channels~1{channelId}/patch",
+            "/paths/~1api~1v1~1admin~1ad-channels~1{channelId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats/get",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats/post",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats~1order/put",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats~1{formatId}/patch",
+            "/paths/~1api~1v1~1admin~1ad-channel-formats~1{formatId}/delete",
+            "/paths/~1api~1v1~1admin~1channel-ads/get",
+            "/paths/~1api~1v1~1admin~1channel-ads/post",
+            "/paths/~1api~1v1~1admin~1channel-ads~1{adId}/patch",
+            "/paths/~1api~1v1~1admin~1channel-ads~1{adId}/delete",
+            "/paths/~1api~1v1~1admin~1calendar-todos/get",
+            "/paths/~1api~1v1~1admin~1calendar-todos/post",
+            "/paths/~1api~1v1~1admin~1calendar-todos~1{todoId}/patch",
+            "/paths/~1api~1v1~1admin~1calendar-todos~1{todoId}/delete",
+            "/paths/~1api~1v1~1admin~1ad-calendar/get",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
@@ -292,6 +332,171 @@ class AdminOpenApiContractTest @Autowired constructor(
             "managerPhone", "businessNumberType", "businessNumber", "companyType", "employeeCountRange", "industry",
             "address", "homepageUrl", "managerTitle", "managerDuty", "recommender",
         ).forEach { field -> assertTrue(properties.has(field), field) }
+    }
+
+    @Test
+    fun `배너 세팅은 프런트 계약의 칸과 광고주·계약 요약을 싣고 수정 본문은 null로 칸을 비울 수 있다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val banner = document.at("/components/schemas/AdminBannerResponse/properties")
+        val create = document.at("/components/schemas/CreateAdminBannerRequest/properties")
+        val update = document.at("/components/schemas/UpdateAdminBannerRequest/properties")
+        val list = document.at("/paths/~1api~1v1~1admin~1banners/get")
+
+        // then
+        listOf(
+            "id", "placement", "name", "pcImageUrl", "mobileImageUrl", "linkUrl", "openInNewTab", "altText", "showAdLabel",
+            "startAt", "endAt", "enabled", "displayOrder", "advertiserId", "advertiser", "contractId", "contract", "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(banner.has(field), field) }
+        listOf(
+            "placement", "name", "pcImageUrl", "mobileImageUrl", "linkUrl", "openInNewTab", "altText", "showAdLabel",
+            "startAt", "endAt", "enabled", "advertiserId", "contractId",
+        ).forEach { field -> assertTrue(create.has(field), field) }
+        assertEquals(6, create.at("/placement/enum").size())
+        assertEquals("string", update.at("/mobileImageUrl/type").asText())
+        assertEquals("integer", update.at("/contractId/type").asText())
+        listOf("id", "name", "type").forEach { field ->
+            assertTrue(document.at("/components/schemas/AdminBannerAdvertiserResponse/properties").has(field), field)
+        }
+        listOf("id", "name", "startAt", "endAt").forEach { field ->
+            assertTrue(document.at("/components/schemas/AdminBannerContractResponse/properties").has(field), field)
+        }
+        assertEquals(listOf("placement", "advertiserId"), list.at("/parameters").map { it["name"].asText() })
+        assertEquals("replaceBannerOrder", document.at("/paths/~1api~1v1~1admin~1banners~1order/put/operationId").asText())
+    }
+
+    @Test
+    fun `광고주 목록은 종류를 enum으로 받고 광고 수와 계약 합계를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val type = document.at("/paths/~1api~1v1~1admin~1advertisers/get/parameters").first { it["name"].asText() == "type" }
+        val properties = document.at("/components/schemas/AdminAdvertiserResponse/properties")
+
+        // then
+        assertEquals(listOf("MEMBER", "NON_MEMBER"), type.at("/schema/enum").map { it.asText() })
+        listOf(
+            "id", "name", "type", "source", "companyMemberUserId", "adInquiryId", "contactName", "contactEmail", "contactPhone",
+            "bannerCount", "activeBannerCount", "adPostingCount", "activeAdPostingCount", "latestEndAt",
+            "contractCount", "activeContractCount", "contractTotalAmount", "contractVatMixed",
+        ).forEach { field -> assertTrue(properties.has(field), field) }
+        assertFalse(properties.has("memo"))
+    }
+
+    @Test
+    fun `광고 계약과 광고주 메모는 프런트 계약의 칸을 싣고 메모 쓴 사람은 본문으로 받지 않는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val contract = document.at("/components/schemas/AdminAdvertiserContractResponse/properties")
+        val update = document.at("/components/schemas/UpdateAdminAdvertiserContractRequest/properties")
+        val note = document.at("/components/schemas/AdminAdvertiserNoteResponse/properties")
+        val noteRequest = document.at("/components/schemas/CreateAdminAdvertiserNoteRequest/properties")
+        val products = document.at("/components/schemas/CreateAdminAdvertiserContractRequest/properties/products/items/enum")
+
+        // then
+        listOf(
+            "id", "advertiserId", "name", "startAt", "endAt", "amount", "vatIncluded", "paid", "paidDate", "products", "memo",
+            "bannerCount", "adPostingCount", "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(contract.has(field), field) }
+        assertEquals("string", update.at("/name/type").asText())
+        assertEquals(12, products.size())
+        listOf("id", "advertiserId", "title", "content", "authorName", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(note.has(field), field) }
+        assertFalse(noteRequest.has("authorName"))
+        assertTrue(
+            document.at("/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}~1notes/post/parameters")
+                .none { it["name"].asText() == "adminUserId" },
+        )
+    }
+
+    @Test
+    fun `광고 공고는 자리를 enum으로 받고 대상·광고주·계약 요약을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val placement = document.at("/paths/~1api~1v1~1admin~1ad-postings/get/parameters").first { it["name"].asText() == "placement" }
+        val properties = document.at("/components/schemas/AdminAdPostingResponse/properties")
+        val update = document.at("/components/schemas/UpdateAdminAdPostingRequest/properties")
+
+        // then
+        assertEquals(
+            listOf("JOB_LIST", "JOB_PICK", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "CALENDAR", "MYPAGE_SCRAP"),
+            placement.at("/schema/enum").map { it.asText() },
+        )
+        listOf(
+            "id", "placement", "targetType", "targetId", "targetTitle", "targetCompanyName", "targetAvailable",
+            "startAt", "endAt", "enabled", "displayOrder", "advertiserId", "advertiser", "contractId", "contract",
+            "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(properties.has(field), field) }
+        assertEquals("integer", update.at("/contractId/type").asText())
+        assertFalse(update.has("placement"))
+        assertFalse(update.has("targetId"))
+    }
+
+    @Test
+    fun `채널 광고는 채널·게재 유형·광고 일정의 프런트 계약 칸을 싣고 계약은 산 채널 게재 유형과 채널 광고 수를 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val channel = document.at("/components/schemas/AdminAdChannelResponse/properties")
+        val format = document.at("/components/schemas/AdminAdChannelFormatResponse/properties")
+        val ad = document.at("/components/schemas/AdminChannelAdResponse/properties")
+        val contract = document.at("/components/schemas/AdminAdvertiserContractResponse/properties")
+        val contractRequest = document.at("/components/schemas/CreateAdminAdvertiserContractRequest/properties")
+        val listParameters = document.at("/paths/~1api~1v1~1admin~1channel-ads/get/parameters").map { it["name"].asText() }
+
+        // then
+        listOf("id", "platform", "name", "handle", "url", "profileImageUrl", "memberCount", "enabled", "memo", "adCount", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(channel.has(field), field) }
+        assertEquals(listOf("INSTAGRAM", "KAKAO_OPENCHAT"), channel.at("/platform/enum").map { it.asText() })
+        listOf("id", "platform", "name", "description", "enabled", "defaultPrice", "channelIds", "displayOrder", "adCount", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(format.has(field), field) }
+        listOf(
+            "id", "advertiserId", "advertiser", "contractId", "contract", "platform", "channelId", "channel", "formatId", "format",
+            "postDate", "endDate", "status", "postUrl", "creativeMemo", "adminMemo", "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(ad.has(field), field) }
+        assertEquals(listOf("SCHEDULED", "PUBLISHED", "CANCELED"), ad.at("/status/enum").map { it.asText() })
+        assertEquals(listOf("month", "advertiserId", "contractId", "platform", "channelId", "formatId", "status"), listParameters)
+        assertTrue(contract.has("channelFormatIds"))
+        assertTrue(contract.has("channelAdCount"))
+        assertTrue(contractRequest.has("channelFormatIds"))
+    }
+
+    @Test
+    fun `캘린더 할 일과 광고 일정은 날짜 기간을 받고 프런트 계약의 칸을 싣는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val todoParameters = document.at("/paths/~1api~1v1~1admin~1calendar-todos/get/parameters")
+        val calendarParameters = document.at("/paths/~1api~1v1~1admin~1ad-calendar/get/parameters")
+        val todo = document.at("/components/schemas/AdminCalendarTodoResponse/properties")
+        val update = document.at("/components/schemas/UpdateAdminCalendarTodoRequest/properties")
+        val calendar = document.at("/components/schemas/AdminAdCalendarResponse/properties")
+        val contract = document.at("/components/schemas/AdminAdCalendarContractResponse/properties")
+
+        // then
+        listOf(todoParameters, calendarParameters).forEach { parameters ->
+            assertEquals(listOf("from", "to"), parameters.map { it["name"].asText() })
+            parameters.forEach { assertEquals("date", it.at("/schema/format").asText()) }
+        }
+        listOf("id", "title", "content", "startDate", "endDate", "done", "createdAt", "updatedAt")
+            .forEach { field -> assertTrue(todo.has(field), field) }
+        assertEquals("date", todo.at("/startDate/format").asText())
+        assertEquals("string", update.at("/content/type").asText())
+        assertEquals(listOf("adPostings", "banners", "channelAds", "contracts"), calendar.fieldNames().asSequence().toList().sorted())
+        assertEquals("#/components/schemas/AdminBannerResponse", calendar.at("/banners/items/\$ref").asText())
+        assertEquals("#/components/schemas/AdminAdPostingResponse", calendar.at("/adPostings/items/\$ref").asText())
+        assertEquals("#/components/schemas/AdminChannelAdResponse", calendar.at("/channelAds/items/\$ref").asText())
+        listOf("id", "name", "startAt", "endAt", "advertiserId", "advertiser", "amount", "paid", "products")
+            .forEach { field -> assertTrue(contract.has(field), field) }
     }
 
     private fun openApiDocument() = objectMapper.readTree(
