@@ -97,6 +97,11 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1memo/patch",
             "/paths/~1api~1v1~1admin~1company-content-priority/get",
             "/paths/~1api~1v1~1admin~1company-content-priority/put",
+            "/paths/~1api~1v1~1admin~1banners/get",
+            "/paths/~1api~1v1~1admin~1banners/post",
+            "/paths/~1api~1v1~1admin~1banners~1order/put",
+            "/paths/~1api~1v1~1admin~1banners~1{bannerId}/patch",
+            "/paths/~1api~1v1~1admin~1banners~1{bannerId}/delete",
             "/paths/~1api~1v1~1admin~1advertisers/get",
             "/paths/~1api~1v1~1admin~1advertisers/post",
             "/paths/~1api~1v1~1admin~1advertisers~1{advertiserId}/get",
@@ -309,6 +314,39 @@ class AdminOpenApiContractTest @Autowired constructor(
             "managerPhone", "businessNumberType", "businessNumber", "companyType", "employeeCountRange", "industry",
             "address", "homepageUrl", "managerTitle", "managerDuty", "recommender",
         ).forEach { field -> assertTrue(properties.has(field), field) }
+    }
+
+    @Test
+    fun `배너 세팅은 프런트 계약의 칸과 광고주·계약 요약을 싣고 수정 본문은 null로 칸을 비울 수 있다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val banner = document.at("/components/schemas/AdminBannerResponse/properties")
+        val create = document.at("/components/schemas/CreateAdminBannerRequest/properties")
+        val update = document.at("/components/schemas/UpdateAdminBannerRequest/properties")
+        val list = document.at("/paths/~1api~1v1~1admin~1banners/get")
+
+        // then
+        listOf(
+            "id", "placement", "name", "pcImageUrl", "mobileImageUrl", "linkUrl", "openInNewTab", "altText", "showAdLabel",
+            "startAt", "endAt", "enabled", "displayOrder", "advertiserId", "advertiser", "contractId", "contract", "createdAt", "updatedAt",
+        ).forEach { field -> assertTrue(banner.has(field), field) }
+        listOf(
+            "placement", "name", "pcImageUrl", "mobileImageUrl", "linkUrl", "openInNewTab", "altText", "showAdLabel",
+            "startAt", "endAt", "enabled", "advertiserId", "contractId",
+        ).forEach { field -> assertTrue(create.has(field), field) }
+        assertEquals(6, create.at("/placement/enum").size())
+        assertEquals("string", update.at("/mobileImageUrl/type").asText())
+        assertEquals("integer", update.at("/contractId/type").asText())
+        listOf("id", "name", "type").forEach { field ->
+            assertTrue(document.at("/components/schemas/AdminBannerAdvertiserResponse/properties").has(field), field)
+        }
+        listOf("id", "name", "startAt", "endAt").forEach { field ->
+            assertTrue(document.at("/components/schemas/AdminBannerContractResponse/properties").has(field), field)
+        }
+        assertEquals(listOf("placement", "advertiserId"), list.at("/parameters").map { it["name"].asText() })
+        assertEquals("replaceBannerOrder", document.at("/paths/~1api~1v1~1admin~1banners~1order/put/operationId").asText())
     }
 
     @Test

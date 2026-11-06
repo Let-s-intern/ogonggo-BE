@@ -14,6 +14,8 @@ internal interface AdvertiserContractJpaRepository : JpaRepository<AdvertiserCon
 
     fun findAllByAdvertiserIdInAndDeletedAtIsNull(advertiserIds: Collection<Long>): List<AdvertiserContract>
 
+    fun findAllByIdInAndDeletedAtIsNull(ids: Collection<Long>): List<AdvertiserContract>
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from AdvertiserContract c where c.id = :contractId and c.deletedAt is null")
     fun findForUpdate(@Param("contractId") contractId: Long): AdvertiserContract?

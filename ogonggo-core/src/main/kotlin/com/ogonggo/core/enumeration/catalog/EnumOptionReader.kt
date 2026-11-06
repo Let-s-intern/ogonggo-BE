@@ -11,6 +11,7 @@ import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberTy
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.banner.domain.BannerPlacement
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
@@ -171,6 +172,8 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementInquiryMemberType>(),
             enumOptionsOf<AdvertisementInquiryInflowChannel>(),
             enumOptionsOf<AdvertisementInquiryCompanyNameSource>(),
+            // 배너
+            enumOptionsOf<BannerPlacement>(),
             // 광고주와 광고 계약
             enumOptionsOf<AdvertiserType>(),
             enumOptionsOf<AdvertiserSource>(),

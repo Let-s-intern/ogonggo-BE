@@ -5,6 +5,7 @@ import com.ogonggo.core.advertisercontract.domain.AdContractProduct
 import com.ogonggo.core.advertisercontract.domain.AdvertiserContractTerms
 import com.ogonggo.core.advertisercontract.error.AdvertiserContractErrorCode
 import com.ogonggo.core.advertisercontract.implement.dto.AdvertiserContractAppendDto
+import com.ogonggo.core.banner.implement.BannerManager
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
@@ -20,7 +21,13 @@ import java.time.LocalDateTime
 
 @DataJpaTest(showSql = false)
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(AdvertiserContractReader::class, AdvertiserContractAppender::class, AdvertiserContractManager::class, AdPostingManager::class)
+@Import(
+    AdvertiserContractReader::class,
+    AdvertiserContractAppender::class,
+    AdvertiserContractManager::class,
+    BannerManager::class,
+    AdPostingManager::class,
+)
 internal class AdvertiserContractPersistenceTest @Autowired constructor(
     private val reader: AdvertiserContractReader,
     private val appender: AdvertiserContractAppender,

@@ -578,6 +578,30 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `배너 공개 조회는 로그인 없이 자리를 enum으로 받고 운영 칸을 싣지 않는다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val banners = document.at("/paths/~1api~1v1~1banners/get")
+        val placement = banners.parameter("placement")
+        val properties = document.at("/components/schemas/UserBannerResponse/properties")
+
+        // then
+        assertEquals("listPublicBanners", banners.at("/operationId").asText())
+        assertFalse(banners.has("security"))
+        assertTrue(placement.at("/required").asBoolean())
+        assertEquals(
+            listOf("HOME_TOP", "HOME_BOTTOM", "JOB_DETAIL_SIDE", "BOOTCAMP_TOP", "BOOTCAMP_BOTTOM", "BOOTCAMP_DETAIL_SIDE"),
+            placement.at("/schema/enum").map { it.asText() },
+        )
+        listOf("id", "placement", "pcImageUrl", "mobileImageUrl", "linkUrl", "openInNewTab", "altText", "showAdLabel")
+            .forEach { field -> assertTrue(properties.has(field), field) }
+        listOf("name", "startAt", "endAt", "enabled", "displayOrder", "advertiserId", "contractId")
+            .forEach { field -> assertFalse(properties.has(field), field) }
+    }
+
+    @Test
     fun `EnumField enum은 값과 code와 설명을 문서에 노출한다`() {
         val document = openApiDocument()
 

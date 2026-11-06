@@ -131,7 +131,7 @@ POST /api/v1/images/{imageId}/complete       S3에 올린 파일을 확인하고
 - presigned 방식은 파일이 서버를 거치지 않습니다. 발급 응답의 `uploadUrl`에 `uploadHeaders`(`Content-Type`, `Cache-Control`)를 그대로 넣어 5분 안에 PUT하고, 완료 API를 불러야 본문·프로필에 쓸 수 있습니다. 형식(`image/jpeg`·`image/png`·`image/webp`)과 크기(10 MiB 이하)는 발급할 때 검사하고, 크기·형식·캐시 헤더는 서명에 묶여 다르게 올리면 S3가 거절합니다.
 - 완료는 서버가 S3 객체 크기와 앞 12바이트로 실제 형식을 다시 확인합니다. 아직 올리지 않았으면 409 `IMAGE_FILE_NOT_UPLOADED`, 알린 형식이 아니면 400 `IMAGE_FILE_TYPE_NOT_SUPPORTED`입니다. 이미 완료한 이미지를 다시 완료해도 200입니다. 완료하지 않은 이미지는 업로드 중으로 남아 정리 작업이 지웁니다.
 - 완료 API를 따로 둔 이유: 글 저장 때 확인하면 호출은 줄지만 저장 요청이 S3 확인만큼 느려지고, 잘못 올린 파일을 글을 저장할 때에야 알게 됩니다.
-- S3 키는 `ogonggo/{폴더}/{imageId}.{확장자}`입니다. 렛츠커리어와 같이 쓰는 버킷이라 `ogonggo/` 아래에 두고, 폴더는 `usage`(`ImageAssetUsage`)로 정합니다: `PROFILE` → `profile`(프로필 이미지·기업 로고), `RECRUITMENT_POST` → `side`, `CONCERN` → `concern`, `NOTIFICATION` → `notification`(푸시 이미지). 용도마다 받는 형식이 다르며 `RECRUITMENT_POST`·`CONCERN`·`NOTIFICATION`은 JPG·PNG만 받습니다. 관리자 콘솔의 푸시 이미지도 사용자 API의 `POST /api/v1/images?usage=NOTIFICATION`으로 올리고, 관리자 배치 생성에서 같은 계정 소유·미사용 이미지만 연결합니다. presigned 발급은 `usage`가 필수이고, multipart는 선택이라 보내지 않으면 `etc`에 둡니다. 모집글 복사로 만든 이미지는 원본과 같은 폴더에 둡니다. 고용24 기관 이미지(관리자 API)도 `ogonggo/work24/`에 둡니다. 이 변경 전에 올린 이미지는 `images/` 아래에 그대로 둡니다.
+- S3 키는 `ogonggo/{폴더}/{imageId}.{확장자}`입니다. 렛츠커리어와 같이 쓰는 버킷이라 `ogonggo/` 아래에 두고, 폴더는 `usage`(`ImageAssetUsage`)로 정합니다: `PROFILE` → `profile`(프로필 이미지·기업 로고), `RECRUITMENT_POST` → `side`, `CONCERN` → `concern`, `NOTIFICATION` → `notification`(푸시 이미지), `BANNER` → `banner`(관리자 콘솔 배너 이미지, JPG·PNG·WEBP). 용도마다 받는 형식이 다르며 `RECRUITMENT_POST`·`CONCERN`·`NOTIFICATION`은 JPG·PNG만 받습니다. 관리자 콘솔의 배너 이미지는 `usage=BANNER`로 올립니다. 관리자 콘솔의 푸시 이미지도 사용자 API의 `POST /api/v1/images?usage=NOTIFICATION`으로 올리고, 관리자 배치 생성에서 같은 계정 소유·미사용 이미지만 연결합니다. presigned 발급은 `usage`가 필수이고, multipart는 선택이라 보내지 않으면 `etc`에 둡니다. 모집글 복사로 만든 이미지는 원본과 같은 폴더에 둡니다. 고용24 기관 이미지(관리자 API)도 `ogonggo/work24/`에 둡니다. 이 변경 전에 올린 이미지는 `images/` 아래에 그대로 둡니다.
 - multipart 방식은 화면이 모두 presigned로 옮겨 갈 때까지 유지하고 그 뒤 없앱니다(확인 필요: 제거 시점). multipart 한도는 `spring.servlet.multipart.max-file-size`를 10MB로 맞춥니다.
 
 ### 부트캠프 북마크
@@ -272,6 +272,23 @@ PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/memo   메모 저장
 - 두 PATCH는 콘솔의 부분 수정처럼 바뀐 문의 전체를 `data`로 돌려줍니다. 없는 문의는 404 `ADVERTISEMENT_INQUIRY_NOT_FOUND`입니다. 상태와 메모를 동시에 바꿔도 서로 덮지 않도록 행을 잠가 읽습니다.
 - 수정·삭제 경로는 두지 않습니다. 문의 내용은 남긴 그대로 둡니다.
 - 응답 계약은 [API 성공 응답의 B2B 광고 문의](api-response.md#b2b-광고-문의)를 따릅니다.
+
+### 배너
+
+```text
+GET    /api/v1/banners?placement=                            사용자 API, 로그인 없음. 노출 중인 배너
+GET    /api/v1/admin/banners?placement=&advertiserId=        배너 목록(자리나 광고주 중 하나는 필수)
+POST   /api/v1/admin/banners                                 배너 등록(그 자리 맨 뒤)
+PUT    /api/v1/admin/banners/order                           자리 안 순서 통째로 바꾸기
+PATCH  /api/v1/admin/banners/{bannerId}                      배너 수정
+DELETE /api/v1/admin/banners/{bannerId}                      배너 삭제
+```
+
+- 결정일: 2026-11-06 (LC-3576) / 리뷰 상태: 팀 리뷰 필요
+- 경로와 본문은 관리자 콘솔의 목 계약을 따릅니다. 순서는 자리 하나의 전체를 바꾸는 작업이라 한 건씩 옮기는 경로 없이 `PUT .../order`로 둡니다(오늘의 공고와 같은 이유). `bannerIds`가 그 자리의 배너를 빠짐없이 한 번씩 담지 않으면 400입니다.
+- 수정(PATCH)은 보낸 칸만 바꾸고, `mobileImageUrl`·`startAt`·`endAt`·`advertiserId`·`contractId`는 `null`을 보내면 비웁니다. 자리는 바꿀 수 없어 다른 값을 보내면 400입니다. 검증은 저장된 값과 합친 결과로 합니다.
+- 삭제(DELETE)는 소프트 삭제이고 광고주·계약 API와 같이 `{ "id": number }`를 돌려주며 다시 지워도 200입니다.
+- 응답 계약은 [API 성공 응답의 배너](api-response.md#배너)를 따릅니다.
 
 ### 광고주·광고 계약·광고주 메모
 

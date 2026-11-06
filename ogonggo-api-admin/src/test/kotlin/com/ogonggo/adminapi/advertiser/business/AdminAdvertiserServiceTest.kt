@@ -11,6 +11,7 @@ import com.ogonggo.core.advertiser.implement.AdvertiserManager
 import com.ogonggo.core.advertiser.implement.AdvertiserReader
 import com.ogonggo.core.advertisercontract.domain.AdvertiserContract
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractReader
+import com.ogonggo.core.banner.implement.BannerReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -32,7 +33,10 @@ class AdminAdvertiserServiceTest {
         advertiserAppender = advertiserAppender,
         advertiserManager = advertiserManager,
         advertiserContractReader = advertiserContractReader,
-        advertiserAdCountReader = AdvertiserAdCountReader(Mockito.mock(AdPostingCountReader::class.java)),
+        advertiserAdCountReader = AdvertiserAdCountReader(
+            Mockito.mock(BannerReader::class.java),
+            Mockito.mock(AdPostingCountReader::class.java),
+        ),
         clock = Clock.fixed(NOW.atZone(SEOUL).toInstant(), SEOUL),
     )
 

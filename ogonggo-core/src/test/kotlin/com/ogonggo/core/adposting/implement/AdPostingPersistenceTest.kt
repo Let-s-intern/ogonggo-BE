@@ -11,6 +11,9 @@ import com.ogonggo.core.advertisercontract.implement.AdvertiserContractAppender
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractManager
 import com.ogonggo.core.advertisercontract.implement.AdvertiserContractReader
 import com.ogonggo.core.advertisercontract.implement.dto.AdvertiserContractAppendDto
+import com.ogonggo.core.banner.implement.BannerManager
+import com.ogonggo.core.banner.implement.BannerReader
+import com.ogonggo.core.banner.persistence.BannerQueryRepository
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
@@ -51,6 +54,9 @@ import java.time.LocalDateTime
     AdvertiserContractAppender::class,
     AdvertiserContractReader::class,
     AdvertiserContractManager::class,
+    BannerReader::class,
+    BannerManager::class,
+    BannerQueryRepository::class,
 )
 internal class AdPostingPersistenceTest @Autowired constructor(
     private val reader: AdPostingReader,

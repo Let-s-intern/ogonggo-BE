@@ -67,9 +67,9 @@ class AdminAdPostingServiceTest {
     fun `등록은 광고주, 계약, 켜기, 기간 순으로 보고 처음 걸린 칸 하나만 알린다`() {
         // given
         Mockito.`when`(adPostingTargetReader.exists(AdPostingTargetType.JOB, TARGET_ID)).thenReturn(true)
-        Mockito.`when`(advertiserReader.readAllByIds(listOf(ADVERTISER_ID))).thenReturn(listOf(advertiser(ADVERTISER_ID)))
+        Mockito.`when`(advertiserReader.readAllByIds(listOf(ADVERTISER_ID))).thenReturn(mapOf(ADVERTISER_ID to advertiser(ADVERTISER_ID)))
         val otherContract = contract(OTHER_ADVERTISER_ID)
-        Mockito.`when`(advertiserContractReader.readAllByIds(listOf(OTHER_CONTRACT_ID))).thenReturn(listOf(otherContract))
+        Mockito.`when`(advertiserContractReader.readAllByIds(listOf(OTHER_CONTRACT_ID))).thenReturn(mapOf(OTHER_CONTRACT_ID to otherContract))
 
         // then
         assertMessage("advertiserId: 광고주를 골라 주세요.") { service.createAdPosting(create(advertiserId = 999)) }
@@ -90,9 +90,9 @@ class AdminAdPostingServiceTest {
         Mockito.`when`(adPosting.contractId).thenReturn(CONTRACT_ID)
         Mockito.`when`(adPosting.startAt).thenReturn(NOW)
         Mockito.`when`(adPostingReader.readForUpdate(AD_POSTING_ID)).thenReturn(adPosting)
-        Mockito.`when`(advertiserReader.readAllByIds(listOf(OTHER_ADVERTISER_ID))).thenReturn(listOf(advertiser(OTHER_ADVERTISER_ID)))
+        Mockito.`when`(advertiserReader.readAllByIds(listOf(OTHER_ADVERTISER_ID))).thenReturn(mapOf(OTHER_ADVERTISER_ID to advertiser(OTHER_ADVERTISER_ID)))
         val contract = contract(ADVERTISER_ID)
-        Mockito.`when`(advertiserContractReader.readAllByIds(listOf(CONTRACT_ID))).thenReturn(listOf(contract))
+        Mockito.`when`(advertiserContractReader.readAllByIds(listOf(CONTRACT_ID))).thenReturn(mapOf(CONTRACT_ID to contract))
 
         // then
         assertMessage("endAt: 노출 끝은 시작보다 뒤여야 합니다.") {

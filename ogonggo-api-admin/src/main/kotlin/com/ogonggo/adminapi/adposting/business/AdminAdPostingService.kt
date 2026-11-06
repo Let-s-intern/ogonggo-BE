@@ -127,8 +127,8 @@ class AdminAdPostingService(
             return emptyList()
         }
         val targets = adPostingTargetReader.read(adPostings, LocalDateTime.now(clock))
-        val advertisers = advertiserReader.readAllByIds(adPostings.map { it.advertiserId }).associateBy { it.id }
-        val contracts = advertiserContractReader.readAllByIds(adPostings.mapNotNull { it.contractId }).associateBy { it.id }
+        val advertisers = advertiserReader.readAllByIds(adPostings.map { it.advertiserId })
+        val contracts = advertiserContractReader.readAllByIds(adPostings.mapNotNull { it.contractId })
         return adPostings.map { adPosting ->
             AdminAdPostingResult.of(
                 adPosting = adPosting,
@@ -147,7 +147,7 @@ class AdminAdPostingService(
         if (contractId == null) {
             return
         }
-        val contract = advertiserContractReader.readAllByIds(listOf(contractId)).firstOrNull()
+        val contract = advertiserContractReader.readAllByIds(listOf(contractId))[contractId]
             ?: throw AdminConsoleBadRequestException.field("contractId", "있는 계약을 골라 주세요.")
         if (contract.advertiserId != advertiserId) {
             throw AdminConsoleBadRequestException.field("contractId", "고른 광고주의 계약만 이을 수 있습니다.")
