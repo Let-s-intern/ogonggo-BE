@@ -68,13 +68,13 @@ class AdminJobService(
      * 이미 같은 검수 상태면 다시 전이하지 않는다. 화면이 현재 값을 함께 보내도 노출이 되돌아가지 않게 하기 위해서다.
      * 공고 정보는 내용을 고친 뒤 현재 값에 덮어 한 번에 고친다. 모집 종료 일시가 바뀌면 모집 상태와 마감 알림도 다시 정해진다.
      * 제목·본문·공고 정보·원문 중 하나라도 고치면 운영자 내용 수정으로 남긴다. 그 뒤로 AI 서버의 다시 수집은 이 공고의 내용과 원문을 바꾸지 않는다.
-     * 본문 해시가 바뀌면 운영자가 고친 분석을 새 해시로 옮긴다([JobAnalysisManager.keepAdminEditCurrent]).
+     * 제목·본문을 고쳐 본문 해시가 바뀌면 운영자가 고친 분석도 낡아 사용자에게 보이지 않고 AI 서버가 다시 분석한다.
+     * 고친 본문에 맞는 분석을 바로 보이려면 운영자가 공고 분석도 함께 고친다([replaceAnalysis]).
      */
     @Transactional
     fun updateJob(jobId: Long, command: AdminJobUpdateCommand, adminUserId: Long) {
         val now = LocalDateTime.now(clock)
         val job = jobReader.readForUpdate(jobId)
-        val previousContentHash = job.contentHash()
 
         command.reviewStatus
             ?.takeIf { it != job.reviewStatus }
@@ -92,9 +92,6 @@ class AdminJobService(
         command.sourceHtml?.let { saveSourceHtml(job, it) }
         if (command.editsContent()) {
             jobManager.markContentEdited(job, adminUserId, now)
-        }
-        if (job.contentHash() != previousContentHash) {
-            jobAnalysisManager.keepAdminEditCurrent(job, previousContentHash)
         }
     }
 

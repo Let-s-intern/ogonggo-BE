@@ -62,19 +62,6 @@ class JobAnalysisManager internal constructor(
         existing.edit(job.contentHash(), json, userId, now, job.updatedAt)
     }
 
-    /**
-     * 운영자가 관리자 콘솔에서 본문을 고친 뒤 부른다. 고치기 전 본문([previousContentHash])에 대해 운영자가 고친 분석이 있으면
-     * 새 본문 해시로 옮겨 계속 사용자에게 보이고 AI 서버가 덮지 못하게 한다. 운영자 수정은 마지막 방어선이라
-     * 운영자 자신의 본문 수정이 그 분석을 버리게 하지 않는다.
-     * AI 서버 분석이거나 이미 낡은 운영자 분석이면 그대로 두어, 바뀐 본문을 AI 서버가 다시 분석한다. 잠근 공고로 부른다.
-     */
-    fun keepAdminEditCurrent(job: Job, previousContentHash: String) {
-        val jobId = checkNotNull(job.id) { "채용공고 식별자가 없습니다." }
-        val existing = jobAnalysisRepository.findByJobId(jobId) ?: return
-        if (existing.isEditedByAdminFor(previousContentHash)) {
-            existing.restamp(job.contentHash(), job.updatedAt)
-        }
-    }
 
     /** 본문이 그대로인 공고를 확인한 것으로 남긴다. 다음 대상 선정에서 다시 비교하지 않는다. */
     fun confirm(jobs: Collection<Job>) {

@@ -221,8 +221,8 @@ interface AdminJobApi {
             sourceHtml은 원문 HTML을 바꿉니다. AI 서버 원문과 같이 안전한 태그만 남겨 저장하고 상대 주소는 sourceUrl 기준 절대 주소로 바꿉니다.
             보내지 않거나 null이면 그대로 두고, 비울 수 없어 공백이거나 걸러서 남는 글·이미지가 없으면 400입니다.
             원문은 공고 분석의 본문 해시에 들어가지 않아 원문만 고치면 분석(analysisCurrent)은 그대로입니다.
-            제목·본문 칸(title, fields)이나 recruitmentNotice를 고치면 AI 서버가 만든 분석은 낡아(analysisCurrent=false) 다시 분석을 기다립니다.
-            운영자가 고친 분석(analysisEditedAt이 있고 analysisCurrent=true)은 새 본문으로 옮겨 그대로 보이며 AI 서버가 덮지 못합니다.
+            제목·본문 칸(title, fields)이나 recruitmentNotice를 고치면 분석은 낡아(analysisCurrent=false) 사용자 상세에서 빠지고 AI 서버의 다시 분석을 기다립니다.
+            운영자가 고친 분석도 마찬가지입니다. 고친 본문에 맞는 분석을 바로 보이려면 PUT /api/v1/admin/jobs/{jobId}/analysis로 분석도 고칩니다.
             내용을 고쳐도 검수 완료(inspectedAt)는 풀리지 않습니다.
 
             제목·본문·공고 정보·원문을 하나라도 고치면 운영자 내용 수정으로 남습니다(상세의 contentEditedAt).
@@ -270,7 +270,7 @@ interface AdminJobApi {
 
             지금 본문 해시로 저장하므로 사용자 상세에 바로 보이고 analysisCurrent가 true가 됩니다. 분석이 없던 공고에도 저장합니다.
             운영자가 고친 분석은 본문(제목과 본문 여덟 칸)이 바뀌기 전까지 AI 서버의 분석 대상에서 빠지고 AI 서버 저장은 409로 거절합니다.
-            본문이 바뀌면 평소처럼 AI 서버가 다시 분석해 바꿉니다. 같은 요청을 반복해도 결과가 같습니다.
+            본문이 바뀌면 운영자가 관리자 콘솔에서 고친 경우에도 평소처럼 AI 서버가 다시 분석해 바꿉니다. 같은 요청을 반복해도 결과가 같습니다.
         """,
     )
     @ApiResponses(

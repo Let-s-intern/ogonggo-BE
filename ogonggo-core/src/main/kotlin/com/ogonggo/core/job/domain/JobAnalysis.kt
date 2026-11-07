@@ -21,7 +21,8 @@ import java.time.LocalDateTime
  *
  * 운영자가 관리자 콘솔에서 분석을 고치면([edit]) 지금 본문 해시로 저장하고 고친 사람과 일시를 남긴다.
  * 운영자 수정은 AI 분석을 바로잡는 마지막 방어선이라, 본문 해시가 그대로인 동안에는 AI 서버가 덮어쓰지 못한다
- * ([isEditedByAdminFor]). 본문이 바뀌면 그 분석은 낡은 것이 되어 평소처럼 AI 서버가 다시 분석하고, 그때 표시가 지워진다.
+ * ([isEditedByAdminFor]). 본문이 바뀌면 운영자가 고친 것이든 아니든 그 분석은 낡은 것이 되어 평소처럼 AI 서버가 다시 분석하고,
+ * 그때 표시가 지워진다.
  */
 @Entity
 @Table(name = "job_analyses")
@@ -96,15 +97,6 @@ internal class JobAnalysis(
         this.editedAt = now
     }
 
-    /**
-     * 운영자가 고친 분석을 운영자가 고친 새 본문으로 옮긴다. 고친 사람과 일시는 지킨다.
-     * 운영자가 분석을 고친 뒤 제목이나 본문을 고쳐도 자기 분석이 낡아 사라지거나 AI 서버에 덮이지 않게 하기 위해서다.
-     */
-    fun restamp(contentHash: String, jobUpdatedAt: LocalDateTime) {
-        check(editedAt != null) { "운영자가 고친 분석만 옮길 수 있습니다." }
-        this.contentHash = contentHash
-        this.jobUpdatedAt = jobUpdatedAt
-    }
 
     /** 운영자가 이 본문에 대해 고친 분석인지. 참이면 AI 서버가 덮어쓰지 못한다. */
     fun isEditedByAdminFor(contentHash: String): Boolean = editedAt != null && this.contentHash == contentHash

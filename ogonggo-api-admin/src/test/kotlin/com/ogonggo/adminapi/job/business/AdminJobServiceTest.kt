@@ -119,16 +119,12 @@ class AdminJobServiceTest {
     }
 
     @Test
-    fun `본문을 고쳐 본문 해시가 바뀌면 운영자가 고친 분석을 새 본문으로 옮기게 한다`() {
-        // given
-        val job = lockedJob(reviewStatus = null)
-        Mockito.`when`(job.contentHash()).thenReturn("before", "after")
+    fun `본문을 고쳐도 공고 분석은 건드리지 않아 운영자가 고친 분석도 낡게 둔다`() {
+        lockedJob(reviewStatus = null)
 
-        // when
         service.updateJob(JOB_ID, AdminJobUpdateCommand(title = "고친 제목"), ADMIN_ID)
 
-        // then
-        Mockito.verify(jobAnalysisManager).keepAdminEditCurrent(job, "before")
+        Mockito.verifyNoInteractions(jobAnalysisManager)
     }
 
     @Test
