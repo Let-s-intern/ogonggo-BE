@@ -1,5 +1,8 @@
 package com.ogonggo.userapi.bootcamp.business
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractAppender
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractCompanyPostingAppendDto
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
@@ -31,10 +34,12 @@ class CompanyBootcampService(
     private val bootcampAppender: BootcampAppender,
     private val bootcampManager: BootcampManager,
     private val imageAssetManager: ImageAssetManager,
+    private val advertisementContractAppender: AdvertisementContractAppender,
     private val clock: Clock,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
 
+    /** 비즈니스 공고 등록은 광고 상품 중 하나라 부트캠프마다 광고 계약을 함께 만든다. 계약은 검수 상태를 따른다. */
     @Transactional
     fun create(userId: Long, command: BootcampAppendDto): Long {
         val account = verifyCompany(userId)
@@ -43,6 +48,16 @@ class CompanyBootcampService(
             command.copy(ownerUserId = userId, closedAt = closedAt),
         )
         imageAssetManager.attachImageUrls(userId, listOf(command.logoUrl, command.representativeImageUrl))
+        advertisementContractAppender.appendForCompanyPosting(
+            AdvertisementContractCompanyPostingAppendDto(
+                userId = userId,
+                promotionTarget = AdvertisementContractPromotionTarget.BOOTCAMP,
+                targetId = bootcamp.requiredId(),
+                companyName = command.companyName,
+                recruitmentTitle = command.title,
+                recruitmentDeadline = command.recruitmentEndAt?.toLocalDate(),
+            ),
+        )
         eventPublisher.publishEvent(
             CompanyPostingRegisteredEvent(
                 type = CompanyPostingType.BOOTCAMP,

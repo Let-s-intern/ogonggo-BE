@@ -1,5 +1,7 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampCurriculum
 import com.ogonggo.core.bootcamp.domain.BootcampPartner
@@ -22,6 +24,7 @@ class BootcampManager internal constructor(
     private val bootcampPartnerRepository: BootcampPartnerJpaRepository,
     private val bootcampCurriculumRepository: BootcampCurriculumJpaRepository,
     private val contentRejectionManager: ContentRejectionManager,
+    private val advertisementContractManager: AdvertisementContractManager,
     private val clock: Clock,
 ) {
 
@@ -96,20 +99,31 @@ class BootcampManager internal constructor(
 
     fun delete(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { delete(now) }
 
-    /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
+    /**
+     * 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다.
+     * 비즈니스 공고 계약의 상태도 같은 이유로 여기서 검수 상태에 맞춘다.
+     */
     fun approveReview(bootcamp: Bootcamp, now: LocalDateTime) {
         change(bootcamp) { approveReview() }
         contentRejectionManager.clear(ContentReviewTargetType.BOOTCAMP, bootcamp.requiredId(), now)
+        followReview(bootcamp)
     }
 
     fun rejectReview(bootcamp: Bootcamp, reason: String, now: LocalDateTime) {
         change(bootcamp) { rejectReview() }
         contentRejectionManager.reject(ContentReviewTargetType.BOOTCAMP, bootcamp.requiredId(), reason, now)
+        followReview(bootcamp)
     }
 
     fun requestReview(bootcamp: Bootcamp, now: LocalDateTime) {
         change(bootcamp) { requestReview() }
         contentRejectionManager.clear(ContentReviewTargetType.BOOTCAMP, bootcamp.requiredId(), now)
+        followReview(bootcamp)
+    }
+
+    private fun followReview(bootcamp: Bootcamp) {
+        val reviewStatus = checkNotNull(bootcamp.reviewStatus) { "검수한 부트캠프의 검수 상태가 없습니다." }
+        advertisementContractManager.followReview(AdvertisementContractPromotionTarget.BOOTCAMP, bootcamp.requiredId(), reviewStatus)
     }
 
     /** 모집 종료 일시가 지난 모집 중 부트캠프를 마감하고 마감한 건수를 돌려준다. */

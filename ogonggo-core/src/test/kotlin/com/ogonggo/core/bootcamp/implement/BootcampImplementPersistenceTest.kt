@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
@@ -49,6 +50,7 @@ import org.springframework.test.context.ContextConfiguration
     BootcampContentReader::class,
     BootcampAppender::class,
     BootcampManager::class,
+    AdvertisementContractManager::class,
     BootcampMetricReader::class,
     BootcampMetricManager::class,
     BootcampMetricAppender::class,
