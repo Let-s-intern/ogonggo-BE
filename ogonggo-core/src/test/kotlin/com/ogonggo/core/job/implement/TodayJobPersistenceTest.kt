@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobEmploymentType
@@ -32,6 +33,7 @@ import org.springframework.test.context.ContextConfiguration
     JobQueryRepository::class,
     JobAppender::class,
     JobManager::class,
+    AdvertisementContractManager::class,
     TodayJobManager::class,
     ContentRejectionManager::class,
 )

@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -29,6 +30,7 @@ import java.time.LocalDateTime
     JobAppender::class,
     JobQueryRepository::class,
     JobManager::class,
+    AdvertisementContractManager::class,
     JobBookmarkReminderNotificationListener::class,
     NotificationAppender::class,
     NotificationProcessingPolicy::class,
