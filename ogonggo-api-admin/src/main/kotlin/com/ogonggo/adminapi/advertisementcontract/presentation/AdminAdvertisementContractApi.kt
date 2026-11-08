@@ -35,7 +35,7 @@ private const val CONTRACT_PRODUCT_NOT_FOUND = "ADVERTISEMENT_CONTRACT_PRODUCT_N
 private const val CONTRACT_FOLLOWS_REVIEW = "ADVERTISEMENT_CONTRACT_FOLLOWS_REVIEW: 비즈니스 공고 계약의 상태는 공고 검수로만 바뀝니다."
 private const val PRODUCT_NOT_FOUND = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
 
-@Tag(name = "관리자 광고 계약")
+@Tag(name = "관리자 광고")
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
 interface AdminAdvertisementContractApi {
 

@@ -563,6 +563,22 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `관리자 광고 API는 Swagger의 관리자 광고 그룹으로 묶인다`() {
+        val document = openApiDocument()
+        val advertisementOperations = document.at("/paths").fields().asSequence()
+            .filter { (path, _) -> path.startsWith("/api/v1/admin/advertisement-") }
+            .flatMap { (path, operations) ->
+                operations.fields().asSequence().map { (method, operation) -> "$method $path" to operation }
+            }
+            .toList()
+
+        assertTrue(advertisementOperations.isNotEmpty())
+        advertisementOperations.forEach { (path, operation) ->
+            assertEquals(listOf("관리자 광고"), operation.at("/tags").map { it.asText() }, path)
+        }
+    }
+
+    @Test
     fun `비즈니스 회원 목록은 가입 때 받은 기업·담당자 정보를 응답에 싣는다`() {
         // given
         val document = openApiDocument()
@@ -582,7 +598,7 @@ class AdminOpenApiContractTest @Autowired constructor(
             .andExpect(status().isOk)
             .andReturn()
             .response
-            .contentAsString,
+            .getContentAsString(Charsets.UTF_8),
     )
 
     @Test

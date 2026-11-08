@@ -181,6 +181,23 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("사용자 광고 API는 Swagger의 광고 그룹으로 묶인다")
+    fun `사용자 광고 API는 하나의 광고 태그를 사용한다`() {
+        val document = openApiDocument()
+        val advertisementOperations = document.at("/paths").fields().asSequence()
+            .filter { (path, _) -> path.startsWith("/api/v1/advertisement-") }
+            .flatMap { (path, operations) ->
+                operations.fields().asSequence().map { (method, operation) -> "$method $path" to operation }
+            }
+            .toList()
+
+        assertEquals(4, advertisementOperations.size, "기존 광고 문의와 신규 광고 API를 모두 검사합니다.")
+        advertisementOperations.forEach { (path, operation) ->
+            assertEquals(listOf("광고"), operation.at("/tags").map { it.asText() }, path)
+        }
+    }
+
+    @Test
     @DisplayName("알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다")
     fun `알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다`() {
         // given
