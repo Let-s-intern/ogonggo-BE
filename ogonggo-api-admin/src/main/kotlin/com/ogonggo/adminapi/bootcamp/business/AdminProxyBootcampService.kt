@@ -50,7 +50,7 @@ class AdminProxyBootcampService(
         if (command.visibility == AdminContentVisibility.HIDDEN) {
             bootcampManager.hide(bootcamp)
         }
-        bootcampManager.markProxyRegistered(bootcamp, adminUserId, now)
+        bootcampManager.markAdminRegistered(bootcamp)
 
         val imageUrls = listOf(command.bootcamp.logoUrl, command.bootcamp.representativeImageUrl)
         imageAssetManager.attachImageUrls(memberId, imageUrls)

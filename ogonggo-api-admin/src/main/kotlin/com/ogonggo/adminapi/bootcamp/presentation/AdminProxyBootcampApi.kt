@@ -31,7 +31,7 @@ interface AdminProxyBootcampApi {
             요청 칸과 검증은 기업회원 부트캠프 등록(사용자 API POST /api/v1/users/me/bootcamps)과 같고 visibility를 더합니다.
             검수 없이 승인(reviewStatus = APPROVED)으로 등록되며, visibility(기본 VISIBLE)로 바로 노출할지 정합니다.
             status가 CLOSED면 지금을 마감 일시로 남깁니다.
-            응답은 부트캠프 상세 조회와 같으며 proxyRegisteredAt·proxyRegisteredByUserId에 대리 등록 일시와 관리자가 남습니다.
+            응답은 부트캠프 상세 조회와 같으며 adminRegistered가 true입니다.
             로고·대표 이미지는 POST /api/v1/images로 올린 이미지 URL을 받습니다. 검수 요청 슬랙 알림은 보내지 않습니다.
         """,
     )

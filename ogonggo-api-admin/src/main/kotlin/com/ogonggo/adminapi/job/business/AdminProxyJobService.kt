@@ -53,7 +53,7 @@ class AdminProxyJobService(
         if (command.visibility == AdminContentVisibility.HIDDEN) {
             jobManager.hide(job)
         }
-        jobManager.markProxyRegistered(job, adminUserId, now)
+        jobManager.markAdminRegistered(job)
 
         val imageUrls = listOf(command.job.logoUrl, command.job.coverImageUrl)
         imageAssetManager.attachImageUrls(memberId, imageUrls)

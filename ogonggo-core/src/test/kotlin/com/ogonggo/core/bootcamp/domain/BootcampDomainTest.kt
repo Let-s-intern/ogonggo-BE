@@ -2,6 +2,8 @@ package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.contentreview.domain.ContentSource
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -157,22 +159,19 @@ class BootcampDomainTest {
     }
 
     @Test
-    fun `대리 등록은 기업회원 과정에만 한 번 남고 수집 과정이나 삭제한 과정에는 남길 수 없다`() {
+    fun `대리 등록은 기업회원 과정에만 남고 수집 과정이나 삭제한 과정에는 남길 수 없다`() {
         // given
         val company = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY)
-        val proxyAt = LocalDateTime.of(2026, 11, 5, 10, 0)
+        assertFalse(company.adminRegistered)
 
         // when
-        company.markProxyRegistered(42L, proxyAt)
+        company.markAdminRegistered()
 
         // then
-        assertEquals(proxyAt, company.proxyRegisteredAt)
-        assertEquals(42L, company.proxyRegisteredByUserId)
-        assertThrows(IllegalStateException::class.java) { company.markProxyRegistered(43L, proxyAt.plusDays(1)) }
-        assertEquals(42L, company.proxyRegisteredByUserId)
-        assertThrows(IllegalStateException::class.java) { createBootcamp().markProxyRegistered(42L, proxyAt) }
-        val deleted = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY).also { it.delete(proxyAt) }
-        assertThrows(IllegalStateException::class.java) { deleted.markProxyRegistered(42L, proxyAt) }
+        assertTrue(company.adminRegistered)
+        assertThrows(IllegalStateException::class.java) { createBootcamp().markAdminRegistered() }
+        val deleted = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY).also { it.delete(LocalDateTime.of(2026, 11, 5, 10, 0)) }
+        assertThrows(IllegalStateException::class.java) { deleted.markAdminRegistered() }
     }
 
     @Test

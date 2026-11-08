@@ -495,7 +495,7 @@ POST /api/v1/admin/company-members/{userId}/bootcamps    부트캠프 대리 등
 - 운영자가 비즈니스 회원 대신 채용공고·부트캠프를 등록합니다. 등록한 콘텐츠는 그 회원의 것(`owner_user_id`, `source = COMPANY`)이 되어 회원 마이페이지(`/api/v1/users/me/jobs`, `/api/v1/users/me/bootcamps`)에 보이고, 회원이 직접 등록한 것처럼 고칠 수 있습니다. 회원이 고치면 평소처럼 다시 검수를 기다립니다.
 - 콘텐츠가 그 회원에게 속하므로 관리자 회원 상세와 같은 `company-members/{userId}` 아래 컬렉션으로 둡니다. 가입 환영 이메일 재발송(`general-members/{userId}/welcome-email-resends`)과 같은 모양입니다. 일반 POST 생성이라 201이며 각 상세 조회와 같은 응답을 `data`로 돌려줍니다. 멱등하지 않습니다.
 - 요청 칸과 검증은 기업회원 등록(`POST /api/v1/users/me/jobs`, `POST /api/v1/users/me/bootcamps`)과 같고 노출 `visibility`(`VISIBLE`·`HIDDEN`, 보내지 않으면 `VISIBLE`)를 더합니다. 칸 사이 규칙은 core의 `JobWriteValidator`·`BootcampWriteValidator`를 두 API가 함께 씁니다.
-- 운영자가 올린 콘텐츠라 검수를 거치지 않고 승인으로 등록합니다([API 성공 응답의 검수와 노출](api-response.md#검수와-노출)). 누가 대신 올렸는지는 `proxy_registered_at`·`proxy_registered_by_user_id`에 남깁니다.
+- 운영자가 올린 콘텐츠라 검수를 거치지 않고 승인으로 등록합니다([API 성공 응답의 검수와 노출](api-response.md#검수와-노출)). 운영자가 올렸는지는 `admin_registered`에 남깁니다. 등록 일시는 `created_at`과 같아 따로 두지 않고, 올린 관리자도 남기지 않습니다.
 - 없는 회원이나 비즈니스 회원이 아닌 회원은 회원 상세와 같이 404 `USER_NOT_FOUND`, 정지·탈퇴한 회원은 409 `COMPANY_MEMBER_NOT_ACTIVE`입니다. 회원이 자기 공고를 관리할 수 없는 상태라 대신 등록하지 않습니다.
 - 기업회원 등록이 보내는 검수 요청 슬랙 알림(LC-3536)은 보내지 않습니다. 운영자에게 검수할 공고가 들어왔다고 알리는 것인데 이 공고는 운영자가 올려 이미 승인했기 때문입니다.
 - 로고·대표 이미지는 관리자 콘솔도 사용자 API의 `POST /api/v1/images`로 올린 URL을 보냅니다. 이렇게 올린 이미지는 관리자 계정 소유이므로 회원 소유 이미지와 관리자 소유 이미지를 모두 첨부합니다([레이어와 모듈의 이미지 참조](layers-and-modules.md#이미지-참조)).

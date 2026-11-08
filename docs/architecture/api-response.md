@@ -358,7 +358,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 채용공고 목록·상세·오늘의 공고 항목은 검수 완료 일시 `inspectedAt`(한국 시간, 미검수면 `null`)을 싣습니다(2026-11-04, LC-3567). 표시와 해제는 [REST API 설계의 관리자 채용공고 검수 완료](rest-api-design.md#관리자-채용공고-검수-완료)를 따릅니다.
 - 채용공고 목록·오늘의 공고 항목은 상세와 같은 원문 주소 `sourceUrl`(없으면 `null`)을 싣습니다(2026-11-05, LC-3572). 운영자가 목록에서 원문을 열어 내려간 공고인지 보고 바로 숨길 수 있게 하기 위해서입니다.
 - 채용공고 상세는 운영자가 공고 내용(제목·본문·공고 정보·원문)을 마지막으로 고친 일시 `contentEditedAt`(한국 시간, 고친 적이 없으면 `null`)을 싣습니다(2026-11-05, LC-3567). 값이 있으면 AI 서버의 다시 수집이 내용과 원문을 바꾸지 않습니다([REST API 설계의 AI 서버 채용공고](rest-api-design.md#ai-서버-채용공고)).
-- 채용공고·부트캠프 목록·상세·오늘의 공고 항목은 운영자가 비즈니스 회원 대신 등록한 콘텐츠면 대리 등록 일시 `proxyRegisteredAt`(한국 시간)과 등록한 관리자 `proxyRegisteredByUserId`를, 아니면 둘 다 `null`을 싣습니다(2026-11-05, LC-3574). 등록할 때 한 번 남기며 회원이 나중에 고쳐도 지우지 않습니다. 대리 등록 응답은 각 상세 조회와 같은 `AdminJobDetailResponse`·`AdminBootcampDetailResponse`를 201로 돌려줍니다.
+- 채용공고·부트캠프 목록·상세·오늘의 공고 항목은 운영자가 비즈니스 회원 대신 등록한 콘텐츠인지 `adminRegistered`(boolean)를 싣습니다(2026-11-05, LC-3574). 회원이 나중에 고쳐도 바뀌지 않습니다. 등록 일시는 `registeredAt`과 같습니다. 대리 등록 응답은 각 상세 조회와 같은 `AdminJobDetailResponse`·`AdminBootcampDetailResponse`를 201로 돌려줍니다.
 - 검수 대기(`GET /api/v1/admin/content-reviews`)는 페이지를 나누지 않고 등록일이 오래된 순으로 줍니다.
 - 콘솔의 부분 수정(`PATCH`)과 반려 사유 수정은 수정된 리소스 전체를 `data`로 돌려줍니다. 노출 일괄 변경(`PATCH /visibility`)은 여러 건이라 `data: null`로 응답합니다([REST API 설계](rest-api-design.md#관리자-콘솔-노출-일괄-변경)).
 - 공지 목록은 `sort`를 받지 않고 상단 고정 공지를 먼저 둔 뒤 등록일 역순(`pinned DESC, id DESC`)으로 줍니다. 공지는 조회 수를 두지 않아 `VIEW_COUNT`가 의미가 없습니다.

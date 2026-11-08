@@ -7,6 +7,7 @@ import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.dto.CompanyAccountAppendDto
 import com.ogonggo.core.user.implement.dto.UserAppendDto
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -39,7 +40,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * 운영자가 비즈니스 회원 대신 채용공고·부트캠프를 등록하는 흐름을 실제 저장까지 확인한다.
- * 소유자·검수·노출·대리 등록 기록과 이미지 첨부가 한 요청에서 함께 맞아야 회원 마이페이지와 정리 작업이 어긋나지 않는다.
+ * 소유자·검수·노출·대리 등록 여부와 이미지 첨부가 한 요청에서 함께 맞아야 회원 마이페이지와 정리 작업이 어긋나지 않는다.
  */
 @SpringBootTest(properties = [
     "spring.datasource.url=jdbc:h2:mem:admin-proxy-registration;MODE=MySQL;DB_CLOSE_DELAY=-1",
@@ -65,7 +66,7 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("대리 등록한 채용공고는 회원 소유의 승인된 공고로 바로 노출되고 대리 등록 기록과 처음 승인 일시가 남는다")
+    @DisplayName("대리 등록한 채용공고는 회원 소유의 승인된 공고로 바로 노출되고 대리 등록 표시와 처음 승인 일시가 남는다")
     fun `채용공고를 회원 대신 승인 상태로 등록한다`() {
         // given
         val memberId = companyMember()
@@ -80,14 +81,12 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         assertEquals("VISIBLE", response["visibility"].asText())
         assertEquals("APPROVED", response["reviewStatus"].asText())
         assertEquals("COMPANY", response["source"].asText())
-        assertEquals(NOW, LocalDateTime.parse(response["proxyRegisteredAt"].asText()))
-        assertEquals(ADMIN_ID, response["proxyRegisteredByUserId"].asLong())
+        assertTrue(response["adminRegistered"].asBoolean())
         val saved = jdbc.queryForMap("select * from jobs where id = ?", jobId)
         assertEquals(memberId, (saved["owner_user_id"] as Number).toLong())
         assertEquals("PUBLISHED", saved["publication_status"])
         assertEquals(Timestamp.valueOf(NOW), saved["first_approved_at"])
-        assertEquals(Timestamp.valueOf(NOW), saved["proxy_registered_at"])
-        assertEquals(ADMIN_ID, (saved["proxy_registered_by_user_id"] as Number).toLong())
+        assertEquals(true, saved["admin_registered"])
         assertEquals("ATTACHED", imageStatus("admin-logo"))
         assertEquals("ATTACHED", imageStatus("member-cover"))
         val contract = contractOf("JOB", jobId)
@@ -99,7 +98,7 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("비노출로 대리 등록하면 승인된 채로 숨기고 관리자 목록에도 대리 등록 일시가 실린다")
+    @DisplayName("비노출로 대리 등록하면 승인된 채로 숨기고 관리자 목록에도 대리 등록 여부가 실린다")
     fun `비노출을 고르면 승인한 뒤 숨긴다`() {
         // given
         val memberId = companyMember()
@@ -115,7 +114,7 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         val listed = mapper.readTree(
             mvc.perform(admin(get("/api/v1/admin/jobs"))).andExpect(status().isOk).andReturn().response.contentAsByteArray,
         ).at("/data/items/0")
-        assertEquals(NOW, LocalDateTime.parse(listed["proxyRegisteredAt"].asText()))
+        assertTrue(listed["adminRegistered"].asBoolean())
     }
 
     @Test
@@ -137,14 +136,13 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         assertEquals("APPROVED", response["reviewStatus"].asText())
         assertEquals("COMPANY", response["source"].asText())
         assertEquals("CLOSED", response["status"].asText())
-        assertEquals(NOW, LocalDateTime.parse(response["proxyRegisteredAt"].asText()))
-        assertEquals(ADMIN_ID, response["proxyRegisteredByUserId"].asLong())
+        assertTrue(response["adminRegistered"].asBoolean())
         assertEquals("파트너", response["partners"][0]["name"].asText())
         val saved = jdbc.queryForMap("select * from bootcamps where id = ?", bootcampId)
         assertEquals(memberId, (saved["owner_user_id"] as Number).toLong())
         assertEquals("HIDDEN", saved["publication_status"])
         assertEquals(Timestamp.valueOf(NOW), saved["closed_at"])
-        assertEquals(Timestamp.valueOf(NOW), saved["proxy_registered_at"])
+        assertEquals(true, saved["admin_registered"])
         assertEquals("ATTACHED", imageStatus("admin-bootcamp"))
         val contract = contractOf("BOOTCAMP", bootcampId)
         assertEquals(memberId, (contract["user_id"] as Number).toLong())

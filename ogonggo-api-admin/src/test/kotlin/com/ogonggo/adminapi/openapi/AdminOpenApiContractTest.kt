@@ -699,11 +699,9 @@ class AdminOpenApiContractTest @Autowired constructor(
             "AdminBootcampDetailResponse",
         ).forEach { name ->
             val schema = document.at("/components/schemas/$name")
-            assertEquals("date-time", schema.at("/properties/proxyRegisteredAt/format").asText(), name)
-            assertEquals("integer", schema.at("/properties/proxyRegisteredByUserId/type").asText(), name)
-            val required = schema.at("/required").map { it.asText() }
-            assertFalse(required.contains("proxyRegisteredAt"), name)
-            assertFalse(required.contains("proxyRegisteredByUserId"), name)
+            assertEquals("boolean", schema.at("/properties/adminRegistered/type").asText(), name)
+            assertTrue(schema.at("/required").any { it.asText() == "adminRegistered" }, name)
+            assertTrue(schema.at("/properties/proxyRegisteredAt").isMissingNode, name)
         }
     }
 
