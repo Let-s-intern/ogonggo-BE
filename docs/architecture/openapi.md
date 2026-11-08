@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-09-27
+- 최종 변경일: 2026-11-08
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: API를 개발·연동·검증하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -106,15 +106,22 @@ PUT  /api/v1/users/me/jobs/{jobId}   replaceMyJob
 
 로그인과 토큰 재발급처럼 공개된 작업에는 Security Requirement를 붙이지 않습니다. 전역 인증 요구를 선언한 뒤 공개 작업에서 해제하는 방식은 실제 Security 정책과 어긋나기 쉬워 사용하지 않습니다.
 
-### 토큰이 선택인 작업 — 확인 필요
+### P-02 U-01 선택 인증 표현
+
+- 상태: 결정됨
+- 결정일: 2026-11-08
+
+`POST /api/v1/advertisement-contracts`는 비회원 호출과 Bearer 토큰 호출을 모두 허용하므로 OpenAPI `security`에 `[{}, {BearerAuth: []}]`를 기록합니다. Swagger 계약에서 두 호출 방식을 모두 선택할 수 있도록 하며, 이 결정은 U-01에 적용합니다. `UserOpenApiContractTest`가 공개 호출과 Bearer 호출 요구사항을 함께 확인합니다.
+
+### 채용·부트캠프 목록의 선택 인증 — 확인 필요
 
 채용공고와 부트캠프의 목록·상세는 로그인 없이 호출할 수 있지만, 토큰을 보내면 응답의 `bookmarked`가 채워집니다. 인증이 필수도 아니고 무의미하지도 않은 세 번째 경우입니다.
 
-이런 작업에는 `@SecurityRequirement`를 **붙입니다.** 붙이지 않으면 Swagger UI가 토큰을 보내지 않아 `bookmarked`가 항상 `false`인 경로밖에 시험할 수 없습니다. 다만 OpenAPI에는 "선택적 인증"을 표현하는 방법이 없어, 명세만 보면 필수처럼 읽힙니다. 실제 필수 여부는 작업 description에 적습니다.
+이런 작업에는 `@SecurityRequirement`를 **붙입니다.** 붙이지 않으면 Swagger UI가 토큰을 보내지 않아 `bookmarked`가 항상 `false`인 경로밖에 시험할 수 없습니다. 현재 이 목록 명세에는 익명 호출 대안을 선언하지 않아 Security Requirement만 보면 필수처럼 읽힙니다. 실제 필수 여부는 작업 description에 적습니다.
 
 `@SecurityRequirement`를 인터페이스가 아니라 메서드에 선언하는 이유도 여기에 있습니다. 한 인터페이스 안에서 토큰 선택 작업(`GET /api/v1/jobs`, `GET /api/v1/jobs/calendar`)과 인증 필수 작업(`POST /api/v1/jobs/{jobId}/source-url-clicks`)이 섞이고, 다른 인터페이스에는 공개 작업도 있습니다. 모든 작업이 같은 요구를 가지는 `UserJobBookmarkApi`, `UserBootcampBookmarkApi`처럼 인터페이스 단위로 선언해도 되는 경우는 예외입니다.
 
-대안으로 `security: [{}, {BearerAuth: []}]`처럼 빈 요구사항을 함께 선언해 선택임을 표현하는 방법이 있지만 springdoc annotation으로는 표현이 번거롭고 도구별 해석이 갈립니다. **팀 논의 필요.**
+`security: [{}, {BearerAuth: []}]`처럼 빈 요구사항을 함께 선언하는 방법도 있습니다. 채용·부트캠프 목록에 이를 적용할지는 별도 논의가 필요하며, U-01의 결정 범위를 넘어 일반 규칙으로 정하지 않습니다. **팀 논의 필요.**
 
 ## 6. 검증
 

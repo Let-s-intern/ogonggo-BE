@@ -14,13 +14,15 @@ class AdvertisementExposureAppender internal constructor(
     private val advertisementContractReader: AdvertisementContractReader,
 ) {
 
-    /** 그 자리의 맨 뒤에 둔다. 광고주 계약을 고르면 있는 계약이어야 한다. */
+    /** 그 자리의 맨 뒤에 둔다. 상품별 순서 잠금을 쓰므로 호출자가 DB 트랜잭션을 열어야 한다. */
     fun append(dto: AdvertisementExposureAppendDto): Long {
-        val product = advertisementProductReader.read(dto.productId)
-        dto.contractId?.let(advertisementContractReader::read)
+        // 상품 행을 순서 잠금 기준으로 삼는다. 반드시 같은 DB 트랜잭션에서
+        // 잠금을 얻은 뒤 형제 노출을 조회해야 concurrent append가 같은 순서를 고르지 않는다.
+        val product = advertisementProductReader.readForUpdate(dto.productId)
         val lastOrder = advertisementExposureRepository
-            .findAllByProductIdAndDeletedAtIsNullOrderByDisplayOrderAscIdAsc(dto.productId)
+            .findAllForOrderUpdate(dto.productId)
             .maxOfOrNull { it.displayOrder } ?: 0
+        dto.contractId?.let(advertisementContractReader::read)
         val saved = advertisementExposureRepository.save(
             AdvertisementExposure(
                 product = product,

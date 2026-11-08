@@ -12,5 +12,6 @@ class NotificationProcessingPolicy(private val properties: NotificationProcessin
             NotificationProvider.NHN_ALIMTALK -> properties.nhnAlimTalk
             NotificationProvider.EMAIL_SMTP -> properties.emailSmtp
             NotificationProvider.FIREBASE_FCM -> properties.firebaseFcm
+            NotificationProvider.SLACK_WEBHOOK -> properties.slackWebhook
         }
 }

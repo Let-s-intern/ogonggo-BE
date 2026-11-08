@@ -125,6 +125,8 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `GET /api/v1/jobs`, `/api/v1/jobs/{jobId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
 | `GET /api/v1/jobs/calendar` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false`. `bookmarkedOnly=true`는 토큰이 없으면 401 |
 | `GET /api/v1/bootcamps`, `/api/v1/bootcamps/{bootcampId}` | 선택 | 토큰이 있으면 `bookmarked`가 채워지고, 없으면 항상 `false` |
+| `GET /api/v1/advertisement-products` | 선택 | 광고 신청 화면의 상품을 조회한다 |
+| `GET /api/v1/advertisement-exposures` | 선택 | 현재 보이는 공개 배너를 조회한다 |
 | `GET /api/v1/recommended-challenges` | 선택 | 토큰이 있으면 그 사용자의 렛츠커리어 계정을 추천에 넘기고, 없거나 기업 회원이면 넘기지 않는다 |
 | `POST /api/v1/jobs/{jobId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
 | `POST /api/v1/bootcamps/{bootcampId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
