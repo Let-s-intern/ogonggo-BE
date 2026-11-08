@@ -434,13 +434,14 @@ AI 서버처럼 사람이 아닌 클라이언트는 사용자 로그인 흐름�
 | 사용자 API | `UserSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
 | 관리자 API | `AdminSecurityConfiguration.ALLOWED_ORIGIN_PATTERNS` |
 
-두 API에는 각자의 Swagger UI를 띄우는 API Gateway 주소가 하나씩 더 있고, 나머지는 두 목록이 같습니다.
+두 API에는 각자의 Swagger UI를 띄우는 API Gateway 주소가 하나씩 더 있습니다. 사용자 API에는 비즈니스 앱 오리진이 더 있고, 나머지는 두 목록이 같습니다.
 
 | 오리진 | 모듈 | 용도 |
 | --- | --- | --- |
 | `https://www.ogonggo.co.kr` | 공통 | 운영 프론트엔드 |
 | `https://ogonggo.co.kr` | 공통 | apex 도메인 직접 접속 |
 | `https://admin.ogonggo.co.kr` | 공통 | 관리자 콘솔 로그인·이미지 업로드(사용자 API), 발송 관리(관리자 API) |
+| `https://biz.ogonggo.co.kr` | 사용자 API | 기업 회원용 비즈니스 앱. 기업 로그인, 공고등록, 광고 신청. 관리자 API는 부르지 않는다 |
 | `http://localhost:[*]` | 공통 | 로컬 개발 서버. 포트는 사람과 프레임워크마다 달라 전부 연다 |
 | `https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com` | 사용자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |
 | `https://p5itn5nbm4.execute-api.ap-northeast-2.amazonaws.com` | 관리자 API | API Gateway 주소. 여기서 Swagger UI를 띄워 API를 호출한다 |

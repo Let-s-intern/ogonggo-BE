@@ -72,6 +72,19 @@ class UserCorsConfigurationTest @Autowired constructor(
             .andExpect(header().string("Access-Control-Allow-Origin", API_GATEWAY_ORIGIN))
     }
 
+    /** 비즈니스 앱은 기업 회원가입·로그인과 공고등록 같은 쓰기 요청을 보내므로 POST preflight가 통과해야 한다. */
+    @Test
+    fun `비즈니스 앱 오리진의 POST preflight는 통과한다`() {
+        mockMvc.perform(
+            options("/api/v1/auth/company/signin")
+                .header("Origin", BIZ_ORIGIN)
+                .header("Access-Control-Request-Method", "POST"),
+        )
+            .andExpect(status().isOk)
+            .andExpect(header().string("Access-Control-Allow-Origin", BIZ_ORIGIN))
+            .andExpect(header().string("Access-Control-Allow-Credentials", "true"))
+    }
+
     /** allowCredentials를 켜도 목록 밖 오리진은 열리지 않는다는 것이 이 테스트의 요지다. */
     @Test
     fun `허용하지 않은 오리진의 preflight는 거부한다`() {
@@ -107,6 +120,7 @@ class UserCorsConfigurationTest @Autowired constructor(
 
     companion object {
         private const val ALLOWED_ORIGIN = "https://www.ogonggo.co.kr"
+        private const val BIZ_ORIGIN = "https://biz.ogonggo.co.kr"
         private const val API_GATEWAY_ORIGIN = "https://qi9peez04m.execute-api.ap-northeast-2.amazonaws.com"
     }
 }

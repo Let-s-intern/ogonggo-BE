@@ -203,6 +203,8 @@ class UserSecurityConfiguration {
             "https://ogonggo.co.kr",
             // 관리자 콘솔 운영 도메인이다. 관리자 API는 토큰을 발급하지 않아 로그인·재발급을 여기서 한다.
             "https://admin.ogonggo.co.kr",
+            // 기업 회원용 비즈니스 앱 운영 도메인이다. 로그인과 공고등록·광고 신청 같은 쓰기 요청을 여기서 보낸다.
+            "https://biz.ogonggo.co.kr",
             // 로컬 개발 서버는 프레임워크와 사람마다 포트가 달라 전부 연다.
             "http://localhost:[*]",
             /*
