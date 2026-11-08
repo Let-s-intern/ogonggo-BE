@@ -50,6 +50,7 @@ class AdvertisementContractReader internal constructor(
     fun readPage(condition: AdvertisementContractSearchCondition, page: Int, size: Int): AdvertisementContractPageDto {
         validatePageRequest(page, size)
         val result = advertisementContractQueryRepository.findPage(condition, PageRequest.of(page, size))
+        advertisementContractQueryRepository.initializeCategories(result.content.map { checkNotNull(it.id) })
         return AdvertisementContractPageDto(
             advertisementContracts = result.content,
             page = result.number,

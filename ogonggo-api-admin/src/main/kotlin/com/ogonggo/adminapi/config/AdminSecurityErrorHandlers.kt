@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.error.AdminApiErrorCode
 import com.ogonggo.adminapi.response.ErrorResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.AuthenticationException
@@ -19,7 +20,12 @@ class AdminAuthenticationEntryPoint(
         response: HttpServletResponse,
         authException: AuthenticationException,
     ) {
+        log.error("관리자 인증 실패", authException)
         response.writeError(ErrorResponse.from(AdminApiErrorCode.UNAUTHORIZED), objectMapper)
+    }
+
+    private companion object {
+        val log = LoggerFactory.getLogger(AdminAuthenticationEntryPoint::class.java)
     }
 }
 
@@ -31,7 +37,12 @@ class AdminAccessDeniedHandler(
         response: HttpServletResponse,
         accessDeniedException: AccessDeniedException,
     ) {
+        log.error("관리자 권한 확인 실패", accessDeniedException)
         response.writeError(ErrorResponse.from(AdminApiErrorCode.FORBIDDEN), objectMapper)
+    }
+
+    private companion object {
+        val log = LoggerFactory.getLogger(AdminAccessDeniedHandler::class.java)
     }
 }
 

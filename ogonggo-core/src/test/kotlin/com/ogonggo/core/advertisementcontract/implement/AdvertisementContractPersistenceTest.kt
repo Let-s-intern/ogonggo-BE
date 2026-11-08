@@ -34,7 +34,9 @@ import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
+import org.hibernate.SessionFactory
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -134,6 +136,45 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `협의 금액은 0 이상으로 저장하고 null로 해제한다`() {
+        // given
+        val contractId = appendForm(setOf(AdvertisementProductCategory.BANNER))
+
+        // when
+        manager.changePaymentAmount(reader.readForUpdate(contractId), 0)
+        repository.flush()
+        entityManager.clear()
+
+        // then
+        assertEquals(0, reader.read(contractId).paymentAmount)
+
+        // when
+        manager.changePaymentAmount(reader.readForUpdate(contractId), null)
+        repository.flush()
+        entityManager.clear()
+
+        // then
+        assertEquals(null, reader.read(contractId).paymentAmount)
+    }
+
+    @Test
+    fun `같은 상품을 계약에 여러 번 연결하면 각 연결에 별도 ID를 만든다`() {
+        // given
+        val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
+
+        // when
+        val firstId = manager.addProduct(contract, product)
+        val secondId = manager.addProduct(contract, product)
+        repository.flush()
+        entityManager.clear()
+
+        // then
+        assertNotEquals(firstId, secondId)
+        assertEquals(listOf(firstId, secondId), reader.readProducts(checkNotNull(contract.id)).map { it.contractProductId })
+    }
+
+    @Test
     fun `목록은 최근 계약부터 주고 경로, 상태, 카테고리, 기업명으로 거른다`() {
         // given
         val banner = appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "렛츠커리어")
@@ -153,6 +194,94 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         assertEquals(listOf(kakao), ids(AdvertisementContractSearchCondition(category = AdvertisementProductCategory.KAKAO_1)))
         assertEquals(listOf(kakao, banner), ids(AdvertisementContractSearchCondition(category = AdvertisementProductCategory.BANNER)))
         assertEquals(listOf(kakao), ids(AdvertisementContractSearchCondition(companyName = "스테이션")))
+    }
+
+    @Test
+    fun `계약 목록은 페이지 카테고리를 일괄 조회하고 계약별 결과를 유지한다`() {
+        // given
+        val bannerId = appendForm(setOf(AdvertisementProductCategory.BANNER))
+        val kakaoId = appendForm(setOf(AdvertisementProductCategory.KAKAO_1, AdvertisementProductCategory.INSTAGRAM_1))
+        repository.flush()
+        entityManager.clear()
+        val statistics = entityManager.entityManagerFactory.unwrap(SessionFactory::class.java).statistics
+        statistics.isStatisticsEnabled = true
+        statistics.clear()
+
+        // when
+        val result = reader.readPage(AdvertisementContractSearchCondition(), page = 0, size = 10)
+        val categoriesByContractId = result.advertisementContracts.associate {
+            checkNotNull(it.id) to it.categories.toSet()
+        }
+
+        // then
+        assertEquals(
+            mapOf(
+                kakaoId to setOf(AdvertisementProductCategory.KAKAO_1, AdvertisementProductCategory.INSTAGRAM_1),
+                bannerId to setOf(AdvertisementProductCategory.BANNER),
+            ),
+            categoriesByContractId,
+        )
+        assertEquals(2, statistics.prepareStatementCount, "페이지 쿼리와 페이지 내 카테고리 일괄 조회만 실행해야 한다")
+    }
+
+    @Test
+    fun `계약 목록은 필터 결과 전체를 기준으로 페이지 개수를 준다`() {
+        // given
+        val bannerIds = listOf(
+            appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "첫 번째 배너 회사"),
+            appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "두 번째 배너 회사"),
+        )
+        appendForm(setOf(AdvertisementProductCategory.KAKAO_1), companyName = "카카오 회사")
+        repository.flush()
+        entityManager.clear()
+        val condition = AdvertisementContractSearchCondition(
+            source = AdvertisementContractSource.APPLICATION_FORM,
+            category = AdvertisementProductCategory.BANNER,
+        )
+
+        // when
+        val allMatches = reader.readPage(condition, page = 0, size = 10)
+        val firstPage = reader.readPage(condition, page = 0, size = 1)
+
+        // then
+        assertEquals(bannerIds.sortedDescending(), allMatches.advertisementContracts.map { it.id })
+        assertEquals(2L, allMatches.totalElements)
+        assertEquals(allMatches.totalElements, firstPage.totalElements)
+        assertEquals(allMatches.advertisementContracts.size, firstPage.totalPages)
+        assertEquals(bannerIds.sortedDescending().take(1), firstPage.advertisementContracts.map { it.id })
+    }
+
+    @Test
+    fun `계약 목록은 status 중 하나와 AND 필터를 적용하고 생성일 양 끝을 포함한다`() {
+        // given
+        val firstDay = appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "LetsCareer")
+        val lastDay = appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "LetsCareer Labs")
+        val wrongCompany = appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "Other Company")
+        val afterRange = appendForm(setOf(AdvertisementProductCategory.BANNER), companyName = "LetsCareer")
+        manager.changeStatus(reader.readForUpdate(lastDay), AdvertisementContractStatus.NEGOTIATING)
+        repository.flush()
+        setCreatedAt(firstDay, LocalDateTime.of(2026, 11, 1, 0, 0))
+        setCreatedAt(lastDay, LocalDateTime.of(2026, 11, 30, 23, 59, 59, 999_000_000))
+        setCreatedAt(wrongCompany, LocalDateTime.of(2026, 11, 15, 12, 0))
+        setCreatedAt(afterRange, LocalDateTime.of(2026, 12, 1, 0, 0))
+        entityManager.clear()
+
+        // when
+        val result = reader.readPage(
+            condition = AdvertisementContractSearchCondition(
+                source = AdvertisementContractSource.APPLICATION_FORM,
+                statuses = setOf(AdvertisementContractStatus.REQUESTED, AdvertisementContractStatus.NEGOTIATING),
+                category = AdvertisementProductCategory.BANNER,
+                companyName = "  letscareer  ",
+                createdFrom = LocalDate.of(2026, 11, 1),
+                createdTo = LocalDate.of(2026, 11, 30),
+            ),
+            page = 0,
+            size = 10,
+        )
+
+        // then
+        assertEquals(listOf(lastDay, firstDay), result.advertisementContracts.map { it.id })
     }
 
     @Test
@@ -187,6 +316,23 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         // when
         val exception = assertThrows(EntityNotFoundException::class.java) {
             manager.removeProduct(contract, contractProductId, NOW)
+        }
+
+        // then
+        assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND, exception.errorCode)
+    }
+
+    @Test
+    fun `이미 제거한 계약 상품은 다시 제거할 수 없다`() {
+        // given
+        val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
+        val contractProductId = manager.addProduct(contract, product)
+        manager.removeProduct(contract, contractProductId, NOW)
+
+        // when
+        val exception = assertThrows(EntityNotFoundException::class.java) {
+            manager.removeProduct(contract, contractProductId, NOW.plusMinutes(1))
         }
 
         // then
@@ -236,6 +382,13 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         repository.flush()
         entityManager.clear()
         return repository.findById(contractId).get().status
+    }
+
+    private fun setCreatedAt(contractId: Long, createdAt: LocalDateTime) {
+        entityManager.createNativeQuery("update advertisement_contracts set created_at = :createdAt where id = :id")
+            .setParameter("createdAt", createdAt)
+            .setParameter("id", contractId)
+            .executeUpdate()
     }
 
     private fun companyJob(): JobAppendDto = JobAppendDto(

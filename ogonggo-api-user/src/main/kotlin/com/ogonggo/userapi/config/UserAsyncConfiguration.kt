@@ -57,6 +57,24 @@ class UserAsyncConfiguration {
     }
 
     /**
+     * 광고 계약 신청 확인 메일 전용 실행기다.
+     *
+     * 기존 문의 확인 메일의 CallerRuns 정책은 유지한다. 계약 접수 요청은 SMTP 지연과 분리해야 하므로
+     * 별도 bounded queue를 쓰고, 포화 시 AbortPolicy로 예약을 거절해 요청 스레드에서 SMTP를 실행하지 않는다.
+     * 예약 거절은 AdvertisementContractService가 기록하고 이미 저장된 접수 응답을 유지한다.
+     */
+    @Bean(name = [ADVERTISEMENT_CONTRACT_TASK_EXECUTOR])
+    fun advertisementContractTaskExecutor(): ThreadPoolTaskExecutor = ThreadPoolTaskExecutor().apply {
+        corePoolSize = 1
+        maxPoolSize = 2
+        queueCapacity = 100
+        setThreadNamePrefix("advertisement-contract-")
+        setRejectedExecutionHandler(ThreadPoolExecutor.AbortPolicy())
+        setWaitForTasksToCompleteOnShutdown(true)
+        setAwaitTerminationSeconds(5)
+    }
+
+    /**
      * 외부 알림 provider 호출을 요청·지표·문의 메일 작업과 분리한다.
      * 기본 동시성 4는 유지하고 작업마다 가상 스레드를 만든다. 포화 시 다음 tick에서 다시 읽는다.
      */
@@ -134,6 +152,7 @@ class UserAsyncConfiguration {
     companion object {
         const val METRIC_TASK_EXECUTOR = "metricTaskExecutor"
         const val ADVERTISEMENT_TASK_EXECUTOR = "advertisementTaskExecutor"
+        const val ADVERTISEMENT_CONTRACT_TASK_EXECUTOR = "advertisementContractTaskExecutor"
         const val NOTIFICATION_DELIVERY_TASK_EXECUTOR = "notificationDeliveryTaskExecutor"
         const val NOTIFICATION_RESULT_DB_TASK_EXECUTOR = "notificationResultDbTaskExecutor"
         const val NOTIFICATION_ENQUEUE_TASK_EXECUTOR = "notificationEnqueueTaskExecutor"

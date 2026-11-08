@@ -67,4 +67,15 @@ internal class AdvertisementContractQueryRepository(
 
         return pageOf(content, pageable, countQuery)
     }
+
+    /** 페이지네이션이 끝난 계약 ID만 대상으로 응답 변환에 필요한 categories를 한 번에 초기화한다. */
+    fun initializeCategories(contractIds: Collection<Long>) {
+        if (contractIds.isEmpty()) return
+
+        queryFactory.selectFrom(advertisementContract)
+            .distinct()
+            .leftJoin(advertisementContract.categories).fetchJoin()
+            .where(advertisementContract.id.`in`(contractIds))
+            .fetch()
+    }
 }
