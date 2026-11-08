@@ -280,6 +280,284 @@ class AdminOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    fun `광고 상품 관리 API는 관리자 인증과 생성 수정 삭제 계약을 명시한다`() {
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1admin~1advertisement-products"
+        val list = document.at("$base/get")
+        val create = document.at("$base/post")
+        val replace = document.at("$base~1{productId}/put")
+        val delete = document.at("$base~1{productId}/delete")
+        val createRequest = document.at("/components/schemas/CreateAdminAdvertisementProductRequest")
+        val replaceRequest = document.at("/components/schemas/ReplaceAdminAdvertisementProductRequest")
+        val response = document.at("/components/schemas/AdminAdvertisementProductResponse")
+
+        assertEquals("listAdvertisementProducts", list.at("/operationId").asText())
+        assertEquals("createAdvertisementProduct", create.at("/operationId").asText())
+        assertEquals("replaceAdvertisementProduct", replace.at("/operationId").asText())
+        assertEquals("deleteAdvertisementProduct", delete.at("/operationId").asText())
+        listOf(list, create, replace, delete).forEach { operation ->
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertEquals("UNAUTHORIZED", operation.at("/responses/401/description").asText())
+            assertTrue(operation.at("/responses/403/description").asText().startsWith("FORBIDDEN"))
+            listOf("401", "403").forEach { statusCode ->
+                assertEquals(
+                    "#/components/schemas/ErrorResponse",
+                    operation.at("/responses/$statusCode/content/application~1json/schema/\$ref").asText(),
+                )
+            }
+        }
+        assertTrue(create.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(create.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(replace.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
+        assertTrue(
+            replace.at("/responses/400/description").asText().contains("ADVERTISEMENT_PRODUCT_POSITION_MISMATCH"),
+        )
+        assertTrue(delete.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
+        listOf(createRequest, replaceRequest).forEach { request ->
+            assertEquals(setOf("category", "name"), request.at("/required").map { it.asText() }.toSet())
+            assertEquals(100, request.at("/properties/name/maxLength").asInt())
+            assertEquals(0, request.at("/properties/price/minimum").asInt())
+            assertTrue(request.at("/properties/position").isObject)
+            assertTrue(request.at("/properties/price").isObject)
+            assertTrue(request.at("/properties/position/nullable").asBoolean())
+            assertTrue(request.at("/properties/price/nullable").asBoolean())
+        }
+        listOf("id", "category", "position", "name", "price", "registeredAt", "updatedAt").forEach { field ->
+            assertTrue(response.at("/properties/$field").isObject, field)
+        }
+        assertTrue(response.at("/properties/position/nullable").asBoolean())
+        assertTrue(response.at("/properties/price/nullable").asBoolean())
+    }
+
+    @Test
+    fun `광고 계약 목록과 상세는 관리자 인증 필터 페이지와 연결 상품 계약을 명시한다`() {
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1admin~1advertisement-contracts"
+        val list = document.at("$base/get")
+        val detail = document.at("$base~1{contractId}/get")
+        val summary = document.at("/components/schemas/AdminAdvertisementContractSummaryResponse")
+        val detailSchema = document.at("/components/schemas/AdminAdvertisementContractDetailResponse")
+        val product = document.at("/components/schemas/AdminAdvertisementContractProductResponse")
+
+        assertEquals("listAdvertisementContracts", list.at("/operationId").asText())
+        assertEquals("getAdvertisementContract", detail.at("/operationId").asText())
+        listOf(list, detail).forEach { operation ->
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/401/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+            assertTrue(operation.at("/responses/403/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+        }
+        val page = list.at("/parameters").first { it.at("/name").asText() == "page" }.at("/schema")
+        val size = list.at("/parameters").first { it.at("/name").asText() == "size" }.at("/schema")
+        assertEquals("1", page.at("/default").asText())
+        assertEquals(1, page.at("/minimum").asInt())
+        assertEquals("20", size.at("/default").asText())
+        assertEquals(1, size.at("/minimum").asInt())
+        assertEquals(100, size.at("/maximum").asInt())
+        val statuses = list.at("/parameters").first { it.at("/name").asText() == "status" }
+        assertEquals("array", statuses.at("/schema/type").asText())
+        assertEquals(
+            setOf("REQUESTED", "NEGOTIATING", "APPROVED", "REJECTED"),
+            statuses.at("/schema/items/enum").map { it.asText() }.toSet(),
+        )
+        assertTrue(list.at("/description").asText().contains("AND"))
+        listOf("createdFrom", "createdTo").forEach { name ->
+            assertEquals("date", list.at("/parameters").first { it.at("/name").asText() == name }.at("/schema/format").asText(), name)
+        }
+        assertEquals(100, list.at("/parameters").first { it.at("/name").asText() == "companyName" }.at("/schema/maxLength").asInt())
+        assertTrue(detail.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertEquals(
+            "#/components/schemas/ErrorResponse",
+            detail.at("/responses/400/content/application~1json/schema/\$ref").asText(),
+        )
+        assertTrue(detail.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        listOf("source", "status", "promotionTarget", "targetId", "companyName", "recruitmentTitle", "recruitmentDeadline", "categories", "paymentAmount", "registeredAt", "updatedAt").forEach { field ->
+            assertTrue(summary.at("/properties/$field").isObject, field)
+        }
+        listOf("userId", "recruitmentUrl", "purpose", "scheduleRequest", "managerName", "email", "invoiceMethod", "creativeMethod", "products").forEach { field ->
+            assertTrue(detailSchema.at("/properties/$field").isObject, field)
+        }
+        assertTrue(detailSchema.at("/properties/products/items").isObject, detailSchema.at("/properties/products").toPrettyString())
+        listOf("contractProductId", "productId", "productName", "category", "productDeleted", "addedAt").forEach { field ->
+            assertTrue(product.at("/properties/$field").isObject, field)
+        }
+    }
+
+    @Test
+    fun `광고 계약 운영 OpenAPI는 상태 금액 상품 연결·제거의 인증과 오류 응답을 명시한다`() {
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1admin~1advertisement-contracts~1{contractId}"
+        val status = document.at("$base~1status/patch")
+        val payment = document.at("$base~1payment-amount/patch")
+        val addProduct = document.at("$base~1products/post")
+        val removeProduct = document.at("$base~1products~1{contractProductId}/delete")
+
+        assertEquals("updateAdvertisementContractStatus", status.at("/operationId").asText())
+        assertEquals("updateAdvertisementContractPaymentAmount", payment.at("/operationId").asText())
+        assertEquals("createAdvertisementContractProduct", addProduct.at("/operationId").asText())
+        assertEquals("deleteAdvertisementContractProduct", removeProduct.at("/operationId").asText())
+        listOf(status, payment, addProduct, removeProduct).forEach { operation ->
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/400/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+            assertTrue(operation.at("/responses/401/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+            assertTrue(operation.at("/responses/403/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+        }
+        assertTrue(status.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        assertTrue(status.at("/responses/409/description").asText().startsWith("ADVERTISEMENT_CONTRACT_FOLLOWS_REVIEW"))
+        assertTrue(payment.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        assertTrue(addProduct.at("/responses/201").isObject)
+        assertTrue(addProduct.at("/responses/404/description").asText().contains("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
+        assertTrue(removeProduct.at("/responses/404/description").asText().contains("ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND"))
+        assertEquals(
+            listOf("contractId"),
+            status.at("/parameters").map { it.at("/name").asText() },
+        )
+        assertEquals(
+            listOf("contractId", "contractProductId"),
+            removeProduct.at("/parameters").map { it.at("/name").asText() },
+        )
+
+        val paymentRequest = document.at("/components/schemas/ChangeAdminAdvertisementContractPaymentAmountRequest")
+        val statusRequest = document.at("/components/schemas/ChangeAdminAdvertisementContractStatusRequest")
+        val addProductRequest = document.at("/components/schemas/AddAdminAdvertisementContractProductRequest")
+        assertEquals("integer", paymentRequest.at("/properties/paymentAmount/type").asText())
+        assertEquals(0, paymentRequest.at("/properties/paymentAmount/minimum").asInt())
+        assertTrue(paymentRequest.at("/properties/paymentAmount/nullable").asBoolean())
+        assertTrue(paymentRequest.at("/required").any { it.asText() == "paymentAmount" })
+        assertEquals("string", statusRequest.at("/properties/status/type").asText())
+        assertEquals(
+            setOf("REQUESTED", "NEGOTIATING", "APPROVED", "REJECTED"),
+            statusRequest.at("/properties/status/enum").map { it.asText() }.toSet(),
+        )
+        assertEquals("integer", addProductRequest.at("/properties/productId/type").asText())
+        assertEquals("int64", addProductRequest.at("/properties/productId/format").asText())
+        val productIdSchema = addProductRequest.at("/properties/productId")
+        assertEquals(1, productIdSchema.at("/minimum").asInt())
+        assertTrue(addProduct.at("/responses/201/content/application~1json/schema/\$ref").asText().endsWith("CreateAdminAdvertisementContractProductResponse"))
+    }
+
+    @Test
+    fun `관리자 노출 목록과 등록 OpenAPI는 필터 요청 검증 인증 응답 오류를 명시한다`() {
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1admin~1advertisement-exposures"
+        val list = document.at("$base/get")
+        val create = document.at("$base/post")
+        val request = document.at("/components/schemas/CreateAdminAdvertisementExposureRequest")
+        val response = document.at("/components/schemas/AdminAdvertisementExposureResponse")
+
+        assertEquals("listAdvertisementExposures", list.at("/operationId").asText())
+        assertEquals("createAdvertisementExposure", create.at("/operationId").asText())
+        listOf(list, create).forEach { operation ->
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            listOf("401", "403").forEach { statusCode ->
+                assertTrue(operation.at("/responses/$statusCode/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+            }
+        }
+        assertEquals(listOf("productId", "contractId"), list.at("/parameters").map { it.at("/name").asText() })
+        val productId = list.at("/parameters").first { it.at("/name").asText() == "productId" }
+        val contractId = list.at("/parameters").first { it.at("/name").asText() == "contractId" }
+        assertTrue(productId.at("/required").asBoolean())
+        assertEquals("integer", productId.at("/schema/type").asText())
+        assertEquals("int64", productId.at("/schema/format").asText())
+        assertEquals(1, productId.at("/schema/minimum").asInt())
+        assertFalse(contractId.at("/required").asBoolean())
+        assertEquals("integer", contractId.at("/schema/type").asText())
+        assertEquals("int64", contractId.at("/schema/format").asText())
+        assertEquals(1, contractId.at("/schema/minimum").asInt())
+        assertTrue(list.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(create.at("/responses/201").isObject)
+        assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_PERIOD_INVALID"))
+        assertTrue(create.at("/responses/404/description").asText().contains("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        assertTrue(
+            create.at("/responses/201/content/application~1json/schema/\$ref").asText()
+                .endsWith("CreateAdminAdvertisementExposureResponse"),
+        )
+
+        assertEquals(setOf("productId", "adLabel", "exposed"), request.at("/required").map { it.asText() }.toSet())
+        assertEquals("integer", request.at("/properties/productId/type").asText())
+        assertEquals("int64", request.at("/properties/contractId/format").asText())
+        assertTrue(request.at("/properties/contractId/nullable").asBoolean())
+        assertEquals(100, request.at("/properties/name/maxLength").asInt())
+        assertEquals(2048, request.at("/properties/imageUrl/maxLength").asInt())
+        assertEquals(2048, request.at("/properties/linkUrl/maxLength").asInt())
+        assertEquals(setOf("JOB", "BOOTCAMP"), request.at("/properties/targetType/enum").map { it.asText() }.toSet())
+        assertEquals("boolean", request.at("/properties/adLabel/type").asText())
+        assertEquals("boolean", request.at("/properties/exposed/type").asText())
+        listOf(
+            "id", "productId", "contractId", "name", "imageUrl", "linkUrl", "targetType", "targetId", "adLabel",
+            "startAt", "endAt", "exposed", "advertiserCompanyName", "displayOrder", "registeredAt", "updatedAt",
+        ).forEach { field -> assertTrue(response.at("/properties/$field").isObject, field) }
+        listOf(
+            "contractId", "advertiserCompanyName", "name", "imageUrl", "linkUrl", "targetType", "targetId",
+            "startAt", "endAt",
+        ).forEach { field -> assertTrue(response.at("/properties/$field/nullable").asBoolean(), field) }
+    }
+
+    @Test
+    fun `관리자 노출 수정 상태 이동 삭제 OpenAPI는 경로 인증 요청 오류와 성공 계약을 명시한다`() {
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1admin~1advertisement-exposures"
+        val replace = document.at("$base~1{exposureId}/put")
+        val exposed = document.at("$base~1{exposureId}~1exposed/patch")
+        val move = document.at("$base~1{exposureId}~1move/post")
+        val delete = document.at("$base~1{exposureId}/delete")
+        val replaceRequest = document.at("/components/schemas/UpdateAdminAdvertisementExposureRequest")
+        val exposedRequest = document.at("/components/schemas/ChangeAdminAdvertisementExposureExposedRequest")
+        val moveRequest = document.at("/components/schemas/MoveAdminAdvertisementExposureRequest")
+
+        assertEquals("replaceAdvertisementExposure", replace.at("/operationId").asText())
+        assertEquals("updateAdvertisementExposureExposed", exposed.at("/operationId").asText())
+        assertEquals("moveAdvertisementExposure", move.at("/operationId").asText())
+        assertEquals("deleteAdvertisementExposure", delete.at("/operationId").asText())
+        listOf(replace, exposed, move, delete).forEach { operation ->
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/200").isObject)
+            val successSchema = operation.at("/responses/200/content/application~1json/schema")
+            val successSchemaRef = successSchema.at("/\$ref").asText()
+            assertTrue(successSchemaRef.startsWith("#/components/schemas/"), "성공 응답 래퍼 참조가 없습니다: $successSchemaRef")
+            val successResponse = document.at("/components/schemas/${successSchemaRef.substringAfterLast("/")}")
+            assertEquals(setOf("status", "message", "data"), successResponse.at("/properties").fieldNames().asSequence().toSet())
+            assertEquals("integer", successResponse.at("/properties/status/type").asText())
+            assertEquals("string", successResponse.at("/properties/message/type").asText())
+            assertTrue(successResponse.at("/properties/data").isObject)
+            assertFalse(successResponse.at("/required").any { it.asText() == "data" }, "성공 응답의 nullable payload는 OpenAPI에서 필수로 고정하지 않습니다.")
+            listOf("401", "403").forEach { statusCode ->
+                assertTrue(operation.at("/responses/$statusCode/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+            }
+            val exposureId = operation.at("/parameters").first { it.at("/name").asText() == "exposureId" }
+            assertEquals("integer", exposureId.at("/schema/type").asText())
+            assertEquals("int64", exposureId.at("/schema/format").asText())
+            assertEquals(1, exposureId.at("/schema/minimum").asInt())
+        }
+        assertTrue(replace.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(replace.at("/responses/404/description").asText().contains("ADVERTISEMENT_EXPOSURE_NOT_FOUND"))
+        assertTrue(replace.at("/responses/404/description").asText().contains("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
+        assertTrue(replace.at("/responses/404/description").asText().contains("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        assertTrue(exposed.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_EXPOSURE_NOT_FOUND"))
+        assertTrue(move.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_EXPOSURE_NOT_FOUND"))
+        assertTrue(delete.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(delete.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_EXPOSURE_NOT_FOUND"))
+        listOf(replace, exposed, move, delete).forEach { operation ->
+            assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+        }
+
+        assertEquals(setOf("adLabel"), replaceRequest.at("/required").map { it.asText() }.toSet())
+        assertFalse(replaceRequest.has("productId"))
+        assertFalse(replaceRequest.has("displayOrder"))
+        assertFalse(replaceRequest.has("exposed"))
+        assertEquals(100, replaceRequest.at("/properties/name/maxLength").asInt())
+        assertEquals(2048, replaceRequest.at("/properties/imageUrl/maxLength").asInt())
+        assertEquals(2048, replaceRequest.at("/properties/linkUrl/maxLength").asInt())
+        assertTrue(replaceRequest.at("/properties/contractId/nullable").asBoolean())
+        assertEquals(setOf("JOB", "BOOTCAMP"), replaceRequest.at("/properties/targetType/enum").map { it.asText() }.toSet())
+        assertEquals("boolean", replaceRequest.at("/properties/adLabel/type").asText())
+        assertEquals(setOf("exposed"), exposedRequest.at("/required").map { it.asText() }.toSet())
+        assertEquals("boolean", exposedRequest.at("/properties/exposed/type").asText())
+        assertEquals(setOf("direction"), moveRequest.at("/required").map { it.asText() }.toSet())
+        assertEquals(setOf("UP", "DOWN"), moveRequest.at("/properties/direction/enum").map { it.asText() }.toSet())
+        assertTrue(delete.at("/requestBody").isMissingNode)
+    }
+
+    @Test
     fun `비즈니스 회원 목록은 가입 때 받은 기업·담당자 정보를 응답에 싣는다`() {
         // given
         val document = openApiDocument()
