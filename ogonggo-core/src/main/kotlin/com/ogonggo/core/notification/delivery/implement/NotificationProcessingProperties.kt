@@ -42,4 +42,7 @@ data class NotificationProcessingProperties(
     val firebaseFcm: NotificationProviderProcessingSettings = NotificationProviderProcessingSettings(
         staleTimeout = Duration.ofMinutes(8),
     ),
+    val slackWebhook: NotificationProviderProcessingSettings = NotificationProviderProcessingSettings(
+        staleTimeout = Duration.ofMinutes(8),
+    ),
 )

@@ -9,6 +9,9 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
 import com.ogonggo.core.job.implement.JobAppender
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractAppender
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractCompanyPostingAppendDto
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.user.domain.UserRole
@@ -37,7 +40,17 @@ class CompanyJobServiceTest {
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZONE)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
-    private val service = CompanyJobService(userReader, jobReader, jobAppender, jobManager, imageAssetManager, clock, eventPublisher)
+    private val advertisementContractAppender = Mockito.mock(AdvertisementContractAppender::class.java)
+    private val service = CompanyJobService(
+        userReader,
+        jobReader,
+        jobAppender,
+        jobManager,
+        imageAssetManager,
+        advertisementContractAppender,
+        clock,
+        eventPublisher,
+    )
 
     @Test
     fun `등록한 공고에 소유자를 채운다`() {
@@ -51,6 +64,31 @@ class CompanyJobServiceTest {
 
         assertEquals(JOB_ID, id)
         Mockito.verify(jobAppender).append(expected)
+    }
+
+    @Test
+    fun `등록하면 그 공고의 광고 계약을 함께 만든다`() {
+        // given
+        givenAccount(role = UserRole.COMPANY)
+        val saved = Mockito.mock(Job::class.java)
+        Mockito.`when`(saved.id).thenReturn(JOB_ID)
+        val command = command().copy(recruitmentEndAt = NOW.plusDays(10))
+        Mockito.`when`(jobAppender.append(command.copy(ownerUserId = USER_ID))).thenReturn(saved)
+
+        // when
+        service.create(USER_ID, command)
+
+        // then
+        Mockito.verify(advertisementContractAppender).appendForCompanyPosting(
+            AdvertisementContractCompanyPostingAppendDto(
+                userId = USER_ID,
+                promotionTarget = AdvertisementContractPromotionTarget.JOB,
+                targetId = JOB_ID,
+                companyName = "오공고",
+                recruitmentTitle = "백엔드 개발자",
+                recruitmentDeadline = NOW.plusDays(10).toLocalDate(),
+            ),
+        )
     }
 
     @Test

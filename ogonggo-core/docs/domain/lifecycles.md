@@ -1,6 +1,6 @@
 # 오공고 라이프사이클
 
-- 최종 변경일: 2026-11-05
+- 최종 변경일: 2026-11-07
 - 예상 독자: 상태가 있는 엔티티를 고치거나 리뷰하는 개발자
 - 리뷰 상태: 팀 리뷰 필요
 
@@ -17,6 +17,7 @@
 | 렛츠커리어 콘텐츠 | [letscareer-content.html](lifecycles/letscareer-content.html) | 목록 상태와 태그 상태가 따로 움직입니다. 목록에 있고 태그가 최신이며 모집 기간인 콘텐츠만 공고별로 추천됩니다. 제목·설명이 바뀌면 다시 태그할 때까지 추천에서 빠집니다. |
 | 공고 분석 | [아래 상태도](#공고-분석) | AI 서버 분석과 운영자 수정이 본문 해시를 기준으로 움직입니다. 운영자가 고친 분석은 본문이 바뀌기 전까지 AI 서버가 덮어쓰지 못합니다. |
 | 알림 발송 기록 | [아래 상태도](#알림-발송-기록) | 발송 전에 `PROCESSING`으로 선점하며, stale 복구와 늦은 provider 결과를 attempt 단위로 구분합니다. |
+| 광고 계약 | [아래 상태도](#광고-계약) | 신청 폼 계약은 운영자가 상태를 바꾸고, 비즈니스 공고 계약은 공고 검수 상태를 그대로 따릅니다. |
 
 분리된 Archify 다이어그램의 `SRC` 배지를 누르면 근거가 된 코드 줄로 이동합니다. GitHub에서는 HTML이 렌더링되지 않으니 내려받아 브라우저로 엽니다. 알림 상태도의 근거는 [`Notification`](../../src/main/kotlin/com/ogonggo/core/notification/domain/Notification.kt)과 [`NotificationManager`](../../src/main/kotlin/com/ogonggo/core/notification/delivery/implement/NotificationManager.kt)입니다.
 
@@ -40,6 +41,24 @@ stateDiagram-v2
 - 낡은 분석은 사용자 상세에 보이지 않고 AI 서버 분석 대상이 됩니다. 관리자 상세는 낡은 분석도 싣고 `analysisCurrent=false`로 알립니다.
 - 운영자 수정은 늘 지금 본문 해시로 저장하므로 곧바로 사용자에게 보입니다. 운영자가 관리자 콘솔에서 본문을 고치면 고친 분석을 새 본문 해시로 옮깁니다(`JobAnalysisManager.keepAdminEditCurrent`). 운영자가 내용을 고친 공고는 AI 서버 재수집이 본문을 바꾸지 않으므로, 운영자 수정이 낡는 것은 운영자가 분석만 고치고 내용은 고치지 않은 공고를 AI 서버가 다시 수집해 본문이 바뀐 경우뿐입니다. 본문 해시가 그대로인 동안 AI 서버 분석 대상에서 빠지고 AI 서버 저장은 409 `JOB_ANALYSIS_EDITED_BY_ADMIN`입니다(LC-3567).
 - 운영자 분석 수정과 AI 서버 저장은 공고 행을 잠가(`JobReader.readForUpdate`) 차례로 돕니다. 분석 행은 첫 저장 전에는 없어 잠글 수 없으므로 공고 행으로 묶습니다. 그래서 겹쳐 들어와도 AI 저장이 막 고친 운영자 수정을 지우지 않고, 첫 저장 둘이 `job_id` 유일 제약에 걸려 500이 나지 않습니다. 검증은 `concurrency` 태그의 `JobAnalysisConcurrencyTest`입니다.
+
+### 광고 계약
+
+```mermaid
+stateDiagram-v2
+    [*] --> 신청: 광고 신청 폼 제출 / 비즈니스 공고 등록
+    신청 --> 협의중: 운영자 (신청 폼만)
+    협의중 --> 승인: 운영자
+    협의중 --> 반려: 운영자
+    신청 --> 승인: 운영자 / 공고 검수 승인
+    신청 --> 반려: 운영자 / 공고 검수 반려
+    승인 --> 신청: 공고 수정·검수 되돌리기
+    반려 --> 신청: 반려된 공고 수정
+```
+
+- 신청 폼 계약(`APPLICATION_FORM`)은 운영자가 바꾸며, 잘못 바꾼 상태를 되돌릴 수 있도록 어느 상태로든 바꿀 수 있습니다(`AdvertisementContract.changeStatus`).
+- 비즈니스 공고 계약(`COMPANY_POSTING`)은 공고 검수 상태를 그대로 따릅니다(`AdvertisementContract.followReview`). 운영자가 계약 상태를 직접 바꾸면 409 `ADVERTISEMENT_CONTRACT_FOLLOWS_REVIEW`이고, 검수 화면에서 승인·반려합니다. 검수 상태를 바꾸는 `JobManager`·`BootcampManager`의 승인·반려·검수 요청이 같은 트랜잭션에서 맞춥니다. 승인된 공고를 고쳐 다시 검수를 받는 동안에도 신청으로 돌아가는데, 그동안 공고가 노출되지 않기 때문입니다.
+- 계약이 없는 비즈니스 공고(이관 SQL 적용 전 등록분)는 검수 상태만 바뀌고 계약은 건너뜁니다. 이관 SQL이 나중에 현재 검수 상태로 계약을 만듭니다.
 
 ### 알림 발송 기록
 

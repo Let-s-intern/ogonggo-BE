@@ -1,5 +1,6 @@
 package com.ogonggo.core.bootcamp.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
 import com.ogonggo.core.bootcamp.domain.BootcampManagementSearchCondition
@@ -39,6 +40,7 @@ import org.springframework.test.context.ContextConfiguration
     BootcampQueryRepository::class,
     BootcampAppender::class,
     BootcampManager::class,
+    AdvertisementContractManager::class,
     BootcampBookmarkManager::class,
     BootcampBookmarkReader::class,
     ContentRejectionManager::class,

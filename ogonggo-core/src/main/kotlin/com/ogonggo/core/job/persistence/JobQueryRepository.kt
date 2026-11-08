@@ -223,6 +223,36 @@ internal class JobQueryRepository(
             .fetch()
 
     /**
+     * 직무가 주어진 값 중 하나이고 사용자에게 보이는 등록 일시가 [since] 이후인 마감 전 공고 수.
+     * 값 목록이 비면 조건 없이 세게 되므로 호출하는 쪽이 막는다.
+     */
+    fun countOpenByJobRolesRegisteredSince(jobRoles: Collection<JobRole>, since: LocalDateTime, now: LocalDateTime): Long =
+        queryFactory.select(job.count())
+            .from(job)
+            .where(*openPredicates(now), registeredSince(since), job.jobRole.`in`(jobRoles))
+            .fetchOne() ?: 0L
+
+    /** 사용자에게 보이는 등록 일시가 [since] 이후인 마감 전 공고 수. */
+    fun countOpenRegisteredSince(since: LocalDateTime, now: LocalDateTime): Long =
+        queryFactory.select(job.count())
+            .from(job)
+            .where(*openPredicates(now), registeredSince(since))
+            .fetchOne() ?: 0L
+
+    /**
+     * 마감 전 공고: 게시 중인 미삭제 모집 중 공고 중 모집 종료 일시가 없거나 [now] 이후인 것.
+     * 자동 마감 작업이 돌기 전이라 저장된 모집 상태가 아직 모집 중인 공고도 종료 일시가 지났으면 뺀다.
+     */
+    private fun openPredicates(now: LocalDateTime): Array<Predicate> = arrayOf(
+        *recruitingPredicates(),
+        job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)),
+    )
+
+    /** 사용자에게 보이는 등록 일시([com.ogonggo.core.job.domain.Job.publicRegisteredAt]): 기업회원 공고는 처음 승인한 일시, 그 밖에는 등록 일시다. */
+    private fun registeredSince(since: LocalDateTime): BooleanExpression =
+        job.firstApprovedAt.coalesce(job.createdAt).goe(since)
+
+    /**
      * 직무·산업이 주어진 값 중 하나와 정확히 같은 모집 중 공고를 조회수순으로 읽는다.
      * 값 목록이 비면 그 조건을 걸지 않으므로, 둘 다 비었는지는 호출하는 쪽이 막는다.
      * 조건으로 먼저 좁힌 뒤 정렬하므로 인기 공고와 달리 한 번도 조회되지 않은 공고도 0으로 포함한다.

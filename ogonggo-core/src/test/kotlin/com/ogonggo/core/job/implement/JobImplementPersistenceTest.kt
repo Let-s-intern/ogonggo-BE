@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
@@ -54,6 +55,7 @@ import java.time.LocalDateTime
     JobQueryRepository::class,
     JobAppender::class,
     JobManager::class,
+    AdvertisementContractManager::class,
     JobBookmarkReader::class,
     JobBookmarkManager::class,
     JobMetricReader::class,

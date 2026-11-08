@@ -4,8 +4,10 @@ import com.ogonggo.userapi.auth.presentation.LetsCareerInternalApiKeyFilter
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
+import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.servers.Server
+import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -14,6 +16,18 @@ const val USER_INTERNAL_API_KEY_SCHEME = "InternalApiKey"
 
 @Configuration
 class UserOpenApiConfiguration {
+
+    @Bean
+    fun optionalBearerAdvertisementContractOpenApiCustomizer(): OpenApiCustomizer =
+        OpenApiCustomizer { openApi ->
+            openApi.paths?.get("/api/v1/advertisement-contracts")?.post?.let { operation ->
+                val requirements = operation.security.orEmpty()
+                if (requirements.none { it.isEmpty() }) {
+                    // springdoc 2.5.0 ignores @SecurityRequirement(name = ""); add OpenAPI's empty requirement directly.
+                    operation.security = requirements + SecurityRequirement()
+                }
+            }
+        }
 
     @Bean
     fun userOpenApi(): OpenAPI = OpenAPI()

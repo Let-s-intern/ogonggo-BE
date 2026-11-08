@@ -1,5 +1,7 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.dto.JobContentEditDto
 import com.ogonggo.core.job.implement.dto.JobUpdateDto
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 class JobManager internal constructor(
     private val jobRepository: JobJpaRepository,
     private val contentRejectionManager: ContentRejectionManager,
+    private val advertisementContractManager: AdvertisementContractManager,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
 
@@ -105,20 +108,31 @@ class JobManager internal constructor(
     /** 모집 종료 일시가 지난 모집 중 공고를 마감하고 마감한 건수를 돌려준다. 직접 마감한 것이 아니므로 마감 처리 일시는 남기지 않는다. */
     fun closeExpired(now: LocalDateTime): Int = jobRepository.closeExpired(now)
 
-    /** 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다. */
+    /**
+     * 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다.
+     * 비즈니스 공고 계약의 상태도 같은 이유로 여기서 검수 상태에 맞춘다.
+     */
     fun approveReview(job: Job, now: LocalDateTime) {
         change(job) { approveReview(now) }
         contentRejectionManager.clear(ContentReviewTargetType.JOB, job.requiredId(), now)
+        followReview(job)
     }
 
     fun rejectReview(job: Job, reason: String, now: LocalDateTime) {
         change(job) { rejectReview() }
         contentRejectionManager.reject(ContentReviewTargetType.JOB, job.requiredId(), reason, now)
+        followReview(job)
     }
 
     fun requestReview(job: Job, now: LocalDateTime) {
         change(job) { requestReview() }
         contentRejectionManager.clear(ContentReviewTargetType.JOB, job.requiredId(), now)
+        followReview(job)
+    }
+
+    private fun followReview(job: Job) {
+        val reviewStatus = checkNotNull(job.reviewStatus) { "검수한 채용공고의 검수 상태가 없습니다." }
+        advertisementContractManager.followReview(AdvertisementContractPromotionTarget.JOB, job.requiredId(), reviewStatus)
     }
 
     private fun change(job: Job, change: Job.() -> Unit) {

@@ -1,11 +1,21 @@
 package com.ogonggo.core.enumeration.catalog
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureMoveDirection
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryInflowChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryMemberType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.bookmark.domain.BookmarkSortType
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationStatus
@@ -166,6 +176,16 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementInquiryMemberType>(),
             enumOptionsOf<AdvertisementInquiryInflowChannel>(),
             enumOptionsOf<AdvertisementInquiryCompanyNameSource>(),
+            enumOptionsOf<AdvertisementProductCategory>(),
+            enumOptionsOf<AdvertisementProductPosition>(),
+            enumOptionsOf<AdvertisementContractStatus>(),
+            enumOptionsOf<AdvertisementContractSource>(),
+            enumOptionsOf<AdvertisementContractPromotionTarget>(),
+            enumOptionsOf<AdvertisementContractPurpose>(),
+            enumOptionsOf<AdvertisementContractInvoiceMethod>(),
+            enumOptionsOf<AdvertisementContractCreativeMethod>(),
+            enumOptionsOf<AdvertisementExposureTargetType>(),
+            enumOptionsOf<AdvertisementExposureMoveDirection>(),
         )
     }
 }

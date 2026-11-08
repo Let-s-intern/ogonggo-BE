@@ -143,6 +143,14 @@
 | 광고 문의 회원 구분 | `AdvertisementInquiryMemberType` | 기업 회원(`COMPANY`), 일반 회원(`USER`), 비회원(`GUEST`). 저장할 때 토큰으로 정한 문의 시점의 값입니다. |
 | 광고 문의 회사명 입력 방식 | `AdvertisementInquiryCompanyNameSource` | 검색(`SEARCH`, 오공고 회사명 검색에서 고름), 직접 입력(`MANUAL`), 회원 정보(`MEMBER_PROFILE`, 기업 회원 정보로 채움). 클라이언트가 보낸 값을 그대로 저장하며 보내지 않으면 직접 입력입니다. 영업이 표기를 정리할 행을 고르는 표시입니다. |
 | 광고 문의 유입 경로 | `AdvertisementInquiryInflowChannel` | 콜드메일·인스타그램·카카오톡·뉴스레터·기타 UTM·오공고 사이트·렛츠커리어·검색·외부 사이트·직접 접속. UTM과 referrer 원본으로 저장할 때 한 번 판정합니다. 회원의 유입 구분(`UserInflowSource`)과 다릅니다. |
+| 광고 상품 | `AdvertisementProduct` | 오공고가 파는 광고. 어드민이 추가하고 지웁니다. 화면에 노출되는 상품은 하나가 노출 자리 하나입니다. 가격은 소개용이며 견적 문의 상품은 비워 둡니다. |
+| 광고 상품 카테고리 | `AdvertisementProductCategory` | 광고 공고(`JOB_POSTING`), 배너(`BANNER`), 인스타그램 1·2(`INSTAGRAM_1`, `INSTAGRAM_2`), 카카오톡 채널 1·2(`KAKAO_1`, `KAKAO_2`). 신청 폼에서 고르는 단위입니다. 인스타그램·카카오톡 이름은 정해지면 바꿉니다. |
+| 노출 자리 | `AdvertisementProductPosition` | 광고가 노출되는 오공고 화면의 자리. 프론트가 자기 자리의 광고를 찾는 고정 이름입니다. 지금은 배너 6곳(채용공고 홈 상단·하단, 공고 상세, 부트캠프 목록 상단·하단, 부트캠프 상세)입니다. |
+| 광고 계약 | `AdvertisementContract` | 광고주와의 계약. 신청부터 승인·반려까지 한 행이 상태로 거칩니다. 광고 신청 폼이나 비즈니스 공고 등록으로 생깁니다. 기획의 "광고 신청"도 이 행입니다. |
+| 광고 계약 상태 | `AdvertisementContractStatus` | 신청(`REQUESTED`), 협의 중(`NEGOTIATING`), 승인(`APPROVED`), 반려(`REJECTED`). 신청 폼 계약은 운영자가 바꾸며 전이를 막지 않습니다. 비즈니스 공고 계약은 검수 상태를 따라 검수 대기는 신청, 승인은 승인, 반려는 반려입니다. |
+| 광고 계약 경로 | `AdvertisementContractSource` | 광고 신청 폼(`APPLICATION_FORM`), 비즈니스 공고 등록(`COMPANY_POSTING`). 경로마다 채우는 값이 다릅니다. |
+| 계약 상품 | `AdvertisementContractProduct` | 운영자가 계약 상세에서 붙인 광고 상품. 판매 기록입니다. |
+| 광고 노출 | `AdvertisementExposure` | 상품 자리에 띄울 배너·광고 공고의 설정. 운영자가 순서·켜짐·기간을 정하며, 노출 중·꺼짐은 켜짐과 기간으로 계산합니다. 광고주 계약이 없는 우리 홍보도 둡니다. |
 | 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. 채용공고·부트캠프의 로고·대표 이미지는 URL만 가지며, 저장할 때 그 URL의 이미지를 첨부하고 이미 지워진 이미지 URL이면 막습니다. 이 URL로 쓰이는 이미지는 참조를 풀지 않고 정리 작업도 지우지 않습니다. |
 | 이미지 용도 | `ImageAssetUsage` | 프로필(`ogonggo/profile`), 모집글(`ogonggo/side`), 취준고민(`ogonggo/concern`). 업로드할 때 받아 S3 폴더만 정하고, 어디에 붙일 수 있는지는 정하지 않습니다. |
 | 지역 | `Region`, `SubRegion` | 시·도와 시·군·구. 행정 코드를 함께 가집니다. |

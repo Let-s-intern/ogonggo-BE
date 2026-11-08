@@ -37,6 +37,7 @@ import com.ogonggo.userapi.bootcamp.presentation.UserBootcampController
 import com.ogonggo.userapi.config.UserSecurityConfiguration
 import com.ogonggo.userapi.error.UserApiExceptionHandler
 import com.ogonggo.userapi.job.business.UserJobCalendarItem
+import com.ogonggo.userapi.job.business.UserJobHeadlineCount
 import com.ogonggo.userapi.job.business.UserJobPageResult
 import com.ogonggo.userapi.job.business.UserJobResult
 import com.ogonggo.userapi.job.business.UserJobService
@@ -233,6 +234,22 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
 
         Mockito.verifyNoInteractions(userJobService)
+    }
+
+    @Test
+    fun `홈 히어로 공고 수는 로그인 없이도 조회하고 토큰이 있으면 그 사용자로 센다`() {
+        Mockito.`when`(userJobService.getHeadlineJobCount(null)).thenReturn(UserJobHeadlineCount(count = 7L, matchedWishJob = false))
+        Mockito.`when`(userJobService.getHeadlineJobCount(USER_ID)).thenReturn(UserJobHeadlineCount(count = 12L, matchedWishJob = true))
+
+        mockMvc.perform(get("/api/v1/jobs/headline-count"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.count").value(7))
+            .andExpect(jsonPath("$.data.matchedWishJob").value(false))
+
+        mockMvc.perform(get("/api/v1/jobs/headline-count").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.count").value(12))
+            .andExpect(jsonPath("$.data.matchedWishJob").value(true))
     }
 
     @Test

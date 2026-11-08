@@ -1,0 +1,89 @@
+package com.ogonggo.core.advertisementcontract.domain
+
+import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.contentreview.domain.ContentReviewStatus
+import com.ogonggo.core.error.ConflictException
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+import java.time.LocalDate
+
+class AdvertisementContractDomainTest {
+
+    @Test
+    fun `비즈니스 공고 계약은 검수 대기면 신청, 승인이면 승인, 반려면 반려다`() {
+        val contract = companyPostingContract()
+
+        contract.followReview(ContentReviewStatus.APPROVED)
+        assertEquals(AdvertisementContractStatus.APPROVED, contract.status)
+
+        contract.followReview(ContentReviewStatus.PENDING)
+        assertEquals(AdvertisementContractStatus.REQUESTED, contract.status)
+
+        contract.followReview(ContentReviewStatus.REJECTED)
+        assertEquals(AdvertisementContractStatus.REJECTED, contract.status)
+    }
+
+    @Test
+    fun `비즈니스 공고 계약의 상태는 운영자가 바꿀 수 없다`() {
+        val exception = assertThrows(ConflictException::class.java) {
+            companyPostingContract().changeStatus(AdvertisementContractStatus.APPROVED)
+        }
+
+        assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_FOLLOWS_REVIEW, exception.errorCode)
+    }
+
+    @Test
+    fun `신청 폼 계약은 운영자가 어느 상태로든 바꾼다`() {
+        val contract = formContract()
+
+        contract.changeStatus(AdvertisementContractStatus.REJECTED)
+        contract.changeStatus(AdvertisementContractStatus.NEGOTIATING)
+
+        assertEquals(AdvertisementContractStatus.NEGOTIATING, contract.status)
+    }
+
+    @Test
+    fun `신청 폼 계약은 검수 상태를 따르지 않는다`() {
+        assertThrows(IllegalStateException::class.java) {
+            formContract().followReview(ContentReviewStatus.APPROVED)
+        }
+    }
+
+    @Test
+    fun `신청 폼 계약은 광고 카테고리를 하나 이상 골라야 한다`() {
+        assertThrows(IllegalArgumentException::class.java) { formContract(categories = emptySet()) }
+    }
+
+    private fun companyPostingContract() = AdvertisementContract.ofCompanyPosting(
+        userId = 7L,
+        promotionTarget = AdvertisementContractPromotionTarget.JOB,
+        targetId = 1L,
+        companyName = "뱅크",
+        recruitmentTitle = "백엔드 개발자",
+        recruitmentDeadline = null,
+    )
+
+    private fun formContract(categories: Set<AdvertisementProductCategory> = setOf(AdvertisementProductCategory.BANNER)) =
+        AdvertisementContract(
+            source = AdvertisementContractSource.APPLICATION_FORM,
+            status = AdvertisementContractStatus.REQUESTED,
+            userId = null,
+            promotionTarget = AdvertisementContractPromotionTarget.JOB,
+            targetId = null,
+            companyName = "렛츠커리어",
+            recruitmentTitle = "브랜드 마케팅 인턴 모집",
+            recruitmentUrl = "https://example.com/recruit",
+            recruitmentDeadline = LocalDate.of(2026, 12, 20),
+            purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
+            categories = categories,
+            scheduleRequest = null,
+            advertisementRequest = null,
+            managerName = "김담당",
+            email = "marketing@example.com",
+            phoneNumber = "010-1234-5678",
+            invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
+            creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+        )
+}

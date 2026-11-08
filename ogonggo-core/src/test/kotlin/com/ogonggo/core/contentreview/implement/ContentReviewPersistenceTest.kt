@@ -1,5 +1,6 @@
 package com.ogonggo.core.contentreview.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
@@ -44,6 +45,7 @@ import org.springframework.test.context.ContextConfiguration
     ContentRejectionQueryRepository::class,
     JobAppender::class,
     JobManager::class,
+    AdvertisementContractManager::class,
     JobReader::class,
     JobQueryRepository::class,
     BootcampAppender::class,

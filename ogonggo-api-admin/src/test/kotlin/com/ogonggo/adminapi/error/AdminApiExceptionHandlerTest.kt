@@ -8,6 +8,7 @@ import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.ErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.http.HttpMethod
@@ -88,9 +89,19 @@ class AdminApiExceptionHandlerTest {
         )
 
         assertEquals(401, unauthorizedResponse.status)
-        assertEquals("UNAUTHORIZED", objectMapper.readTree(unauthorizedResponse.contentAsString)["code"].asText())
+        val unauthorizedBody = objectMapper.readTree(unauthorizedResponse.contentAsString)
+        assertEquals(401, unauthorizedBody["status"].asInt())
+        assertEquals("UNAUTHORIZED", unauthorizedBody["code"].asText())
+        assertEquals(AdminApiErrorCode.UNAUTHORIZED.message, unauthorizedBody["message"].asText())
+        assertTrue(unauthorizedResponse.contentType.orEmpty().startsWith("application/json"))
+        assertEquals("UTF-8", unauthorizedResponse.characterEncoding)
         assertEquals(403, forbiddenResponse.status)
-        assertEquals("FORBIDDEN", objectMapper.readTree(forbiddenResponse.contentAsString)["code"].asText())
+        val forbiddenBody = objectMapper.readTree(forbiddenResponse.contentAsString)
+        assertEquals(403, forbiddenBody["status"].asInt())
+        assertEquals("FORBIDDEN", forbiddenBody["code"].asText())
+        assertEquals(AdminApiErrorCode.FORBIDDEN.message, forbiddenBody["message"].asText())
+        assertTrue(forbiddenResponse.contentType.orEmpty().startsWith("application/json"))
+        assertEquals("UTF-8", forbiddenResponse.characterEncoding)
     }
 
     private data class ValidationTarget(

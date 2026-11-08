@@ -77,6 +77,12 @@ class UserSecurityConfiguration {
                 ).permitAll()
                 // 광고 문의는 오공고 계정이 없는 기업 담당자가 소개 페이지에서 남긴다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-inquiries").permitAll()
+                // 광고 신청은 비회원도 접수하고, 유효한 토큰은 선택적으로 회원 연결에 사용한다.
+                it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-contracts").permitAll()
+                // 광고 상품은 신청 화면에서 비회원도 조회한다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-products").permitAll()
+                // 화면 자리별 광고 배너는 비회원도 조회한다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-exposures").permitAll()
                 // 광고 문의 폼의 회사명 검색도 비회원이 쓰므로 로그인 없이 연다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/company-names").permitAll()
                 // 개선 의견은 로그인 없이도 남긴다. 토큰이 있으면 작성자를 함께 기록한다.

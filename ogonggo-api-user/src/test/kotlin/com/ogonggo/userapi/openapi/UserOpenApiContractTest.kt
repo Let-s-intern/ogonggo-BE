@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -46,9 +47,12 @@ class UserOpenApiContractTest @Autowired constructor(
      * 이 명세로 클라이언트 코드를 생성하는 쪽은 다른 API를 호출하게 된다.
      */
     @Test
+    @DisplayName("모든 operationId는 유일하며 자동 생성 접미사가 붙지 않는다")
     fun `모든 operationId는 유일하며 자동 생성 접미사가 붙지 않는다`() {
+        // given
         val document = openApiDocument()
 
+        // when
         val operationIds = document.at("/paths").fields().asSequence()
             .flatMap { (path, operations) ->
                 operations.fields().asSequence().map { (method, operation) ->
@@ -57,6 +61,7 @@ class UserOpenApiContractTest @Autowired constructor(
             }
             .toList()
 
+        // then
         val missing = operationIds.filter { (_, id) -> id.isEmpty() }
         assertTrue(missing.isEmpty(), "operationId가 없는 작업: ${missing.map { it.first }}")
 
@@ -71,11 +76,117 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("광고 상품 신청 목록은 비회원 공개이며 신청 화면 필드만 반환한다")
+    fun `광고 상품 신청 목록은 비회원 공개이며 신청 화면 필드만 반환한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1advertisement-products/get")
+        val response = document.at("/components/schemas/AdvertisementProductResponse")
+
+        // then
+        assertEquals("listPublicAdvertisementProducts", operation.at("/operationId").asText())
+        assertFalse(operation.has("security"))
+        assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+        listOf("id", "category", "position", "name", "price").forEach { field ->
+            assertTrue(response.at("/properties/$field").isObject, field)
+        }
+        assertTrue(response.at("/properties/position/nullable").asBoolean())
+        assertTrue(response.at("/properties/price/nullable").asBoolean())
+        assertFalse(response.at("/properties/registeredAt").isObject)
+        assertFalse(response.at("/properties/updatedAt").isObject)
+    }
+
+    @Test
+    @DisplayName("공개 광고 노출 명세는 필수 배너 자리와 최소 응답 및 오류를 명시한다")
+    fun `공개 광고 노출 명세는 필수 배너 자리와 최소 응답 및 오류를 명시한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1advertisement-exposures/get")
+        val position = operation["parameters"].first { it.at("/name").asText() == "position" }
+        val response = document.at("/components/schemas/AdvertisementExposureResponse")
+
+        // then
+        assertEquals("listPublicAdvertisementExposures", operation.at("/operationId").asText())
+        assertFalse(operation.has("security"))
+        assertTrue(position.at("/required").asBoolean())
+        assertEquals("string", position.at("/schema/type").asText())
+        assertEquals(
+            setOf(
+                "JOB_HOME_TOP_BANNER",
+                "JOB_HOME_BOTTOM_BANNER",
+                "JOB_DETAIL_BANNER",
+                "BOOTCAMP_LIST_TOP_BANNER",
+                "BOOTCAMP_LIST_BOTTOM_BANNER",
+                "BOOTCAMP_DETAIL_BANNER",
+            ),
+            position.at("/schema/enum").map { it.asText() }.toSet(),
+        )
+        assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(operation.at("/responses/400/content/application~1json/schema").isObject)
+        assertEquals(setOf("id", "name", "imageUrl", "linkUrl", "adLabel"), response.at("/properties").fieldNames().asSequence().toSet())
+        assertEquals(setOf("id", "name", "imageUrl", "linkUrl", "adLabel"), response.at("/required").map { it.asText() }.toSet())
+    }
+
+    @Test
+    @DisplayName("광고 신청은 선택 인증과 폼 검증 및 201 응답을 명시한다")
+    fun `광고 신청은 선택 인증과 폼 검증 및 201 응답을 명시한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1advertisement-contracts/post")
+        val request = document.at("/components/schemas/CreateAdvertisementContractRequest")
+        val response = document.at("/components/schemas/CreateAdvertisementContractResponse")
+
+        // then
+        assertEquals("createAdvertisementContract", operation.at("/operationId").asText())
+        assertEquals(0, operation.path("parameters").size())
+        val securityRequirements = operation.at("/security")
+        assertEquals(2, securityRequirements.size())
+        val anonymousRequirements = securityRequirements.filter { it.isObject && it.size() == 0 }
+        assertEquals(1, anonymousRequirements.size)
+        val bearerScopes = securityRequirements
+            .filter { it.isObject && it.size() == 1 && it.has("BearerAuth") }
+            .map { it.at("/BearerAuth") }
+        assertEquals(1, bearerScopes.size)
+        assertTrue(bearerScopes.single().isArray)
+        assertEquals(0, bearerScopes.single().size())
+        assertTrue(operation.at("/responses/201/content/application~1json/schema").isObject)
+        assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertTrue(operation.at("/description").asText().contains("토큰이 없거나 유효하지 않거나"))
+        assertTrue(operation.at("/description").asText().contains("Bearer 선택"))
+        assertEquals("string", request.at("/properties/recruitmentUrl/type").asText())
+        assertTrue(request.at("/properties/recruitmentUrl/description").asText().contains("HTTP 또는 HTTPS"))
+        assertEquals(255, request.at("/properties/email/maxLength").asInt())
+        assertEquals("array", request.at("/properties/categories/type").asText())
+        assertEquals(6, request.at("/properties/categories/maxItems").asInt())
+        assertEquals(
+            setOf(
+                "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline",
+                "purpose", "categories", "scheduleRequest", "advertisementRequest", "managerName", "email",
+                "phoneNumber", "invoiceMethod", "creativeMethod",
+            ),
+            request.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertEquals(setOf("promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline", "purpose", "categories", "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod"), request.at("/required").map { it.asText() }.toSet())
+        assertEquals(setOf("id"), response.at("/properties").fieldNames().asSequence().toSet())
+        assertEquals(listOf("id"), response.at("/required").map { it.asText() })
+        assertEquals("integer", response.at("/properties/id/type").asText())
+        assertEquals("int64", response.at("/properties/id/format").asText())
+    }
+
+    @Test
+    @DisplayName("알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다")
     fun `알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다`() {
         // given
         val document = openApiDocument()
         val base = "/paths/~1api~1v1~1users~1me~1notifications"
-        // when, then
+        // when
         listOf(
             "$base/get" to "listMyNotifications",
             "$base~1unread-count/get" to "getMyNotificationUnreadCount",
@@ -84,6 +195,7 @@ class UserOpenApiContractTest @Autowired constructor(
             "$base~1broadcasts~1{batchId}~1read/patch" to "readMyBroadcastNotification",
         ).forEach { (path, operationId) ->
             val operation = document.at(path)
+            // then
             assertEquals(operationId, operation.at("/operationId").asText())
             assertTrue(operation.at("/security/0/BearerAuth").isArray)
             assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
@@ -107,6 +219,7 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("FCM 토큰 계약은 설치 UUID와 해제 및 충돌 응답을 명시한다")
     fun `FCM 토큰 계약은 설치 UUID와 해제 및 충돌 응답을 명시한다`() {
         // given
         val document = openApiDocument()
@@ -126,9 +239,14 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("사용자 OpenAPI는 인터페이스의 경로와 인증과 오류 명세를 노출한다")
     fun `사용자 OpenAPI는 인터페이스의 경로와 인증과 오류 명세를 노출한다`() {
+        // given
+        // 클래스의 SpringBootTest 설정으로 사용자 API 문서를 조회한다.
+        // when
         val document = openApiDocument()
 
+        // then
         assertEquals("Ogonggo User API", document.at("/info/title").asText())
         // 절대 URL이면 HTTP ALB 주소가 새어 나가 HTTPS Swagger UI에서 Try it out이 막힌다.
         assertEquals("/", document.at("/servers/0/url").asText())
@@ -347,6 +465,14 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(similarJobs.at("/security/0/BearerAuth").isArray)
         assertTrue(similarJobs.at("/responses/401/description").asText().startsWith("UNAUTHORIZED"))
         assertTrue(similarJobs.at("/responses/200/content/application~1json/schema").isObject)
+
+        // 홈 히어로 공고 수는 토큰이 선택이라 인증 요구를 노출하고 401 응답은 없다. 클라이언트는 count와 matchedWishJob으로 문구를 고른다.
+        val headlineCount = document.at("/paths/~1api~1v1~1jobs~1headline-count/get")
+        assertEquals("getPublicJobHeadlineCount", headlineCount.at("/operationId").asText())
+        assertTrue(headlineCount.at("/security/0/BearerAuth").isArray)
+        assertTrue(headlineCount.at("/responses/401").isMissingNode)
+        val headlineCountProperties = document.at("/components/schemas/UserJobHeadlineCountResponse/properties")
+        listOf("count", "matchedWishJob").forEach { field -> assertTrue(headlineCountProperties.has(field), field) }
 
         // 공지는 토큰으로 달라지는 값이 없어 인증 요구를 노출하지 않는다.
         val announcementList = document.at("/paths/~1api~1v1~1announcements/get")
@@ -578,9 +704,14 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("EnumField enum은 값과 code와 설명을 문서에 노출한다")
     fun `EnumField enum은 값과 code와 설명을 문서에 노출한다`() {
+        // given
+        // 클래스의 SpringBootTest 설정으로 사용자 API 문서를 조회한다.
+        // when
         val document = openApiDocument()
 
+        // then
         // 요청 본문 안의 enum
         val bodyEnum = document
             .at("/components/schemas/CreateAdvertisementInquiryRequest/properties/promotionChannel/description")

@@ -7,6 +7,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampContentReader
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractAppender
 import com.ogonggo.core.bootcamp.implement.BootcampManager
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
@@ -41,6 +42,7 @@ class CompanyBootcampServiceTest {
         bootcampAppender,
         bootcampManager,
         imageAssetManager,
+        Mockito.mock(AdvertisementContractAppender::class.java),
         Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZoneId.of("Asia/Seoul")),
         Mockito.mock(ApplicationEventPublisher::class.java),
     )

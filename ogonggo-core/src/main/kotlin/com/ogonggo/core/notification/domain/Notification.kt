@@ -19,6 +19,7 @@ enum class NotificationChannel(override val code: Int, override val desc: String
     KAKAO(1, "카카오 알림톡"),
     EMAIL(2, "이메일"),
     FCM(3, "푸시 알림"),
+    SLACK(4, "슬랙 웹훅"),
 }
 
 /** provider에 접수되면 SENT다. 사용자 단말 도착 여부까지 의미하지 않는다. */
@@ -35,6 +36,7 @@ enum class NotificationProvider(val channel: NotificationChannel) {
     NHN_ALIMTALK(NotificationChannel.KAKAO),
     EMAIL_SMTP(NotificationChannel.EMAIL),
     FIREBASE_FCM(NotificationChannel.FCM),
+    SLACK_WEBHOOK(NotificationChannel.SLACK),
 }
 
 /** 수신자 한 명·채널 한 개에 대한 알림과 발송 결과를 보존한다. */

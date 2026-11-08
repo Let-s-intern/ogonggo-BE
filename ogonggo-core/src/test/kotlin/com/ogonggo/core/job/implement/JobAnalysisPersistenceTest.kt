@@ -1,5 +1,6 @@
 package com.ogonggo.core.job.implement
 
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
 import com.ogonggo.core.error.ConflictException
@@ -36,6 +37,7 @@ import org.springframework.test.context.ContextConfiguration
     JobQueryRepository::class,
     JobAppender::class,
     JobManager::class,
+    AdvertisementContractManager::class,
     JobAnalysisReader::class,
     JobAnalysisManager::class,
     ContentRejectionManager::class,
