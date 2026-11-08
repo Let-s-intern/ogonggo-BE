@@ -342,7 +342,7 @@ ogonggo:
 
 ### 회원 종류 토픽 이관·배포
 
-1. [`2026-10-31-notification-member-topics.sql`](../schema/2026-10-31-notification-member-topics.sql)을 적용해 개별 알림 조회 인덱스를 만든다. 다른 스키마 변경은 없다.
+1. [`2026-10-31-notification-member-topics.sql`](../schema/2026-10-31-notification-member-topics.sql)을 적용해 개별 알림 조회 인덱스와 관리자 발송 기록의 희망 직무·광고성·마케팅 미동의 제외 수 컬럼을 추가한다. 렛츠커리어 마케팅 동의 조회 API 배포와 관리자 API 전환 순서는 [희망 직무 발송과 광고성 발송](#희망-직무-발송과-광고성-발송)을 따른다.
 2. 사용자 API에 `general-topic`·`company-topic`을 설정해 배포한다. `fcmTopicSync`가 기존 토큰을 두 토픽에 구독시킨다. 관리자 API는 `member-topics-enabled=false`로 둔다.
 3. [전체 토픽 이관·배포](#전체-토픽-이관배포)의 확인 SQL에서 토픽 변수만 바꿔 두 토픽의 미처리 구독이 0인지 보고, 테스트 기기 수신을 확인한다. 일반회원 토픽은 `u.role in ('USER','MENTOR','ADMIN')`, 기업회원 토픽은 `u.role = 'COMPANY'` 조건을 더한다.
 4. 관리자 API의 `member-topics-enabled`를 true로 바꿔 배포한다. 그 전까지 두 대상은 기기마다 보내므로 기능은 바로 쓸 수 있다.
