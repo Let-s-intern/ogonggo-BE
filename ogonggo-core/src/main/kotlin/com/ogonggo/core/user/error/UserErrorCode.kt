@@ -22,4 +22,5 @@ enum class UserErrorCode(
     COMPANY_MEMBER_ROLE_UNCHANGEABLE(HttpStatus.BAD_REQUEST, "기업 회원의 역할은 바꿀 수 없습니다."),
     OWN_ROLE_UNCHANGEABLE(HttpStatus.BAD_REQUEST, "자기 역할은 바꿀 수 없습니다."),
     WITHDRAWN_USER_ROLE_UNCHANGEABLE(HttpStatus.CONFLICT, "탈퇴한 회원의 역할은 바꿀 수 없습니다."),
+    COMPANY_MEMBER_NOT_ACTIVE(HttpStatus.CONFLICT, "정지·탈퇴한 비즈니스 회원에게는 공고를 대신 등록할 수 없습니다."),
 }

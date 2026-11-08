@@ -171,6 +171,7 @@ class AdminBootcampControllerTest @Autowired constructor(
         reviewStatus = ContentReviewStatus.APPROVED,
         registeredAt = LocalDateTime.of(2026, 11, 1, 10, 0),
         priorityExposed = priorityExposed,
+        adminRegistered = false,
     )
 
     private fun detail(summary: AdminBootcampSummary): AdminBootcampResult = AdminBootcampResult(

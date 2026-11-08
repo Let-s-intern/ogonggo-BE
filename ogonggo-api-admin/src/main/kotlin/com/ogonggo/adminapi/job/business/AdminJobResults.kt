@@ -81,6 +81,8 @@ data class AdminJobSummary(
     val sourceUrl: String?,
     /** 기업회원 공고 우선 노출을 이 공고에 줄지다. 기업회원 공고에만 영향이 있다. */
     val priorityExposed: Boolean,
+    /** 운영자가 기업회원 대신 등록한 공고인지다. */
+    val adminRegistered: Boolean,
 ) {
     companion object {
         internal fun from(job: Job, metric: JobMetricDto): AdminJobSummary = AdminJobSummary(
@@ -109,6 +111,7 @@ data class AdminJobSummary(
             inspectedAt = job.inspectedAt,
             sourceUrl = job.sourceUrl,
             priorityExposed = job.priorityExposed,
+            adminRegistered = job.adminRegistered,
         )
     }
 }

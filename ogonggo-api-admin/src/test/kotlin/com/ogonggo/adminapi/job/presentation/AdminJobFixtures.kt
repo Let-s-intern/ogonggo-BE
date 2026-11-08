@@ -48,6 +48,7 @@ internal object AdminJobFixtures {
         inspectedAt = inspectedAt,
         sourceUrl = "https://example.com/jobs/$id",
         priorityExposed = priorityExposed,
+        adminRegistered = false,
     )
 
     fun detail(

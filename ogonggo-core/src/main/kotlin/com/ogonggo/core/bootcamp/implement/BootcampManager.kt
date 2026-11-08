@@ -99,6 +99,8 @@ class BootcampManager internal constructor(
 
     fun delete(bootcamp: Bootcamp, now: LocalDateTime) = change(bootcamp) { delete(now) }
 
+    fun markAdminRegistered(bootcamp: Bootcamp) = change(bootcamp) { markAdminRegistered() }
+
     /**
      * 반려가 풀리면 반려 기록도 함께 지운다. 검수 상태와 기록이 어긋나지 않도록 한 곳에서 처리한다.
      * 비즈니스 공고 계약의 상태도 같은 이유로 여기서 검수 상태에 맞춘다.

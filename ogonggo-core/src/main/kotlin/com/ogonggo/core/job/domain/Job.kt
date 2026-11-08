@@ -424,6 +424,14 @@ class Job internal constructor(
     var contentEditedByUserId: Long? = null /* 공고 내용을 마지막으로 고친 관리자 식별자 */
         protected set
 
+    /**
+     * 운영자가 기업회원 대신 등록한 공고인지다(대리 등록). 기업회원이 직접 등록했거나 수집한 공고는 거짓이다.
+     * 기업회원이 나중에 고쳐도 지우지 않는다. 운영자가 올렸다는 기록이기 때문이다. 등록 일시는 생성 일시와 같다.
+     */
+    @Column(name = "admin_registered", nullable = false)
+    var adminRegistered: Boolean = false /* 운영자 대리 등록 여부 */
+        protected set
+
     fun update(
         companyName: String,
         parentCompanyName: String?,
@@ -525,6 +533,13 @@ class Job internal constructor(
         require(userId > 0) { "관리자 식별자는 양수여야 합니다." }
         contentEditedAt = now
         contentEditedByUserId = userId
+    }
+
+    /** 운영자가 기업회원 대신 등록했다고 남긴다. 기업회원 공고에만 남긴다. */
+    fun markAdminRegistered() {
+        checkNotDeleted()
+        check(ownerUserId != null) { "기업회원 공고만 대리 등록으로 남깁니다." }
+        adminRegistered = true
     }
 
     /** 운영자가 고친 내용이 있는지. 참이면 AI 서버의 다시 수집이 공고 내용과 원문을 바꾸지 않는다. */

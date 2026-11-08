@@ -2,6 +2,8 @@ package com.ogonggo.core.bootcamp.domain
 
 import com.ogonggo.core.contentreview.domain.ContentSource
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -157,6 +159,22 @@ class BootcampDomainTest {
     }
 
     @Test
+    fun `대리 등록은 기업회원 과정에만 남고 수집 과정이나 삭제한 과정에는 남길 수 없다`() {
+        // given
+        val company = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY)
+        assertFalse(company.adminRegistered)
+
+        // when
+        company.markAdminRegistered()
+
+        // then
+        assertTrue(company.adminRegistered)
+        assertThrows(IllegalStateException::class.java) { createBootcamp().markAdminRegistered() }
+        val deleted = createBootcamp(ownerUserId = 7L, source = ContentSource.COMPANY).also { it.delete(LocalDateTime.of(2026, 11, 5, 10, 0)) }
+        assertThrows(IllegalStateException::class.java) { deleted.markAdminRegistered() }
+    }
+
+    @Test
     fun `삭제는 멱등하며 삭제 후 변경을 차단한다`() {
         val bootcamp = createBootcamp()
         val firstDeletedAt = LocalDateTime.of(2026, 9, 1, 0, 0)
@@ -185,6 +203,7 @@ class BootcampDomainTest {
     }
 
     private fun createBootcamp(
+        ownerUserId: Long? = null,
         source: ContentSource = ContentSource.CRAWLER,
         externalId: String? = null,
         programType: String = "개발",
@@ -203,6 +222,7 @@ class BootcampDomainTest {
         publicationStartAt: LocalDateTime? = null,
         publicationEndAt: LocalDateTime? = null,
     ): Bootcamp = Bootcamp(
+        ownerUserId = ownerUserId,
         companyName = "오공고 교육사",
         title = "백엔드 부트캠프",
         programType = programType,

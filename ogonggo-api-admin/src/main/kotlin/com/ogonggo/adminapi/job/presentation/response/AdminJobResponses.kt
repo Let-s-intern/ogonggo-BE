@@ -52,6 +52,8 @@ data class AdminJobSummaryResponse(
     val sourceUrl: String?,
     @Schema(description = PRIORITY_EXPOSED_DESCRIPTION)
     val priorityExposed: Boolean,
+    @Schema(description = ADMIN_REGISTERED_DESCRIPTION)
+    val adminRegistered: Boolean,
 ) {
     companion object {
         internal fun from(result: AdminJobSummary): AdminJobSummaryResponse = AdminJobSummaryResponse(
@@ -80,6 +82,7 @@ data class AdminJobSummaryResponse(
             inspectedAt = result.inspectedAt,
             sourceUrl = result.sourceUrl,
             priorityExposed = result.priorityExposed,
+            adminRegistered = result.adminRegistered,
         )
     }
 }
@@ -140,6 +143,8 @@ data class AdminJobDetailResponse(
     val inspectedAt: LocalDateTime?,
     @Schema(description = PRIORITY_EXPOSED_DESCRIPTION)
     val priorityExposed: Boolean,
+    @Schema(description = ADMIN_REGISTERED_DESCRIPTION)
+    val adminRegistered: Boolean,
     val companyAndTeamIntroduction: String?,
     val responsibilities: String?,
     val qualifications: String?,
@@ -199,6 +204,7 @@ data class AdminJobDetailResponse(
                 registeredAt = summary.registeredAt,
                 inspectedAt = summary.inspectedAt,
                 priorityExposed = summary.priorityExposed,
+                adminRegistered = summary.adminRegistered,
                 companyAndTeamIntroduction = result.companyAndTeamIntroduction,
                 responsibilities = result.responsibilities,
                 qualifications = result.qualifications,
@@ -225,3 +231,7 @@ private const val PRIORITY_EXPOSED_DESCRIPTION =
     "기업회원 공고 우선 노출을 이 공고에 줄지입니다. 기업회원 공고(source = COMPANY)에만 영향이 있고, " +
         "다른 경로 공고는 저장한 값(기본 true)을 그대로 보여 줍니다. 전체 설정(company-content-priority)이 켜져 있고 " +
         "이 값이 true인 마감 전 공고만 공개 목록 맨 앞에 둡니다."
+
+private const val ADMIN_REGISTERED_DESCRIPTION =
+    "운영자가 비즈니스 회원 대신 등록한 공고(대리 등록)인지입니다. 회원이 직접 등록했거나 수집한 공고는 false입니다. " +
+        "회원이 나중에 고쳐도 바뀌지 않습니다."

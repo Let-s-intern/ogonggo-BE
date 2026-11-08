@@ -67,6 +67,8 @@ data class AdminBootcampSummary(
     val registeredAt: LocalDateTime,
     /** 기업회원 공고 우선 노출을 이 과정에 줄지다. 기업회원 과정에만 영향이 있다. */
     val priorityExposed: Boolean,
+    /** 운영자가 기업회원 대신 등록한 과정인지다. */
+    val adminRegistered: Boolean,
 ) {
     companion object {
         internal fun from(bootcamp: Bootcamp, metric: BootcampMetricDto): AdminBootcampSummary = AdminBootcampSummary(
@@ -95,6 +97,7 @@ data class AdminBootcampSummary(
             reviewStatus = bootcamp.reviewStatus,
             registeredAt = bootcamp.createdAt,
             priorityExposed = bootcamp.priorityExposed,
+            adminRegistered = bootcamp.adminRegistered,
         )
     }
 }

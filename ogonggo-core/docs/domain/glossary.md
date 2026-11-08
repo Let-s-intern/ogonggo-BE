@@ -157,4 +157,5 @@
 | 스케줄 작업 | `ScheduledJob` | 주기 작업의 실행 주기와 켜짐 여부. 운영자가 DB에서 바꿉니다. |
 | 기업회원 공고 우선 노출 | `CompanyContentPriority` | 기업회원이 비즈니스로 등록한 마감 전 채용공고·부트캠프를 공개 목록 맨 앞에 두는 혜택의 켜짐 여부. 유료 광고 구좌가 나오기 전까지의 임시 혜택이며, 행이 없으면 켜진 것으로 봅니다. 전체 스위치이며 공고별 우선 노출과 함께 켜져 있어야 앞에 둡니다. |
 | 공고별 우선 노출 | `Job.priorityExposed`, `Bootcamp.priorityExposed` | 기업회원 공고 우선 노출을 그 공고·과정에 줄지. 등록할 때 켜짐으로 시작하고 운영자가 관리자 콘솔에서 공고마다 끕니다. 기업회원 공고(`source = COMPANY`)에만 영향이 있습니다. |
+| 대리 등록 | `Job.adminRegistered`, `Bootcamp.adminRegistered` | 운영자가 비즈니스 회원 대신 채용공고·부트캠프를 등록한 것. 콘텐츠는 그 회원의 비즈니스 등록(`source = COMPANY`)이 되고 검수 없이 승인으로 시작합니다. 운영자가 올렸다는 표시만 남기며, 회원이 나중에 고쳐도 지우지 않습니다. |
 | 관리 목록 / 콘솔 목록 | `*ManagementSearchCondition`, `*ConsoleSearchCondition` | 게시 상태와 무관하게 콘텐츠를 관리할 때 쓰는 목록 조건. 관리자 콘솔이나 작성자 본인의 관리 화면에서 씁니다. |

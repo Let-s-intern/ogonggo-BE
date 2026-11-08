@@ -9,6 +9,8 @@ import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.contentreview.error.ContentReviewErrorCode
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
@@ -257,6 +259,22 @@ class JobDomainTest {
         assertEquals(true, company.priorityExposed)
         company.delete(LocalDateTime.of(2026, 9, 1, 0, 0))
         assertThrows(IllegalStateException::class.java) { company.changePriorityExposed(false) }
+    }
+
+    @Test
+    fun `대리 등록은 기업회원 공고에만 남고 수집 공고이나 삭제한 공고에는 남길 수 없다`() {
+        // given
+        val company = createJob(ownerUserId = 7L)
+        assertFalse(company.adminRegistered)
+
+        // when
+        company.markAdminRegistered()
+
+        // then
+        assertTrue(company.adminRegistered)
+        assertThrows(IllegalStateException::class.java) { createJob().markAdminRegistered() }
+        val deleted = createJob(ownerUserId = 7L).also { it.delete(LocalDateTime.of(2026, 11, 5, 10, 0)) }
+        assertThrows(IllegalStateException::class.java) { deleted.markAdminRegistered() }
     }
 
     @Test
