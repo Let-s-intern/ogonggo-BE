@@ -29,7 +29,7 @@ private const val EXPOSURE_NOT_FOUND = "ADVERTISEMENT_EXPOSURE_NOT_FOUND: 광고
 private const val PRODUCT_NOT_FOUND = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
 private const val CONTRACT_NOT_FOUND = "ADVERTISEMENT_CONTRACT_NOT_FOUND: 광고 계약을 찾을 수 없습니다."
 
-@Tag(name = "관리자 광고 노출")
+@Tag(name = "관리자 광고")
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
 interface AdminAdvertisementExposureApi {
 

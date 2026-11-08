@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.http.ResponseEntity
 
-@Tag(name = "광고 상품")
+@Tag(name = "광고")
 interface AdvertisementProductApi {
 
     @Operation(

@@ -29,7 +29,7 @@ import jakarta.validation.constraints.Size
 import org.springframework.http.ResponseEntity
 import java.time.LocalDate
 
-@Tag(name = "관리자 광고 문의")
+@Tag(name = "관리자 광고")
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
 interface AdminAdvertisementInquiryApi {
 
