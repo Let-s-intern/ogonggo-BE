@@ -60,7 +60,7 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun reset() {
-        listOf("bootcamp_partners", "bootcamp_curriculums", "bootcamps", "jobs", "image_assets", "users")
+        listOf("advertisement_contracts", "bootcamp_partners", "bootcamp_curriculums", "bootcamps", "jobs", "image_assets", "users")
             .forEach { jdbc.update("delete from $it") }
     }
 
@@ -90,6 +90,9 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         assertEquals(ADMIN_ID, (saved["proxy_registered_by_user_id"] as Number).toLong())
         assertEquals("ATTACHED", imageStatus("admin-logo"))
         assertEquals("ATTACHED", imageStatus("member-cover"))
+        val contract = contractOf("JOB", jobId)
+        assertEquals(memberId, (contract["user_id"] as Number).toLong())
+        assertEquals("APPROVED", contract["status"])
         mvc.perform(admin(get("/api/v1/admin/company-members/$memberId")))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.jobs[0].id").value(jobId))
@@ -143,6 +146,9 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         assertEquals(Timestamp.valueOf(NOW), saved["closed_at"])
         assertEquals(Timestamp.valueOf(NOW), saved["proxy_registered_at"])
         assertEquals("ATTACHED", imageStatus("admin-bootcamp"))
+        val contract = contractOf("BOOTCAMP", bootcampId)
+        assertEquals(memberId, (contract["user_id"] as Number).toLong())
+        assertEquals("APPROVED", contract["status"])
     }
 
     @Test
@@ -168,6 +174,7 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         }
         assertEquals(0, jdbc.queryForObject("select count(*) from jobs", Int::class.java))
         assertEquals(0, jdbc.queryForObject("select count(*) from bootcamps", Int::class.java))
+        assertEquals(0, jdbc.queryForObject("select count(*) from advertisement_contracts", Int::class.java))
     }
 
     @Test
@@ -195,6 +202,7 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
         ).andExpect(status().isForbidden)
         assertEquals(0, jdbc.queryForObject("select count(*) from jobs", Int::class.java))
         assertEquals(0, jdbc.queryForObject("select count(*) from bootcamps", Int::class.java))
+        assertEquals(0, jdbc.queryForObject("select count(*) from advertisement_contracts", Int::class.java))
     }
 
     @Test
@@ -226,6 +234,12 @@ class AdminProxyRegistrationIntegrationTest @Autowired constructor(
 
     private fun imageStatus(id: String): String =
         jdbc.queryForObject("select status from image_assets where id = ?", String::class.java, id)!!
+
+    private fun contractOf(promotionTarget: String, targetId: Long): Map<String, Any?> = jdbc.queryForMap(
+        "select * from advertisement_contracts where source = 'COMPANY_POSTING' and promotion_target = ? and target_id = ?",
+        promotionTarget,
+        targetId,
+    )
 
     private fun jobBody(
         title: String = "\"백엔드 개발자\"",

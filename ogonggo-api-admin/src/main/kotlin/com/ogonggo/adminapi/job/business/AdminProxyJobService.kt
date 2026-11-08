@@ -2,6 +2,9 @@ package com.ogonggo.adminapi.job.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.member.implement.CompanyMemberValidator
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractAppender
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractCompanyPostingAppendDto
 import com.ogonggo.core.image.implement.ImageAssetManager
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobManager
@@ -23,6 +26,7 @@ class AdminProxyJobService(
     private val jobAppender: JobAppender,
     private val jobManager: JobManager,
     private val imageAssetManager: ImageAssetManager,
+    private val advertisementContractAppender: AdvertisementContractAppender,
     private val clock: Clock,
 ) {
 
@@ -35,6 +39,16 @@ class AdminProxyJobService(
         companyMemberValidator.validateProxyRegistrable(memberId)
         val now = LocalDateTime.now(clock)
         val job = jobAppender.append(command.job.copy(ownerUserId = memberId), now)
+        advertisementContractAppender.appendForCompanyPosting(
+            AdvertisementContractCompanyPostingAppendDto(
+                userId = memberId,
+                promotionTarget = AdvertisementContractPromotionTarget.JOB,
+                targetId = job.requiredId(),
+                companyName = command.job.companyName,
+                recruitmentTitle = command.job.title,
+                recruitmentDeadline = command.job.recruitmentEndAt?.toLocalDate(),
+            ),
+        )
         jobManager.approveReview(job, now)
         if (command.visibility == AdminContentVisibility.HIDDEN) {
             jobManager.hide(job)

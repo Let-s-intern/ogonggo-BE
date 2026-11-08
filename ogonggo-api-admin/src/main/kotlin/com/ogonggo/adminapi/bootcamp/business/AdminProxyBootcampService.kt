@@ -2,6 +2,9 @@ package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.member.implement.CompanyMemberValidator
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractAppender
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractCompanyPostingAppendDto
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampManager
@@ -22,6 +25,7 @@ class AdminProxyBootcampService(
     private val bootcampAppender: BootcampAppender,
     private val bootcampManager: BootcampManager,
     private val imageAssetManager: ImageAssetManager,
+    private val advertisementContractAppender: AdvertisementContractAppender,
     private val clock: Clock,
 ) {
 
@@ -32,6 +36,16 @@ class AdminProxyBootcampService(
         val now = LocalDateTime.now(clock)
         val closedAt = if (command.bootcamp.status == BootcampRecruitmentStatus.CLOSED) now else null
         val bootcamp = bootcampAppender.append(command.bootcamp.copy(ownerUserId = memberId, closedAt = closedAt))
+        advertisementContractAppender.appendForCompanyPosting(
+            AdvertisementContractCompanyPostingAppendDto(
+                userId = memberId,
+                promotionTarget = AdvertisementContractPromotionTarget.BOOTCAMP,
+                targetId = bootcamp.requiredId(),
+                companyName = command.bootcamp.companyName,
+                recruitmentTitle = command.bootcamp.title,
+                recruitmentDeadline = command.bootcamp.recruitmentEndAt?.toLocalDate(),
+            ),
+        )
         bootcampManager.approveReview(bootcamp, now)
         if (command.visibility == AdminContentVisibility.HIDDEN) {
             bootcampManager.hide(bootcamp)
