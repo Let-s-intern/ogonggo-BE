@@ -41,7 +41,7 @@ private const val BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE =
 private const val EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS: 같은 이메일로 동시에 가입했습니다. 다시 요청하면 그 회원에 연결합니다."
 private const val PRODUCT_NOT_FOUND = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
 
-@Tag(name = "관리자 광고 계약")
+@Tag(name = "관리자 광고")
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
 interface AdminAdvertisementContractApi {
 

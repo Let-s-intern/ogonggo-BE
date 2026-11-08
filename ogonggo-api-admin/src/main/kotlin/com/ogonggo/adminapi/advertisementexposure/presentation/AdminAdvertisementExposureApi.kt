@@ -31,7 +31,7 @@ private const val CONTRACT_NOT_FOUND = "ADVERTISEMENT_CONTRACT_NOT_FOUND: 광고
 private const val TARGET_NOT_FOUND = "JOB_NOT_FOUND, BOOTCAMP_NOT_FOUND: 광고 공고 대상이 없거나 지워졌습니다."
 private const val TARGET_DUPLICATED = "ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED: 같은 자리(채용공고 목록은 같은 직군 안)에 같은 대상의 노출이 이미 있습니다."
 
-@Tag(name = "관리자 광고 노출")
+@Tag(name = "관리자 광고")
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
 interface AdminAdvertisementExposureApi {
 
