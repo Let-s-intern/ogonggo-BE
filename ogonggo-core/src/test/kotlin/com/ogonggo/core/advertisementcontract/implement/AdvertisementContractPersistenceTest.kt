@@ -19,6 +19,7 @@ import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductAppen
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductManager
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
+import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.contentreview.persistence.ContentRejectionQueryRepository
@@ -57,6 +58,7 @@ import java.time.LocalDateTime
     AdvertisementProductAppender::class,
     AdvertisementProductManager::class,
     AdvertisementProductReader::class,
+    AdvertisementProductQueryRepository::class,
     ContentRejectionReader::class,
     ContentRejectionManager::class,
     ContentRejectionQueryRepository::class,
