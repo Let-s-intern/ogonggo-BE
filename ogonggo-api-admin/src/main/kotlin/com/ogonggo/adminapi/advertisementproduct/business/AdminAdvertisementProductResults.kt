@@ -26,3 +26,11 @@ data class AdminAdvertisementProductResult(
         )
     }
 }
+
+data class AdminAdvertisementProductPageResult(
+    val items: List<AdminAdvertisementProductResult>,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
+)

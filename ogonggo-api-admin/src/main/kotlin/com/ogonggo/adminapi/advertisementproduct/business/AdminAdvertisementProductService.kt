@@ -16,8 +16,16 @@ class AdminAdvertisementProductService(
     private val clock: Clock,
 ) {
 
-    fun getProducts(): List<AdminAdvertisementProductResult> =
-        advertisementProductReader.readAll().map(AdminAdvertisementProductResult::from)
+    fun getProducts(page: Int, size: Int): AdminAdvertisementProductPageResult {
+        val result = advertisementProductReader.readPage(page, size)
+        return AdminAdvertisementProductPageResult(
+            items = result.items.map(AdminAdvertisementProductResult::from),
+            page = result.page,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+        )
+    }
 
     fun createProduct(command: AdminAdvertisementProductSaveCommand): Long =
         advertisementProductAppender.append(command.toCoreDto())

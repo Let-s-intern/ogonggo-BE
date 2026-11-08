@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.advertisementexposure.business
 
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
+import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposurePageDto
 import java.time.LocalDateTime
 
 data class AdminAdvertisementExposureResult(
@@ -44,4 +45,25 @@ data class AdminAdvertisementExposureResult(
     }
 }
 
-data class CreateAdminAdvertisementExposureResult(val id: Long)
+data class AdminAdvertisementExposurePageResult(
+    val items: List<AdminAdvertisementExposureResult>,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
+) {
+    companion object {
+        fun from(page: AdvertisementExposurePageDto, companyNames: Map<Long, String>) = AdminAdvertisementExposurePageResult(
+            items = page.items.map { exposure ->
+                AdminAdvertisementExposureResult.from(
+                    exposure,
+                    exposure.contractId?.let(companyNames::get),
+                )
+            },
+            page = page.page,
+            size = page.size,
+            totalElements = page.totalElements,
+            totalPages = page.totalPages,
+        )
+    }
+}

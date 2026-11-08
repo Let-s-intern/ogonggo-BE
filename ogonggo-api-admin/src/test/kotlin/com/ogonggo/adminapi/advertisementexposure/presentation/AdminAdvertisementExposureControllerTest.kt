@@ -1,15 +1,14 @@
 package com.ogonggo.adminapi.advertisementexposure.presentation
 
 import com.ogonggo.adminapi.advertisementexposure.business.AdminAdvertisementExposureResult
+import com.ogonggo.adminapi.advertisementexposure.business.AdminAdvertisementExposurePageResult
 import com.ogonggo.adminapi.advertisementexposure.business.AdminAdvertisementExposureService
 import com.ogonggo.adminapi.advertisementexposure.business.CreateAdminAdvertisementExposureCommand
-import com.ogonggo.adminapi.advertisementexposure.business.CreateAdminAdvertisementExposureResult
 import com.ogonggo.adminapi.advertisementexposure.business.UpdateAdminAdvertisementExposureCommand
 import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
-import com.ogonggo.adminapi.error.InvalidRequestFieldException
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCode
@@ -78,6 +77,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
     @Test
     fun `관리자 권한이 없으면 노출 API는 403이다`() {
         listOf(
+            get(PATH).queryParam("productId", "11"),
             post(PATH).contentType(MediaType.APPLICATION_JSON).content(BANNER_REQUEST),
             put("$PATH/501").contentType(MediaType.APPLICATION_JSON).content(UPDATE_REQUEST),
             patch("$PATH/501/exposed").contentType(MediaType.APPLICATION_JSON).content("{\"exposed\":false}"),
@@ -93,31 +93,33 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `노출 목록은 상품 필수 필터와 선택 계약 필터를 전달하고 결과를 배열로 반환한다`() {
-        Mockito.`when`(adminAdvertisementExposureService.getExposures(11, 1001))
-            .thenReturn(listOf(exposureResult()))
+    fun `노출 목록은 상품 계약 필터와 페이지를 적용해 항목과 페이지 정보를 반환한다`() {
+        Mockito.`when`(adminAdvertisementExposureService.getExposures(11, 1001, 0, 10))
+            .thenReturn(AdminAdvertisementExposurePageResult(listOf(exposureResult()), 0, 10, 1, 1))
 
         mockMvc.perform(admin(get(PATH).queryParam("productId", "11").queryParam("contractId", "1001")))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data[0].id").value(501))
-            .andExpect(jsonPath("$.data[0].productId").value(11))
-            .andExpect(jsonPath("$.data[0].contractId").value(1001))
-            .andExpect(jsonPath("$.data[0].advertiserCompanyName").value("샘플기업"))
-            .andExpect(jsonPath("$.data[0].displayOrder").value(1))
-            .andExpect(jsonPath("$.data[0].exposed").value(false))
-            .andExpect(jsonPath("$.data[0].targetType").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.items[0].id").value(501))
+            .andExpect(jsonPath("$.data.items[0].productId").value(11))
+            .andExpect(jsonPath("$.data.items[0].contractId").value(1001))
+            .andExpect(jsonPath("$.data.items[0].advertiserCompanyName").value("샘플기업"))
+            .andExpect(jsonPath("$.data.items[0].displayOrder").value(1))
+            .andExpect(jsonPath("$.data.items[0].exposed").value(false))
+            .andExpect(jsonPath("$.data.items[0].targetType").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
 
-        Mockito.verify(adminAdvertisementExposureService).getExposures(11, 1001)
+        Mockito.verify(adminAdvertisementExposureService).getExposures(11, 1001, 0, 10)
     }
 
     @Test
     fun `알 수 없는 상품 필터는 빈 배열을 반환하고 양수 ID를 요구한다`() {
-        Mockito.`when`(adminAdvertisementExposureService.getExposures(999, null)).thenReturn(emptyList())
+        Mockito.`when`(adminAdvertisementExposureService.getExposures(999, null, 0, 10))
+            .thenReturn(AdminAdvertisementExposurePageResult(emptyList(), 0, 10, 0, 0))
 
         mockMvc.perform(admin(get(PATH).queryParam("productId", "999")))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data").isArray)
-            .andExpect(jsonPath("$.data").isEmpty)
+            .andExpect(jsonPath("$.data.items").isArray)
+            .andExpect(jsonPath("$.data.items").isEmpty)
 
         mockMvc.perform(admin(get(PATH)))
             .andExpect(status().isBadRequest)
@@ -126,9 +128,12 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(status().isBadRequest)
         mockMvc.perform(admin(get(PATH).queryParam("productId", "11").queryParam("contractId", "-1")))
             .andExpect(status().isBadRequest)
+        mockMvc.perform(admin(get(PATH).queryParam("productId", "11").queryParam("page", "0")))
+            .andExpect(status().isBadRequest)
+        mockMvc.perform(admin(get(PATH).queryParam("productId", "11").queryParam("size", "101")))
+            .andExpect(status().isBadRequest)
 
-        Mockito.verify(adminAdvertisementExposureService).getExposures(999, null)
-        Mockito.verifyNoMoreInteractions(adminAdvertisementExposureService)
+        Mockito.verify(adminAdvertisementExposureService).getExposures(999, null, 0, 10)
     }
 
     @Test
@@ -149,7 +154,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                     exposed = true,
                 ),
             ),
-        ).thenReturn(CreateAdminAdvertisementExposureResult(501))
+        ).thenReturn(501L)
 
         mockMvc.perform(
             admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(BANNER_REQUEST)),
@@ -187,6 +192,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             BANNER_REQUEST.replace("\"exposed\":true", "\"exposed\":null"),
             BANNER_REQUEST.replace("\"targetType\":null", "\"targetType\":1"),
             BANNER_REQUEST.replace("\"exposed\":true", "\"exposed\":true,\"displayOrder\":1"),
+            BANNER_REQUEST.replace("https://example.com/assets/banner.png", "ftp://example.com/assets/banner.png"),
+            BANNER_REQUEST.replace("\"linkUrl\":\"/jobs/5501\"", "\"linkUrl\":\"//example.com/jobs/5501\""),
         ).forEach { body ->
             mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body)))
                 .andExpect(status().isBadRequest)
@@ -197,10 +204,9 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `상품 계약과 URL 정책 오류를 각 400 404 응답으로 전달한다`() {
+    fun `상품 노출 정책과 상품 계약 존재 오류를 400 404 응답으로 전달한다`() {
         val failures = listOf(
             InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE),
-            InvalidRequestFieldException("imageUrl", "HTTP 또는 HTTPS 절대 URL이어야 합니다."),
             EntityNotFoundException(AdvertisementProductErrorCode.ADVERTISEMENT_PRODUCT_NOT_FOUND),
             EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND),
         ).iterator()
@@ -215,17 +221,13 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE"))
         mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(BANNER_REQUEST)))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
-            .andExpect(jsonPath("$.message").value("[imageUrl] HTTP 또는 HTTPS 절대 URL이어야 합니다."))
-        mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(BANNER_REQUEST)))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
         mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(BANNER_REQUEST)))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
 
-        Mockito.verify(adminAdvertisementExposureService, Mockito.times(4))
+        Mockito.verify(adminAdvertisementExposureService, Mockito.times(3))
             .createExposure(Mockito.any(CreateAdminAdvertisementExposureCommand::class.java) ?: exposureCommand())
     }
 
@@ -285,6 +287,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             UPDATE_REQUEST.replace("\"adLabel\":true", "\"adLabel\":null"),
             UPDATE_REQUEST.replace("\"contractId\":null", "\"contractId\":1.5"),
             UPDATE_REQUEST.replace("\"targetId\":null", "\"targetId\":\"12\""),
+            UPDATE_REQUEST.replace("https://example.com/assets/banner.png", "ftp://example.com/assets/banner.png"),
+            UPDATE_REQUEST.replace("\"linkUrl\":\"/jobs/5501\"", "\"linkUrl\":\"javascript:alert(1)\""),
             UPDATE_REQUEST.replace("\"endAt\":null", "\"endAt\":\"2026-11-01T00:00:00\",\"productId\":11"),
             UPDATE_REQUEST.replace("\"endAt\":null", "\"endAt\":null,\"exposed\":true"),
             UPDATE_REQUEST.replace("\"endAt\":null", "\"endAt\":null,\"displayOrder\":1"),

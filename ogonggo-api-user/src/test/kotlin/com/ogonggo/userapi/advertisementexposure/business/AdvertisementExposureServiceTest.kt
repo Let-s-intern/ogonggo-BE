@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisementexposure.business
 
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.implement.AdvertisementExposureReader
+import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposurePageDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -23,15 +24,18 @@ class AdvertisementExposureServiceTest {
         Mockito.`when`(exposure.imageUrl).thenReturn("https://example.com/banner.png")
         Mockito.`when`(exposure.linkUrl).thenReturn("/jobs/5501")
         Mockito.`when`(exposure.adLabel).thenReturn(true)
-        Mockito.`when`(reader.readShown(POSITION, NOW)).thenReturn(listOf(exposure))
+        Mockito.`when`(reader.readShownPage(POSITION, NOW, 0, 10)).thenReturn(
+            AdvertisementExposurePageDto(listOf(exposure), page = 0, size = 10, totalElements = 1, totalPages = 1),
+        )
         val service = AdvertisementExposureService(reader, CLOCK)
 
         // when
-        val results = service.getShown(POSITION)
+        val results = service.getShown(POSITION, 0, 10)
 
         // then
         assertEquals(
-            listOf(
+            AdvertisementExposurePageResult(
+                items = listOf(
                 AdvertisementExposureResult(
                     id = EXPOSURE_ID,
                     name = "샘플기업 인턴 채용",
@@ -39,10 +43,15 @@ class AdvertisementExposureServiceTest {
                     linkUrl = "/jobs/5501",
                     adLabel = true,
                 ),
+                ),
+                page = 0,
+                size = 10,
+                totalElements = 1,
+                totalPages = 1,
             ),
             results,
         )
-        Mockito.verify(reader).readShown(POSITION, NOW)
+        Mockito.verify(reader).readShownPage(POSITION, NOW, 0, 10)
     }
 
     private companion object {

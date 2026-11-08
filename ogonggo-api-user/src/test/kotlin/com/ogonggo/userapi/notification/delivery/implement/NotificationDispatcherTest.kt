@@ -128,6 +128,33 @@ class NotificationDispatcherTest {
     }
 
     @Test
+    @DisplayName("광고 계약 Slack sender도 공통 발송 실행기에서 호출한다")
+    fun `Slack 알림 provider 호출은 요청 스레드와 분리된 전용 실행기에서 한다`() {
+        // given
+        val notification = notification(id = 32, channel = NotificationChannel.SLACK).copy(
+            templateCode = "advertisement_contract_submitted",
+            recipientAddress = "advertisement-inquiry",
+        )
+        val manager = Mockito.mock(NotificationManager::class.java)
+        val result = NotificationDeliveryResult.Sent(null)
+        Mockito.`when`(manager.claimDue(now, 4)).thenReturn(listOf(notification), emptyList())
+        Mockito.`when`(manager.complete(32, "attempt-32", result, now)).thenReturn(true)
+        var providerThreadName: String? = null
+        val slackSender = sender(NotificationChannel.SLACK) {
+            providerThreadName = Thread.currentThread().name
+            result
+        }
+        val dispatcher = dispatcher(manager, listOf(slackSender))
+
+        // when
+        dispatcher.dispatch()
+
+        // then
+        assertEquals("notification-test", providerThreadName)
+        Mockito.verify(manager).complete(32, "attempt-32", result, now)
+    }
+
+    @Test
     @DisplayName("발송 결과는 전용 플랫폼 풀에서 기록한다")
     fun `결과 저장은 알림 DB 실행기에서 처리한다`() {
         // given

@@ -8,6 +8,7 @@ import com.ogonggo.adminapi.advertisementexposure.presentation.response.AdminAdv
 import com.ogonggo.adminapi.advertisementexposure.presentation.response.CreateAdminAdvertisementExposureResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.response.ErrorResponse
+import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -19,6 +20,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Max
 import org.springframework.http.ResponseEntity
 
 private const val EXPOSURE_BAD_REQUEST = "BAD_REQUEST: 필수 값, ID, URL, 기간 또는 상품 카테고리별 내용이 올바르지 않습니다."
@@ -33,7 +36,7 @@ interface AdminAdvertisementExposureApi {
     @Operation(
         operationId = "listAdvertisementExposures",
         summary = "상품 자리의 광고 노출 목록 조회",
-        description = "미삭제 노출을 displayOrder와 ID 오름차순으로 반환합니다. 꺼짐·기간 전·기간 종료 항목과 삭제된 상품 자리의 항목도 포함합니다. contractId를 생략하면 자체 홍보를 포함한 전체 노출을 반환합니다. advertiserCompanyName은 현재 계약의 companyName이며 자체 홍보는 null입니다.",
+        description = "미삭제 노출을 displayOrder와 ID 오름차순으로 페이지 조회합니다. page는 1부터 시작하고 size는 1~100이며 기본값은 1과 10입니다. 꺼짐·기간 전·기간 종료 항목과 삭제된 상품 자리의 항목도 포함합니다. contractId를 생략하면 자체 홍보를 포함한 전체 노출을 반환합니다. advertiserCompanyName은 현재 계약의 companyName이며 자체 홍보는 null입니다.",
     )
     @ApiResponses(
         value = [
@@ -51,15 +54,17 @@ interface AdminAdvertisementExposureApi {
         @Parameter(
             description = "조회할 상품 자리 ID",
             required = true,
-            schema = Schema(type = "integer", format = "int64", minimum = "1"),
+            schema = Schema(type = "integer", format = "int64"),
         )
         @Positive productId: Long,
         @Parameter(
             description = "계약 필터. 생략하면 모든 노출과 자체 홍보를 반환합니다.",
-            schema = Schema(type = "integer", format = "int64", minimum = "1"),
+            schema = Schema(type = "integer", format = "int64"),
         )
         @Positive contractId: Long?,
-    ): ResponseEntity<SuccessResponse<List<AdminAdvertisementExposureResponse>>>
+        @Parameter(description = "1부터 시작하는 페이지 번호", example = "1") @Min(1) page: Int,
+        @Parameter(description = "페이지 크기(1~100)", example = "10") @Min(1) @Max(100) size: Int,
+    ): ResponseEntity<SuccessResponse<PageResponse<AdminAdvertisementExposureResponse>>>
 
     @Operation(
         operationId = "createAdvertisementExposure",
@@ -110,7 +115,7 @@ interface AdminAdvertisementExposureApi {
         ],
     )
     fun updateExposure(
-        @Parameter(description = "수정할 노출 ID", required = true, schema = Schema(type = "integer", format = "int64", minimum = "1"))
+        @Parameter(description = "수정할 노출 ID", required = true, schema = Schema(type = "integer", format = "int64"))
         @Positive exposureId: Long,
         @Valid request: UpdateAdminAdvertisementExposureRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
@@ -130,7 +135,7 @@ interface AdminAdvertisementExposureApi {
         ],
     )
     fun changeExposureExposed(
-        @Parameter(description = "상태를 바꿀 노출 ID", required = true, schema = Schema(type = "integer", format = "int64", minimum = "1"))
+        @Parameter(description = "상태를 바꿀 노출 ID", required = true, schema = Schema(type = "integer", format = "int64"))
         @Positive exposureId: Long,
         @Valid request: ChangeAdminAdvertisementExposureExposedRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
@@ -150,7 +155,7 @@ interface AdminAdvertisementExposureApi {
         ],
     )
     fun moveExposure(
-        @Parameter(description = "이동할 노출 ID", required = true, schema = Schema(type = "integer", format = "int64", minimum = "1"))
+        @Parameter(description = "이동할 노출 ID", required = true, schema = Schema(type = "integer", format = "int64"))
         @Positive exposureId: Long,
         @Valid request: MoveAdminAdvertisementExposureRequest,
     ): ResponseEntity<SuccessResponse<Unit>>
@@ -170,7 +175,7 @@ interface AdminAdvertisementExposureApi {
         ],
     )
     fun deleteExposure(
-        @Parameter(description = "삭제할 노출 ID", required = true, schema = Schema(type = "integer", format = "int64", minimum = "1"))
+        @Parameter(description = "삭제할 노출 ID", required = true, schema = Schema(type = "integer", format = "int64"))
         @Positive exposureId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 }

@@ -6,8 +6,10 @@ import com.ogonggo.adminapi.advertisementproduct.presentation.response.AdminAdve
 import com.ogonggo.adminapi.advertisementproduct.presentation.response.CreateAdminAdvertisementProductResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.response.ErrorResponse
+import com.ogonggo.adminapi.response.PageResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -16,6 +18,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Max
 import org.springframework.http.ResponseEntity
 
 private const val PRODUCT_NOT_FOUND_DESCRIPTION = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
@@ -28,14 +32,17 @@ interface AdminAdvertisementProductApi {
     @Operation(
         operationId = "listAdvertisementProducts",
         summary = "광고 상품 목록 조회",
-        description = "삭제되지 않은 광고 상품을 카테고리와 상품 ID 순으로 반환합니다.",
+        description = "삭제되지 않은 광고 상품을 카테고리와 상품 ID 순으로 페이지 조회합니다. page는 1부터 시작하고 size는 1~100이며 기본값은 1과 10입니다.",
     )
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
         ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ApiResponse(responseCode = "403", description = "FORBIDDEN: 관리자 권한 없음", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
     ])
-    fun getProducts(): ResponseEntity<SuccessResponse<List<AdminAdvertisementProductResponse>>>
+    fun getProducts(
+        @Parameter(description = "1부터 시작하는 페이지 번호", example = "1") @Min(1) page: Int,
+        @Parameter(description = "페이지 크기(1~100)", example = "10") @Min(1) @Max(100) size: Int,
+    ): ResponseEntity<SuccessResponse<PageResponse<AdminAdvertisementProductResponse>>>
 
     @Operation(
         operationId = "createAdvertisementProduct",

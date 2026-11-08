@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.advertisementproduct.presentation
 
 import com.ogonggo.adminapi.advertisementproduct.business.AdminAdvertisementProductSaveCommand
 import com.ogonggo.adminapi.advertisementproduct.business.AdminAdvertisementProductResult
+import com.ogonggo.adminapi.advertisementproduct.business.AdminAdvertisementProductPageResult
 import com.ogonggo.adminapi.advertisementproduct.business.AdminAdvertisementProductService
 import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
@@ -56,8 +57,10 @@ class AdminAdvertisementProductControllerTest @Autowired constructor(
     @Test
     fun `관리자는 상품 목록을 관리자 응답 필드와 함께 조회한다`() {
         val registeredAt = LocalDateTime.parse("2026-11-07T17:00:00")
-        Mockito.`when`(adminAdvertisementProductService.getProducts()).thenReturn(
-            listOf(
+        val updatedAt = LocalDateTime.parse("2026-11-08T09:00:00")
+        Mockito.`when`(adminAdvertisementProductService.getProducts(0, 10)).thenReturn(
+            AdminAdvertisementProductPageResult(
+                items = listOf(
                 AdminAdvertisementProductResult(
                     id = PRODUCT_ID,
                     category = AdvertisementProductCategory.BANNER,
@@ -65,19 +68,26 @@ class AdminAdvertisementProductControllerTest @Autowired constructor(
                     name = "채용공고 홈 상단 배너",
                     price = 500_000,
                     registeredAt = registeredAt,
-                    updatedAt = registeredAt,
+                    updatedAt = updatedAt,
                 ),
+                ),
+                page = 0,
+                size = 10,
+                totalElements = 1,
+                totalPages = 1,
             ),
         )
 
         mockMvc.perform(admin(get(PATH)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data[0].id").value(PRODUCT_ID))
-            .andExpect(jsonPath("$.data[0].category").value("BANNER"))
-            .andExpect(jsonPath("$.data[0].position").value("JOB_HOME_TOP_BANNER"))
-            .andExpect(jsonPath("$.data[0].price").value(500_000))
-            .andExpect(jsonPath("$.data[0].registeredAt").value("2026-11-07T17:00:00"))
-            .andExpect(jsonPath("$.data[0].updatedAt").value("2026-11-07T17:00:00"))
+            .andExpect(jsonPath("$.data.items[0].id").value(PRODUCT_ID))
+            .andExpect(jsonPath("$.data.items[0].category").value("BANNER"))
+            .andExpect(jsonPath("$.data.items[0].position").value("JOB_HOME_TOP_BANNER"))
+            .andExpect(jsonPath("$.data.items[0].name").value("채용공고 홈 상단 배너"))
+            .andExpect(jsonPath("$.data.items[0].price").value(500_000))
+            .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-11-07T17:00:00"))
+            .andExpect(jsonPath("$.data.items[0].updatedAt").value("2026-11-08T09:00:00"))
+            .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
     }
 
     @Test

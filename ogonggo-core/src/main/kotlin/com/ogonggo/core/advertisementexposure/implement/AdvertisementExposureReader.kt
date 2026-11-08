@@ -3,11 +3,14 @@ package com.ogonggo.core.advertisementexposure.implement
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCode
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposureUpdateTargetDto
+import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposurePageDto
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureJpaRepository
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureQueryRepository
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.paging.validatePageRequest
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
@@ -53,6 +56,13 @@ class AdvertisementExposureReader internal constructor(
     fun readByProduct(productId: Long, contractId: Long? = null): List<AdvertisementExposure> =
         advertisementExposureQueryRepository.findByProduct(productId, contractId)
 
+    fun readByProductPage(productId: Long, contractId: Long?, page: Int, size: Int): AdvertisementExposurePageDto {
+        validatePageRequest(page, size)
+        return AdvertisementExposurePageDto.from(
+            advertisementExposureQueryRepository.findByProductPage(productId, contractId, PageRequest.of(page, size)),
+        )
+    }
+
     /**
      * 사용자 화면의 한 자리에서 지금 보이는 노출을 순서대로 준다. 지운 상품의 노출은 주지 않는다.
      * 광고 공고 노출이 가리키는 공고가 지워졌거나 게시 중이 아닌지는 공고를 붙이는 쪽이 거른다.
@@ -60,6 +70,19 @@ class AdvertisementExposureReader internal constructor(
     fun readShown(position: AdvertisementProductPosition, now: LocalDateTime): List<AdvertisementExposure> {
         val productIds = advertisementProductReader.readByPosition(position).map { checkNotNull(it.id) }
         return advertisementExposureQueryRepository.findShown(productIds, now)
+    }
+
+    fun readShownPage(
+        position: AdvertisementProductPosition,
+        now: LocalDateTime,
+        page: Int,
+        size: Int,
+    ): AdvertisementExposurePageDto {
+        validatePageRequest(page, size)
+        val productIds = advertisementProductReader.readByPosition(position).map { checkNotNull(it.id) }
+        return AdvertisementExposurePageDto.from(
+            advertisementExposureQueryRepository.findShownPage(productIds, now, PageRequest.of(page, size)),
+        )
     }
 
     private fun readActiveProductId(exposureId: Long): Long =

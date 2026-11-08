@@ -8,6 +8,14 @@ class AdvertisementProductService(
     private val advertisementProductReader: AdvertisementProductReader,
 ) {
 
-    fun getProducts(): List<AdvertisementProductResult> =
-        advertisementProductReader.readAll().map(AdvertisementProductResult::from)
+    fun getProducts(page: Int, size: Int): AdvertisementProductPageResult {
+        val result = advertisementProductReader.readPage(page, size)
+        return AdvertisementProductPageResult(
+            items = result.items.map(AdvertisementProductResult::from),
+            page = result.page,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+        )
+    }
 }

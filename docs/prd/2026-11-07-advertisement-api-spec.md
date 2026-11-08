@@ -35,9 +35,9 @@ UI에서만 관찰된 주차 예약·쿠폰·가입 동시 처리 등의 필드�
 | ID | 메서드·경로 | Request 신뢰도 | Response 신뢰도 | 분리 근거 |
 | --- | --- | --- | --- | --- |
 | U-01 | `POST /api/v1/advertisement-contracts` | 중간 | 높음 | 입력 필드는 core 신청 DTO와 대응한다. HTTP(S) URL·이메일 검증과 선택 인증을 구현했고 생성 ID는 core Appender가 반환한다. |
-| U-02 | `GET /api/v1/advertisement-products` | 높음 | 높음 | 요청 조건은 없고, 응답은 삭제 제외 상품 reader와 DB 필드를 사용한다. |
-| U-03 | `GET /api/v1/advertisement-exposures?position=...` | 높음 | 높음 | position enum과 다섯 공개 필드가 구현·계약 검증에 반영됐다. 공개 링크는 A-12 입력 정책을 그대로 따른다. |
-| A-01 | `GET /api/v1/admin/advertisement-products` | 높음 | 높음 | 추가 입력 없이 상품 조회 reader와 상품 필드를 반환한다. |
+| U-02 | `GET /api/v1/advertisement-products` | 높음 | 높음 | 기본 `page=1`, `size=10`으로 미삭제 상품을 페이지 조회하고 공통 `PageResponse`를 반환한다. |
+| U-03 | `GET /api/v1/advertisement-exposures?position=...&page=1&size=10` | 높음 | 높음 | position enum과 페이지 응답, 다섯 공개 필드가 구현·계약 검증에 반영됐다. 공개 링크는 A-12 입력 정책을 그대로 따른다. |
+| A-01 | `GET /api/v1/admin/advertisement-products` | 높음 | 높음 | 기본 `page=1`, `size=10`으로 상품을 페이지 조회하고 공통 `PageResponse`를 반환한다. |
 | A-02 | `POST /api/v1/admin/advertisement-products` | 높음 | 높음 | 생성 입력 필드·domain 제약과 생성 ID가 core에 대응한다. |
 | A-03 | `PUT /api/v1/admin/advertisement-products/{productId}` | 높음 | 높음 | core의 수정 동작과 P-01에서 정한 기존 노출 영향 정책을 따른다. position·price 누락 또는 null은 해제한다. 응답은 공통 성공 규칙을 따른다. |
 | A-04 | `DELETE /api/v1/admin/advertisement-products/{productId}` | 높음 | 높음 | 경로 ID로 소프트 삭제하고 공통 성공 규칙을 적용한다. |
@@ -47,7 +47,7 @@ UI에서만 관찰된 주차 예약·쿠폰·가입 동시 처리 등의 필드�
 | A-08 | `PATCH /api/v1/admin/advertisement-contracts/{contractId}/payment-amount` | 높음 | 높음 | nullable 정수 금액과 필수 키·null 해제 규칙을 채택해 요청 검증과 OpenAPI에 반영했다. |
 | A-09 | `POST /api/v1/admin/advertisement-contracts/{contractId}/products` | 높음 | 높음 | productId 입력, 연결 행 ID와 중복 연결 규칙이 core로 확인된다. |
 | A-10 | `DELETE /api/v1/admin/advertisement-contracts/{contractId}/products/{contractProductId}` | 높음 | 높음 | 계약·연결 행 경로와 소프트 삭제가 core에 대응한다. |
-| A-11 | `GET /api/v1/admin/advertisement-exposures?productId=&contractId=` | 높음 | 중간 | 필터와 노출 원본은 core에 있다. 제안한 광고주 회사명 파생 필드는 별도 조회 투영이다. |
+| A-11 | `GET /api/v1/admin/advertisement-exposures?productId=&contractId=&page=1&size=10` | 높음 | 중간 | 필터와 페이지 응답·노출 원본은 core에 있다. 제안한 광고주 회사명 파생 필드는 별도 조회 투영이다. |
 | A-12 | `POST /api/v1/admin/advertisement-exposures` | 높음 | 높음 | 평탄화 요청·category별 콘텐츠 및 URL 검증과 생성 응답 `data.id`를 P-04에서 구현·계약 검증했다. JOB_POSTING 대상 공고의 실제 적격성 확인은 별도 업무 규칙으로 미정이다. |
 | A-13 | `PUT /api/v1/admin/advertisement-exposures/{exposureId}` | 중간 | 높음 | 배너 URL·카테고리별 HTTP 검증은 A-12에서 채택해 테스트했다. PUT의 nullable 필드 누락·null은 전체 교체 값으로 적용하고 테스트했다. 중간은 JOB_POSTING 대상 공고의 실제 존재·게시·마감/노출 적격성 검증 규칙이 미정인 점에만 남긴다. |
 | A-14 | `PATCH /api/v1/admin/advertisement-exposures/{exposureId}/exposed` | 높음 | 높음 | boolean 상태 변경과 core 동작이 일치한다. |
@@ -62,7 +62,7 @@ HTTP API 19개 중 Request는 높음 17개·중간 2개, Response는 높음 18�
 | --- | --- | --- | --- | --- |
 | U-01 | POST | `/api/v1/advertisement-contracts` | 중간 | 폼 입력·상태는 core DTO를 따른다. HTTP 검증·선택 인증은 P-02에서 정해 구현했고 접수 알림은 P-07에서 응답 변경 없이 연결했다. |
 | U-02 | GET | `/api/v1/advertisement-products` | 높음 | 삭제 제외·정렬·출력 원본이 상품 reader와 DB에서 바로 정해진다. |
-| U-03 | GET | `/api/v1/advertisement-exposures` | 높음 | 필수 position, 여섯 BANNER 자리, 다섯 공개 필드, 빈 배열과 BAD_REQUEST 동작을 구현·계약 검증했다. 링크는 A-12 정책을 따른다. |
+| U-03 | GET | `/api/v1/advertisement-exposures` | 높음 | 필수 position, 여섯 BANNER 자리, 다섯 공개 필드와 페이지 응답, 빈 결과와 BAD_REQUEST 동작을 구현·계약 검증했다. 링크는 A-12 정책을 따른다. |
 | A-01 | GET | `/api/v1/admin/advertisement-products` | 높음 | 상품 reader에 조회·정렬 규칙이 있고 목록 목적이 명확하다. |
 | A-02 | POST | `/api/v1/admin/advertisement-products` | 높음 | 저장 DTO가 4개 필드를 그대로 정의하고 domain 검증이 존재한다. |
 | A-03 | PUT | `/api/v1/admin/advertisement-products/{productId}` | 높음 | core 수정 동작을 따르며, 기존 노출이 있어도 category·position 변경을 허용하고 기존 exposure 행은 product 참조를 유지한다. position·price 누락 또는 null은 해제한다. |
@@ -104,7 +104,9 @@ HTTP API 19개 중 높음 15개, 중간 4개다. 낮음은 아직 HTTP 경로가
 
 ### 2.2 성공·실패 본문
 
-모든 예시는 기존 성공 래퍼 `{status, message, data}`를 포함한다. 반환값 없는 성공도 200과 `data: null`이다. 페이지 없는 목록은 `data` 자체가 배열이고, 빈 결과는 null이 아니라 `[]`다.
+모든 예시는 기존 성공 래퍼 `{status, message, data}`를 포함한다. 반환값 없는 성공도 200과 `data: null`이다. 페이지 적용 목록은 `data: {items, pageInfo}`를 반환하고, 페이지 없는 목록은 `data` 자체가 배열이다. 목록이 비면 배열 또는 `items`가 `[]`다.
+
+U-02, U-03, A-01, A-11은 외부 `page`를 1부터 받고 기본 `page=1`, `size=10`을 적용한다. `size`는 1~100이며 core 내부에서는 0부터 계산한다. 다른 API의 페이지 규칙은 각 절에 적힌 값을 따른다.
 
 ```json
 {
@@ -242,7 +244,7 @@ POST /api/v1/advertisement-contracts
 - 희망 categories만 저장한다. 실제 상품 연결과 노출 생성은 각각 어드민 API로 수행한다. 신청으로 계정·공고·결제·구좌 예약을 자동 생성하지 않는다.
 - 신청 원문을 보존한다. 필수 문자열을 전역 trim하지 않는다. scheduleRequest·advertisementRequest만 공백일 때 null로 정리한다.
 - 반복 POST는 서로 다른 계약을 만든다. source·target 유니크 제약은 targetId가 null인 폼 중복 제출을 막지 않는다.
-- 계약 저장 커밋 이후 Slack 알림을 동기로 한 번 시도하고, 확인 메일은 전용 비동기 `ADVERTISEMENT_CONTRACT_TASK_EXECUTOR`에 예약한다. 포화 시 예약은 거절되며 요청 스레드에서 SMTP를 실행하지 않는다. Slack·메일 발송 실패나 예약 거절은 접수 성공을 바꾸지 않는다. 발송 결과·예상 견적·신청번호 같은 추가 응답은 두지 않는다.
+- 계약 저장 뒤 알림 적재를 별도 트랜잭션으로 시도한다. 공통 notification 대기열에 신청자 EMAIL과 영업 SLACK 행을 넣으며, 실제 발송은 공통 dispatcher가 처리한다. 계약 ID별 deduplication key로 중복 행을 막는다. 대기열 적재 실패도 접수 성공 응답을 바꾸지 않으며 U-01은 기존 `data.id`를 반환한다. 실제 전달은 응답에서 보장하지 않는다.
 - U-01은 Request DTO 검증과 기존 사용자 API 예외 처리기를 사용한다. 필드 제약 오류는 필드명을 포함한 400 `BAD_REQUEST`, JSON·enum 등 역직렬화 오류는 기본 문구의 400 `BAD_REQUEST`로 매핑한다. 이 동작은 컨트롤러 계약 테스트에 포함돼 있다.
 
 #### 예외
@@ -263,7 +265,12 @@ GET /api/v1/advertisement-products
 
 인증: 비회원 허용.
 
-요청 본문 없음.
+요청 본문 없음. `page`와 `size`는 선택이며 기본값은 각각 1과 10, 최대 size는 100이다.
+
+| 이름 | 위치 | 타입 | 필수 | 기본값 | 허용 값 | 설명 |
+| --- | --- | --- | --- | --- | --- | --- |
+| page | query | int32 | 아니오 | 1 | 1 이상 | 외부 페이지 번호 |
+| size | query | int32 | 아니오 | 10 | 1~100 | 페이지 크기 |
 
 성공 응답: 200
 
@@ -271,15 +278,18 @@ GET /api/v1/advertisement-products
 {
   "status": 200,
   "message": "요청이 성공했습니다.",
-  "data": [
-    {
-      "id": 11,
-      "category": "BANNER",
-      "position": "JOB_HOME_TOP_BANNER",
-      "name": "채용공고 홈 상단 배너",
-      "price": 500000
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": 11,
+        "category": "BANNER",
+        "position": "JOB_HOME_TOP_BANNER",
+        "name": "채용공고 홈 상단 배너",
+        "price": 500000
+      }
+    ],
+    "pageInfo": { "pageNum": 1, "pageSize": 10, "totalElements": 1, "totalPages": 1 }
+  }
 }
 ```
 
@@ -287,15 +297,19 @@ GET /api/v1/advertisement-products
 
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
-| data[].id | int64 | 아니오 | 상품 ID |
-| data[].category | string(enum) | 아니오 | 상품 카테고리 |
-| data[].position | string(enum) | 예 | 노출 자리. 외부 채널·자리 미정 상품은 null |
-| data[].name | string | 아니오 | 상품명 |
-| data[].price | int32 | 예 | 소개 가격. null은 견적 문의, 0과 다름 |
+| data.items[].id | int64 | 아니오 | 상품 ID |
+| data.items[].category | string(enum) | 아니오 | 상품 카테고리 |
+| data.items[].position | string(enum) | 예 | 노출 자리. 외부 채널·자리 미정 상품은 null |
+| data.items[].name | string | 아니오 | 상품명 |
+| data.items[].price | int32 | 예 | 소개 가격. null은 견적 문의, 0과 다름 |
+| data.pageInfo.pageNum | int32 | 아니오 | 1부터 시작하는 요청 페이지 |
+| data.pageInfo.pageSize | int32 | 아니오 | 요청 페이지 크기 |
+| data.pageInfo.totalElements | int64 | 아니오 | 미삭제 상품 수 |
+| data.pageInfo.totalPages | int32 | 아니오 | 전체 페이지 수, 결과가 없으면 0 |
 
 동작과 경계:
 
-- 요청 본문과 쿼리 필터가 없다. 삭제되지 않은 모든 상품을 category 선언 순서, id 오름차순으로 반환한다. 없으면 data=[]다.
+- 본문·필터는 없다. `page` 기본 1, `size` 기본 10·최대 100이다. 미삭제 상품 중 요청 페이지를 category 선언 순서, id 오름차순으로 반환한다. 없으면 `items=[]`다.
 - position·price는 null일 수 있다. 소개 가격이며 계약별 실제 금액이 아니다. 노출 불가능한 인스타그램·카카오톡 상품도 포함한다.
 - 선택은 categories로 U-01에 보낸다. 이 API의 상품 ID를 신청자가 계약에 바로 붙이는 방식으로 해석하지 않는다.
 
@@ -306,7 +320,7 @@ GET /api/v1/advertisement-products
 ### U-03. 자리별 노출 중인 배너 조회
 
 ```http
-GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER
+GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER&page=1&size=10
 ```
 
 확정 가능성: 높음. 조회·정렬은 core가 제공하며 공개 필드와 링크 처리를 P-05에서 확정해 구현했다.
@@ -321,15 +335,18 @@ GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER
 {
   "status": 200,
   "message": "요청이 성공했습니다.",
-  "data": [
-    {
-      "id": 501,
-      "name": "샘플기업 인턴 채용",
-      "imageUrl": "https://example.com/assets/banner.png",
-      "linkUrl": "/jobs/5501",
-      "adLabel": true
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": 501,
+        "name": "샘플기업 인턴 채용",
+        "imageUrl": "https://example.com/assets/banner.png",
+        "linkUrl": "/jobs/5501",
+        "adLabel": true
+      }
+    ],
+    "pageInfo": { "pageNum": 1, "pageSize": 10, "totalElements": 1, "totalPages": 1 }
+  }
 }
 ```
 
@@ -338,23 +355,29 @@ GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER
 | 이름 | 위치 | 타입 | 필수 | 기본값 | 허용 값 | 설명 |
 | --- | --- | --- | --- | --- | --- | --- |
 | position | query | string(enum) | 예 | 없음 | 현재 배너 position 6종 | 고정된 화면 자리. productId로 요청하지 않음 |
+| page | query | int32 | 아니오 | 1 | 1 이상 | 외부 페이지 번호 |
+| size | query | int32 | 아니오 | 10 | 1~100 | 페이지 크기 |
 
 응답 필드:
 
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
-| data[].id | int64 | 아니오 | 노출 ID |
-| data[].name | string | 아니오 | 배너 이름 |
-| data[].imageUrl | string | 아니오 | 배너 이미지 URL |
-| data[].linkUrl | string | 아니오 | 클릭할 외부 URL 또는 내부 경로. A-12 등록 때 허용한 값을 그대로 반환 |
-| data[].adLabel | boolean | 아니오 | 광고 표시 여부 |
+| data.items[].id | int64 | 아니오 | 노출 ID |
+| data.items[].name | string | 아니오 | 배너 이름 |
+| data.items[].imageUrl | string | 아니오 | 배너 이미지 URL |
+| data.items[].linkUrl | string | 아니오 | 클릭할 외부 URL 또는 내부 경로. A-12 등록 때 허용한 값을 그대로 반환 |
+| data.items[].adLabel | boolean | 아니오 | 광고 표시 여부 |
+| data.pageInfo.pageNum | int32 | 아니오 | 1부터 시작하는 요청 페이지 |
+| data.pageInfo.pageSize | int32 | 아니오 | 요청 페이지 크기 |
+| data.pageInfo.totalElements | int64 | 아니오 | 현재 자리에서 보이는 노출 수 |
+| data.pageInfo.totalPages | int32 | 아니오 | 전체 페이지 수, 결과가 없으면 0 |
 
 동작과 경계:
 
 - 본문 없음. 현재 position 6종은 모두 BANNER다. 따라서 이 API는 JOB_POSTING 광고를 반환하지 않으며 광고 공고용 자리와 응답은 연동 작업 F-01에서 미정으로 남긴다.
 - 서버 Clock의 현재 시각으로 미삭제 상품·미삭제 노출·exposed=true·기간 내 행만 반환한다. 시작·종료 시각은 양 끝을 포함한다. 기간 둘 다 null이면 상시다.
 - 동일 position에 여러 상품이 있어도 전체 노출을 displayOrder ASC, id ASC로 정렬한다. 고정 슬롯 수·랜덤·롤링·상위 N개 제한은 추가하지 않는다.
-- position은 유효하지만 상품·노출이 없으면 200과 빈 배열이다. 유효하지 않은 position은 400이다.
+- position은 유효하지만 상품·노출이 없으면 200과 `items=[]`다. 유효하지 않은 position은 400이다. 정렬은 `displayOrder ASC, id ASC`를 유지한다.
 - 공개 응답은 `{id, name, imageUrl, linkUrl, adLabel}`만 포함한다. 광고주·상품·계약 ID, 대상 메타데이터, 결제액·기간·연락처는 제외한다. `id`는 노출 ID이지 상품 ID나 계약 ID가 아니다.
 - `linkUrl`은 A-12의 HTTP(S) 절대 URL 또는 단일 `/` 내부 경로 허용 정책을 따른다. U-03은 추가 검증·정규화·재작성 정책을 두지 않고 저장된 값을 반환한다.
 
@@ -376,7 +399,12 @@ GET /api/v1/admin/advertisement-products
 
 인증: 관리자 Bearer 필수.
 
-요청 본문 없음.
+요청 본문 없음. `page`는 기본 1, `size`는 기본 10·최대 100이다.
+
+| 이름 | 위치 | 타입 | 필수 | 기본값 | 허용 값 | 설명 |
+| --- | --- | --- | --- | --- | --- | --- |
+| page | query | int32 | 아니오 | 1 | 1 이상 | 외부 페이지 번호 |
+| size | query | int32 | 아니오 | 10 | 1~100 | 페이지 크기 |
 
 성공 응답: 200
 
@@ -384,17 +412,20 @@ GET /api/v1/admin/advertisement-products
 {
   "status": 200,
   "message": "요청이 성공했습니다.",
-  "data": [
-    {
-      "id": 11,
-      "category": "BANNER",
-      "position": "JOB_HOME_TOP_BANNER",
-      "name": "채용공고 홈 상단 배너",
-      "price": 500000,
-      "registeredAt": "2026-11-07T17:00:00",
-      "updatedAt": "2026-11-07T17:00:00"
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": 11,
+        "category": "BANNER",
+        "position": "JOB_HOME_TOP_BANNER",
+        "name": "채용공고 홈 상단 배너",
+        "price": 500000,
+        "registeredAt": "2026-11-07T17:00:00",
+        "updatedAt": "2026-11-07T17:00:00"
+      }
+    ],
+    "pageInfo": { "pageNum": 1, "pageSize": 10, "totalElements": 1, "totalPages": 1 }
+  }
 }
 ```
 
@@ -402,17 +433,21 @@ GET /api/v1/admin/advertisement-products
 
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
-| data[].id | int64 | 아니오 | 상품 ID |
-| data[].category | string(enum) | 아니오 | 상품 카테고리 |
-| data[].position | string(enum) | 예 | 노출 자리. 외부 채널·자리 미정 상품은 null |
-| data[].name | string | 아니오 | 상품명 |
-| data[].price | int32 | 예 | 소개 가격. null은 견적 문의, 0과 다름 |
-| data[].registeredAt | string(date-time) | 아니오 | 생성 일시 |
-| data[].updatedAt | string(date-time) | 아니오 | 수정 일시 |
+| data.items[].id | int64 | 아니오 | 상품 ID |
+| data.items[].category | string(enum) | 아니오 | 상품 카테고리 |
+| data.items[].position | string(enum) | 예 | 노출 자리. 외부 채널·자리 미정 상품은 null |
+| data.items[].name | string | 아니오 | 상품명 |
+| data.items[].price | int32 | 예 | 소개 가격. null은 견적 문의, 0과 다름 |
+| data.items[].registeredAt | string(date-time) | 아니오 | 생성 일시 |
+| data.items[].updatedAt | string(date-time) | 아니오 | 수정 일시 |
+| data.pageInfo.pageNum | int32 | 아니오 | 1부터 시작하는 요청 페이지 |
+| data.pageInfo.pageSize | int32 | 아니오 | 요청 페이지 크기 |
+| data.pageInfo.totalElements | int64 | 아니오 | 미삭제 상품 수 |
+| data.pageInfo.totalPages | int32 | 아니오 | 전체 페이지 수, 결과가 없으면 0 |
 
 동작과 경계:
 
-- 본문·쿼리·페이지 없음. 삭제되지 않은 모든 상품을 category 선언 순서, id ASC로 반환한다. 없으면 [].
+- 본문·필터는 없다. `page` 기본 1, `size` 기본 10·최대 100이다. 미삭제 상품을 category 선언 순서, id ASC로 반환한다. 없으면 `items=[]`다.
 - 노출 세팅 탭에서는 JOB_POSTING·BANNER만 사용한다. 외부 채널 상품에도 판매 기록 관리를 위해 목록 항목은 존재한다.
 - 상품별 계약 수·노출 수·슬롯 수·쿠폰·판매 단위는 이 응답에 추가하지 않는다. 현재 DB 확정 필드에 없다.
 
@@ -1079,14 +1114,14 @@ DELETE /api/v1/admin/advertisement-contracts/{contractId}/products/{contractProd
 ### A-11. 상품 자리별 노출 목록 조회
 
 ```http
-GET /api/v1/admin/advertisement-exposures?productId=11&contractId=1001
+GET /api/v1/admin/advertisement-exposures?productId=11&contractId=1001&page=1&size=10
 ```
 
 확정 가능성: 중간. raw 목록·필터는 core로 정해지지만 광고주 표시 이름을 추가하는 응답은 새 설계다.
 
 인증: 관리자 Bearer 필수.
 
-요청 본문 없음.
+요청 본문 없음. `page`는 기본 1, `size`는 기본 10·최대 100이다.
 
 성공 응답: 200
 
@@ -1094,26 +1129,29 @@ GET /api/v1/admin/advertisement-exposures?productId=11&contractId=1001
 {
   "status": 200,
   "message": "요청이 성공했습니다.",
-  "data": [
-    {
-      "id": 501,
-      "productId": 11,
-      "contractId": 1001,
-      "name": "샘플기업 인턴 채용",
-      "imageUrl": "https://example.com/assets/banner.png",
-      "linkUrl": "/jobs/5501",
-      "targetType": null,
-      "targetId": null,
-      "adLabel": true,
-      "startAt": "2026-11-01T00:00:00",
-      "endAt": "2026-11-30T23:59:59",
-      "exposed": true,
-      "advertiserCompanyName": "샘플기업",
-      "displayOrder": 1,
-      "registeredAt": "2026-11-07T18:10:00",
-      "updatedAt": "2026-11-07T18:10:00"
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": 501,
+        "productId": 11,
+        "contractId": 1001,
+        "name": "샘플기업 인턴 채용",
+        "imageUrl": "https://example.com/assets/banner.png",
+        "linkUrl": "/jobs/5501",
+        "targetType": null,
+        "targetId": null,
+        "adLabel": true,
+        "startAt": "2026-11-01T00:00:00",
+        "endAt": "2026-11-30T23:59:59",
+        "exposed": true,
+        "advertiserCompanyName": "샘플기업",
+        "displayOrder": 1,
+        "registeredAt": "2026-11-07T18:10:00",
+        "updatedAt": "2026-11-07T18:10:00"
+      }
+    ],
+    "pageInfo": { "pageNum": 1, "pageSize": 10, "totalElements": 1, "totalPages": 1 }
+  }
 }
 ```
 
@@ -1123,38 +1161,43 @@ GET /api/v1/admin/advertisement-exposures?productId=11&contractId=1001
 | --- | --- | --- | --- | --- | --- | --- |
 | productId | query | int64 | 예 | 없음 | 1 이상 | 조회할 상품 자리 |
 | contractId | query | int64 | 아니오 | 필터 없음 | 1 이상 | 해당 계약의 노출만 조회 |
+| page | query | int32 | 아니오 | 1 | 1 이상 | 외부 페이지 번호 |
+| size | query | int32 | 아니오 | 10 | 1~100 | 페이지 크기 |
 
 응답 필드:
 
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
-| data[].id | int64 | 아니오 | 노출 ID |
-| data[].productId | int64 | 아니오 | 상품 자리 ID |
-| data[].contractId | int64 | 예 | 광고주 계약. 자체 홍보면 null |
-| data[].advertiserCompanyName | string | 예 | 계약 companyName의 조회 시점 값. 계약이 없으면 null |
-| data[].name | string | 예 | 배너 이름. 광고 공고면 null |
-| data[].imageUrl | string | 예 | 배너 이미지. 광고 공고면 null |
-| data[].linkUrl | string | 예 | 배너 목적지. 광고 공고면 null |
-| data[].targetType | string(enum) | 예 | 광고 공고 종류. 배너면 null |
-| data[].targetId | int64 | 예 | 광고 공고 ID. 배너면 null |
-| data[].adLabel | boolean | 아니오 | 광고 표시 |
-| data[].startAt | string(date-time) | 예 | 시작. 상시면 null |
-| data[].endAt | string(date-time) | 예 | 종료. 상시면 null |
-| data[].exposed | boolean | 아니오 | 수동 켜짐 값. 기간 내 실제 노출 여부와 다름 |
-| data[].displayOrder | int32 | 아니오 | 같은 productId의 순서. 삭제 뒤 공백이 남을 수 있음 |
-| data[].registeredAt | string(date-time) | 아니오 | 생성 일시 |
-| data[].updatedAt | string(date-time) | 아니오 | 수정 일시 |
+| data.items[].id | int64 | 아니오 | 노출 ID |
+| data.items[].productId | int64 | 아니오 | 상품 자리 ID |
+| data.items[].contractId | int64 | 예 | 광고주 계약. 자체 홍보면 null |
+| data.items[].advertiserCompanyName | string | 예 | 계약 companyName의 조회 시점 값. 계약이 없으면 null |
+| data.items[].name | string | 예 | 배너 이름. 광고 공고면 null |
+| data.items[].imageUrl | string | 예 | 배너 이미지. 광고 공고면 null |
+| data.items[].linkUrl | string | 예 | 배너 목적지. 광고 공고면 null |
+| data.items[].targetType | string(enum) | 예 | 광고 공고 종류. 배너면 null |
+| data.items[].targetId | int64 | 예 | 광고 공고 ID. 배너면 null |
+| data.items[].adLabel | boolean | 아니오 | 광고 표시 |
+| data.items[].startAt | string(date-time) | 예 | 시작. 상시면 null |
+| data.items[].endAt | string(date-time) | 예 | 종료. 상시면 null |
+| data.items[].exposed | boolean | 아니오 | 수동 켜짐 값. 기간 내 실제 노출 여부와 다름 |
+| data.items[].displayOrder | int32 | 아니오 | 같은 productId의 순서. 삭제 뒤 공백이 남을 수 있음 |
+| data.items[].registeredAt | string(date-time) | 아니오 | 생성 일시 |
+| data.items[].updatedAt | string(date-time) | 아니오 | 수정 일시 |
+| data.pageInfo.pageNum | int32 | 아니오 | 1부터 시작하는 요청 페이지 |
+| data.pageInfo.pageSize | int32 | 아니오 | 요청 페이지 크기 |
+| data.pageInfo.totalElements | int64 | 아니오 | 현재 필터의 미삭제 노출 수 |
+| data.pageInfo.totalPages | int32 | 아니오 | 전체 페이지 수, 결과가 없으면 0 |
 
 동작과 경계:
 
-- A-11은 일반 관리자 목록의 페이지 응답 규칙을 적용하지 않는 명시적 예외다. 요청에 page/size가 없고, 응답은 위 예시처럼 data 배열을 반환한다.
-- 본문 없음. productId는 필터이므로 존재하지 않는 상품 ID나 contractId는 200·빈 배열이다. 계약 필터는 자체 홍보만 조회하는 별도 모드를 포함하지 않는다.
+- `productId`는 필수 필터이고 `page` 기본 1, `size` 기본 10·최대 100이다. 존재하지 않는 상품 ID나 contractId는 200과 `items=[]`다. 계약 필터는 자체 홍보만 조회하는 별도 모드를 포함하지 않는다.
 - 꺼짐·기간 전·기간 종료 노출도 포함하고 삭제된 노출만 뺀다. 정렬은 displayOrder ASC, id ASC다.
 - core readByProduct에 맞춰 삭제된 상품의 노출도 ID로 조회할 수 있는 안이다. 공개 조회는 이와 달리 상품 삭제를 반영해 제외한다.
 - advertiserCompanyName은 contractId의 계약을 일괄 조회해 붙인 companyName이다. 외부 기업 프로필 이름이나 최신 공고 회사명으로 바꾸지 않는다. 계약이 없으면 null이다.
 - 새 status·실제 노출 중 플래그·집계값을 추가하지 않는다. exposed와 startAt·endAt을 그대로 반환한다.
 
-**구현 선택 (2026-11-08):** `productId`는 필수 양수, `contractId`는 선택 양수로 확정했다. 존재하지 않는 ID 필터는 core Reader 결과대로 200과 빈 배열을 반환한다. 소프트 삭제된 상품을 참조하는 미삭제 exposure 행도 포함한다. `advertiserCompanyName`은 core 계약 Reader의 일괄 조회에서 현재 계약 `companyName`을 가져오며 자체 홍보는 null이다. 외부 회사 프로필은 조회하지 않는다. 비활성·기간 밖 행도 포함하고 core의 `displayOrder ASC, id ASC` 순서를 유지한다.
+**구현 선택 (2026-11-08):** `productId`는 필수 양수, `contractId`는 선택 양수로 확정했다. 존재하지 않는 ID 필터는 core Reader 결과대로 200과 빈 `items`를 반환한다. 소프트 삭제된 상품을 참조하는 미삭제 exposure 행도 포함한다. `advertiserCompanyName`은 현재 계약 `companyName`을 가져오며 자체 홍보는 null이다. 비활성·기간 밖 행도 포함하고 `displayOrder ASC, id ASC` 순서를 유지한다.
 
 #### 예외
 
@@ -1164,7 +1207,7 @@ GET /api/v1/admin/advertisement-exposures?productId=11&contractId=1001
 | --- | --- | --- | --- |
 | 입력 누락·타입·enum·길이·범위·형식 오류 | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` 또는 `[필드] 검증 메시지` |
 
-선택 완료: 광고주 표시 필드는 `advertiserCompanyName`이며, 삭제된 상품 자리의 raw exposure 조회를 유지한다.
+선택 완료: 광고주 표시 필드는 `advertiserCompanyName`이며, 삭제된 상품 자리의 raw exposure 조회를 유지한다. 기본 페이지 1·크기 10, 최대 크기 100을 적용한다.
 
 ### A-12. 광고 노출 등록
 
@@ -1633,21 +1676,21 @@ Response 제안: 기존 카드 필드는 유지하고 광고 카드에만 노출
 
 ### F-02. 광고 신청 접수 Slack·메일 알림
 
-**구현 상태 (2026-11-08): 구현 완료.** 새 HTTP 경로·요청 필드·응답 필드는 추가하지 않았다. 계약 저장 ID를 받은 다음 Slack과 메일을 각각 한 번 시도한다. U-01의 201 및 `{ data: { id } }` 응답은 기존과 같다.
+**구현 상태 (2026-11-08): 구현 완료.** 새 HTTP 경로·요청 필드·응답 필드는 추가하지 않았다. 계약 저장 이후 공통 `notifications` 대기열에 EMAIL과 SLACK 행을 별도 트랜잭션으로 적재한다. U-01의 201 및 `{ data: { id } }` 응답은 기존과 같다.
 
-**알림 정책:** 영업 Slack은 기존 `ogonggo.slack.advertisement-inquiry` 웹훅을 사용한다. 계약 ID, 기업명, 공고명, 홍보 대상·목적, 신청 카테고리, 모집 마감일과 회신에 필요한 담당자 이름·이메일·전화번호만 포함한다. `scheduleRequest`와 `advertisementRequest` 자유 입력은 보내지 않는다. Slack 호출은 저장 후 동기로 한 번 실행하며 누락 설정이나 예외는 기록하고 접수를 성공 처리한다.
+**알림 정책:** `AdvertisementContractNotificationAppender`는 계약별 deduplication key로 `advertisement-contract:{contractId}:email`과 `advertisement-contract:{contractId}:slack`을 기록한다. 신청자 이메일은 수신 주소로 저장하고 Slack 수신 주소는 논리 이름 `advertisement-inquiry`로 저장한다. webhook 비밀값은 대기열에 넣지 않고 sender가 `ogonggo.slack.advertisement-inquiry`에서 읽는다. 메일은 `ADVERTISEMENT_CONTRACT_RECEIVED` 템플릿을 사용한다. Slack 메시지는 계약 ID, 기업명, 공고명, 홍보 대상·목적·카테고리·마감일 및 회신 연락처를 포함하고 자유 입력 요청은 포함하지 않는다. 메일은 신청 접수 요약을 포함한다.
 
-신청자 메일은 요청의 `email`로 보내고 발신자는 `ogonggo.mail.from`, SMTP 접속은 기존 `spring.mail.*`를 사용한다. 광고 문의 메일의 `ADVERTISEMENT_TASK_EXECUTOR`와 분리된 bounded `ADVERTISEMENT_CONTRACT_TASK_EXECUTOR`에 비동기 예약한다. 계약 실행기는 포화 시 `AbortPolicy`로 예약을 거절해 U-01 요청 스레드에서 SMTP를 실행하지 않는다. 예약 거절은 서비스가 기록하고 이미 저장된 계약 ID와 201 응답을 유지한다. 간결한 접수 내용과 선택 카테고리는 알리되 전화번호나 자유 입력 요청사항은 메일 본문에 복사하지 않는다. 빈 발신 주소는 발송을 건너뛰며 SMTP 실패와 executor 예약 예외는 접수 결과에 영향을 주지 않는다.
+실제 전송은 기존 공통 notification dispatcher와 EMAIL/SLACK sender가 담당한다. Slack webhook 호출은 `SlackNotificationSender`에서 공통 sender 규약에 맞춰 실행한다. Slack provider의 stale 처리 기준은 8분이며 장기 PROCESSING 행은 `UNKNOWN` 처리한다. 실패·미확인 전달은 U-01 응답에 포함되지 않으며 실제 수신을 보장하지 않는다.
 
-**실패·중복 정책:** 저장 실패 시 알림은 호출하지 않는다. Slack/SMTP 발송과 예약은 요청마다 최대 한 번 시도하며 자동 재시도, 알림 전용 멱등 키, 실패 기록 테이블은 추가하지 않았다. 발송 성공 여부는 U-01 응답에 포함되지 않는다. 재제출은 새 계약과 새 알림을 만들 수 있으며, Slack 응답 유실이나 SMTP 실패를 운영자가 UI에서 재전송할 기능은 없다. 실제 운영 웹훅·SMTP 전달은 scoped 테스트에서 검증하지 않았다.
+**실패·중복 정책:** 계약 저장 실패 전에는 알림 적재를 호출하지 않는다. 적재 예외는 기록하고 신청 성공을 유지한다. 계약 ID별 deduplication key는 같은 대기열 행의 중복 삽입을 막는다. 재제출은 새 계약 ID와 새 알림 행을 만들 수 있다. dispatcher의 발송·재처리 상태와 설정은 공통 notification 정책을 따른다. 실제 운영 웹훅·SMTP 전달은 scoped 테스트에서 검증하지 않았다.
 
-**완료 근거:** 서비스 저장·알림 순서, Slack 실패 및 메일 예약 실패 격리, 전용 executor의 포화 시 요청 스레드 실행 방지와 광고 문의 executor의 기존 `CallerRunsPolicy` 유지, Slack·메일 메시지와 U-01 controller/OpenAPI 계약을 사용자 API focused 테스트 26건으로 검증했다(service 6, Slack notifier 3, mail sender 4, controller 4, OpenAPI 8, executor configuration 1; 실패·오류·건너뜀 0). 실제 운영 Slack/SMTP 전달은 테스트하지 않았다. 상세 명령은 [구현 단계 문서](2026-11-07-advertisement-implementation-phases.md)의 P-07 결과를 따른다.
+**완료 근거:** 신청 DTO, 대기열 적재와 계약 ID별 deduplication key, EMAIL·SLACK 메시지 내용 및 공통 dispatcher에서 Slack sender 호출을 사용자 API 테스트로 검증했다. 실제 운영 Slack/SMTP 전달은 테스트하지 않았다. 최신 명령과 결과는 이 작업의 최종 보고에 기록한다.
 
 ## 7. 구현 선택과 후속 결정
 
 | 항목 | 이 명세의 제안 | 남은 선택 또는 P-01 결정 |
 | --- | --- | --- |
-| 응답 이름·투영 | 생성 data.id, 날짜 registeredAt, 계약 목록 요약·상세 분리 | P-01~P-05 구현 완료. A-11은 core 노출 필드와 현재 계약 회사명을 반환하고 U-03은 `{id, name, imageUrl, linkUrl, adLabel}`만 반환 |
+| 응답 이름·투영 | 생성 data.id, 날짜 registeredAt, 계약 목록 요약·상세 분리 | P-01~P-05 구현 완료. U-02·U-03·A-01·A-11은 기본 1페이지·10건의 `items`와 `pageInfo`를 반환하며, U-03은 `{id, name, imageUrl, linkUrl, adLabel}`만 반환 |
 | 공개 폼 인증 | 비회원·유효 토큰 선택, 잘못된 토큰은 비회원 | P-02 선택: 토큰 회원 행이 없는 경우도 비회원으로 처리. 인증 필터의 기존 의미와 충돌하지 않음 |
 | URL·이메일 검증 | 폼은 HTTP(S) 절대 URL·이메일 형식, 배너 링크는 내부 경로도 허용 | P-02에서 HTTP 경계 검증을 채택해 구현 |
 | 계약 목록 필터 | `source`, 복수 `status`, `promotionTarget`, `category`, `companyName`, `createdFrom`, `createdTo` | P-02 구현 완료. `page=1`, `size=20` (최대 100), core 0-based, ID 내림차순 |
@@ -1662,11 +1705,11 @@ Response 제안: 기존 카드 필드는 유지하고 광고 카드에만 노출
 | 삭제 재요청 | 현재 reader를 사용해 반복 삭제는 404 | 반복 200을 원하면 별도 reader·서비스 정책 변경 필요 |
 | 동시 순서 변경 | 등록은 상품 행 비관적 잠금 후 max+1, 이동은 전체 형제 목록의 인접 교환 | A-12와 A-13~A-16은 공통 상품 잠금 순서를 사용한다. 변경 전 `productId` 스칼라 조회, 상품 잠금, 대상 노출 잠금 순으로 진행하고 A-12/A-15 형제 조회는 current read다. P-06 focused 65건 통과; H2의 READ_COMMITTED·REPEATABLE_READ 테스트이며 운영 MySQL 검증은 별도 |
 | 광고 공고 연동 | 카드 메타데이터 확장 예시만 제안 | F-01의 자리·대상 API·목록 편입 조건·조합·페이징 결정 후 명세 구체화. A-12 등록 단계 대상 공고 검증 정책과 별개 |
-| 신청 알림 | U-01 저장 후 Slack·신청자 메일을 best-effort로 한 번씩 시도 | 기존 광고 문의 Slack webhook, `ogonggo.mail.from`, `spring.mail.*` 사용. Slack은 회신 연락처·계약 요약, 메일은 간결한 접수 확인. 재시도·중복 방지·실패 저장 없음 |
+| 신청 알림 | U-01 저장 뒤 EMAIL·SLACK 알림 행을 공통 대기열에 적재 | 계약 ID별 deduplication key를 사용한다. 공통 dispatcher가 전송하며 실제 전달은 U-01 응답에서 보장하지 않는다. Slack webhook 주소는 DB에 저장하지 않는다 |
 
 위 선택은 DB를 수정하거나 API 목록을 확대하는 승인이 아니다. 목 UI에서 발견한 가입·공고 동시 생성, 재고 예약, 쿠폰 계산, 8단계 진행, 성과 리포트·임시저장 API는 이번 명세의 필수 필드나 엔드포인트로 추가하지 않았다.
 
-구현 시 기존 사용자 API와 관리자 API의 독립 배포·응답 소유권을 유지한다. Request 검증은 Presentation에서, 상태·도메인 제약은 Business/core에서 처리한다. 계약 수정의 잠금 reader와 노출 순서 변경을 API 트랜잭션 안에서 사용하고, core require/check가 정상 입력 오류로 새어 나오지 않도록 검증한다.
+구현 시 기존 사용자 API와 관리자 API의 독립 배포·응답 소유권을 유지한다. 이번 convention follow-up은 U-02·U-03·A-01·A-11의 배열 응답을 공통 `PageResponse`로 바꾸고 조회에 page/size를 추가했다. Request 검증은 Presentation에서, 상태·도메인 제약은 Business/core에서 처리한다. 계약 수정의 잠금 reader와 노출 순서 변경을 API 트랜잭션 안에서 사용하고, core require/check가 정상 입력 오류로 새어 나오지 않도록 검증한다.
 
 ## 8. 근거와 검증 범위
 
@@ -1677,4 +1720,4 @@ Response 제안: 기존 카드 필드는 유지하고 광고 카드에만 노출
 - 기존 HTTP 규칙: [성공 응답](../architecture/api-response.md), [요청 검증](../architecture/api-request-validation.md), [예외 처리](../architecture/error-handling.md), [REST API 설계](../architecture/rest-api-design.md), [시간 처리](../architecture/time-handling.md)
 - 전체 사업·UI·DB 맥락: [비즈니스 맥락 문서](2026-11-07-advertisement-business-context.md)
 
-광고 core는 DB·core 기준 커밋 `9a975b354d9b748277725a8a3116b0ff6563c486`에서 시작한다. P-01~P-07 구현 범위에서는 고정 API 19개의 HTTP 계약을 변경하지 않았고, P-06 관리자 controller 13건, service 단위 테스트 11건, service DB 테스트 2건, OpenAPI 22건, core 노출 영속성 17건(총 65건)이 통과했다. DB 회귀 테스트는 H2에서 수행했다. 교차 필드 경합 테스트는 READ_COMMITTED, 삭제 상품 snapshot 테스트는 REPEATABLE_READ를 사용했으며 운영 MySQL의 실제 격리·잠금 동작은 검증하지 않았다. A-12 등록 단계의 JOB_POSTING 대상 공고 검증 정책과 F-01 광고 공고 배치 규칙은 각각 별도로 미정이다. P-07 테스트는 아래 구현 단계 문서에 기록하며 실제 운영 DB와 외부 메일·Slack 전달은 검증하지 않았다.
+광고 core는 DB·core 기준 커밋 `9a975b354d9b748277725a8a3116b0ff6563c486`에서 시작한다. P-01~P-07의 기존 검증 결과는 [구현 단계 문서](2026-11-07-advertisement-implementation-phases.md)에 역사적 실행 범위로 남아 있다. 이번 convention follow-up에서 네 목록 API의 HTTP 응답 계약을 배열에서 페이지 형식으로 변경했고, 추가된 Gradle 검증 명령과 결과는 최종 작업 보고에 기록한다. 동시성 테스트는 H2에서 수행하며 운영 MySQL의 실제 격리·잠금 동작은 검증하지 않았다. A-12 등록 단계의 JOB_POSTING 대상 공고 검증 정책과 F-01 광고 공고 배치 규칙은 각각 별도로 미정이다. 실제 운영 DB와 외부 메일·Slack 전달은 검증하지 않았다.

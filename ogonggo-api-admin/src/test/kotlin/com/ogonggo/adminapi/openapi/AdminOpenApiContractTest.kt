@@ -430,8 +430,6 @@ class AdminOpenApiContractTest @Autowired constructor(
         )
         assertEquals("integer", addProductRequest.at("/properties/productId/type").asText())
         assertEquals("int64", addProductRequest.at("/properties/productId/format").asText())
-        val productIdSchema = addProductRequest.at("/properties/productId")
-        assertEquals(1, productIdSchema.at("/minimum").asInt())
         assertTrue(addProduct.at("/responses/201/content/application~1json/schema/\$ref").asText().endsWith("CreateAdminAdvertisementContractProductResponse"))
     }
 
@@ -443,6 +441,7 @@ class AdminOpenApiContractTest @Autowired constructor(
         val create = document.at("$base/post")
         val request = document.at("/components/schemas/CreateAdminAdvertisementExposureRequest")
         val response = document.at("/components/schemas/AdminAdvertisementExposureResponse")
+        val createResponse = document.at("/components/schemas/CreateAdminAdvertisementExposureResponse")
 
         assertEquals("listAdvertisementExposures", list.at("/operationId").asText())
         assertEquals("createAdvertisementExposure", create.at("/operationId").asText())
@@ -452,17 +451,18 @@ class AdminOpenApiContractTest @Autowired constructor(
                 assertTrue(operation.at("/responses/$statusCode/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
             }
         }
-        assertEquals(listOf("productId", "contractId"), list.at("/parameters").map { it.at("/name").asText() })
+        listOf(list, create).forEach { operation ->
+            assertTrue(operation.at("/responses/400/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
+        }
+        assertEquals(listOf("productId", "contractId", "page", "size"), list.at("/parameters").map { it.at("/name").asText() })
         val productId = list.at("/parameters").first { it.at("/name").asText() == "productId" }
         val contractId = list.at("/parameters").first { it.at("/name").asText() == "contractId" }
         assertTrue(productId.at("/required").asBoolean())
         assertEquals("integer", productId.at("/schema/type").asText())
         assertEquals("int64", productId.at("/schema/format").asText())
-        assertEquals(1, productId.at("/schema/minimum").asInt())
         assertFalse(contractId.at("/required").asBoolean())
         assertEquals("integer", contractId.at("/schema/type").asText())
         assertEquals("int64", contractId.at("/schema/format").asText())
-        assertEquals(1, contractId.at("/schema/minimum").asInt())
         assertTrue(list.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertTrue(create.at("/responses/201").isObject)
         assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_PERIOD_INVALID"))
@@ -471,6 +471,9 @@ class AdminOpenApiContractTest @Autowired constructor(
             create.at("/responses/201/content/application~1json/schema/\$ref").asText()
                 .endsWith("CreateAdminAdvertisementExposureResponse"),
         )
+        assertEquals("integer", createResponse.at("/properties/id/type").asText())
+        assertEquals("int64", createResponse.at("/properties/id/format").asText())
+        assertTrue(createResponse.at("/required").any { it.asText() == "id" })
 
         assertEquals(setOf("productId", "adLabel", "exposed"), request.at("/required").map { it.asText() }.toSet())
         assertEquals("integer", request.at("/properties/productId/type").asText())
@@ -511,6 +514,9 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf(replace, exposed, move, delete).forEach { operation ->
             assertTrue(operation.at("/security/0/BearerAuth").isArray)
             assertTrue(operation.at("/responses/200").isObject)
+            assertTrue(
+                operation.at("/responses/400/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"),
+            )
             val successSchema = operation.at("/responses/200/content/application~1json/schema")
             val successSchemaRef = successSchema.at("/\$ref").asText()
             assertTrue(successSchemaRef.startsWith("#/components/schemas/"), "성공 응답 래퍼 참조가 없습니다: $successSchemaRef")
@@ -526,7 +532,6 @@ class AdminOpenApiContractTest @Autowired constructor(
             val exposureId = operation.at("/parameters").first { it.at("/name").asText() == "exposureId" }
             assertEquals("integer", exposureId.at("/schema/type").asText())
             assertEquals("int64", exposureId.at("/schema/format").asText())
-            assertEquals(1, exposureId.at("/schema/minimum").asInt())
         }
         assertTrue(replace.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertTrue(replace.at("/responses/404/description").asText().contains("ADVERTISEMENT_EXPOSURE_NOT_FOUND"))

@@ -1,7 +1,6 @@
 package com.ogonggo.adminapi.advertisementexposure.presentation.response
 
 import com.ogonggo.adminapi.advertisementexposure.business.AdminAdvertisementExposureResult
-import com.ogonggo.adminapi.advertisementexposure.business.CreateAdminAdvertisementExposureResult
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
@@ -57,6 +56,6 @@ data class AdminAdvertisementExposureResponse(
 
 data class CreateAdminAdvertisementExposureResponse(val id: Long) {
     companion object {
-        fun from(result: CreateAdminAdvertisementExposureResult) = CreateAdminAdvertisementExposureResponse(result.id)
+        fun from(id: Long) = CreateAdminAdvertisementExposureResponse(id)
     }
 }

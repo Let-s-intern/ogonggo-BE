@@ -11,8 +11,7 @@ import com.ogonggo.core.jpa.CoreJpaConfiguration
 import com.ogonggo.core.user.implement.UserAppender
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.dto.UserAppendDto
-import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractMailSender
-import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractSlackNotifier
+import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractNotificationAppender
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,8 +40,7 @@ internal class AdvertisementContractServiceMemberLinkPersistenceTest @Autowired 
         val service = AdvertisementContractService(
             userReader = userReader,
             advertisementContractAppender = advertisementContractAppender,
-            advertisementContractNotifier = Mockito.mock(AdvertisementContractSlackNotifier::class.java),
-            advertisementContractMailer = Mockito.mock(AdvertisementContractMailSender::class.java),
+            advertisementContractNotificationAppender = Mockito.mock(AdvertisementContractNotificationAppender::class.java),
         )
 
         // when

@@ -157,6 +157,21 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `계약 목록은 페이지 크기와 회사명 최대 길이를 허용한다`() {
+        val companyName = "x".repeat(100)
+        val condition = AdvertisementContractSearchCondition(companyName = companyName)
+        Mockito.`when`(adminAdvertisementContractService.getContracts(condition, 0, 100))
+            .thenReturn(AdminAdvertisementContractPageResult(emptyList(), 0, 100, 0, 0))
+
+        mockMvc.perform(admin(get(PATH).queryParam("companyName", companyName).queryParam("size", "100")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items").isEmpty)
+            .andExpect(jsonPath("$.data.pageInfo.pageSize").value(100))
+
+        Mockito.verify(adminAdvertisementContractService).getContracts(condition, 0, 100)
+    }
+
+    @Test
     fun `상세에는 희망 카테고리와 삭제 상품 표시를 포함한 상품을 반환한다`() {
         val detail = AdminAdvertisementContractDetailResult(
             id = CONTRACT_ID,
@@ -208,6 +223,12 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
     @Test
     fun `페이지 기간과 ID 검증 실패는 400이고 없는 상세는 404다`() {
         mockMvc.perform(admin(get(PATH).queryParam("page", "0")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        mockMvc.perform(admin(get(PATH).queryParam("size", "101")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        mockMvc.perform(admin(get(PATH).queryParam("companyName", "x".repeat(101))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
         mockMvc.perform(

@@ -12,8 +12,8 @@ class AdvertisementExposureService(
     private val clock: Clock,
 ) {
 
-    fun getShown(position: AdvertisementProductPosition): List<AdvertisementExposureResult> =
-        advertisementExposureReader
-            .readShown(position, LocalDateTime.now(clock))
-            .map(AdvertisementExposureResult::from)
+    fun getShown(position: AdvertisementProductPosition, page: Int, size: Int): AdvertisementExposurePageResult =
+        AdvertisementExposurePageResult.from(
+            advertisementExposureReader.readShownPage(position, LocalDateTime.now(clock), page, size),
+        )
 }

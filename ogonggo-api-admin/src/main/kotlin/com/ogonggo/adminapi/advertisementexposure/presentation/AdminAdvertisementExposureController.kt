@@ -8,6 +8,7 @@ import com.ogonggo.adminapi.advertisementexposure.presentation.request.UpdateAdm
 import com.ogonggo.adminapi.advertisementexposure.presentation.response.AdminAdvertisementExposureResponse
 import com.ogonggo.adminapi.advertisementexposure.presentation.response.CreateAdminAdvertisementExposureResponse
 import com.ogonggo.adminapi.response.SuccessResponse
+import com.ogonggo.adminapi.response.PageResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,11 +33,20 @@ class AdminAdvertisementExposureController(
     override fun getExposures(
         @RequestParam(name = "productId") productId: Long,
         @RequestParam(name = "contractId", required = false) contractId: Long?,
-    ): ResponseEntity<SuccessResponse<List<AdminAdvertisementExposureResponse>>> =
-        SuccessResponse.ok(
-            adminAdvertisementExposureService.getExposures(productId, contractId)
-                .map(AdminAdvertisementExposureResponse::from),
+        @RequestParam(name = "page", defaultValue = "1") page: Int,
+        @RequestParam(name = "size", defaultValue = "10") size: Int,
+    ): ResponseEntity<SuccessResponse<PageResponse<AdminAdvertisementExposureResponse>>> {
+        val result = adminAdvertisementExposureService.getExposures(productId, contractId, page - 1, size)
+        return SuccessResponse.ok(
+            PageResponse.fromZeroBased(
+                items = result.items.map(AdminAdvertisementExposureResponse::from),
+                page = result.page,
+                size = result.size,
+                totalElements = result.totalElements,
+                totalPages = result.totalPages,
+            ),
         )
+    }
 
     @PostMapping
     override fun createExposure(

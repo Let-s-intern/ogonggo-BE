@@ -4,8 +4,8 @@ import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractApp
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractFormAppendDto
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.advertisementcontract.toSafeLogThrowable
-import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractMailSender
-import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractSlackNotifier
+import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractNotificationAppender
+import com.ogonggo.userapi.advertisementcontract.implement.dto.AdvertisementContractNotificationDto
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -13,8 +13,7 @@ import org.springframework.stereotype.Service
 class AdvertisementContractService internal constructor(
     private val userReader: UserReader,
     private val advertisementContractAppender: AdvertisementContractAppender,
-    private val advertisementContractNotifier: AdvertisementContractSlackNotifier,
-    private val advertisementContractMailer: AdvertisementContractMailSender,
+    private val advertisementContractNotificationAppender: AdvertisementContractNotificationAppender,
 ) {
 
     fun createContract(userId: Long?, command: CreateAdvertisementContractCommand): Long {
@@ -41,22 +40,14 @@ class AdvertisementContractService internal constructor(
             ),
         )
 
-        val notification = AdvertisementContractNotification.from(contractId, command)
         try {
-            advertisementContractNotifier.notify(notification)
-        } catch (exception: RuntimeException) {
-            log.error(
-                "광고 계약 신청 Slack 알림에 실패했습니다. 신청은 저장돼 있습니다. contractId={}",
-                contractId,
-                exception.toSafeLogThrowable(),
+            val inserted = advertisementContractNotificationAppender.append(
+                AdvertisementContractNotificationDto.from(contractId, command),
             )
-        }
-        try {
-            advertisementContractMailer.sendConfirmation(notification)
-        } catch (exception: RuntimeException) {
-            // @Async executor 제출 거절도 접수 결과를 바꾸지 않는다.
+            log.info("광고 계약 신청 알림 적재 결과. contractId={}, inserted={}", contractId, inserted)
+        } catch (exception: Exception) {
             log.error(
-                "광고 계약 신청 확인 메일 예약에 실패했습니다. 신청은 저장돼 있습니다. contractId={}",
+                "광고 계약 신청 알림을 적재하지 못했습니다. 신청은 저장돼 있습니다. contractId={}",
                 contractId,
                 exception.toSafeLogThrowable(),
             )
@@ -67,35 +58,5 @@ class AdvertisementContractService internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(AdvertisementContractService::class.java)
-    }
-}
-
-/** 알림 어댑터에 전달하는 값이다. 자유 입력 요청사항은 외부 채널로 전달하지 않는다. */
-data class AdvertisementContractNotification(
-    val contractId: Long,
-    val promotionTarget: String,
-    val companyName: String,
-    val recruitmentTitle: String,
-    val recruitmentDeadline: String,
-    val purpose: String,
-    val categories: List<String>,
-    val managerName: String,
-    val email: String,
-    val phoneNumber: String,
-) {
-    companion object {
-        fun from(contractId: Long, command: CreateAdvertisementContractCommand): AdvertisementContractNotification =
-            AdvertisementContractNotification(
-                contractId = contractId,
-                promotionTarget = command.promotionTarget.desc,
-                companyName = command.companyName,
-                recruitmentTitle = command.recruitmentTitle,
-                recruitmentDeadline = command.recruitmentDeadline.toString(),
-                purpose = command.purpose.desc,
-                categories = command.categories.sortedBy { it.code }.map { it.desc },
-                managerName = command.managerName,
-                email = command.email,
-                phoneNumber = command.phoneNumber,
-            )
     }
 }

@@ -3,6 +3,7 @@ package com.ogonggo.core.advertisementproduct.implement
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
+import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,7 +16,12 @@ import java.time.LocalDateTime
 
 @DataJpaTest(showSql = false)
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
-@Import(AdvertisementProductAppender::class, AdvertisementProductManager::class, AdvertisementProductReader::class)
+@Import(
+    AdvertisementProductAppender::class,
+    AdvertisementProductManager::class,
+    AdvertisementProductReader::class,
+    AdvertisementProductQueryRepository::class,
+)
 internal class AdvertisementProductPersistenceTest @Autowired constructor(
     private val appender: AdvertisementProductAppender,
     private val manager: AdvertisementProductManager,
@@ -43,6 +49,8 @@ internal class AdvertisementProductPersistenceTest @Autowired constructor(
 
         // when
         val products = reader.readAll()
+        val firstPage = reader.readPage(page = 0, size = 3)
+        val secondPage = reader.readPage(page = 1, size = 3)
 
         // then
         assertEquals(
@@ -60,6 +68,12 @@ internal class AdvertisementProductPersistenceTest @Autowired constructor(
             ),
             products.map { it.category to checkNotNull(it.id) },
         )
+        assertEquals(listOf(postingFirst, postingSecond, bannerFirst), firstPage.items.map { it.id })
+        assertEquals(listOf(bannerSecond, instagramFirst, instagramSecond), secondPage.items.map { it.id })
+        assertEquals(10L, firstPage.totalElements)
+        assertEquals(4, firstPage.totalPages)
+        assertEquals(1, secondPage.page)
+        assertEquals(3, secondPage.size)
     }
 
     private fun append(category: AdvertisementProductCategory, name: String): Long = appender.append(

@@ -4,12 +4,17 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductJpaRepository
+import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
+import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductPageDto
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.paging.validatePageRequest
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 
 @Component
 class AdvertisementProductReader internal constructor(
     private val advertisementProductRepository: AdvertisementProductJpaRepository,
+    private val advertisementProductQueryRepository: AdvertisementProductQueryRepository,
 ) {
 
     /** 지우지 않은 상품을 읽는다. 지운 상품은 고치거나 계약·노출에 새로 붙일 수 없어 없는 것으로 본다. */
@@ -31,6 +36,19 @@ class AdvertisementProductReader internal constructor(
     fun readAll(): List<AdvertisementProduct> =
         advertisementProductRepository.findAllByDeletedAtIsNull()
             .sortedWith(compareBy<AdvertisementProduct>({ it.category.ordinal }, { it.id }))
+
+    /** 미삭제 상품을 기존 카테고리·ID 순서로 페이지 단위 조회한다. */
+    fun readPage(page: Int, size: Int): AdvertisementProductPageDto {
+        validatePageRequest(page, size)
+        val result = advertisementProductQueryRepository.findActivePage(PageRequest.of(page, size))
+        return AdvertisementProductPageDto(
+            items = result.content,
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+        )
+    }
 
     /** 이미 맺은 계약·노출이 가리키는 상품은 지웠어도 이름을 보여 줘야 하므로 지운 상품도 준다. */
     fun readAllByIds(productIds: Collection<Long>): Map<Long, AdvertisementProduct> =

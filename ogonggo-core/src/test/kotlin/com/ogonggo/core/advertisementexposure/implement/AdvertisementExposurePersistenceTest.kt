@@ -24,6 +24,7 @@ import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductAppen
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductManager
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
+import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
@@ -31,11 +32,15 @@ import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.boot.test.mock.mockito.SpyBean
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.annotation.Propagation
@@ -46,6 +51,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @DataJpaTest(showSql = false)
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
@@ -57,6 +63,7 @@ import java.util.concurrent.TimeUnit
     AdvertisementProductAppender::class,
     AdvertisementProductManager::class,
     AdvertisementProductReader::class,
+    AdvertisementProductQueryRepository::class,
     AdvertisementContractAppender::class,
     AdvertisementContractReader::class,
     AdvertisementContractQueryRepository::class,
@@ -73,6 +80,9 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
     private val entityManager: EntityManager,
     private val transactionManager: PlatformTransactionManager,
 ) {
+
+    @SpyBean
+    private lateinit var spiedProductReader: AdvertisementProductReader
 
     @Test
     fun `사용자 화면은 켜져 있고 기간 안인 그 자리 노출만 순서대로 준다`() {
@@ -386,7 +396,36 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("관리자와 공개 노출 목록은 안정된 순서로 페이지를 나누고 전체 건수를 반환한다")
+    fun `관리자와 공개 노출 목록은 안정된 순서로 페이지를 나누고 전체 건수를 반환한다`() {
+        // given
+        val productId = appendProduct(AdvertisementProductPosition.JOB_HOME_TOP_BANNER)
+        val first = append(productId)
+        val hidden = append(productId, exposed = false)
+        val last = append(productId)
+        flushAndClear()
+
+        // when
+        val adminFirstPage = reader.readByProductPage(productId, contractId = null, page = 0, size = 1)
+        val adminSecondPage = reader.readByProductPage(productId, contractId = null, page = 1, size = 1)
+        val shownFirstPage = reader.readShownPage(AdvertisementProductPosition.JOB_HOME_TOP_BANNER, NOW, page = 0, size = 1)
+        val shownSecondPage = reader.readShownPage(AdvertisementProductPosition.JOB_HOME_TOP_BANNER, NOW, page = 1, size = 1)
+
+        // then
+        assertEquals(listOf(first), adminFirstPage.items.map { it.id })
+        assertEquals(3L, adminFirstPage.totalElements)
+        assertEquals(3, adminFirstPage.totalPages)
+        assertEquals(listOf(hidden), adminSecondPage.items.map { it.id })
+        assertEquals(listOf(first), shownFirstPage.items.map { it.id })
+        assertEquals(2L, shownFirstPage.totalElements)
+        assertEquals(2, shownFirstPage.totalPages)
+        assertEquals(listOf(last), shownSecondPage.items.map { it.id })
+    }
+
+    @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Tag("concurrency")
+    @DisplayName("같은 상품에 동시에 등록하면 두 번째 등록은 상품 행 잠금을 기다린 뒤 순서를 계산한다")
     fun `같은 상품에 동시에 등록해도 잠금 뒤 max displayOrder를 계산한다`() {
         // given
         val transaction = TransactionTemplate(transactionManager).apply {
@@ -394,22 +433,45 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
         }
         val productId = checkNotNull(transaction.execute { appendProduct(AdvertisementProductPosition.JOB_HOME_TOP_BANNER) })
         val first = checkNotNull(transaction.execute { append(productId) })
-        val ready = CountDownLatch(2)
-        val start = CountDownLatch(1)
-        val executor = Executors.newFixedThreadPool(2)
+        val ownerHasProductLock = CountDownLatch(1)
+        val releaseOwner = CountDownLatch(1)
+        val waiterReachedLock = CountDownLatch(1)
+        val waiterThread = AtomicReference<Thread>()
+        val ownerThreadName = "advertisement-exposure-append-owner"
+        val waiterThreadName = "advertisement-exposure-append-waiter"
+        val ownerExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, ownerThreadName) }
+        val waiterExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, waiterThreadName) }
+        Mockito.doAnswer { invocation ->
+            when (Thread.currentThread().name) {
+                ownerThreadName -> invocation.callRealMethod().also {
+                    ownerHasProductLock.countDown()
+                    check(releaseOwner.await(10, TimeUnit.SECONDS)) { "첫 노출 등록의 잠금 해제 신호가 오지 않았습니다." }
+                }
+                waiterThreadName -> {
+                    waiterThread.set(Thread.currentThread())
+                    waiterReachedLock.countDown()
+                    invocation.callRealMethod()
+                }
+                else -> invocation.callRealMethod()
+            }
+        }.`when`(spiedProductReader).readForUpdate(productId)
 
         // when
-        val registrations = (1..2).map {
-            executor.submit<Long> {
-                ready.countDown()
-                check(start.await(10, TimeUnit.SECONDS)) { "동시 등록 시작 신호가 오지 않았습니다." }
-                checkNotNull(transaction.execute { append(productId) })
-            }
+        val firstRegistration = ownerExecutor.submit<Long> {
+            checkNotNull(transaction.execute { append(productId) })
         }
         try {
-            assertTrue(ready.await(10, TimeUnit.SECONDS), "두 등록 요청이 준비되어야 합니다.")
-            start.countDown()
-            registrations.forEach { it.get(20, TimeUnit.SECONDS) }
+            assertTrue(ownerHasProductLock.await(10, TimeUnit.SECONDS), "첫 등록이 상품 행 잠금을 얻어야 합니다.")
+            val secondRegistration = waiterExecutor.submit<Long> {
+                checkNotNull(transaction.execute { append(productId) })
+            }
+            assertTrue(waiterReachedLock.await(10, TimeUnit.SECONDS), "두 번째 등록이 상품 잠금 조회에 도달해야 합니다.")
+            awaitH2RowLockWait(checkNotNull(waiterThread.get()))
+            assertTrue(!secondRegistration.isDone, "두 번째 등록은 첫 등록의 상품 잠금이 풀리기 전 끝나면 안 됩니다.")
+
+            releaseOwner.countDown()
+            firstRegistration.get(20, TimeUnit.SECONDS)
+            secondRegistration.get(20, TimeUnit.SECONDS)
 
             // then
             val exposures = reader.readByProduct(productId)
@@ -417,9 +479,12 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
             assertEquals(listOf(1, 2, 3), exposures.map { it.displayOrder })
             assertTrue(exposures.any { it.id == first })
         } finally {
-            start.countDown()
-            executor.shutdownNow()
-            executor.awaitTermination(20, TimeUnit.SECONDS)
+            releaseOwner.countDown()
+            ownerExecutor.shutdownNow()
+            waiterExecutor.shutdownNow()
+            ownerExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            waiterExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            Mockito.reset(spiedProductReader)
             transaction.execute {
                 reader.readByProduct(productId).forEach { exposure ->
                     val exposureId = checkNotNull(exposure.id)
@@ -432,6 +497,8 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Tag("concurrency")
+    @DisplayName("노출 이동 조회는 등록과 같은 상품 행 잠금이 풀릴 때까지 기다린다")
     fun `이동 조회는 A-12 등록과 같은 상품 행 잠금이 풀릴 때까지 기다린다`() {
         // given
         val transaction = TransactionTemplate(transactionManager).apply {
@@ -443,17 +510,28 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
         val releaseProduct = CountDownLatch(1)
         val moveStarted = CountDownLatch(1)
         val moveCompleted = CountDownLatch(1)
-        val executor = Executors.newFixedThreadPool(2)
+        val moveLockRequestReached = CountDownLatch(1)
+        val moveThread = AtomicReference<Thread>()
+        val moveThreadName = "advertisement-exposure-move-waiter"
+        val ownerExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "advertisement-exposure-lock-owner") }
+        val moveExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, moveThreadName) }
+        Mockito.doAnswer { invocation ->
+            if (Thread.currentThread().name == moveThreadName) {
+                moveThread.set(Thread.currentThread())
+                moveLockRequestReached.countDown()
+            }
+            invocation.callRealMethod()
+        }.`when`(spiedProductReader).readForOrderUpdate(productId)
 
         // when
-        val lockOwner = executor.submit {
+        val lockOwner = ownerExecutor.submit {
             transaction.execute {
                 productReader.readForUpdate(productId)
                 productLocked.countDown()
                 check(releaseProduct.await(10, TimeUnit.SECONDS)) { "상품 잠금 해제 신호가 오지 않았습니다." }
             }
         }
-        val moveReader = executor.submit {
+        val moveReader = moveExecutor.submit {
             check(productLocked.await(10, TimeUnit.SECONDS)) { "상품 잠금이 준비되지 않았습니다." }
             transaction.execute {
                 moveStarted.countDown()
@@ -465,7 +543,9 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
         try {
             assertTrue(productLocked.await(10, TimeUnit.SECONDS), "첫 트랜잭션이 상품 행을 잠가야 합니다.")
             assertTrue(moveStarted.await(10, TimeUnit.SECONDS), "이동 조회가 시작되어야 합니다.")
-            assertTrue(!moveCompleted.await(300, TimeUnit.MILLISECONDS), "이동 조회는 기존 상품 잠금이 풀리기 전 완료되면 안 됩니다.")
+            assertTrue(moveLockRequestReached.await(10, TimeUnit.SECONDS), "이동 조회가 상품 잠금 조회에 도달해야 합니다.")
+            awaitH2RowLockWait(checkNotNull(moveThread.get()))
+            assertTrue(moveCompleted.count > 0L, "이동 조회가 상품 잠금 해제 전에 완료되면 안 됩니다.")
             releaseProduct.countDown()
             lockOwner.get(20, TimeUnit.SECONDS)
             moveReader.get(20, TimeUnit.SECONDS)
@@ -474,8 +554,11 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
             assertTrue(moveCompleted.count == 0L, "상품 잠금 해제 뒤 이동 조회가 완료되어야 합니다.")
         } finally {
             releaseProduct.countDown()
-            executor.shutdownNow()
-            executor.awaitTermination(20, TimeUnit.SECONDS)
+            ownerExecutor.shutdownNow()
+            moveExecutor.shutdownNow()
+            ownerExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            moveExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            Mockito.reset(spiedProductReader)
             transaction.execute {
                 reader.readByProduct(productId).forEach { exposure ->
                     manager.delete(reader.readForUpdate(checkNotNull(exposure.id)), NOW)
@@ -487,6 +570,8 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Tag("concurrency")
+    @DisplayName("순서 이동 중인 노출의 삭제는 상품 잠금을 기다려 삭제 상태를 보존한다")
     fun `A-15 순서 이동 중 A-16 삭제는 상품 잠금을 기다려 삭제 상태를 보존한다`() {
         // given
         val transaction = TransactionTemplate(transactionManager).apply {
@@ -500,10 +585,21 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
         val allowMove = CountDownLatch(1)
         val deleteAttempting = CountDownLatch(1)
         val deleteCompleted = CountDownLatch(1)
-        val executor = Executors.newFixedThreadPool(2)
+        val deleteLockRequestReached = CountDownLatch(1)
+        val deleteThread = AtomicReference<Thread>()
+        val deleteThreadName = "advertisement-exposure-delete-waiter"
+        val moveExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "advertisement-exposure-move-owner") }
+        val deleteExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, deleteThreadName) }
+        Mockito.doAnswer { invocation ->
+            if (Thread.currentThread().name == deleteThreadName) {
+                deleteThread.set(Thread.currentThread())
+                deleteLockRequestReached.countDown()
+            }
+            invocation.callRealMethod()
+        }.`when`(spiedProductReader).readForOrderUpdate(productId)
 
         // when
-        val move = executor.submit {
+        val move = moveExecutor.submit {
             transaction.execute {
                 val exposure = reader.readForMove(middle)
                 // A-15's initial ordinary read has established a snapshot; also keep the changing sibling managed.
@@ -514,7 +610,7 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
                 repository.flush()
             }
         }
-        val delete = executor.submit {
+        val delete = deleteExecutor.submit {
             check(moveLockedAndLoadedSiblings.await(10, TimeUnit.SECONDS)) { "순서 이동 상품 잠금이 준비되지 않았습니다." }
             transaction.execute {
                 // Establish A-16's ordinary lookup before it tries to follow the product → exposure lock order.
@@ -528,10 +624,9 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
         try {
             assertTrue(moveLockedAndLoadedSiblings.await(10, TimeUnit.SECONDS), "A-15가 상품을 잠그고 형제를 읽어야 합니다.")
             assertTrue(deleteAttempting.await(10, TimeUnit.SECONDS), "A-16 삭제가 잠금을 요청해야 합니다.")
-            assertTrue(
-                !deleteCompleted.await(300, TimeUnit.MILLISECONDS),
-                "A-16은 A-15가 같은 상품 행 잠금을 해제할 때까지 기다려야 합니다.",
-            )
+            assertTrue(deleteLockRequestReached.await(10, TimeUnit.SECONDS), "A-16이 상품 잠금 조회에 도달해야 합니다.")
+            awaitH2RowLockWait(checkNotNull(deleteThread.get()))
+            assertTrue(deleteCompleted.count > 0L, "A-16은 A-15가 같은 상품 행 잠금을 풀기 전 끝나면 안 됩니다.")
             allowMove.countDown()
             move.get(20, TimeUnit.SECONDS)
             delete.get(20, TimeUnit.SECONDS)
@@ -544,8 +639,11 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
             assertEquals(listOf(1, 3), live.map { it.displayOrder })
         } finally {
             allowMove.countDown()
-            executor.shutdownNow()
-            executor.awaitTermination(20, TimeUnit.SECONDS)
+            moveExecutor.shutdownNow()
+            deleteExecutor.shutdownNow()
+            moveExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            deleteExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            Mockito.reset(spiedProductReader)
             transaction.execute {
                 reader.readByProduct(productId).forEach { exposure ->
                     manager.delete(reader.readForUpdate(checkNotNull(exposure.id)), NOW)
@@ -565,6 +663,20 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
 
         // then
         assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND, exception.errorCode)
+    }
+
+    private fun awaitH2RowLockWait(thread: Thread) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        var lastStack: Array<StackTraceElement> = emptyArray()
+        while (System.nanoTime() < deadline) {
+            lastStack = thread.stackTrace
+            val isWaiting = thread.state in setOf(Thread.State.WAITING, Thread.State.TIMED_WAITING, Thread.State.BLOCKED)
+            if (isWaiting && lastStack.any { it.className.startsWith("org.h2.") }) return
+            Thread.sleep(10)
+        }
+        throw AssertionError(
+            "대기 스레드가 H2 잠금 대기에 도달하지 않았습니다. state=${thread.state}, stack=${lastStack.joinToString(" <- ")}",
+        )
     }
 
     private fun appendProduct(position: AdvertisementProductPosition): Long = productAppender.append(

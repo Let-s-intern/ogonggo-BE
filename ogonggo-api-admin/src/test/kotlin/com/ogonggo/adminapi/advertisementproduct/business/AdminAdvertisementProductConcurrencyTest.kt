@@ -18,10 +18,13 @@ import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.SpyBean
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionTemplate
@@ -29,6 +32,7 @@ import java.time.LocalDate
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @Tag("concurrency")
 @SpringBootTest(
@@ -50,7 +54,11 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
     private val transactionManager: PlatformTransactionManager,
 ) {
 
+    @SpyBean
+    private lateinit var spiedProductReader: AdvertisementProductReader
+
     @Test
+    @DisplayName("수정이 상품 잠금을 먼저 얻으면 대기한 삭제는 수정 값이 반영된 뒤 상품을 삭제한다")
     fun `수정이 먼저 상품 잠금을 얻으면 수정 값이 반영된 뒤 삭제 상태를 유지한다`() {
         // given
         val productId = appendProduct()
@@ -59,18 +67,29 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
         val allowUpdateCommit = CountDownLatch(1)
         val deleteStarted = CountDownLatch(1)
         val deleteCompleted = CountDownLatch(1)
-        val executor = Executors.newFixedThreadPool(2)
+        val deleteLockRequestReached = CountDownLatch(1)
+        val deleteThread = AtomicReference<Thread>()
+        val deleteThreadName = "advertisement-product-delete-waiter"
+        val updateExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "advertisement-product-update-owner") }
+        val deleteExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, deleteThreadName) }
         val command = updatedCommand()
+        Mockito.doAnswer { invocation ->
+            if (Thread.currentThread().name == deleteThreadName) {
+                deleteThread.set(Thread.currentThread())
+                deleteLockRequestReached.countDown()
+            }
+            invocation.callRealMethod()
+        }.`when`(spiedProductReader).readForUpdate(productId)
 
         // when
-        val update = executor.submit {
+        val update = updateExecutor.submit {
             newTransaction().execute {
                 productService.replaceProduct(productId, command)
                 updatePrepared.countDown()
                 check(allowUpdateCommit.await(10, TimeUnit.SECONDS)) { "상품 수정 커밋 신호를 받지 못했습니다." }
             }
         }
-        val delete = executor.submit {
+        val delete = deleteExecutor.submit {
             check(updatePrepared.await(10, TimeUnit.SECONDS)) { "상품 수정 트랜잭션이 준비되어야 합니다." }
             deleteStarted.countDown()
             productService.deleteProduct(productId).also { deleteCompleted.countDown() }
@@ -79,7 +98,9 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
         try {
             assertTrue(updatePrepared.await(10, TimeUnit.SECONDS), "상품 수정이 잠금 안에서 완료되어야 합니다.")
             assertTrue(deleteStarted.await(10, TimeUnit.SECONDS), "상품 삭제 요청이 시작되어야 합니다.")
-            assertFalse(deleteCompleted.await(300, TimeUnit.MILLISECONDS), "상품 삭제는 수정 트랜잭션의 잠금 해제 전 완료되면 안 됩니다.")
+            assertTrue(deleteLockRequestReached.await(10, TimeUnit.SECONDS), "삭제가 상품 잠금 조회에 도달해야 합니다.")
+            awaitH2RowLockWait(checkNotNull(deleteThread.get()))
+            assertFalse(deleteCompleted.count == 0L, "상품 삭제가 수정 트랜잭션의 잠금 해제 전에 완료되면 안 됩니다.")
             allowUpdateCommit.countDown()
             update.get(20, TimeUnit.SECONDS)
             delete.get(20, TimeUnit.SECONDS)
@@ -94,12 +115,16 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
             assertHiddenFromListsAndCannotBeLinked(productId, contractId)
         } finally {
             allowUpdateCommit.countDown()
-            executor.shutdownNow()
-            executor.awaitTermination(20, TimeUnit.SECONDS)
+            updateExecutor.shutdownNow()
+            deleteExecutor.shutdownNow()
+            updateExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            deleteExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            Mockito.reset(spiedProductReader)
         }
     }
 
     @Test
+    @DisplayName("삭제가 상품 잠금을 먼저 얻으면 대기한 수정은 상품 없음으로 거부된다")
     fun `삭제가 먼저 상품 잠금을 얻으면 대기한 수정은 없는 상품으로 거부된다`() {
         // given
         val productId = appendProduct()
@@ -108,17 +133,28 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
         val allowDeleteCommit = CountDownLatch(1)
         val updateStarted = CountDownLatch(1)
         val updateCompleted = CountDownLatch(1)
-        val executor = Executors.newFixedThreadPool(2)
+        val updateLockRequestReached = CountDownLatch(1)
+        val updateThread = AtomicReference<Thread>()
+        val updateThreadName = "advertisement-product-update-waiter"
+        val deleteExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "advertisement-product-delete-owner") }
+        val updateExecutor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, updateThreadName) }
+        Mockito.doAnswer { invocation ->
+            if (Thread.currentThread().name == updateThreadName) {
+                updateThread.set(Thread.currentThread())
+                updateLockRequestReached.countDown()
+            }
+            invocation.callRealMethod()
+        }.`when`(spiedProductReader).readForUpdate(productId)
 
         // when
-        val delete = executor.submit {
+        val delete = deleteExecutor.submit {
             newTransaction().execute {
                 productService.deleteProduct(productId)
                 deletePrepared.countDown()
                 check(allowDeleteCommit.await(10, TimeUnit.SECONDS)) { "상품 삭제 커밋 신호를 받지 못했습니다." }
             }
         }
-        val update = executor.submit<Result<Unit>> {
+        val update = updateExecutor.submit<Result<Unit>> {
             check(deletePrepared.await(10, TimeUnit.SECONDS)) { "상품 삭제 트랜잭션이 준비되어야 합니다." }
             updateStarted.countDown()
             runCatching { productService.replaceProduct(productId, updatedCommand()) }
@@ -128,7 +164,9 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
         try {
             assertTrue(deletePrepared.await(10, TimeUnit.SECONDS), "상품 삭제가 잠금 안에서 완료되어야 합니다.")
             assertTrue(updateStarted.await(10, TimeUnit.SECONDS), "상품 수정 요청이 시작되어야 합니다.")
-            assertFalse(updateCompleted.await(300, TimeUnit.MILLISECONDS), "상품 수정은 삭제 트랜잭션의 잠금 해제 전 완료되면 안 됩니다.")
+            assertTrue(updateLockRequestReached.await(10, TimeUnit.SECONDS), "수정이 상품 잠금 조회에 도달해야 합니다.")
+            awaitH2RowLockWait(checkNotNull(updateThread.get()))
+            assertFalse(updateCompleted.count == 0L, "상품 수정이 삭제 트랜잭션의 잠금 해제 전에 완료되면 안 됩니다.")
             allowDeleteCommit.countDown()
             delete.get(20, TimeUnit.SECONDS)
 
@@ -142,13 +180,30 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
             assertHiddenFromListsAndCannotBeLinked(productId, contractId)
         } finally {
             allowDeleteCommit.countDown()
-            executor.shutdownNow()
-            executor.awaitTermination(20, TimeUnit.SECONDS)
+            deleteExecutor.shutdownNow()
+            updateExecutor.shutdownNow()
+            deleteExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            updateExecutor.awaitTermination(20, TimeUnit.SECONDS)
+            Mockito.reset(spiedProductReader)
         }
     }
 
+    private fun awaitH2RowLockWait(thread: Thread) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        var lastStack: Array<StackTraceElement> = emptyArray()
+        while (System.nanoTime() < deadline) {
+            lastStack = thread.stackTrace
+            val isWaiting = thread.state in setOf(Thread.State.WAITING, Thread.State.TIMED_WAITING, Thread.State.BLOCKED)
+            if (isWaiting && lastStack.any { it.className.startsWith("org.h2.") }) return
+            Thread.sleep(10)
+        }
+        throw AssertionError(
+            "대기 스레드가 H2 잠금 대기에 도달하지 않았습니다. state=${thread.state}, stack=${lastStack.joinToString(" <- ")}",
+        )
+    }
+
     private fun assertHiddenFromListsAndCannotBeLinked(productId: Long, contractId: Long) {
-        assertFalse(productService.getProducts().any { it.id == productId }, "관리자 상품 목록에 삭제 상품이 없어야 합니다.")
+        assertFalse(productService.getProducts(0, 100).items.any { it.id == productId }, "관리자 상품 목록에 삭제 상품이 없어야 합니다.")
         assertFalse(productReader.readAll().any { it.id == productId }, "사용자 상품 목록의 공통 reader에서 삭제 상품이 없어야 합니다.")
 
         val error = runCatching { contractService.addProduct(contractId, productId) }.exceptionOrNull()

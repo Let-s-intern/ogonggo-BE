@@ -15,8 +15,9 @@ import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductS
 import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -29,7 +30,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicReference
 
 @SpringBootTest(
     properties = [
@@ -59,7 +60,10 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `A-13 returns product not found when deletion commits after the exposure snapshot`() {
+    @Tag("concurrency")
+    @DisplayName("노출 snapshot 조회 뒤 상품 삭제가 커밋되면 수정은 상품 없음으로 거부한다")
+    fun `노출 snapshot 조회 뒤 상품 삭제가 커밋되면 수정은 상품 없음으로 거부한다`() {
+        // given
         val productId = checkNotNull(
             transaction.execute {
                 productAppender.append(
@@ -107,12 +111,14 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
         }
 
         try {
+            // when
             assertTrue(snapshotEstablished.await(10, TimeUnit.SECONDS), "A-13 트랜잭션이 노출 조회 snapshot을 만들어야 합니다.")
             transaction.execute {
                 productManager.delete(productReader.readForUpdate(productId), NOW)
             }
             continueUpdate.countDown()
 
+            // then
             val exception = update.get(20, TimeUnit.SECONDS).exceptionOrNull()
             assertTrue(exception is EntityNotFoundException, "삭제된 상품 수정은 상품 not found여야 합니다.")
             assertEquals(
@@ -127,7 +133,10 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `A-13 content update preserves A-14 exposure change committed while waiting for product lock`() {
+    @Tag("concurrency")
+    @DisplayName("상품 잠금을 기다린 노출 수정은 그 사이 커밋된 켜짐 상태를 보존한다")
+    fun `상품 잠금을 기다린 노출 수정은 그 사이 커밋된 켜짐 상태를 보존한다`() {
+        // given
         val productId = checkNotNull(
             transaction.execute {
                 productAppender.append(
@@ -161,10 +170,12 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
 
         val productLocked = CountDownLatch(1)
         val updateReachedProductLock = CountDownLatch(1)
+        val updateThread = AtomicReference<Thread>()
         val allowA14Change = CountDownLatch(1)
         val updateThreadName = "p06-cross-field-content-update"
         Mockito.doAnswer { invocation ->
             if (Thread.currentThread().name == updateThreadName) {
+                updateThread.set(Thread.currentThread())
                 updateReachedProductLock.countDown()
             }
             invocation.callRealMethod()
@@ -193,15 +204,15 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
         }
 
         try {
+            // when
             assertTrue(productLocked.await(10, TimeUnit.SECONDS), "A-14 쪽 트랜잭션이 상품 행을 잠가야 합니다.")
             assertTrue(updateReachedProductLock.await(10, TimeUnit.SECONDS), "A-13이 상품 잠금 단계에 도달해야 합니다.")
-            assertThrows(TimeoutException::class.java) {
-                update.get(300, TimeUnit.MILLISECONDS)
-            }
+            awaitH2RowLockWait(checkNotNull(updateThread.get()))
             assertFalse(update.isDone, "A-13 수정은 상품 잠금이 풀리기 전 완료되면 안 됩니다.")
 
             allowA14Change.countDown()
             lockOwner.get(20, TimeUnit.SECONDS)
+            // then
             val updateFailure = update.get(20, TimeUnit.SECONDS).exceptionOrNull()
 
             assertEquals(null, updateFailure)
@@ -222,6 +233,20 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
             }
             Mockito.reset(spiedProductReader)
         }
+    }
+
+    private fun awaitH2RowLockWait(thread: Thread) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        var lastStack: Array<StackTraceElement> = emptyArray()
+        while (System.nanoTime() < deadline) {
+            lastStack = thread.stackTrace
+            val isWaiting = thread.state in setOf(Thread.State.WAITING, Thread.State.TIMED_WAITING, Thread.State.BLOCKED)
+            if (isWaiting && lastStack.any { it.className.startsWith("org.h2.") }) return
+            Thread.sleep(10)
+        }
+        throw AssertionError(
+            "대기 스레드가 H2 잠금 대기에 도달하지 않았습니다. state=${thread.state}, stack=${lastStack.joinToString(" <- ")}",
+        )
     }
 
     private fun updateCommand(exposureId: Long) = UpdateAdminAdvertisementExposureCommand(

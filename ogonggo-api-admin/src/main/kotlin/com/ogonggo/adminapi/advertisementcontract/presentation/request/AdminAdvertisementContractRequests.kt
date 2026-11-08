@@ -28,7 +28,6 @@ data class ChangeAdminAdvertisementContractPaymentAmountRequest(
 data class AddAdminAdvertisementContractProductRequest(
     @field:Positive
     @field:JsonDeserialize(using = StrictLongDeserializer::class)
-    @field:Schema(minimum = "1")
     val productId: Long,
 )
 

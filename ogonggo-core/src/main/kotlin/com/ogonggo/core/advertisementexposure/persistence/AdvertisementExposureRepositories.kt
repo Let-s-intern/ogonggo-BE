@@ -5,6 +5,9 @@ import com.ogonggo.core.advertisementexposure.domain.QAdvertisementExposure.adve
 import com.querydsl.core.BooleanBuilder
 import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.LockModeType
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
@@ -53,6 +56,25 @@ internal class AdvertisementExposureQueryRepository(
             .fetch()
     }
 
+    fun findByProductPage(productId: Long, contractId: Long?, pageable: Pageable): Page<AdvertisementExposure> {
+        val condition = BooleanBuilder()
+            .and(advertisementExposure.productId.eq(productId))
+            .and(advertisementExposure.deletedAt.isNull)
+        contractId?.let { condition.and(advertisementExposure.contractId.eq(it)) }
+
+        val items = queryFactory.selectFrom(advertisementExposure)
+            .where(condition)
+            .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+        val totalElements = queryFactory.select(advertisementExposure.id.count())
+            .from(advertisementExposure)
+            .where(condition)
+            .fetchOne() ?: 0L
+        return PageImpl(items, pageable, totalElements)
+    }
+
     /** 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다. */
     fun findShown(productIds: Collection<Long>, now: LocalDateTime): List<AdvertisementExposure> {
         if (productIds.isEmpty()) {
@@ -68,5 +90,26 @@ internal class AdvertisementExposureQueryRepository(
             )
             .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
             .fetch()
+    }
+
+    fun findShownPage(productIds: Collection<Long>, now: LocalDateTime, pageable: Pageable): Page<AdvertisementExposure> {
+        if (productIds.isEmpty()) return PageImpl(emptyList(), pageable, 0)
+        val condition = BooleanBuilder()
+            .and(advertisementExposure.productId.`in`(productIds))
+            .and(advertisementExposure.exposed.isTrue)
+            .and(advertisementExposure.deletedAt.isNull)
+            .and(advertisementExposure.startAt.isNull.or(advertisementExposure.startAt.loe(now)))
+            .and(advertisementExposure.endAt.isNull.or(advertisementExposure.endAt.goe(now)))
+        val items = queryFactory.selectFrom(advertisementExposure)
+            .where(condition)
+            .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+        val totalElements = queryFactory.select(advertisementExposure.id.count())
+            .from(advertisementExposure)
+            .where(condition)
+            .fetchOne() ?: 0L
+        return PageImpl(items, pageable, totalElements)
     }
 }
