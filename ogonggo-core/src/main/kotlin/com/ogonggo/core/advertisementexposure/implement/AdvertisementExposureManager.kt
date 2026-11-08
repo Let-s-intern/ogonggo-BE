@@ -41,7 +41,7 @@ class AdvertisementExposureManager internal constructor(
      */
     fun move(exposure: AdvertisementExposure, direction: AdvertisementExposureMoveDirection) {
         val siblings = advertisementExposureRepository
-            .findAllByProductIdAndDeletedAtIsNullOrderByDisplayOrderAscIdAsc(exposure.productId)
+            .findAllForOrderUpdate(exposure.productId)
             .toMutableList()
         val index = siblings.indexOfFirst { it.id == exposure.id }
         check(index >= 0) { "같은 자리의 노출 목록에 없습니다." }
