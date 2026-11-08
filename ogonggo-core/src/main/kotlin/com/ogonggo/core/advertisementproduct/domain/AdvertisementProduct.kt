@@ -45,7 +45,7 @@ class AdvertisementProduct internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(length = 40)
-    var position: AdvertisementProductPosition? = position /* 노출 자리. 화면에 노출하지 않는 상품은 없다 */
+    var position: AdvertisementProductPosition? = position /* 노출 자리. 외부 채널·자리 미정 상품은 null */
         protected set
 
     @Column(nullable = false, length = MAX_NAME_LENGTH)
@@ -53,7 +53,7 @@ class AdvertisementProduct internal constructor(
         protected set
 
     @Column
-    var price: Int? = price /* 소개용 가격. 견적 문의 상품은 없다 */
+    var price: Int? = price /* 소개용 가격. null은 견적 문의 */
         protected set
 
     @Column(name = "deleted_at")
