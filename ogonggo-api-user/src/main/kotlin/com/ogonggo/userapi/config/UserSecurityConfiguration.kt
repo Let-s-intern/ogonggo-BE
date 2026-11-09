@@ -117,6 +117,12 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.PATCH, "/api/v1/users/me/password").authenticated()
                 it.requestMatchers("/api/v1/users/me/bootcamps", "/api/v1/users/me/bootcamps/**").authenticated()
                 it.requestMatchers("/api/v1/users/me/jobs", "/api/v1/users/me/jobs/**").authenticated()
+                // 광고 신청 등록(POST /api/v1/advertisement-contracts)은 비회원에게 열지만 신청 내역은 내 신청만 보므로 로그인을 요구한다.
+                it.requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/users/me/advertisement-contracts",
+                    "/api/v1/users/me/advertisement-contracts/*",
+                ).authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/images", "/api/v1/images/**").authenticated()
                 // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 채용공고 조회 중 유일하게 로그인을 요구한다.
                 // 아래의 조회 전체 허용보다 먼저 선언해야 적용된다.
