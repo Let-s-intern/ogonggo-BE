@@ -70,6 +70,7 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1jobs~1today/put",
             "/paths/~1api~1v1~1admin~1bootcamps/get",
             "/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/patch",
+            "/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/put",
             "/paths/~1api~1v1~1admin~1recruitment-posts/get",
             "/paths/~1api~1v1~1admin~1recruitment-posts~1visibility/patch",
             "/paths/~1api~1v1~1admin~1concerns/get",
@@ -655,6 +656,33 @@ class AdminOpenApiContractTest @Autowired constructor(
             assertEquals("boolean", schema.at("/properties/priorityExposed/type").asText(), name)
             assertTrue(schema.at("/required").any { it.asText() == "priorityExposed" }, name)
         }
+    }
+
+    @Test
+    fun `부트캠프 전체 수정은 PUT으로 모든 칸과 모집 상태를 받고 노출은 받지 않으며 수정된 상세를 돌려준다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/put")
+        val request = document.at("/components/schemas/ReplaceAdminBootcampRequest")
+
+        // then
+        assertEquals("replaceBootcamp", operation.at("/operationId").asText())
+        assertEquals(
+            "#/components/schemas/ReplaceAdminBootcampRequest",
+            operation.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+        )
+        val wrapper = operation.at("/responses/200/content/application~1json/schema/\$ref").asText().substringAfterLast('/')
+        assertEquals(
+            "#/components/schemas/AdminBootcampDetailResponse",
+            document.at("/components/schemas/$wrapper/properties/data/\$ref").asText(),
+        )
+        listOf("instructorInfo", "programFeatures", "completionRequirements", "partners", "curriculums", "status")
+            .forEach { assertTrue(request.at("/properties/$it").isObject, it) }
+        assertTrue(request.at("/required").any { it.asText() == "status" })
+        assertFalse(request.at("/required").any { it.asText() == "representativeImageUrl" })
+        assertTrue(request.at("/properties/visibility").isMissingNode)
     }
 
     @Test
