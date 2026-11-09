@@ -181,6 +181,60 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("내 광고 신청 내역은 로그인 필수이며 페이지와 404와 신청자 필드만 명시한다")
+    fun `내 광고 신청 내역은 로그인 필수이며 페이지와 404와 신청자 필드만 명시한다`() {
+        // given
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1users~1me~1advertisement-contracts"
+
+        // when
+        val list = document.at("$base/get")
+        val detail = document.at("$base~1{contractId}/get")
+        val summary = document.at("/components/schemas/MyAdvertisementContractSummaryResponse")
+        val detailResponse = document.at("/components/schemas/MyAdvertisementContractDetailResponse")
+        val product = document.at("/components/schemas/MyAdvertisementContractProductResponse")
+
+        // then
+        assertEquals("listMyAdvertisementContracts", list.at("/operationId").asText())
+        assertEquals("getMyAdvertisementContract", detail.at("/operationId").asText())
+        listOf(list, detail).forEach { operation ->
+            assertEquals(1, operation.at("/security").size())
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+            assertTrue(operation.at("/responses/401/content/application~1json/schema").isObject)
+        }
+        assertPageParameter(list, "page", defaultValue = "1", minimum = 1, maximum = null)
+        assertPageParameter(list, "size", defaultValue = "10", minimum = 1, maximum = 100)
+        assertEquals("array", list.parameter("status").at("/schema/type").asText())
+        assertEquals("int64", detail.parameter("contractId").at("/schema/format").asText())
+        assertTrue(detail.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        assertEquals(
+            setOf(
+                "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentDeadline",
+                "categories", "paymentAmount", "registeredAt",
+            ),
+            summary.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertEquals(
+            setOf(
+                "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
+                "recruitmentDeadline", "purpose", "categories", "scheduleRequest", "advertisementRequest",
+                "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod", "paymentAmount",
+                "registeredAt", "products",
+            ),
+            detailResponse.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        listOf("scheduleRequest", "advertisementRequest", "paymentAmount").forEach { field ->
+            assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
+        }
+        assertEquals(
+            setOf("contractProductId", "productName", "category", "position", "productDeleted"),
+            product.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertTrue(product.at("/properties/position/nullable").asBoolean())
+    }
+
+    @Test
     @DisplayName("알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다")
     fun `알림함 OpenAPI는 커서 크기 읽음 인증과 nullable 필드를 명시한다`() {
         // given

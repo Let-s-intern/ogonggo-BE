@@ -3,9 +3,11 @@ package com.ogonggo.core.advertisementcontract.domain
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import java.time.LocalDate
 
-/** 관리자 콘솔 광고 계약 목록의 선택 조건이다. null이거나 비어 있는 조건은 적용하지 않는다. */
+/** 광고 계약 목록의 선택 조건이다. 관리자 콘솔 목록과 회원의 광고 신청 내역이 쓴다. null이거나 비어 있는 조건은 적용하지 않는다. */
 data class AdvertisementContractSearchCondition(
     val source: AdvertisementContractSource? = null,
+    /** 이 회원이 신청한 계약을 찾는다. */
+    val userId: Long? = null,
     /** 이 상태 중 하나인 계약을 찾는다. */
     val statuses: Set<AdvertisementContractStatus> = emptySet(),
     val promotionTarget: AdvertisementContractPromotionTarget? = null,

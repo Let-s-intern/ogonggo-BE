@@ -7,6 +7,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -53,6 +54,7 @@ data class AdvertisementContractProductDto(
     val productId: Long,
     val productName: String,
     val category: AdvertisementProductCategory,
+    val position: AdvertisementProductPosition?,
     val productDeleted: Boolean,
     val addedAt: LocalDateTime,
 ) {
@@ -62,6 +64,7 @@ data class AdvertisementContractProductDto(
             productId = checkNotNull(product.id),
             productName = product.name,
             category = product.category,
+            position = product.position,
             productDeleted = product.deletedAt != null,
             addedAt = addedAt,
         )

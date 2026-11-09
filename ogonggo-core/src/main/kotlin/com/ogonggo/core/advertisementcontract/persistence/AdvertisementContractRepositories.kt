@@ -26,6 +26,8 @@ internal interface AdvertisementContractJpaRepository : JpaRepository<Advertisem
 
     fun findAllByIdIn(ids: Collection<Long>): List<AdvertisementContract>
 
+    fun findByIdAndUserIdAndSource(id: Long, userId: Long, source: AdvertisementContractSource): AdvertisementContract?
+
     /** 상태와 결제 금액을 동시에 바꿔도 한쪽 변경이 다른 쪽의 낡은 값으로 덮이지 않도록 잠근다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from AdvertisementContract c where c.id = :id")
@@ -38,7 +40,7 @@ internal interface AdvertisementContractProductJpaRepository : JpaRepository<Adv
     fun findByIdAndContractIdAndDeletedAtIsNull(id: Long, contractId: Long): AdvertisementContractProduct?
 }
 
-/** 관리자 콘솔 광고 계약 목록이다. 생긴 순서와 식별자 순서가 같으므로 최신순은 `id DESC`다. */
+/** 관리자 콘솔 광고 계약 목록과 회원의 광고 신청 내역이다. 생긴 순서와 식별자 순서가 같으므로 최신순은 `id DESC`다. */
 @Repository
 internal class AdvertisementContractQueryRepository(
     private val queryFactory: JPAQueryFactory,
@@ -47,6 +49,7 @@ internal class AdvertisementContractQueryRepository(
     fun findPage(condition: AdvertisementContractSearchCondition, pageable: Pageable): Page<AdvertisementContract> {
         val predicates = arrayOf(
             condition.source?.let(advertisementContract.source::eq),
+            condition.userId?.let(advertisementContract.userId::eq),
             condition.statuses.takeIf { it.isNotEmpty() }?.let { advertisementContract.status.`in`(it) },
             condition.promotionTarget?.let(advertisementContract.promotionTarget::eq),
             condition.category?.let { advertisementContract.categories.contains(it) },

@@ -28,6 +28,14 @@ class AdvertisementContractReader internal constructor(
         advertisementContractRepository.findById(contractId).orElse(null)
             ?: throw EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND)
 
+    /**
+     * 회원이 광고 신청 폼으로 낸 신청이다. 다른 회원의 신청, 비회원 신청, 비즈니스 공고 계약은 없는 계약과 같이 다룬다.
+     * 있다는 사실을 남에게 알리지 않기 위해서다.
+     */
+    fun readApplicationOf(userId: Long, contractId: Long): AdvertisementContract =
+        advertisementContractRepository.findByIdAndUserIdAndSource(contractId, userId, AdvertisementContractSource.APPLICATION_FORM)
+            ?: throw EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND)
+
     /** 상태·결제 금액을 바꾸거나 상품을 붙일 계약을 잠가 읽는다. 호출한 서비스의 트랜잭션 안에서 부른다. */
     fun readForUpdate(contractId: Long): AdvertisementContract =
         advertisementContractRepository.findForUpdate(contractId)

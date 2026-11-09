@@ -287,6 +287,52 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `회원의 신청 내역은 그 회원이 폼으로 낸 신청만 최근 신청부터 준다`() {
+        // given
+        val first = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OWNER_ID)
+        appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OTHER_USER_ID)
+        appendForm(setOf(AdvertisementProductCategory.BANNER))
+        val second = appendForm(setOf(AdvertisementProductCategory.KAKAO_1), userId = OWNER_ID)
+        appendContract(jobAppender.append(companyJob()))
+        repository.flush()
+        entityManager.clear()
+        val condition = AdvertisementContractSearchCondition(
+            source = AdvertisementContractSource.APPLICATION_FORM,
+            userId = OWNER_ID,
+        )
+
+        // when
+        val all = reader.readPage(condition, page = 0, size = 10)
+        val secondPage = reader.readPage(condition, page = 1, size = 1)
+
+        // then
+        assertEquals(listOf(second, first), all.advertisementContracts.map { it.id })
+        assertEquals(2L, all.totalElements)
+        assertEquals(listOf(first), secondPage.advertisementContracts.map { it.id })
+        assertEquals(2, secondPage.totalPages)
+    }
+
+    @Test
+    fun `회원 신청 단건은 그 회원이 폼으로 낸 신청만 찾는다`() {
+        // given
+        val mine = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OWNER_ID)
+        val others = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OTHER_USER_ID)
+        val guest = appendForm(setOf(AdvertisementProductCategory.BANNER))
+        val posting = appendContract(jobAppender.append(companyJob()))
+        repository.flush()
+        entityManager.clear()
+
+        // when & then
+        assertEquals(mine, reader.readApplicationOf(OWNER_ID, mine).id)
+        listOf(others, guest, posting, Long.MAX_VALUE).forEach { contractId ->
+            val exception = assertThrows(EntityNotFoundException::class.java) {
+                reader.readApplicationOf(OWNER_ID, contractId)
+            }
+            assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND, exception.errorCode)
+        }
+    }
+
+    @Test
     fun `계약에서 뺀 상품은 주지 않고, 지운 상품은 이름과 함께 지웠다고 준다`() {
         // given
         val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
@@ -305,6 +351,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         // then
         assertEquals(listOf("채용공고 홈 하단"), products.map { it.productName })
         assertEquals(listOf(true), products.map { it.productDeleted })
+        assertEquals(listOf(AdvertisementProductPosition.JOB_HOME_TOP_BANNER), products.map { it.position })
     }
 
     @Test
@@ -341,10 +388,14 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND, exception.errorCode)
     }
 
-    private fun appendForm(categories: Set<AdvertisementProductCategory>, companyName: String = "렛츠커리어"): Long =
+    private fun appendForm(
+        categories: Set<AdvertisementProductCategory>,
+        companyName: String = "렛츠커리어",
+        userId: Long? = null,
+    ): Long =
         appender.appendFromForm(
             AdvertisementContractFormAppendDto(
-                userId = null,
+                userId = userId,
                 promotionTarget = AdvertisementContractPromotionTarget.JOB,
                 companyName = companyName,
                 recruitmentTitle = "브랜드 마케팅 인턴 모집",
@@ -425,6 +476,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
 
     companion object {
         private const val OWNER_ID = 7L
+        private const val OTHER_USER_ID = 8L
         private val NOW = LocalDateTime.of(2026, 11, 7, 12, 0)
     }
 }
