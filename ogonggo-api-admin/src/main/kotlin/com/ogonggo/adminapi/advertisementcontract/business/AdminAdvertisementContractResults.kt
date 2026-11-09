@@ -10,6 +10,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractPageDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractProductDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -83,6 +84,8 @@ data class AdminAdvertisementContractDetailResult(
     val managerName: String?,
     val email: String?,
     val phoneNumber: String?,
+    val businessNumberType: CompanyBusinessNumberType?,
+    val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod?,
     val creativeMethod: AdvertisementContractCreativeMethod?,
     val paymentAmount: Int?,
@@ -112,6 +115,8 @@ data class AdminAdvertisementContractDetailResult(
             managerName = contract.managerName,
             email = contract.email,
             phoneNumber = contract.phoneNumber,
+            businessNumberType = contract.businessNumberType,
+            businessNumber = contract.businessNumber,
             invoiceMethod = contract.invoiceMethod,
             creativeMethod = contract.creativeMethod,
             paymentAmount = contract.paymentAmount,

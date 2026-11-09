@@ -10,6 +10,8 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpos
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -63,6 +65,10 @@ data class AdminAdvertisementContractDetailResponse(
     val managerName: String?,
     val email: String?,
     val phoneNumber: String?,
+    @field:Schema(description = "신청 폼에서 받은 사업자 번호 종류. 보내지 않은 신청과 비즈니스 공고 계약은 null입니다.", nullable = true)
+    val businessNumberType: CompanyBusinessNumberType?,
+    @field:Schema(description = "하이픈 없는 사업자 번호. 해외 기업이거나 보내지 않은 신청, 비즈니스 공고 계약은 null입니다.", nullable = true)
+    val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod?,
     val creativeMethod: AdvertisementContractCreativeMethod?,
     val paymentAmount: Int?,
@@ -89,6 +95,8 @@ data class AdminAdvertisementContractDetailResponse(
             managerName = result.managerName,
             email = result.email,
             phoneNumber = result.phoneNumber,
+            businessNumberType = result.businessNumberType,
+            businessNumber = result.businessNumber,
             invoiceMethod = result.invoiceMethod,
             creativeMethod = result.creativeMethod,
             paymentAmount = result.paymentAmount,

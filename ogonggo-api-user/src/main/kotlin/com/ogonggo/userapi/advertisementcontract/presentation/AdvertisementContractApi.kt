@@ -29,6 +29,9 @@ interface AdvertisementContractApi {
 
             categories에는 희망 카테고리만 저장합니다. 실제 상품 연결, 공고 생성, 노출, 결제, 구좌 예약은 만들지 않습니다.
             입력 원문은 보존하며 scheduleRequest와 advertisementRequest만 공백이면 저장 시 null이 됩니다.
+
+            businessNumberType과 businessNumber는 선택입니다. 보내면 기업 회원가입과 같은 규칙으로 검사합니다. 사업자 번호는 하이픈 없는
+            숫자로, 사업자등록번호는 10자리, 법인등록번호는 13자리입니다. 해외 기업(OVERSEAS)은 번호를 보내지 않습니다.
         """,
     )
     @ApiResponses(
@@ -36,7 +39,7 @@ interface AdvertisementContractApi {
             ApiResponse(responseCode = "201", description = "신청 접수 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 필수값이 없거나 형식·길이가 맞지 않습니다.",
+                description = "BAD_REQUEST: 필수값이 없거나 형식·길이가 맞지 않습니다. 사업자 번호를 번호 종류 없이 보내거나 종류와 자릿수가 맞지 않아도 400입니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

@@ -22,6 +22,7 @@ class AdvertisementExposureServiceTest {
         Mockito.`when`(exposure.id).thenReturn(EXPOSURE_ID)
         Mockito.`when`(exposure.name).thenReturn("샘플기업 인턴 채용")
         Mockito.`when`(exposure.imageUrl).thenReturn("https://example.com/banner.png")
+        Mockito.`when`(exposure.mobileImageUrl).thenReturn("https://example.com/banner-mobile.png")
         Mockito.`when`(exposure.linkUrl).thenReturn("/jobs/5501")
         Mockito.`when`(exposure.adLabel).thenReturn(true)
         Mockito.`when`(reader.readShownPage(POSITION, NOW, 0, 10)).thenReturn(
@@ -40,6 +41,7 @@ class AdvertisementExposureServiceTest {
                     id = EXPOSURE_ID,
                     name = "샘플기업 인턴 채용",
                     imageUrl = "https://example.com/banner.png",
+                    mobileImageUrl = "https://example.com/banner-mobile.png",
                     linkUrl = "/jobs/5501",
                     adLabel = true,
                 ),

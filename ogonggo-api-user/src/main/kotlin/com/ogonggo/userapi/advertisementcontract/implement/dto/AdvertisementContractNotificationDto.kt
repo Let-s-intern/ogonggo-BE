@@ -16,6 +16,8 @@ data class AdvertisementContractNotificationDto(
     val managerName: String,
     val email: String,
     val phoneNumber: String,
+    /** 신청자가 보낸 경우만 있다. 번호 종류와 번호를 함께 쓰고(사업자등록번호 1234567890), 해외 기업이면 종류만 쓴다. */
+    val businessNumber: String? = null,
 ) {
     fun templateParameters(): Map<String, String> = mapOf(
         "contractId" to contractId.toString(),
@@ -28,7 +30,7 @@ data class AdvertisementContractNotificationDto(
         "managerName" to managerName,
         "email" to email,
         "phoneNumber" to phoneNumber,
-    )
+    ) + listOfNotNull(businessNumber?.let { "businessNumber" to it })
 
     companion object {
         fun from(contractId: Long, command: CreateAdvertisementContractCommand) = AdvertisementContractNotificationDto(
@@ -42,6 +44,9 @@ data class AdvertisementContractNotificationDto(
             managerName = command.managerName,
             email = command.email,
             phoneNumber = command.phoneNumber,
+            businessNumber = command.businessNumberType?.let { type ->
+                listOfNotNull(type.desc, command.businessNumber).joinToString(" ")
+            },
         )
     }
 }
