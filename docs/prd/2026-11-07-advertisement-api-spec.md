@@ -37,6 +37,8 @@ UI에서만 관찰된 주차 예약·쿠폰·가입 동시 처리 등의 필드�
 | U-01 | `POST /api/v1/advertisement-contracts` | 중간 | 높음 | 입력 필드는 core 신청 DTO와 대응한다. HTTP(S) URL·이메일 검증과 선택 인증을 구현했고 생성 ID는 core Appender가 반환한다. |
 | U-02 | `GET /api/v1/advertisement-products` | 높음 | 높음 | 기본 `page=1`, `size=10`으로 미삭제 상품을 페이지 조회하고 공통 `PageResponse`를 반환한다. |
 | U-03 | `GET /api/v1/advertisement-exposures?position=...&page=1&size=10` | 높음 | 높음 | position enum과 페이지 응답, 다섯 공개 필드가 구현·계약 검증에 반영됐다. 공개 링크는 A-12 입력 정책을 그대로 따른다. |
+| U-04 | `GET /api/v1/users/me/advertisement-contracts?page=1&size=10` | 높음 | 높음 | 회원 식별자·APPLICATION_FORM 조건을 core 목록 조회에 더했고 페이지 형식은 기존 PageResponse를 따른다(LC-3590). |
+| U-05 | `GET /api/v1/users/me/advertisement-contracts/{contractId}` | 높음 | 높음 | 신청 폼 필드와 A-06의 계약 상품 표현을 재사용하고 운영자 전용 필드를 뺐다(LC-3590). |
 | A-01 | `GET /api/v1/admin/advertisement-products` | 높음 | 높음 | 기본 `page=1`, `size=10`으로 상품을 페이지 조회하고 공통 `PageResponse`를 반환한다. |
 | A-02 | `POST /api/v1/admin/advertisement-products` | 높음 | 높음 | 생성 입력 필드·domain 제약과 생성 ID가 core에 대응한다. |
 | A-03 | `PUT /api/v1/admin/advertisement-products/{productId}` | 높음 | 높음 | core의 수정 동작과 P-01에서 정한 기존 노출 영향 정책을 따른다. position·price 누락 또는 null은 해제한다. 응답은 공통 성공 규칙을 따른다. |
@@ -54,7 +56,7 @@ UI에서만 관찰된 주차 예약·쿠폰·가입 동시 처리 등의 필드�
 | A-15 | `POST /api/v1/admin/advertisement-exposures/{exposureId}/move` | 높음 | 높음 | UP·DOWN 입력, 인접 이동과 경계 동작이 core에 구현돼 있다. |
 | A-16 | `DELETE /api/v1/admin/advertisement-exposures/{exposureId}` | 높음 | 높음 | 경로 ID 기반 소프트 삭제와 공통 성공 규칙을 사용한다. |
 
-HTTP API 19개 중 Request는 높음 17개·중간 2개, Response는 높음 18개·중간 1개다. 낮음은 없다. 낮음인 F-01은 아직 경로와 노출 조합 규칙이 없는 광고 공고 연동 작업이며, Request·Response 계약을 정할 수 있는 단계가 아니다.
+HTTP API 21개 중 Request는 높음 19개·중간 2개, Response는 높음 20개·중간 1개다. 낮음은 없다. 낮음인 F-01은 아직 경로와 노출 조합 규칙이 없는 광고 공고 연동 작업이며, Request·Response 계약을 정할 수 있는 단계가 아니다.
 
 ### API별 요약
 
@@ -63,6 +65,8 @@ HTTP API 19개 중 Request는 높음 17개·중간 2개, Response는 높음 18�
 | U-01 | POST | `/api/v1/advertisement-contracts` | 중간 | 폼 입력·상태는 core DTO를 따른다. HTTP 검증·선택 인증은 P-02에서 정해 구현했고 접수 알림은 P-07에서 응답 변경 없이 연결했다. |
 | U-02 | GET | `/api/v1/advertisement-products` | 높음 | 삭제 제외·정렬·출력 원본이 상품 reader와 DB에서 바로 정해진다. |
 | U-03 | GET | `/api/v1/advertisement-exposures` | 높음 | 필수 position, 여섯 BANNER 자리, 다섯 공개 필드와 페이지 응답, 빈 결과와 BAD_REQUEST 동작을 구현·계약 검증했다. 링크는 A-12 정책을 따른다. |
+| U-04 | GET | `/api/v1/users/me/advertisement-contracts` | 높음 | 로그인 회원의 APPLICATION_FORM 신청만 최신순 페이지로 준다. 반복 `status` 필터를 둔다. |
+| U-05 | GET | `/api/v1/users/me/advertisement-contracts/{contractId}` | 높음 | 내 신청이 아니면 없는 계약과 같이 404다. 연결 상품은 A-06과 같이 지운 상품도 표시한다. |
 | A-01 | GET | `/api/v1/admin/advertisement-products` | 높음 | 상품 reader에 조회·정렬 규칙이 있고 목록 목적이 명확하다. |
 | A-02 | POST | `/api/v1/admin/advertisement-products` | 높음 | 저장 DTO가 4개 필드를 그대로 정의하고 domain 검증이 존재한다. |
 | A-03 | PUT | `/api/v1/admin/advertisement-products/{productId}` | 높음 | core 수정 동작을 따르며, 기존 노출이 있어도 category·position 변경을 허용하고 기존 exposure 행은 product 참조를 유지한다. position·price 누락 또는 null은 해제한다. |
@@ -80,7 +84,7 @@ HTTP API 19개 중 Request는 높음 17개·중간 2개, Response는 높음 18�
 | A-15 | POST | `/api/v1/admin/advertisement-exposures/{exposureId}/move` | 높음 | UP·DOWN의 인접 교환과 경계 no-op가 core에 구현돼 있다. |
 | A-16 | DELETE | `/api/v1/admin/advertisement-exposures/{exposureId}` | 높음 | 미삭제 행 조회와 소프트 삭제가 core로 정해진다. |
 
-HTTP API 19개 중 높음 15개, 중간 4개다. 낮음은 아직 HTTP 경로가 정해지지 않은 광고 공고 연동 F-01에 해당한다. 근거가 충분한 API를 등급 분포 때문에 낮음으로 내리지 않는다.
+HTTP API 21개 중 높음 17개, 중간 4개다. 낮음은 아직 HTTP 경로가 정해지지 않은 광고 공고 연동 F-01에 해당한다. 근거가 충분한 API를 등급 분포 때문에 낮음으로 내리지 않는다.
 
 | 연동 작업 | 확정 가능성 | Request·Response 결정 범위 |
 | --- | --- | --- |
@@ -93,9 +97,10 @@ HTTP API 19개 중 높음 15개, 중간 4개다. 낮음은 아직 HTTP 경로가
 
 | 이름 | 위치 | 타입 | 필수 | 기본값 | 허용 값 | 설명 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Authorization | header | string | 관리자: 필수 / 사용자 3개: 선택 | 없음 | Bearer {오공고 access token} | 관리자 API는 활성 ADMIN. 공개 API는 비회원 허용 |
+| Authorization | header | string | 관리자: 필수 / U-01~U-03: 선택 / U-04·U-05: 필수 | 없음 | Bearer {오공고 access token} | 관리자 API는 활성 ADMIN. 공개 API는 비회원 허용 |
 
-- 사용자 API 3개는 비회원 접근을 허용하도록 Security 매핑을 구현했다. U-01은 선택 토큰을 받고, 토큰이 없거나 유효하지 않아도 비회원으로 접수한다.
+- U-01~U-03은 비회원 접근을 허용하도록 Security 매핑을 구현했다. U-01은 선택 토큰을 받고, 토큰이 없거나 유효하지 않아도 비회원으로 접수한다.
+- U-04·U-05는 GET 메서드와 경로를 좁혀 로그인을 요구한다. 토큰이 없거나 유효하지 않으면 401 `UNAUTHORIZED`다.
 - 관리자 API는 관리자 호스트의 `/api/v1/admin/**`에서 활성 ADMIN 계정의 오공고 access token을 요구한다.
 - Path·query ID는 양수 int64이고 JSON 식별자도 숫자로 반환한다.
 - JSON 요청에는 `Content-Type: application/json`을 사용한다. GET·DELETE 본문은 보내지 않는다.
@@ -106,7 +111,7 @@ HTTP API 19개 중 높음 15개, 중간 4개다. 낮음은 아직 HTTP 경로가
 
 모든 예시는 기존 성공 래퍼 `{status, message, data}`를 포함한다. 반환값 없는 성공도 200과 `data: null`이다. 페이지 적용 목록은 `data: {items, pageInfo}`를 반환하고, 페이지 없는 목록은 `data` 자체가 배열이다. 목록이 비면 배열 또는 `items`가 `[]`다.
 
-U-02, U-03, A-01, A-11은 외부 `page`를 1부터 받고 기본 `page=1`, `size=10`을 적용한다. `size`는 1~100이며 core 내부에서는 0부터 계산한다. 다른 API의 페이지 규칙은 각 절에 적힌 값을 따른다.
+U-02, U-03, U-04, A-01, A-11은 외부 `page`를 1부터 받고 기본 `page=1`, `size=10`을 적용한다. `size`는 1~100이며 core 내부에서는 0부터 계산한다. 다른 API의 페이지 규칙은 각 절에 적힌 값을 따른다.
 
 ```json
 {
@@ -394,6 +399,154 @@ GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER&page=1&size=10
 | 필수 `position` 누락, 잘못된 타입 또는 6종 이외 enum 값 | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` |
 
 P-05에서 U-03 응답·인증·검증·링크 처리 선택은 확정했다. U-03에 남은 별도 선택은 없다. JOB_POSTING 대상의 실재·게시·마감/노출 적격성을 A-12 등록 시 확인할지는 별도 미정 정책이며, 목록·홈의 공개 조합 규칙은 F-01 범위다. 현재 여섯 배너 position 조회에는 JOB_POSTING이 포함되지 않는다. 클릭 집계와 로테이션은 별도 API 작업이다.
+
+### U-04. 내 광고 신청 목록 조회
+
+```http
+GET /api/v1/users/me/advertisement-contracts?status=REQUESTED&status=NEGOTIATING&page=1&size=10
+```
+
+확정 가능성: 높음. 비즈니스 앱의 광고 신청 내역 화면이 쓴다(LC-3590).
+
+인증: Bearer 필수. 역할은 가리지 않는다. U-01이 로그인한 회원의 신청에 회원 ID를 연결하므로 그 회원이면 누구든 자기 신청을 본다.
+
+요청 파라미터:
+
+| 이름 | 위치 | 타입 | 필수 | 기본값 | 허용 값 | 설명 |
+| --- | --- | --- | --- | --- | --- | --- |
+| status | query | string(enum), 반복 | 아니오 | 없음 | REQUESTED, NEGOTIATING, APPROVED, REJECTED | 여러 번 보내면 그중 하나인 신청. 보내지 않으면 거르지 않음 |
+| page | query | int32 | 아니오 | 1 | 1 이상 | 외부 페이지 번호 |
+| size | query | int32 | 아니오 | 10 | 1~100 | 페이지 크기 |
+
+성공 응답: 200
+
+```json
+{
+  "status": 200,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "items": [
+      {
+        "id": 1001,
+        "status": "REQUESTED",
+        "promotionTarget": "JOB",
+        "companyName": "샘플기업",
+        "recruitmentTitle": "백엔드 인턴 채용",
+        "recruitmentDeadline": "2026-12-31",
+        "categories": ["BANNER", "INSTAGRAM_1"],
+        "paymentAmount": null,
+        "registeredAt": "2026-11-08T10:00:00"
+      }
+    ],
+    "pageInfo": { "pageNum": 1, "pageSize": 10, "totalElements": 1, "totalPages": 1 }
+  }
+}
+```
+
+응답 필드:
+
+| JSON 경로 | 타입 | nullable | 설명 |
+| --- | --- | --- | --- |
+| data.items[].id | int64 | 아니오 | 계약 ID. U-01이 돌려준 `data.id`와 같다 |
+| data.items[].status | string(enum) | 아니오 | 계약 상태 |
+| data.items[].promotionTarget | string(enum) | 아니오 | 홍보 대상 유형 |
+| data.items[].companyName | string | 아니오 | 신청 때 적은 기업명 |
+| data.items[].recruitmentTitle | string | 아니오 | 신청 때 적은 공고명 |
+| data.items[].recruitmentDeadline | string(date) | 아니오 | 신청 때 적은 모집 마감일 |
+| data.items[].categories[] | string(enum)[] | 아니오 | 신청 때 고른 카테고리, enum 이름순 |
+| data.items[].paymentAmount | int32 | 예 | 운영자가 정한 협의 금액. 정하기 전이면 null |
+| data.items[].registeredAt | string(date-time) | 아니오 | 신청 일시(KST) |
+| data.pageInfo | object | 아니오 | U-03과 같은 페이지 정보 |
+
+동작과 경계:
+
+- 로그인한 회원 ID로 저장된 `APPLICATION_FORM` 계약만 준다. 로그인 없이 낸 신청은 회원 ID가 없어 나오지 않는다. 비즈니스 공고 등록으로 생긴 `COMPANY_POSTING` 계약은 같은 회원 ID를 가져도 넣지 않는다.
+- 최근 신청부터(`id DESC`) 준다. 정렬은 고를 수 없다.
+- 운영자 전용 값(source, targetId, userId, updatedAt)은 싣지 않는다.
+
+#### 예외
+
+| 상황 | status | code | message |
+| --- | --- | --- | --- |
+| 페이지 범위 밖 또는 enum에 없는 status | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` 또는 `[파라미터] 검증 메시지` |
+| 토큰 없음·만료·위조 | 401 | `UNAUTHORIZED` | `리소스 접근 권한이 없습니다.` |
+
+### U-05. 내 광고 신청 상세 조회
+
+```http
+GET /api/v1/users/me/advertisement-contracts/{contractId}
+```
+
+확정 가능성: 높음. U-04와 같은 화면의 상세다(LC-3590).
+
+인증: Bearer 필수.
+
+성공 응답: 200
+
+```json
+{
+  "status": 200,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "id": 1001,
+    "status": "NEGOTIATING",
+    "promotionTarget": "JOB",
+    "companyName": "샘플기업",
+    "recruitmentTitle": "백엔드 인턴 채용",
+    "recruitmentUrl": "https://example.com/recruit/backend",
+    "recruitmentDeadline": "2026-12-31",
+    "purpose": "FIT_APPLICANTS",
+    "categories": ["BANNER", "INSTAGRAM_1"],
+    "scheduleRequest": "11월 중 1주 집행을 희망합니다.",
+    "advertisementRequest": null,
+    "managerName": "김담당",
+    "email": "marketing@example.com",
+    "phoneNumber": "02-1234-5678",
+    "invoiceMethod": "TAX_INVOICE",
+    "creativeMethod": "REQUEST_PRODUCTION",
+    "paymentAmount": 300000,
+    "registeredAt": "2026-11-08T10:00:00",
+    "products": [
+      {
+        "contractProductId": 31,
+        "productName": "채용공고 홈 상단 배너",
+        "category": "BANNER",
+        "position": "JOB_HOME_TOP_BANNER",
+        "productDeleted": false
+      }
+    ]
+  }
+}
+```
+
+응답 필드:
+
+| JSON 경로 | 타입 | nullable | 설명 |
+| --- | --- | --- | --- |
+| data.id ~ data.creativeMethod | U-01 요청 필드와 같음 | scheduleRequest·advertisementRequest만 예 | 신청 때 보낸 값. 공백 요청사항은 null로 저장돼 null로 나온다 |
+| data.status | string(enum) | 아니오 | 계약 상태 |
+| data.paymentAmount | int32 | 예 | 협의 금액. 정하기 전이면 null |
+| data.registeredAt | string(date-time) | 아니오 | 신청 일시(KST) |
+| data.products[] | object[] | 아니오 | 운영자가 붙인 상품, 붙인 순서. 없으면 `[]` |
+| data.products[].contractProductId | int64 | 아니오 | 연결 행 ID. 같은 상품을 두 번 붙이면 둘이다 |
+| data.products[].productName | string | 아니오 | 조회 시점의 상품 이름 |
+| data.products[].category | string(enum) | 아니오 | 조회 시점의 상품 카테고리 |
+| data.products[].position | string(enum) | 예 | 노출 자리. 외부 채널 상품은 null |
+| data.products[].productDeleted | boolean | 아니오 | 운영자가 상품을 지웠는지 |
+
+동작과 경계:
+
+- 내 회원 ID로 저장된 `APPLICATION_FORM` 계약만 찾는다. 다른 회원의 신청, 로그인 없이 낸 신청, `COMPANY_POSTING` 계약, 없는 ID는 모두 같은 404로 응답해 계약이 있는지 알리지 않는다.
+- 연결 상품은 A-06과 같은 규칙이다. 계약에서 뺀 상품은 주지 않고, 지운 상품은 이름과 `productDeleted=true`로 준다. A-06의 `productId`·`addedAt`은 싣지 않는다.
+- 운영자 전용 값(source, targetId, userId, updatedAt)은 싣지 않는다. 노출 설정(A-11)과 기간은 이 API 범위가 아니다.
+
+#### 예외
+
+| 상황 | status | code | message |
+| --- | --- | --- | --- |
+| contractId가 양수가 아니거나 숫자가 아님 | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` 또는 `[파라미터] 검증 메시지` |
+| 토큰 없음·만료·위조 | 401 | `UNAUTHORIZED` | `리소스 접근 권한이 없습니다.` |
+| 내 신청이 아니거나 없음 | 404 | `ADVERTISEMENT_CONTRACT_NOT_FOUND` | `광고 계약을 찾을 수 없습니다.` |
 
 ### A-01. 어드민 상품 목록 조회
 

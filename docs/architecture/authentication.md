@@ -132,6 +132,7 @@ FE ──OG-access──> 오공고 (이후 렛츠커리어를 호출하지 않�
 | `POST /api/v1/bootcamps/{bootcampId}/source-url-clicks` | 필수 | `source_url_clicks.user_id`가 NOT NULL이다 |
 | `/api/v1/job-bookmarks/**`, `/api/v1/bootcamp-bookmarks/**` | 필수 | 북마크는 사용자별 상태다 |
 | `/api/v1/users/me/bootcamps/**` | 필수 | 기업 회원이 자기 부트캠프를 관리한다 |
+| `GET /api/v1/users/me/advertisement-contracts`, `/api/v1/users/me/advertisement-contracts/{contractId}` | 필수 | 자기가 광고 신청 폼으로 낸 신청을 본다. 신청 등록(`POST /api/v1/advertisement-contracts`)은 로그인 없이 열려 있다 |
 | `GET /api/v1/users/me` | 필수 | 자기 역할과 프로필을 읽는다 |
 | `PUT /api/v1/users/me/profile` | 필수 | 자기 학력과 희망 조건을 고친다 |
 | `PUT /api/v1/users/me/company-profile/basic-info` | 필수 | 기업 회원이 자기 기본 정보(기관명·로고)와 가입 때 받은 기업 정보를 고친다 |
