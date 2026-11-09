@@ -176,12 +176,16 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(
             setOf(
                 "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline",
-                "purpose", "categories", "scheduleRequest", "advertisementRequest", "managerName", "email",
+                "purpose", "budgetRange", "categories", "scheduleRequest", "advertisementRequest", "managerName", "email",
                 "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod",
             ),
             request.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertEquals(setOf("promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline", "purpose", "categories", "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod"), request.at("/required").map { it.asText() }.toSet())
+        assertEquals(
+            setOf("UNDER_500K", "FROM_500K_TO_1M", "FROM_1M_TO_3M", "OVER_3M", "UNDECIDED"),
+            request.at("/properties/budgetRange/enum").map { it.asText() }.toSet(),
+        )
         assertEquals(setOf("id"), response.at("/properties").fieldNames().asSequence().toSet())
         assertEquals(listOf("id"), response.at("/required").map { it.asText() })
         assertEquals("integer", response.at("/properties/id/type").asText())
@@ -226,13 +230,13 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(
             setOf(
                 "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
-                "recruitmentDeadline", "purpose", "categories", "scheduleRequest", "advertisementRequest",
-                "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod", "paymentAmount",
+                "recruitmentDeadline", "purpose", "budgetRange", "categories", "scheduleRequest", "advertisementRequest",
+                "managerName", "email", "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "paymentAmount",
                 "registeredAt", "products",
             ),
             detailResponse.at("/properties").fieldNames().asSequence().toSet(),
         )
-        listOf("scheduleRequest", "advertisementRequest", "paymentAmount").forEach { field ->
+        listOf("budgetRange", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "paymentAmount").forEach { field ->
             assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
         }
         assertEquals(

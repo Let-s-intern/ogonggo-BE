@@ -1,5 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.presentation
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -122,12 +124,15 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.status").value("NEGOTIATING"))
             .andExpect(jsonPath("$.data.recruitmentUrl").value("https://example.com/recruit/backend"))
             .andExpect(jsonPath("$.data.purpose").value("FIT_APPLICANTS"))
+            .andExpect(jsonPath("$.data.budgetRange").value("FROM_1M_TO_3M"))
             .andExpect(jsonPath("$.data.categories[1]").value("INSTAGRAM_1"))
             .andExpect(jsonPath("$.data.scheduleRequest").value("12월 첫째 주 진행 희망"))
             .andExpect(jsonPath("$.data.advertisementRequest").isEmpty)
             .andExpect(jsonPath("$.data.managerName").value("김담당"))
             .andExpect(jsonPath("$.data.email").value("marketing@example.com"))
             .andExpect(jsonPath("$.data.phoneNumber").value("02-1234-5678"))
+            .andExpect(jsonPath("$.data.businessNumberType").value("BUSINESS_REGISTRATION"))
+            .andExpect(jsonPath("$.data.businessNumber").value("1234567890"))
             .andExpect(jsonPath("$.data.invoiceMethod").value("TAX_INVOICE"))
             .andExpect(jsonPath("$.data.creativeMethod").value("REQUEST_PRODUCTION"))
             .andExpect(jsonPath("$.data.paymentAmount").value(300000))
@@ -204,12 +209,15 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = AdvertisementContractBudgetRange.FROM_1M_TO_3M,
             categories = listOf(AdvertisementProductCategory.BANNER, AdvertisementProductCategory.INSTAGRAM_1),
             scheduleRequest = "12월 첫째 주 진행 희망",
             advertisementRequest = null,
             managerName = "김담당",
             email = "marketing@example.com",
             phoneNumber = "02-1234-5678",
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
             paymentAmount = 300000,

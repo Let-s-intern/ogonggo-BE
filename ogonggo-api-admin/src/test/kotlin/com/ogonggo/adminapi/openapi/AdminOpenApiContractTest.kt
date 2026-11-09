@@ -371,10 +371,10 @@ class AdminOpenApiContractTest @Autowired constructor(
             detail.at("/responses/400/content/application~1json/schema/\$ref").asText(),
         )
         assertTrue(detail.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
-        listOf("source", "status", "promotionTarget", "targetId", "companyName", "recruitmentTitle", "recruitmentDeadline", "categories", "paymentAmount", "registeredAt", "updatedAt").forEach { field ->
+        listOf("source", "status", "promotionTarget", "targetId", "companyName", "recruitmentTitle", "recruitmentDeadline", "budgetRange", "categories", "paymentAmount", "registeredAt", "updatedAt").forEach { field ->
             assertTrue(summary.at("/properties/$field").isObject, field)
         }
-        listOf("userId", "recruitmentUrl", "purpose", "scheduleRequest", "managerName", "email", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "products").forEach { field ->
+        listOf("userId", "recruitmentUrl", "purpose", "budgetRange", "scheduleRequest", "managerName", "email", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "products").forEach { field ->
             assertTrue(detailSchema.at("/properties/$field").isObject, field)
         }
         listOf("businessNumberType", "businessNumber").forEach { field ->

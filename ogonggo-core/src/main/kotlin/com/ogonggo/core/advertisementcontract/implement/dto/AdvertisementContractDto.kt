@@ -1,6 +1,7 @@
 package com.ogonggo.core.advertisementcontract.implement.dto
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -31,6 +32,7 @@ data class AdvertisementContractFormAppendDto(
     val recruitmentUrl: String,
     val recruitmentDeadline: LocalDate,
     val purpose: AdvertisementContractPurpose,
+    val budgetRange: AdvertisementContractBudgetRange?,
     val categories: Set<AdvertisementProductCategory>,
     val scheduleRequest: String?,
     val advertisementRequest: String?,

@@ -58,6 +58,42 @@ class AdvertisementContractDomainTest {
     }
 
     @Test
+    fun `신청 폼 계약은 예정 예산 구간을 고르지 않아도 된다`() {
+        assertEquals(null, formContract(budgetRange = null).budgetRange)
+        assertEquals(AdvertisementContractBudgetRange.FROM_1M_TO_3M, formContract().budgetRange)
+    }
+
+    @Test
+    fun `비즈니스 공고 계약은 예정 예산 구간을 갖지 않는다`() {
+        assertEquals(null, companyPostingContract().budgetRange)
+        assertThrows(IllegalArgumentException::class.java) {
+            AdvertisementContract(
+                source = AdvertisementContractSource.COMPANY_POSTING,
+                status = AdvertisementContractStatus.REQUESTED,
+                userId = 7L,
+                promotionTarget = AdvertisementContractPromotionTarget.JOB,
+                targetId = 1L,
+                companyName = "뱅크",
+                recruitmentTitle = "백엔드 개발자",
+                recruitmentUrl = null,
+                recruitmentDeadline = null,
+                purpose = null,
+                budgetRange = AdvertisementContractBudgetRange.OVER_3M,
+                categories = emptySet(),
+                scheduleRequest = null,
+                advertisementRequest = null,
+                managerName = null,
+                email = null,
+                phoneNumber = null,
+                businessNumberType = null,
+                businessNumber = null,
+                invoiceMethod = null,
+                creativeMethod = null,
+            )
+        }
+    }
+
+    @Test
     fun `신청 폼 계약은 사업자 번호 없이도 접수한다`() {
         val contract = formContract()
 
@@ -96,6 +132,7 @@ class AdvertisementContractDomainTest {
 
     private fun formContract(
         categories: Set<AdvertisementProductCategory> = setOf(AdvertisementProductCategory.BANNER),
+        budgetRange: AdvertisementContractBudgetRange? = AdvertisementContractBudgetRange.FROM_1M_TO_3M,
         businessNumberType: CompanyBusinessNumberType? = null,
         businessNumber: String? = null,
     ) =
@@ -110,6 +147,7 @@ class AdvertisementContractDomainTest {
             recruitmentUrl = "https://example.com/recruit",
             recruitmentDeadline = LocalDate.of(2026, 12, 20),
             purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
+            budgetRange = budgetRange,
             categories = categories,
             scheduleRequest = null,
             advertisementRequest = null,

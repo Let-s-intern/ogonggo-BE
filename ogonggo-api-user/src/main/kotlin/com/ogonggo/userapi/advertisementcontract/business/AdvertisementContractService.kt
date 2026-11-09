@@ -29,6 +29,7 @@ class AdvertisementContractService internal constructor(
                 recruitmentUrl = command.recruitmentUrl,
                 recruitmentDeadline = command.recruitmentDeadline,
                 purpose = command.purpose,
+                budgetRange = command.budgetRange,
                 categories = command.categories,
                 scheduleRequest = command.scheduleRequest,
                 advertisementRequest = command.advertisementRequest,

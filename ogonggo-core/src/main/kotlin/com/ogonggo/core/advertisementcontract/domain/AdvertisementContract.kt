@@ -56,6 +56,7 @@ class AdvertisementContract internal constructor(
     recruitmentUrl: String?,
     recruitmentDeadline: LocalDate?,
     purpose: AdvertisementContractPurpose?,
+    budgetRange: AdvertisementContractBudgetRange?,
     categories: Set<AdvertisementProductCategory>,
     scheduleRequest: String?,
     advertisementRequest: String?,
@@ -90,6 +91,7 @@ class AdvertisementContract internal constructor(
 
             AdvertisementContractSource.COMPANY_POSTING -> {
                 require(userId != null && targetId != null && targetId > 0) { "비즈니스 공고 계약은 등록한 회원과 공고를 가리켜야 합니다." }
+                require(budgetRange == null) { "비즈니스 공고 계약은 예정 예산 구간을 갖지 않습니다." }
                 require(businessNumberType == null && businessNumber == null) { "비즈니스 공고 계약은 사업자 번호를 갖지 않습니다." }
             }
         }
@@ -134,6 +136,10 @@ class AdvertisementContract internal constructor(
     @Enumerated(EnumType.STRING)
     @Column(length = 30)
     val purpose: AdvertisementContractPurpose? = purpose /* 광고 목적 */
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "budget_range", length = 30)
+    val budgetRange: AdvertisementContractBudgetRange? = budgetRange /* 예정 예산 구간. 신청 폼에서 고르지 않을 수 있다 */
 
     @ElementCollection
     @CollectionTable(name = "advertisement_contract_categories", joinColumns = [JoinColumn(name = "contract_id")])
@@ -214,6 +220,7 @@ class AdvertisementContract internal constructor(
             recruitmentUrl: String,
             recruitmentDeadline: LocalDate,
             purpose: AdvertisementContractPurpose,
+            budgetRange: AdvertisementContractBudgetRange?,
             categories: Set<AdvertisementProductCategory>,
             scheduleRequest: String?,
             advertisementRequest: String?,
@@ -235,6 +242,7 @@ class AdvertisementContract internal constructor(
             recruitmentUrl = recruitmentUrl,
             recruitmentDeadline = recruitmentDeadline,
             purpose = purpose,
+            budgetRange = budgetRange,
             categories = categories,
             scheduleRequest = scheduleRequest?.takeIf { it.isNotBlank() },
             advertisementRequest = advertisementRequest?.takeIf { it.isNotBlank() },
@@ -266,6 +274,7 @@ class AdvertisementContract internal constructor(
             recruitmentUrl = null,
             recruitmentDeadline = recruitmentDeadline,
             purpose = null,
+            budgetRange = null,
             categories = emptySet(),
             scheduleRequest = null,
             advertisementRequest = null,

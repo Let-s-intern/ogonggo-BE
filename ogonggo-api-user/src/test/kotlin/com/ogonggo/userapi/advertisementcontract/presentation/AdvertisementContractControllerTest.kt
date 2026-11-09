@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisementcontract.presentation
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -99,6 +100,23 @@ class AdvertisementContractControllerTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("고른 예정 예산 구간을 함께 신청한다")
+    fun `고른 예정 예산 구간을 함께 신청한다`() {
+        // given
+        val body = VALID_BODY.replace("\"purpose\": \"FIT_APPLICANTS\",", "\"purpose\": \"FIT_APPLICANTS\",\n  \"budgetRange\": \"FROM_1M_TO_3M\",")
+        val command = VALID_COMMAND.copy(budgetRange = AdvertisementContractBudgetRange.FROM_1M_TO_3M)
+        Mockito.`when`(advertisementContractService.createContract(null, command)).thenReturn(CONTRACT_ID)
+
+        // when
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+            // then
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(CONTRACT_ID))
+
+        Mockito.verify(advertisementContractService).createContract(null, command)
+    }
+
+    @Test
     @DisplayName("사업자 번호와 카카오톡 CRM 카테고리를 함께 신청한다")
     fun `사업자 번호와 카카오톡 CRM 카테고리를 함께 신청한다`() {
         // given
@@ -119,6 +137,21 @@ class AdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.id").value(CONTRACT_ID))
 
         Mockito.verify(advertisementContractService).createContract(null, command)
+    }
+
+    @Test
+    @DisplayName("없는 예정 예산 구간 값은 400으로 응답한다")
+    fun `없는 예정 예산 구간 값은 400으로 응답한다`() {
+        // given
+        val body = VALID_BODY.replace("\"purpose\": \"FIT_APPLICANTS\",", "\"purpose\": \"FIT_APPLICANTS\",\n  \"budgetRange\": \"OVER_10M\",")
+
+        // when
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+            // then
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(advertisementContractService)
     }
 
     @Test
@@ -210,6 +243,7 @@ class AdvertisementContractControllerTest @Autowired constructor(
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = java.time.LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = null,
             categories = setOf(AdvertisementProductCategory.BANNER, AdvertisementProductCategory.INSTAGRAM_1),
             scheduleRequest = "11월 중 1주 집행을 희망합니다.",
             advertisementRequest = "인턴 지원자를 대상으로 알려주세요.",

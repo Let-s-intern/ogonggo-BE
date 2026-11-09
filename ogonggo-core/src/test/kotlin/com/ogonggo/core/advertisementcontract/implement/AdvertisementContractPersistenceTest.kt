@@ -1,6 +1,7 @@
 package com.ogonggo.core.advertisementcontract.implement
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -160,6 +161,23 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         // then
         assertEquals(setOf(AdvertisementProductCategory.BANNER, AdvertisementProductCategory.KAKAO_1), found.categories)
         assertEquals(AdvertisementContractStatus.REQUESTED, found.status)
+    }
+
+    @Test
+    fun `신청 폼 계약은 고른 예정 예산 구간을 저장하고, 고르지 않으면 비워 둔다`() {
+        // given
+        val withBudget = appendForm(setOf(AdvertisementProductCategory.BANNER), budgetRange = AdvertisementContractBudgetRange.FROM_500K_TO_1M)
+        val withoutBudget = appendForm(setOf(AdvertisementProductCategory.BANNER))
+        repository.flush()
+        entityManager.clear()
+
+        // when
+        val foundWithBudget = repository.findById(withBudget).get()
+        val foundWithoutBudget = repository.findById(withoutBudget).get()
+
+        // then
+        assertEquals(AdvertisementContractBudgetRange.FROM_500K_TO_1M, foundWithBudget.budgetRange)
+        assertEquals(null, foundWithoutBudget.budgetRange)
     }
 
     @Test
@@ -416,6 +434,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     private fun appendForm(
         categories: Set<AdvertisementProductCategory>,
         companyName: String = "렛츠커리어",
+        budgetRange: AdvertisementContractBudgetRange? = null,
         userId: Long? = null,
         businessNumberType: CompanyBusinessNumberType? = null,
         businessNumber: String? = null,
@@ -429,6 +448,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
                 recruitmentUrl = "https://example.com/recruit",
                 recruitmentDeadline = LocalDate.of(2026, 12, 20),
                 purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
+                budgetRange = budgetRange,
                 categories = categories,
                 scheduleRequest = " ",
                 advertisementRequest = null,
@@ -493,6 +513,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         recruitmentUrl = "https://example.com/recruit",
         recruitmentDeadline = LocalDate.of(2026, 12, 20),
         purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
+        budgetRange = null,
         categories = categories,
         scheduleRequest = null,
         advertisementRequest = null,

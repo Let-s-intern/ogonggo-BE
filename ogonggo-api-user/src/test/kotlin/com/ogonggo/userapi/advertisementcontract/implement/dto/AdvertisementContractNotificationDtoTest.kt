@@ -56,6 +56,7 @@ class AdvertisementContractNotificationDtoTest {
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = null,
             categories = setOf(AdvertisementProductCategory.KAKAO_CRM),
             scheduleRequest = null,
             advertisementRequest = null,
