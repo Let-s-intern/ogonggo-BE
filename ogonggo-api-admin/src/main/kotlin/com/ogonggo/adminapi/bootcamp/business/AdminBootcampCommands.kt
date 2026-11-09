@@ -2,7 +2,9 @@ package com.ogonggo.adminapi.bootcamp.business
 
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.bootcamp.domain.BootcampContentField
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
+import com.ogonggo.core.bootcamp.implement.dto.BootcampUpdateDto
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 
 /**
@@ -18,6 +20,16 @@ data class AdminBootcampUpdateCommand(
     val contents: Map<BootcampContentField, String?> = emptyMap(),
     /** 기업회원 공고 우선 노출을 이 과정에 줄지. null이면 그대로 둔다. */
     val priorityExposed: Boolean? = null,
+)
+
+/**
+ * 관리자가 부트캠프의 모든 내용과 모집 상태를 바꾼다. 커리큘럼·파트너사도 보낸 목록으로 바꾼다.
+ * 검수와 노출은 바꾸지 않는다. 운영자가 고친 내용이라 다시 검수하지 않는다.
+ */
+data class AdminBootcampReplaceCommand(
+    val bootcamp: BootcampUpdateDto,
+    /** 모집 중 또는 마감. 임시저장으로는 바꾸지 않는다. */
+    val status: BootcampRecruitmentStatus,
 )
 
 /** 관리자가 고른 부트캠프들의 노출을 한꺼번에 바꾼다. 하나라도 바꿀 수 없으면 아무것도 바꾸지 않는다. */

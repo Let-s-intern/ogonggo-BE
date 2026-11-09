@@ -30,12 +30,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -89,6 +92,39 @@ class AdminBootcampControllerTest @Autowired constructor(
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("[fields.content] 상세 내용은 비울 수 없습니다."))
+
+        Mockito.verifyNoInteractions(adminBootcampService)
+    }
+
+    @Test
+    fun `전체 수정은 임시저장 모집 상태로 바꿀 수 없다`() {
+        val body = objectMapper.writeValueAsString(
+            mapOf(
+                "companyName" to "오공고 교육",
+                "title" to "백엔드 부트캠프",
+                "programType" to "부트캠프",
+                "operationType" to "ONLINE",
+                "recruitmentType" to "ALWAYS_OPEN",
+                "programStartDate" to "2026-09-01",
+                "programEndDate" to "2026-12-31",
+                "tuitionType" to "FREE",
+                "shortDescription" to "한 줄 소개",
+                "content" to "상세 내용",
+                "applicationMethod" to "EXTERNAL_PAGE",
+                "applicationUrl" to "https://example.com/apply",
+                "partners" to emptyList<Any>(),
+                "curriculums" to emptyList<Any>(),
+                "status" to "DRAFT",
+            ),
+        )
+
+        val adminId = UsernamePasswordAuthenticationToken(9L, null, listOf(SimpleGrantedAuthority(ADMIN_AUTHORITY)))
+
+        mockMvc.perform(
+            put("/api/v1/admin/bootcamps/3").with(authentication(adminId)).contentType(MediaType.APPLICATION_JSON).content(body),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[status] 임시저장으로는 바꿀 수 없습니다."))
 
         Mockito.verifyNoInteractions(adminBootcampService)
     }

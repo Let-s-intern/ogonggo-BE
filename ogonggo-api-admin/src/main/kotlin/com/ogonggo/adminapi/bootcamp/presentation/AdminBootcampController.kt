@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.bootcamp.presentation
 
 import com.ogonggo.adminapi.bootcamp.business.AdminBootcampService
 import com.ogonggo.adminapi.bootcamp.presentation.request.ChangeAdminBootcampVisibilityRequest
+import com.ogonggo.adminapi.bootcamp.presentation.request.ReplaceAdminBootcampRequest
 import com.ogonggo.adminapi.bootcamp.presentation.request.UpdateAdminBootcampRequest
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampDetailResponse
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampSummaryResponse
@@ -15,11 +16,13 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -92,6 +95,17 @@ class AdminBootcampController(
         @RequestBody request: UpdateAdminBootcampRequest,
     ): ResponseEntity<SuccessResponse<AdminBootcampDetailResponse>> {
         adminBootcampService.updateBootcamp(bootcampId, request.toCommand())
+        return SuccessResponse.ok(AdminBootcampDetailResponse.from(adminBootcampService.getBootcamp(bootcampId)))
+    }
+
+    /** 수정이 커밋된 뒤의 부트캠프를 다시 읽어 응답한다. */
+    @PutMapping("/{bootcampId}")
+    override fun replaceBootcamp(
+        @PathVariable("bootcampId") bootcampId: Long,
+        @RequestBody request: ReplaceAdminBootcampRequest,
+        @AuthenticationPrincipal adminUserId: Long,
+    ): ResponseEntity<SuccessResponse<AdminBootcampDetailResponse>> {
+        adminBootcampService.replaceBootcamp(bootcampId, request.toCommand(), adminUserId)
         return SuccessResponse.ok(AdminBootcampDetailResponse.from(adminBootcampService.getBootcamp(bootcampId)))
     }
 
