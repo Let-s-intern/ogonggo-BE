@@ -144,7 +144,7 @@
 | 광고 문의 회사명 입력 방식 | `AdvertisementInquiryCompanyNameSource` | 검색(`SEARCH`, 오공고 회사명 검색에서 고름), 직접 입력(`MANUAL`), 회원 정보(`MEMBER_PROFILE`, 기업 회원 정보로 채움). 클라이언트가 보낸 값을 그대로 저장하며 보내지 않으면 직접 입력입니다. 영업이 표기를 정리할 행을 고르는 표시입니다. |
 | 광고 문의 유입 경로 | `AdvertisementInquiryInflowChannel` | 콜드메일·인스타그램·카카오톡·뉴스레터·기타 UTM·오공고 사이트·렛츠커리어·검색·외부 사이트·직접 접속. UTM과 referrer 원본으로 저장할 때 한 번 판정합니다. 회원의 유입 구분(`UserInflowSource`)과 다릅니다. |
 | 광고 상품 | `AdvertisementProduct` | 오공고가 파는 광고. 어드민이 추가하고 지웁니다. 화면에 노출되는 상품은 하나가 노출 자리 하나입니다. 가격은 소개용이며 견적 문의 상품은 비워 둡니다. |
-| 광고 상품 카테고리 | `AdvertisementProductCategory` | 광고 공고(`JOB_POSTING`), 배너(`BANNER`), 인스타그램 1·2(`INSTAGRAM_1`, `INSTAGRAM_2`), 카카오톡 채널 1·2(`KAKAO_1`, `KAKAO_2`). 신청 폼에서 고르는 단위입니다. 인스타그램·카카오톡 이름은 정해지면 바꿉니다. |
+| 광고 상품 카테고리 | `AdvertisementProductCategory` | 광고 공고(`JOB_POSTING`), 배너(`BANNER`), 인스타그램 오공고(`INSTAGRAM_1`), 인스타그램 렛츠커리어(`INSTAGRAM_2`), 카카오톡 직무별 큐레이션 톡방(`KAKAO_1`, 직무별 채용공고 큐레이션 톡방 6개), 카카오톡 렛츠커리어 공식 오픈채팅방(`KAKAO_2`, 쥬디 톡방·무료 세미나방 등). 신청 폼에서 고르는 단위입니다. |
 | 노출 자리 | `AdvertisementProductPosition` | 광고가 노출되는 오공고 화면의 자리. 프론트가 자기 자리의 광고를 찾는 고정 이름입니다. 지금은 배너 6곳(채용공고 홈 상단·하단, 공고 상세, 부트캠프 목록 상단·하단, 부트캠프 상세)입니다. |
 | 광고 계약 | `AdvertisementContract` | 광고주와의 계약. 신청부터 승인·반려까지 한 행이 상태로 거칩니다. 광고 신청 폼이나 비즈니스 공고 등록으로 생깁니다. 기획의 "광고 신청"도 이 행입니다. |
 | 광고 계약 상태 | `AdvertisementContractStatus` | 신청(`REQUESTED`), 협의 중(`NEGOTIATING`), 승인(`APPROVED`), 반려(`REJECTED`). 신청 폼 계약은 운영자가 바꾸며 전이를 막지 않습니다. 비즈니스 공고 계약은 검수 상태를 따라 검수 대기는 신청, 승인은 승인, 반려는 반려입니다. |
