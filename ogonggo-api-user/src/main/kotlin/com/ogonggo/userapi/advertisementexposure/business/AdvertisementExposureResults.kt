@@ -25,6 +25,7 @@ data class AdvertisementExposureResult(
     val id: Long,
     val name: String,
     val imageUrl: String,
+    val mobileImageUrl: String?,
     val linkUrl: String,
     val adLabel: Boolean,
 ) {
@@ -33,6 +34,7 @@ data class AdvertisementExposureResult(
             id = checkNotNull(exposure.id),
             name = checkNotNull(exposure.name),
             imageUrl = checkNotNull(exposure.imageUrl),
+            mobileImageUrl = exposure.mobileImageUrl,
             linkUrl = checkNotNull(exposure.linkUrl),
             adLabel = exposure.adLabel,
         )

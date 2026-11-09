@@ -51,6 +51,39 @@ class SlackNotificationSenderTest {
     }
 
     @Test
+    @DisplayName("광고 계약 Slack 알림은 신청자가 보낸 사업자 번호를 전화번호 뒤에 붙이고, 없으면 칸을 만들지 않는다")
+    fun `사업자 번호가 있을 때만 사업자 번호 칸을 보낸다`() {
+        // given
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val sender = SlackNotificationSender(
+            builder.build(),
+            SlackProperties(advertisementInquiry = WEBHOOK_URL),
+            ObjectMapper(),
+        )
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.blocks[1].fields.length()").value(10))
+            .andExpect(jsonPath("$.blocks[1].fields[9].text").value("*사업자 번호*\n사업자등록번호 1234567890"))
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.blocks[1].fields.length()").value(9))
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        // when
+        val withNumber = sender.send(
+            NOTIFICATION.copy(
+                payloadJson = ObjectMapper().writeValueAsString(PARAMETERS + ("businessNumber" to "사업자등록번호 1234567890")),
+            ),
+        )
+        val withoutNumber = sender.send(NOTIFICATION)
+
+        // then
+        assertEquals(NotificationDeliveryResult.Sent(null), withNumber)
+        assertEquals(NotificationDeliveryResult.Sent(null), withoutNumber)
+        server.verify()
+    }
+
+    @Test
     @DisplayName("Slack 메시지에서 사용자 입력 제어 문자를 이스케이프한다")
     fun `제어 문자를 슬랙 문법으로 처리하지 않는다`() {
         // given

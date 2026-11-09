@@ -43,6 +43,7 @@ internal class AdvertisementProductPersistenceTest @Autowired constructor(
         val instagramSecond = append(AdvertisementProductCategory.INSTAGRAM_1, "인스타그램 두 번째 상품")
         val instagramOtherChannel = append(AdvertisementProductCategory.INSTAGRAM_2, "다른 인스타그램 상품")
         val otherKakaoChannel = append(AdvertisementProductCategory.KAKAO_2, "다른 카카오 상품")
+        val kakaoCrm = append(AdvertisementProductCategory.KAKAO_CRM, "카카오톡 CRM 상품")
         manager.delete(reader.read(deletedBanner), NOW)
         entityManager.flush()
         entityManager.clear()
@@ -65,12 +66,13 @@ internal class AdvertisementProductPersistenceTest @Autowired constructor(
                 AdvertisementProductCategory.KAKAO_1 to kakaoLowerId,
                 AdvertisementProductCategory.KAKAO_1 to kakaoHigherId,
                 AdvertisementProductCategory.KAKAO_2 to otherKakaoChannel,
+                AdvertisementProductCategory.KAKAO_CRM to kakaoCrm,
             ),
             products.map { it.category to checkNotNull(it.id) },
         )
         assertEquals(listOf(postingFirst, postingSecond, bannerFirst), firstPage.items.map { it.id })
         assertEquals(listOf(bannerSecond, instagramFirst, instagramSecond), secondPage.items.map { it.id })
-        assertEquals(10L, firstPage.totalElements)
+        assertEquals(11L, firstPage.totalElements)
         assertEquals(4, firstPage.totalPages)
         assertEquals(1, secondPage.page)
         assertEquals(3, secondPage.size)

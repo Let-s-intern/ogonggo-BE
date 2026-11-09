@@ -206,6 +206,7 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
                 content = AdvertisementExposureContent(
                     name = "새 배너",
                     imageUrl = "https://example.com/new.png",
+                    mobileImageUrl = "https://example.com/new-mobile.png",
                     linkUrl = "/jobs/5502",
                 ),
                 adLabel = true,
@@ -223,6 +224,7 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
         assertEquals(null, updated.contractId)
         assertEquals("새 배너", updated.name)
         assertEquals("https://example.com/new.png", updated.imageUrl)
+        assertEquals("https://example.com/new-mobile.png", updated.mobileImageUrl)
         assertEquals("/jobs/5502", updated.linkUrl)
         assertEquals(true, updated.adLabel)
         assertEquals(NOW, updated.startAt)

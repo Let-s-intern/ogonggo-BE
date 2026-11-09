@@ -20,7 +20,7 @@ import java.time.LocalDateTime
  * 광고 상품 자리에 무엇을 띄울지의 설정이다. 운영자가 세팅 화면에서 상품(자리)별로 순서를 정하고 켜고 끈다.
  *
  * 모든 노출 상품이 이 테이블 하나를 쓴다. 상품이 늘어도 행만 늘고, 다른 값이 필요한 노출 종류가 생길 때만 칼럼을 더한다.
- * - 배너: 이름, 이미지, 링크가 있다.
+ * - 배너: 이름, 이미지, 링크가 있다. 모바일 이미지는 선택이며, 없으면 모바일에서도 이미지를 쓴다.
  * - 광고 공고: 띄울 채용공고·부트캠프가 있다.
  *
  * 광고주 계약이 없는 우리 홍보도 둔다([contractId]가 없음). 기간이 없으면 상시다.
@@ -67,6 +67,10 @@ class AdvertisementExposure internal constructor(
 
     @Column(name = "image_url", length = MAX_URL_LENGTH)
     var imageUrl: String? = content.imageUrl /* 배너 이미지 */
+        protected set
+
+    @Column(name = "mobile_image_url", length = MAX_URL_LENGTH)
+    var mobileImageUrl: String? = content.mobileImageUrl /* 배너 모바일 이미지. 없으면 모바일에서도 image_url을 쓴다 */
         protected set
 
     @Column(name = "link_url", length = MAX_URL_LENGTH)
@@ -121,6 +125,7 @@ class AdvertisementExposure internal constructor(
         this.contractId = contractId
         name = content.name
         imageUrl = content.imageUrl
+        mobileImageUrl = content.mobileImageUrl
         linkUrl = content.linkUrl
         targetType = content.targetType
         targetId = content.targetId
@@ -161,19 +166,23 @@ class AdvertisementExposure internal constructor(
             when (category) {
                 AdvertisementProductCategory.BANNER -> {
                     val valid = !content.name.isNullOrBlank() && !content.imageUrl.isNullOrBlank() && !content.linkUrl.isNullOrBlank() &&
+                        (content.mobileImageUrl == null || content.mobileImageUrl.isNotBlank()) &&
                         content.targetType == null && content.targetId == null
                     if (!valid) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_BANNER_CONTENT_REQUIRED)
                     }
                     require(content.name!!.length <= MAX_NAME_LENGTH) { "배너 이름은 ${MAX_NAME_LENGTH}자 이하여야 합니다." }
-                    require(content.imageUrl!!.length <= MAX_URL_LENGTH && content.linkUrl!!.length <= MAX_URL_LENGTH) {
+                    require(
+                        content.imageUrl!!.length <= MAX_URL_LENGTH && content.linkUrl!!.length <= MAX_URL_LENGTH &&
+                            (content.mobileImageUrl?.length ?: 0) <= MAX_URL_LENGTH,
+                    ) {
                         "주소는 ${MAX_URL_LENGTH}자 이하여야 합니다."
                     }
                 }
 
                 AdvertisementProductCategory.JOB_POSTING -> {
                     val valid = content.targetType != null && content.targetId != null && content.targetId > 0 &&
-                        content.name == null && content.imageUrl == null && content.linkUrl == null
+                        content.name == null && content.imageUrl == null && content.mobileImageUrl == null && content.linkUrl == null
                     if (!valid) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED)
                     }
@@ -185,13 +194,14 @@ class AdvertisementExposure internal constructor(
     }
 }
 
-/** 노출할 내용이다. 배너는 이름·이미지·링크, 광고 공고는 대상 공고만 채운다. */
+/** 노출할 내용이다. 배너는 이름·이미지·링크(모바일 이미지는 선택), 광고 공고는 대상 공고만 채운다. */
 data class AdvertisementExposureContent(
     val name: String? = null,
     val imageUrl: String? = null,
     val linkUrl: String? = null,
     val targetType: AdvertisementExposureTargetType? = null,
     val targetId: Long? = null,
+    val mobileImageUrl: String? = null,
 )
 
 /** 노출 기간이다. 둘 다 없으면 상시이고, 있으면 둘 다 있어야 한다. */

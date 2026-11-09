@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.error.UnauthorizedException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.userapi.advertisementcontract.business.AdvertisementContractService
 import com.ogonggo.userapi.advertisementcontract.business.CreateAdvertisementContractCommand
 import com.ogonggo.userapi.auth.error.AuthErrorCode
@@ -98,6 +99,59 @@ class AdvertisementContractControllerTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("사업자 번호와 카카오톡 CRM 카테고리를 함께 신청한다")
+    fun `사업자 번호와 카카오톡 CRM 카테고리를 함께 신청한다`() {
+        // given
+        val body = VALID_BODY
+            .replace("\"categories\": [\"BANNER\", \"INSTAGRAM_1\"]", "\"categories\": [\"KAKAO_CRM\"]")
+            .replace(BUSINESS_NUMBER_ANCHOR, "$BUSINESS_NUMBER_ANCHOR\n  \"businessNumberType\": \"BUSINESS_REGISTRATION\",\n  \"businessNumber\": \"1234567890\",")
+        val command = VALID_COMMAND.copy(
+            categories = setOf(AdvertisementProductCategory.KAKAO_CRM),
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
+        )
+        Mockito.`when`(advertisementContractService.createContract(null, command)).thenReturn(CONTRACT_ID)
+
+        // when
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+            // then
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(CONTRACT_ID))
+
+        Mockito.verify(advertisementContractService).createContract(null, command)
+    }
+
+    @Test
+    @DisplayName("사업자 번호는 기업 회원가입과 같이 종류와 자릿수가 맞지 않으면 400으로 응답한다")
+    fun `사업자 번호는 기업 회원가입과 같이 종류와 자릿수가 맞지 않으면 400으로 응답한다`() {
+        // given
+        val invalidPairs = listOf(
+            "\"businessNumber\": \"1234567890\"",
+            "\"businessNumberType\": \"BUSINESS_REGISTRATION\"",
+            "\"businessNumberType\": \"BUSINESS_REGISTRATION\", \"businessNumber\": \"123456789\"",
+            "\"businessNumberType\": \"CORPORATE_REGISTRATION\", \"businessNumber\": \"1234567890\"",
+            "\"businessNumberType\": \"OVERSEAS\", \"businessNumber\": \"1234567890\"",
+            "\"businessNumberType\": \"BUSINESS_REGISTRATION\", \"businessNumber\": \"123-45-67890\"",
+        )
+
+        // when
+        invalidPairs.forEachIndexed { index, pair ->
+            val body = VALID_BODY.replace(BUSINESS_NUMBER_ANCHOR, "$BUSINESS_NUMBER_ANCHOR $pair,")
+            val response = mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn()
+                .response
+            // then
+            assertEquals(400, response.status, "invalid request #$index returned ${response.status}: ${response.contentAsString}")
+            org.hamcrest.MatcherAssert.assertThat(
+                response.contentAsString,
+                org.hamcrest.Matchers.containsString("\"code\":\"BAD_REQUEST\""),
+            )
+        }
+
+        Mockito.verifyNoInteractions(advertisementContractService)
+    }
+
+    @Test
     @DisplayName("이메일 URL 필수값과 카테고리 검증 실패는 400으로 응답한다")
     fun `이메일 URL 필수값과 카테고리 검증 실패는 400으로 응답한다`() {
         // given
@@ -130,6 +184,7 @@ class AdvertisementContractControllerTest @Autowired constructor(
         const val ACCESS_TOKEN = "user-access-token"
         const val USER_ID = 42L
         const val CONTRACT_ID = 1001L
+        const val BUSINESS_NUMBER_ANCHOR = "\"phoneNumber\": \"02-1234-5678\","
         val VALID_BODY = """
             {
               "promotionTarget": "JOB",
