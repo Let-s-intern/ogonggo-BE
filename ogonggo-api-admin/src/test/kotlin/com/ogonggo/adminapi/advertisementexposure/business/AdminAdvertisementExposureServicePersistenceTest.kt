@@ -254,6 +254,7 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
         contractId = null,
         name = "수정 시도",
         imageUrl = "https://example.com/updated.png",
+        mobileImageUrl = null,
         linkUrl = "/jobs/5502",
         targetType = null,
         targetId = null,

@@ -28,6 +28,8 @@ class AdvertisementContractAppender internal constructor(
             managerName = dto.managerName,
             email = dto.email,
             phoneNumber = dto.phoneNumber,
+            businessNumberType = dto.businessNumberType,
+            businessNumber = dto.businessNumber,
             invoiceMethod = dto.invoiceMethod,
             creativeMethod = dto.creativeMethod,
         ),

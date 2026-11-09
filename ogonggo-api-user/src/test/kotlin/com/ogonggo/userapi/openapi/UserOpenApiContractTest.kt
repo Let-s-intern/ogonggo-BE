@@ -128,8 +128,9 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
         assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertTrue(operation.at("/responses/400/content/application~1json/schema").isObject)
-        assertEquals(setOf("id", "name", "imageUrl", "linkUrl", "adLabel"), response.at("/properties").fieldNames().asSequence().toSet())
+        assertEquals(setOf("id", "name", "imageUrl", "mobileImageUrl", "linkUrl", "adLabel"), response.at("/properties").fieldNames().asSequence().toSet())
         assertEquals(setOf("id", "name", "imageUrl", "linkUrl", "adLabel"), response.at("/required").map { it.asText() }.toSet())
+        assertTrue(response.at("/properties/mobileImageUrl/nullable").asBoolean())
     }
 
     @Test
@@ -164,12 +165,19 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(request.at("/properties/recruitmentUrl/description").asText().contains("HTTP 또는 HTTPS"))
         assertEquals(255, request.at("/properties/email/maxLength").asInt())
         assertEquals("array", request.at("/properties/categories/type").asText())
-        assertEquals(6, request.at("/properties/categories/maxItems").asInt())
+        assertEquals(7, request.at("/properties/categories/maxItems").asInt())
+        assertTrue(request.at("/properties/categories/items/enum").any { it.asText() == "KAKAO_CRM" })
+        assertEquals(
+            setOf("BUSINESS_REGISTRATION", "CORPORATE_REGISTRATION", "OVERSEAS"),
+            request.at("/properties/businessNumberType/enum").map { it.asText() }.toSet(),
+        )
+        assertEquals(13, request.at("/properties/businessNumber/maxLength").asInt())
+        assertEquals("^[0-9]+$", request.at("/properties/businessNumber/pattern").asText())
         assertEquals(
             setOf(
                 "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline",
                 "purpose", "budgetRange", "categories", "scheduleRequest", "advertisementRequest", "managerName", "email",
-                "phoneNumber", "invoiceMethod", "creativeMethod",
+                "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod",
             ),
             request.at("/properties").fieldNames().asSequence().toSet(),
         )

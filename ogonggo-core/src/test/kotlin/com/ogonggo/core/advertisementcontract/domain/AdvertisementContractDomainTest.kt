@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCo
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -84,9 +85,39 @@ class AdvertisementContractDomainTest {
                 managerName = null,
                 email = null,
                 phoneNumber = null,
+                businessNumberType = null,
+                businessNumber = null,
                 invoiceMethod = null,
                 creativeMethod = null,
             )
+        }
+    }
+
+    @Test
+    fun `신청 폼 계약은 사업자 번호 없이도 접수한다`() {
+        val contract = formContract()
+
+        assertEquals(null, contract.businessNumberType)
+        assertEquals(null, contract.businessNumber)
+    }
+
+    @Test
+    fun `신청 폼 계약의 사업자 번호는 기업 회원가입과 같이 종류와 자릿수가 맞아야 한다`() {
+        val registration = formContract(
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
+        )
+        val overseas = formContract(businessNumberType = CompanyBusinessNumberType.OVERSEAS)
+
+        assertEquals(CompanyBusinessNumberType.BUSINESS_REGISTRATION, registration.businessNumberType)
+        assertEquals("1234567890", registration.businessNumber)
+        assertEquals(null, overseas.businessNumber)
+        assertThrows(IllegalArgumentException::class.java) { formContract(businessNumber = "1234567890") }
+        assertThrows(IllegalArgumentException::class.java) {
+            formContract(businessNumberType = CompanyBusinessNumberType.CORPORATE_REGISTRATION, businessNumber = "1234567890")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            formContract(businessNumberType = CompanyBusinessNumberType.OVERSEAS, businessNumber = "1234567890")
         }
     }
 
@@ -102,6 +133,8 @@ class AdvertisementContractDomainTest {
     private fun formContract(
         categories: Set<AdvertisementProductCategory> = setOf(AdvertisementProductCategory.BANNER),
         budgetRange: AdvertisementContractBudgetRange? = AdvertisementContractBudgetRange.FROM_1M_TO_3M,
+        businessNumberType: CompanyBusinessNumberType? = null,
+        businessNumber: String? = null,
     ) =
         AdvertisementContract(
             source = AdvertisementContractSource.APPLICATION_FORM,
@@ -121,6 +154,8 @@ class AdvertisementContractDomainTest {
             managerName = "김담당",
             email = "marketing@example.com",
             phoneNumber = "010-1234-5678",
+            businessNumberType = businessNumberType,
+            businessNumber = businessNumber,
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
         )

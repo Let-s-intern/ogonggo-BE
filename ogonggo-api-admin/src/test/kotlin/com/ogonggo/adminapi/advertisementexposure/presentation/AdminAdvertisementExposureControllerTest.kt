@@ -102,6 +102,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(501))
             .andExpect(jsonPath("$.data.items[0].productId").value(11))
             .andExpect(jsonPath("$.data.items[0].contractId").value(1001))
+            .andExpect(jsonPath("$.data.items[0].mobileImageUrl").value("https://example.com/assets/banner-mobile.png"))
             .andExpect(jsonPath("$.data.items[0].advertiserCompanyName").value("샘플기업"))
             .andExpect(jsonPath("$.data.items[0].displayOrder").value(1))
             .andExpect(jsonPath("$.data.items[0].exposed").value(false))
@@ -145,6 +146,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                     contractId = 1001,
                     name = "샘플기업 인턴 채용",
                     imageUrl = "https://example.com/assets/banner.png",
+                    mobileImageUrl = "https://example.com/assets/banner-mobile.png",
                     linkUrl = "/jobs/5501",
                     targetType = null,
                     targetId = null,
@@ -169,6 +171,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 contractId = 1001,
                 name = "샘플기업 인턴 채용",
                 imageUrl = "https://example.com/assets/banner.png",
+                mobileImageUrl = "https://example.com/assets/banner-mobile.png",
                 linkUrl = "/jobs/5501",
                 targetType = null,
                 targetId = null,
@@ -193,6 +196,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             BANNER_REQUEST.replace("\"targetType\":null", "\"targetType\":1"),
             BANNER_REQUEST.replace("\"exposed\":true", "\"exposed\":true,\"displayOrder\":1"),
             BANNER_REQUEST.replace("https://example.com/assets/banner.png", "ftp://example.com/assets/banner.png"),
+            BANNER_REQUEST.replace("https://example.com/assets/banner-mobile.png", "ftp://example.com/assets/banner-mobile.png"),
             BANNER_REQUEST.replace("\"linkUrl\":\"/jobs/5501\"", "\"linkUrl\":\"//example.com/jobs/5501\""),
         ).forEach { body ->
             mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body)))
@@ -244,6 +248,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 contractId = null,
                 name = "샘플기업 인턴 채용",
                 imageUrl = "https://example.com/assets/banner.png",
+                mobileImageUrl = "https://example.com/assets/banner-mobile.png",
                 linkUrl = "/jobs/5501",
                 targetType = null,
                 targetId = null,
@@ -270,6 +275,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 contractId = null,
                 name = "샘플 배너",
                 imageUrl = "https://example.com/banner.png",
+                mobileImageUrl = null,
                 linkUrl = "/jobs/5501",
                 targetType = null,
                 targetId = null,
@@ -288,6 +294,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             UPDATE_REQUEST.replace("\"contractId\":null", "\"contractId\":1.5"),
             UPDATE_REQUEST.replace("\"targetId\":null", "\"targetId\":\"12\""),
             UPDATE_REQUEST.replace("https://example.com/assets/banner.png", "ftp://example.com/assets/banner.png"),
+            UPDATE_REQUEST.replace("https://example.com/assets/banner-mobile.png", "ftp://example.com/assets/banner-mobile.png"),
             UPDATE_REQUEST.replace("\"linkUrl\":\"/jobs/5501\"", "\"linkUrl\":\"javascript:alert(1)\""),
             UPDATE_REQUEST.replace("\"endAt\":null", "\"endAt\":\"2026-11-01T00:00:00\",\"productId\":11"),
             UPDATE_REQUEST.replace("\"endAt\":null", "\"endAt\":null,\"exposed\":true"),
@@ -361,6 +368,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         contractId = 1001,
         name = "샘플기업 인턴 채용",
         imageUrl = "https://example.com/assets/banner.png",
+        mobileImageUrl = "https://example.com/assets/banner-mobile.png",
         linkUrl = "/jobs/5501",
         targetType = null,
         targetId = null,
@@ -379,6 +387,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         contractId = 1001,
         name = "샘플기업 인턴 채용",
         imageUrl = "https://example.com/assets/banner.png",
+        mobileImageUrl = "https://example.com/assets/banner-mobile.png",
         linkUrl = "/jobs/5501",
         targetType = null,
         targetId = null,
@@ -394,7 +403,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
 
     private companion object {
         const val PATH = "/api/v1/admin/advertisement-exposures"
-        const val BANNER_REQUEST = """{"productId":11,"contractId":1001,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":"2026-11-01T00:00:00","endAt":"2026-11-30T23:59:59","exposed":true}"""
-        const val UPDATE_REQUEST = """{"contractId":null,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":null,"endAt":null}"""
+        const val BANNER_REQUEST = """{"productId":11,"contractId":1001,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":"2026-11-01T00:00:00","endAt":"2026-11-30T23:59:59","exposed":true}"""
+        const val UPDATE_REQUEST = """{"contractId":null,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":null,"endAt":null}"""
     }
 }

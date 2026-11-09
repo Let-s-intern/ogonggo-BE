@@ -5,6 +5,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.jpa.BaseTimeEntity
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
@@ -25,6 +26,7 @@ import java.time.LocalDate
  *
  * 두 경로로 생긴다([source]).
  * - 광고 신청 폼: 로그인 없이도 신청할 수 있어 회원 식별자가 없을 수 있다. 폼이 받은 값을 모두 가진다.
+ *   사업자 번호는 선택이다. 이 값을 보내기 전에 배포된 신청 화면이 있기 때문이다.
  * - 비즈니스 공고 등록: 기업회원이 공고를 등록하면 그 공고 하나에 계약 하나가 생기고, 공고 검수 상태를 따른다([followReview]).
  *
  * 신청자가 쓴 값은 남긴 그대로 두고, 운영자는 상태와 결제 금액만 바꾼다. 지우는 기능이 없어 소프트 삭제 칼럼을 두지 않는다.
@@ -61,6 +63,8 @@ class AdvertisementContract internal constructor(
     managerName: String?,
     email: String?,
     phoneNumber: String?,
+    businessNumberType: CompanyBusinessNumberType?,
+    businessNumber: String?,
     invoiceMethod: AdvertisementContractInvoiceMethod?,
     creativeMethod: AdvertisementContractCreativeMethod?,
 ) : BaseTimeEntity() {
@@ -82,11 +86,13 @@ class AdvertisementContract internal constructor(
                 }
                 require(invoiceMethod != null && creativeMethod != null) { "신청 폼 계약은 계산서 발행 방식과 소재 준비 방식이 있어야 합니다." }
                 require(categories.isNotEmpty()) { "신청 폼 계약은 광고 카테고리를 하나 이상 골라야 합니다." }
+                validateBusinessNumber(businessNumberType, businessNumber)
             }
 
             AdvertisementContractSource.COMPANY_POSTING -> {
                 require(userId != null && targetId != null && targetId > 0) { "비즈니스 공고 계약은 등록한 회원과 공고를 가리켜야 합니다." }
                 require(budgetRange == null) { "비즈니스 공고 계약은 예정 예산 구간을 갖지 않습니다." }
+                require(businessNumberType == null && businessNumber == null) { "비즈니스 공고 계약은 사업자 번호를 갖지 않습니다." }
             }
         }
     }
@@ -159,6 +165,13 @@ class AdvertisementContract internal constructor(
     val phoneNumber: String? = phoneNumber /* 담당자 연락처 */
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "business_number_type", length = 30)
+    val businessNumberType: CompanyBusinessNumberType? = businessNumberType /* 사업자 번호 종류. 해외 기업이면 OVERSEAS */
+
+    @Column(name = "business_number", length = 13)
+    val businessNumber: String? = businessNumber /* 사업자 번호. 숫자만 */
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "invoice_method", length = 20)
     val invoiceMethod: AdvertisementContractInvoiceMethod? = invoiceMethod /* 계약 및 계산서 발행 방식 */
 
@@ -214,6 +227,8 @@ class AdvertisementContract internal constructor(
             managerName: String,
             email: String,
             phoneNumber: String,
+            businessNumberType: CompanyBusinessNumberType? = null,
+            businessNumber: String? = null,
             invoiceMethod: AdvertisementContractInvoiceMethod,
             creativeMethod: AdvertisementContractCreativeMethod,
         ): AdvertisementContract = AdvertisementContract(
@@ -234,6 +249,8 @@ class AdvertisementContract internal constructor(
             managerName = managerName,
             email = email,
             phoneNumber = phoneNumber,
+            businessNumberType = businessNumberType,
+            businessNumber = businessNumber,
             invoiceMethod = invoiceMethod,
             creativeMethod = creativeMethod,
         )
@@ -264,8 +281,19 @@ class AdvertisementContract internal constructor(
             managerName = null,
             email = null,
             phoneNumber = null,
+            businessNumberType = null,
+            businessNumber = null,
             invoiceMethod = null,
             creativeMethod = null,
         )
     }
+}
+
+/** 기업 회원가입과 같은 규칙이다. 번호는 종류가 있어야 뜻이 있고, 종류가 정해지면 그 종류의 형식을 따라야 한다. */
+private fun validateBusinessNumber(type: CompanyBusinessNumberType?, number: String?) {
+    if (type == null) {
+        require(number == null) { "번호 종류 없이 사업자 번호를 둘 수 없습니다." }
+        return
+    }
+    require(type.accepts(number)) { "${type.desc}의 형식이 아닙니다." }
 }

@@ -36,6 +36,8 @@ class AdvertisementContractService internal constructor(
                 managerName = command.managerName,
                 email = command.email,
                 phoneNumber = command.phoneNumber,
+                businessNumberType = command.businessNumberType,
+                businessNumber = command.businessNumber,
                 invoiceMethod = command.invoiceMethod,
                 creativeMethod = command.creativeMethod,
             ),

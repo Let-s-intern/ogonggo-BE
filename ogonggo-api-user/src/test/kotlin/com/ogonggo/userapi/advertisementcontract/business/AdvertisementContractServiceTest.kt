@@ -8,6 +8,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpos
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractAppender
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractFormAppendDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.userapi.advertisementcontract.implement.AdvertisementContractNotificationAppender
@@ -120,6 +121,8 @@ class AdvertisementContractServiceTest {
             managerName = "김담당",
             email = "marketing@example.com",
             phoneNumber = "02-1234-5678",
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
         )
@@ -138,6 +141,8 @@ class AdvertisementContractServiceTest {
             managerName = "김담당",
             email = "marketing@example.com",
             phoneNumber = "02-1234-5678",
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
         )

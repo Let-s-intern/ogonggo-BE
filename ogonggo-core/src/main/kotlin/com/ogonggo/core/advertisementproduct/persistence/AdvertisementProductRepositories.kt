@@ -45,6 +45,7 @@ internal class AdvertisementProductQueryRepository(
             .`when`(advertisementProduct.category.eq(AdvertisementProductCategory.INSTAGRAM_2)).then(4)
             .`when`(advertisementProduct.category.eq(AdvertisementProductCategory.KAKAO_1)).then(5)
             .`when`(advertisementProduct.category.eq(AdvertisementProductCategory.KAKAO_2)).then(6)
+            .`when`(advertisementProduct.category.eq(AdvertisementProductCategory.KAKAO_CRM)).then(7)
             .otherwise(Int.MAX_VALUE)
         val products = queryFactory.selectFrom(advertisementProduct)
             .where(advertisementProduct.deletedAt.isNull)

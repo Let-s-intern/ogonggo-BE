@@ -35,6 +35,7 @@ import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import jakarta.persistence.EntityManager
 import org.hibernate.SessionFactory
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -121,6 +122,30 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
             appendContract(job)
             repository.flush()
         }
+    }
+
+    @Test
+    fun `신청 폼 계약은 사업자 번호를 저장하고 비즈니스 공고 계약은 비워 둔다`() {
+        // given
+        val formId = appendForm(
+            setOf(AdvertisementProductCategory.KAKAO_CRM),
+            businessNumberType = CompanyBusinessNumberType.CORPORATE_REGISTRATION,
+            businessNumber = "1101111234567",
+        )
+        val postingId = appendContract(jobAppender.append(companyJob()))
+        repository.flush()
+        entityManager.clear()
+
+        // when
+        val form = repository.findById(formId).get()
+        val posting = repository.findById(postingId).get()
+
+        // then
+        assertEquals(CompanyBusinessNumberType.CORPORATE_REGISTRATION, form.businessNumberType)
+        assertEquals("1101111234567", form.businessNumber)
+        assertEquals(setOf(AdvertisementProductCategory.KAKAO_CRM), form.categories)
+        assertEquals(null, posting.businessNumberType)
+        assertEquals(null, posting.businessNumber)
     }
 
     @Test
@@ -363,6 +388,8 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         categories: Set<AdvertisementProductCategory>,
         companyName: String = "렛츠커리어",
         budgetRange: AdvertisementContractBudgetRange? = null,
+        businessNumberType: CompanyBusinessNumberType? = null,
+        businessNumber: String? = null,
     ): Long =
         appender.appendFromForm(
             AdvertisementContractFormAppendDto(
@@ -380,6 +407,8 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
                 managerName = "김담당",
                 email = "marketing@example.com",
                 phoneNumber = "010-1234-5678",
+                businessNumberType = businessNumberType,
+                businessNumber = businessNumber,
                 invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
                 creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
             ),
@@ -443,6 +472,8 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         managerName = "김담당",
         email = "marketing@example.com",
         phoneNumber = "010-1234-5678",
+        businessNumberType = null,
+        businessNumber = null,
         invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
         creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
     )

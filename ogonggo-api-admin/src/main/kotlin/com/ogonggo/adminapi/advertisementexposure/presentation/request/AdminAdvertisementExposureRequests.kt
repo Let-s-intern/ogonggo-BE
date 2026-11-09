@@ -24,6 +24,13 @@ data class UpdateAdminAdvertisementExposureRequest(
     @field:Schema(description = "배너 이미지는 HTTP(S) 절대 URL이어야 합니다.", nullable = true)
     val imageUrl: String? = null,
     @field:Size(max = 2048)
+    @field:ValidAdvertisementImageUrl
+    @field:Schema(
+        description = "배너 모바일 이미지. 선택이며 HTTP(S) 절대 URL이어야 합니다. null이면 모바일에서도 imageUrl을 씁니다. 광고 공고는 보내지 않습니다.",
+        nullable = true,
+    )
+    val mobileImageUrl: String? = null,
+    @field:Size(max = 2048)
     @field:ValidAdvertisementLinkUrl
     @field:Schema(description = "HTTP(S) URL 또는 단일 슬래시로 시작하는 내부 경로입니다.", nullable = true)
     val linkUrl: String? = null,
@@ -52,6 +59,7 @@ data class UpdateAdminAdvertisementExposureRequest(
         contractId = contractId,
         name = name,
         imageUrl = imageUrl,
+        mobileImageUrl = mobileImageUrl,
         linkUrl = linkUrl,
         targetType = targetType,
         targetId = targetId,

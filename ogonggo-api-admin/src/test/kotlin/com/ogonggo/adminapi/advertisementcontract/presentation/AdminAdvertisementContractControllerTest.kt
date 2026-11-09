@@ -22,6 +22,7 @@ import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -194,6 +195,8 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             managerName = "김담당",
             email = "marketing@example.com",
             phoneNumber = "02-1234-5678",
+            businessNumberType = CompanyBusinessNumberType.BUSINESS_REGISTRATION,
+            businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
             paymentAmount = null,
@@ -218,6 +221,8 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.userId").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.categories[0]").value("BANNER"))
             .andExpect(jsonPath("$.data.budgetRange").value("FROM_500K_TO_1M"))
+            .andExpect(jsonPath("$.data.businessNumberType").value("BUSINESS_REGISTRATION"))
+            .andExpect(jsonPath("$.data.businessNumber").value("1234567890"))
             .andExpect(jsonPath("$.data.products[0].contractProductId").value(3001))
             .andExpect(jsonPath("$.data.products[0].productDeleted").value(true))
 

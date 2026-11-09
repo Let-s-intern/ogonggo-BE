@@ -8,6 +8,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -37,6 +38,8 @@ data class AdvertisementContractFormAppendDto(
     val managerName: String,
     val email: String,
     val phoneNumber: String,
+    val businessNumberType: CompanyBusinessNumberType? = null,
+    val businessNumber: String? = null,
     val invoiceMethod: AdvertisementContractInvoiceMethod,
     val creativeMethod: AdvertisementContractCreativeMethod,
 )

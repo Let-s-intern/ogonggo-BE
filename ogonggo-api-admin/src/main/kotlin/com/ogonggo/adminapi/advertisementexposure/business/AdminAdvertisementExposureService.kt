@@ -52,6 +52,7 @@ class AdminAdvertisementExposureService(
                 content = AdvertisementExposureContent(
                     name = command.name,
                     imageUrl = command.imageUrl,
+                    mobileImageUrl = command.mobileImageUrl,
                     linkUrl = command.linkUrl,
                     targetType = command.targetType,
                     targetId = command.targetId,
@@ -79,6 +80,7 @@ class AdminAdvertisementExposureService(
                 content = AdvertisementExposureContent(
                     name = command.name,
                     imageUrl = command.imageUrl,
+                    mobileImageUrl = command.mobileImageUrl,
                     linkUrl = command.linkUrl,
                     targetType = command.targetType,
                     targetId = command.targetId,
