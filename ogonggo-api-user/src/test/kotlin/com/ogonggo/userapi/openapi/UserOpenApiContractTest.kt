@@ -230,13 +230,13 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(
             setOf(
                 "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
-                "recruitmentDeadline", "purpose", "categories", "scheduleRequest", "advertisementRequest",
-                "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod", "paymentAmount",
+                "recruitmentDeadline", "purpose", "budgetRange", "categories", "scheduleRequest", "advertisementRequest",
+                "managerName", "email", "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "paymentAmount",
                 "registeredAt", "products",
             ),
             detailResponse.at("/properties").fieldNames().asSequence().toSet(),
         )
-        listOf("scheduleRequest", "advertisementRequest", "paymentAmount").forEach { field ->
+        listOf("budgetRange", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "paymentAmount").forEach { field ->
             assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
         }
         assertEquals(

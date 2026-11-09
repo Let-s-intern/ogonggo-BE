@@ -496,12 +496,15 @@ GET /api/v1/users/me/advertisement-contracts/{contractId}
     "recruitmentUrl": "https://example.com/recruit/backend",
     "recruitmentDeadline": "2026-12-31",
     "purpose": "FIT_APPLICANTS",
+    "budgetRange": "FROM_1M_TO_3M",
     "categories": ["BANNER", "INSTAGRAM_1"],
     "scheduleRequest": "11월 중 1주 집행을 희망합니다.",
     "advertisementRequest": null,
     "managerName": "김담당",
     "email": "marketing@example.com",
     "phoneNumber": "02-1234-5678",
+    "businessNumberType": "BUSINESS_REGISTRATION",
+    "businessNumber": "1234567890",
     "invoiceMethod": "TAX_INVOICE",
     "creativeMethod": "REQUEST_PRODUCTION",
     "paymentAmount": 300000,
@@ -523,7 +526,7 @@ GET /api/v1/users/me/advertisement-contracts/{contractId}
 
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
-| data.id ~ data.creativeMethod | U-01 요청 필드와 같음 | scheduleRequest·advertisementRequest만 예 | 신청 때 보낸 값. 공백 요청사항은 null로 저장돼 null로 나온다 |
+| data.id ~ data.creativeMethod | U-01 요청 필드와 같음 | budgetRange·scheduleRequest·advertisementRequest·businessNumberType·businessNumber만 예 | 신청 때 보낸 값. 보내지 않은 선택 값과 공백 요청사항은 null로 나온다. 해외 기업은 businessNumber가 null이다 |
 | data.status | string(enum) | 아니오 | 계약 상태 |
 | data.paymentAmount | int32 | 예 | 협의 금액. 정하기 전이면 null |
 | data.registeredAt | string(date-time) | 아니오 | 신청 일시(KST) |

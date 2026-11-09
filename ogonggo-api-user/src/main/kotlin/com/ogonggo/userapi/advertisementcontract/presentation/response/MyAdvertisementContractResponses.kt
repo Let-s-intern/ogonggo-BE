@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisementcontract.presentation.response
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -7,6 +8,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpos
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.userapi.advertisementcontract.business.MyAdvertisementContractDetailResult
 import com.ogonggo.userapi.advertisementcontract.business.MyAdvertisementContractProductResult
 import com.ogonggo.userapi.advertisementcontract.business.MyAdvertisementContractSummaryResult
@@ -52,6 +54,8 @@ data class MyAdvertisementContractDetailResponse(
     val recruitmentUrl: String,
     val recruitmentDeadline: LocalDate,
     val purpose: AdvertisementContractPurpose,
+    @field:Schema(description = "예정 예산 구간. 고르지 않았으면 null", nullable = true)
+    val budgetRange: AdvertisementContractBudgetRange?,
     @field:Schema(description = "신청 때 고른 광고 카테고리")
     val categories: List<AdvertisementProductCategory>,
     @field:Schema(description = "일정 요청사항. 비워 보냈으면 null", nullable = true)
@@ -61,6 +65,10 @@ data class MyAdvertisementContractDetailResponse(
     val managerName: String,
     val email: String,
     val phoneNumber: String,
+    @field:Schema(description = "사업자 번호 종류. 보내지 않았으면 null", nullable = true)
+    val businessNumberType: CompanyBusinessNumberType?,
+    @field:Schema(description = "사업자 번호(숫자만). 보내지 않았거나 해외 기업이면 null", nullable = true)
+    val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod,
     val creativeMethod: AdvertisementContractCreativeMethod,
     @field:Schema(description = "협의로 정한 결제 금액(원). 아직 정하지 않았으면 null", nullable = true)
@@ -80,12 +88,15 @@ data class MyAdvertisementContractDetailResponse(
             recruitmentUrl = result.recruitmentUrl,
             recruitmentDeadline = result.recruitmentDeadline,
             purpose = result.purpose,
+            budgetRange = result.budgetRange,
             categories = result.categories,
             scheduleRequest = result.scheduleRequest,
             advertisementRequest = result.advertisementRequest,
             managerName = result.managerName,
             email = result.email,
             phoneNumber = result.phoneNumber,
+            businessNumberType = result.businessNumberType,
+            businessNumber = result.businessNumber,
             invoiceMethod = result.invoiceMethod,
             creativeMethod = result.creativeMethod,
             paymentAmount = result.paymentAmount,

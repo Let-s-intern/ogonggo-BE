@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -10,6 +11,7 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractProductDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -72,12 +74,15 @@ data class MyAdvertisementContractDetailResult(
     val recruitmentUrl: String,
     val recruitmentDeadline: LocalDate,
     val purpose: AdvertisementContractPurpose,
+    val budgetRange: AdvertisementContractBudgetRange?,
     val categories: List<AdvertisementProductCategory>,
     val scheduleRequest: String?,
     val advertisementRequest: String?,
     val managerName: String,
     val email: String,
     val phoneNumber: String,
+    val businessNumberType: CompanyBusinessNumberType?,
+    val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod,
     val creativeMethod: AdvertisementContractCreativeMethod,
     val paymentAmount: Int?,
@@ -97,12 +102,15 @@ data class MyAdvertisementContractDetailResult(
             recruitmentUrl = checkNotNull(contract.recruitmentUrl) { "신청 폼 계약은 recruitmentUrl 값이 있습니다." },
             recruitmentDeadline = checkNotNull(contract.recruitmentDeadline) { "신청 폼 계약은 recruitmentDeadline 값이 있습니다." },
             purpose = checkNotNull(contract.purpose) { "신청 폼 계약은 purpose 값이 있습니다." },
+            budgetRange = contract.budgetRange,
             categories = contract.categories.sorted(),
             scheduleRequest = contract.scheduleRequest,
             advertisementRequest = contract.advertisementRequest,
             managerName = checkNotNull(contract.managerName) { "신청 폼 계약은 managerName 값이 있습니다." },
             email = checkNotNull(contract.email) { "신청 폼 계약은 email 값이 있습니다." },
             phoneNumber = checkNotNull(contract.phoneNumber) { "신청 폼 계약은 phoneNumber 값이 있습니다." },
+            businessNumberType = contract.businessNumberType,
+            businessNumber = contract.businessNumber,
             invoiceMethod = checkNotNull(contract.invoiceMethod) { "신청 폼 계약은 invoiceMethod 값이 있습니다." },
             creativeMethod = checkNotNull(contract.creativeMethod) { "신청 폼 계약은 creativeMethod 값이 있습니다." },
             paymentAmount = contract.paymentAmount,
