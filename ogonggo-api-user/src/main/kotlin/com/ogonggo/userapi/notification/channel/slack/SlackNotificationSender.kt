@@ -95,6 +95,7 @@ internal class SlackNotificationSender(
         val managerName = get("managerName") ?: return null
         val email = get("email") ?: return null
         val phoneNumber = get("phoneNumber") ?: return null
+        val budgetRange = get("budgetRange")
         val adminUrl = properties.adminUrl("/business/ad-applications/$contractId")
         return SlackMessage.withHeadline(
             headline = "📢 광고 계약 신청 - ${SlackText.escape(companyName)}",
@@ -110,7 +111,7 @@ internal class SlackNotificationSender(
                         SlackText.labeled("담당자", managerName),
                         SlackText.labeled("이메일", email),
                         SlackText.labeled("전화번호", phoneNumber),
-                    ),
+                    ) + listOfNotNull(budgetRange?.let { SlackText.labeled("예정 예산", it) }),
                 ),
                 SlackBlock.text(SlackText.link(adminUrl, "어드민에서 신청 처리")),
             ),

@@ -63,6 +63,7 @@ internal class AdvertisementContractServiceMemberLinkPersistenceTest @Autowired 
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = null,
             categories = setOf(AdvertisementProductCategory.BANNER),
             scheduleRequest = "12월 첫째 주 진행 희망",
             advertisementRequest = "채용 안내 문구 검토 요청",

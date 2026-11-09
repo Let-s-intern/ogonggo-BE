@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisementcontract.business
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -112,6 +113,7 @@ class AdvertisementContractServiceTest {
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = AdvertisementContractBudgetRange.UNDECIDED,
             categories = setOf(AdvertisementProductCategory.BANNER),
             scheduleRequest = "12월 첫째 주에 진행을 희망합니다.",
             advertisementRequest = "채용 안내 문구 검토를 요청합니다.",
@@ -129,6 +131,7 @@ class AdvertisementContractServiceTest {
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = AdvertisementContractBudgetRange.UNDECIDED,
             categories = setOf(AdvertisementProductCategory.BANNER),
             scheduleRequest = "12월 첫째 주에 진행을 희망합니다.",
             advertisementRequest = "채용 안내 문구 검토를 요청합니다.",

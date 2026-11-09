@@ -29,6 +29,7 @@ interface AdvertisementContractApi {
 
             categories에는 희망 카테고리만 저장합니다. 실제 상품 연결, 공고 생성, 노출, 결제, 구좌 예약은 만들지 않습니다.
             입력 원문은 보존하며 scheduleRequest와 advertisementRequest만 공백이면 저장 시 null이 됩니다.
+            budgetRange(예정 예산 구간)는 선택이며 보내지 않으면 null로 저장합니다.
         """,
     )
     @ApiResponses(

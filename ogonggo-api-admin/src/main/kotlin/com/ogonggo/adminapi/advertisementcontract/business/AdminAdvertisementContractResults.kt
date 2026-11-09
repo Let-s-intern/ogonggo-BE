@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -41,6 +42,7 @@ data class AdminAdvertisementContractSummaryResult(
     val companyName: String,
     val recruitmentTitle: String,
     val recruitmentDeadline: LocalDate?,
+    val budgetRange: AdvertisementContractBudgetRange?,
     val categories: List<AdvertisementProductCategory>,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
@@ -57,6 +59,7 @@ data class AdminAdvertisementContractSummaryResult(
                 companyName = contract.companyName,
                 recruitmentTitle = contract.recruitmentTitle,
                 recruitmentDeadline = contract.recruitmentDeadline,
+                budgetRange = contract.budgetRange,
                 categories = contract.categories.sorted(),
                 paymentAmount = contract.paymentAmount,
                 registeredAt = contract.createdAt,
@@ -77,6 +80,7 @@ data class AdminAdvertisementContractDetailResult(
     val recruitmentUrl: String?,
     val recruitmentDeadline: LocalDate?,
     val purpose: AdvertisementContractPurpose?,
+    val budgetRange: AdvertisementContractBudgetRange?,
     val categories: List<AdvertisementProductCategory>,
     val scheduleRequest: String?,
     val advertisementRequest: String?,
@@ -106,6 +110,7 @@ data class AdminAdvertisementContractDetailResult(
             recruitmentUrl = contract.recruitmentUrl,
             recruitmentDeadline = contract.recruitmentDeadline,
             purpose = contract.purpose,
+            budgetRange = contract.budgetRange,
             categories = contract.categories.sorted(),
             scheduleRequest = contract.scheduleRequest,
             advertisementRequest = contract.advertisementRequest,

@@ -39,11 +39,38 @@ class SlackNotificationSenderTest {
             .andExpect(jsonPath("$.blocks[1].fields[4].text").value("*신청 카테고리*\n배너 · 인스타그램 1"))
             .andExpect(jsonPath("$.blocks[1].fields[5].text").value("*모집 마감일*\n2026-12-31"))
             .andExpect(jsonPath("$.blocks[1].fields[7].text").value("*이메일*\nmarketing@example.com"))
+            .andExpect(jsonPath("$.blocks[1].fields[9]").doesNotExist())
             .andExpect(jsonPath("$.blocks[2].text.text").value("<https://admin.example.com/business/ad-applications/1001|어드민에서 신청 처리>"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
 
         // when
         val result = sender.send(NOTIFICATION)
+
+        // then
+        assertEquals(NotificationDeliveryResult.Sent(null), result)
+        server.verify()
+    }
+
+    @Test
+    @DisplayName("광고 계약 Slack 알림은 예정 예산 구간을 골랐을 때만 함께 보낸다")
+    fun `예정 예산 구간을 고른 신청은 예산 라벨을 포함한다`() {
+        // given
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val sender = SlackNotificationSender(
+            builder.build(),
+            SlackProperties(advertisementInquiry = WEBHOOK_URL, adminBaseUrl = ADMIN_BASE_URL),
+            ObjectMapper(),
+        )
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.blocks[1].fields[9].text").value("*예정 예산*\n100만~300만원"))
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+        val notification = NOTIFICATION.copy(
+            payloadJson = ObjectMapper().writeValueAsString(PARAMETERS + ("budgetRange" to "100만~300만원")),
+        )
+
+        // when
+        val result = sender.send(notification)
 
         // then
         assertEquals(NotificationDeliveryResult.Sent(null), result)

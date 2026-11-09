@@ -157,6 +157,7 @@ API별 도메인 오류의 code·message는 기준 커밋에 실제 존재하는
 | AdvertisementContractStatus | `REQUESTED`, `NEGOTIATING`, `APPROVED`, `REJECTED` |
 | AdvertisementContractPromotionTarget | `JOB`, `BOOTCAMP` |
 | AdvertisementContractPurpose | `FAST_APPLICANTS`, `FIT_APPLICANTS`, `BRAND_AWARENESS` |
+| AdvertisementContractBudgetRange | `UNDER_500K`, `FROM_500K_TO_1M`, `FROM_1M_TO_3M`, `OVER_3M`, `UNDECIDED` |
 | AdvertisementContractInvoiceMethod | `TAX_INVOICE`, `NEGOTIATE` |
 | AdvertisementContractCreativeMethod | `REQUEST_PRODUCTION`, `PROVIDE_DIRECTLY` |
 | AdvertisementExposureTargetType | `JOB`, `BOOTCAMP` |
@@ -186,6 +187,7 @@ POST /api/v1/advertisement-contracts
   "recruitmentUrl": "https://example.com/recruit/backend",
   "recruitmentDeadline": "2026-12-31",
   "purpose": "FIT_APPLICANTS",
+  "budgetRange": "FROM_1M_TO_3M",
   "categories": [
     "BANNER",
     "INSTAGRAM_1"
@@ -222,6 +224,7 @@ POST /api/v1/advertisement-contracts
 | recruitmentUrl | string | 예 | 1~2000자 | 공백 불가. HTTP(S) 절대 URL 형식을 검증 | 누락·null·빈 문자열 불가 |
 | recruitmentDeadline | string(date) | 예 | YYYY-MM-DD | 과거일·당일을 별도로 금지하지 않음 | 누락·null·빈 문자열 불가 |
 | purpose | string(enum) | 예 | 광고 목적 3종 | enum 절 참조 | 누락·null 불가 |
+| budgetRange | string(enum) | 아니오 | 예정 예산 구간 5종 | enum 절 참조. 없는 값은 400 `BAD_REQUEST` | 누락·null은 null 저장 (LC-3591) |
 | categories[] | string(enum)[] | 예 | 하나 이상, 현재 고유값 최대 6종 | 각 원소는 상품 category. 중복은 Set처럼 제거 | 누락·null·빈 배열·null 원소 불가 |
 | scheduleRequest | string | 아니오 | 2000자 이하 | 희망 일정의 자유 텍스트 | 누락·null·공백 문자열은 null 저장 |
 | advertisementRequest | string | 아니오 | 2000자 이하 | 광고 요청사항의 자유 텍스트 | 누락·null·공백 문자열은 null 저장 |
@@ -671,6 +674,7 @@ GET /api/v1/admin/advertisement-contracts?page=1&size=20&source=APPLICATION_FORM
         "companyName": "샘플기업",
         "recruitmentTitle": "백엔드 인턴 채용",
         "recruitmentDeadline": "2026-12-31",
+        "budgetRange": "FROM_1M_TO_3M",
         "categories": [
           "BANNER",
           "INSTAGRAM_1"
@@ -716,6 +720,7 @@ GET /api/v1/admin/advertisement-contracts?page=1&size=20&source=APPLICATION_FORM
 | data.items[].companyName | string | 아니오 | 기업·기관명 |
 | data.items[].recruitmentTitle | string | 아니오 | 신청 또는 등록 당시 공고명 |
 | data.items[].recruitmentDeadline | string(date) | 예 | 폼은 필수, 비즈니스 상시 공고는 null 가능 |
+| data.items[].budgetRange | string(enum) | 예 | 신청 폼에서 고른 예정 예산 구간. 고르지 않은 폼과 COMPANY_POSTING은 null. 목록 필터는 없음 |
 | data.items[].categories[] | string(enum)[] | 아니오 | 희망 카테고리. COMPANY_POSTING은 빈 배열 |
 | data.items[].paymentAmount | int32 | 예 | 실제 협의 결제액. 미입력은 null |
 | data.items[].registeredAt | string(date-time) | 아니오 | createdAt에 대응 |
@@ -771,6 +776,7 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
     "recruitmentUrl": "https://example.com/recruit/backend",
     "recruitmentDeadline": "2026-12-31",
     "purpose": "FIT_APPLICANTS",
+    "budgetRange": "FROM_1M_TO_3M",
     "categories": [
       "BANNER",
       "INSTAGRAM_1"
@@ -820,6 +826,7 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 | data.recruitmentUrl | string | 예 | 폼 공고 링크. COMPANY_POSTING은 null |
 | data.recruitmentDeadline | string(date) | 예 | 비즈니스 상시 공고는 null 가능 |
 | data.purpose | string(enum) | 예 | 폼은 필수, COMPANY_POSTING은 null |
+| data.budgetRange | string(enum) | 예 | 폼 예정 예산 구간. 고르지 않은 폼과 COMPANY_POSTING은 null |
 | data.categories[] | string(enum)[] | 아니오 | 신청 카테고리. 상품 category 선언 순서로 정렬하는 안 |
 | data.scheduleRequest | string | 예 | 신청 일정 요청사항 |
 | data.advertisementRequest | string | 예 | 신청 광고 요청사항 |
@@ -842,7 +849,7 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 동작과 경계:
 
 - 본문 없음. 계약 원문을 반환하고 products를 추가한 구조다. 제품을 붙인 순서인 계약 상품 ID ASC로 정렬한다.
-- COMPANY_POSTING은 userId·targetId가 있고 recruitmentUrl·purpose·요청사항·폼 담당자·계산서·소재 방식은 null, categories는 []다. 등록 당시 이름·제목을 보존하며 최신 공고로 자동 교체하지 않는다.
+- COMPANY_POSTING은 userId·targetId가 있고 recruitmentUrl·purpose·budgetRange·요청사항·폼 담당자·계산서·소재 방식은 null, categories는 []다. 등록 당시 이름·제목을 보존하며 최신 공고로 자동 교체하지 않는다.
 - 비즈니스 공고 계약의 담당자 연락처를 기업 프로필에서 채워 이 필드의 null 의미를 바꾸지 않는다. 별도 기업 정보 확장이 필요하면 신규 합의한다.
 - 상품을 제거한 연결 행은 제외한다. 상품 자체가 삭제됐어도 연결은 포함하고 productDeleted=true다.
 - productName·category는 현재 상품 값이며 판매 시점 스냅샷으로 보장하지 않는다. products에는 개별 금액·기간이 없다. 계약의 paymentAmount만 실제 금액이다.
@@ -1678,7 +1685,7 @@ Response 제안: 기존 카드 필드는 유지하고 광고 카드에만 노출
 
 **구현 상태 (2026-11-08): 구현 완료.** 새 HTTP 경로·요청 필드·응답 필드는 추가하지 않았다. 계약 저장 이후 공통 `notifications` 대기열에 EMAIL과 SLACK 행을 별도 트랜잭션으로 적재한다. U-01의 201 및 `{ data: { id } }` 응답은 기존과 같다.
 
-**알림 정책:** `AdvertisementContractNotificationAppender`는 계약별 deduplication key로 `advertisement-contract:{contractId}:email`과 `advertisement-contract:{contractId}:slack`을 기록한다. 신청자 이메일은 수신 주소로 저장하고 Slack 수신 주소는 논리 이름 `advertisement-inquiry`로 저장한다. webhook 비밀값은 대기열에 넣지 않고 sender가 `ogonggo.slack.advertisement-inquiry`에서 읽는다. 메일은 `ADVERTISEMENT_CONTRACT_RECEIVED` 템플릿을 사용한다. Slack 메시지는 계약 ID, 기업명, 공고명, 홍보 대상·목적·카테고리·마감일 및 회신 연락처를 포함하고 자유 입력 요청은 포함하지 않는다. 메일은 신청 접수 요약을 포함한다.
+**알림 정책:** `AdvertisementContractNotificationAppender`는 계약별 deduplication key로 `advertisement-contract:{contractId}:email`과 `advertisement-contract:{contractId}:slack`을 기록한다. 신청자 이메일은 수신 주소로 저장하고 Slack 수신 주소는 논리 이름 `advertisement-inquiry`로 저장한다. webhook 비밀값은 대기열에 넣지 않고 sender가 `ogonggo.slack.advertisement-inquiry`에서 읽는다. 메일은 `ADVERTISEMENT_CONTRACT_RECEIVED` 템플릿을 사용한다. Slack 메시지는 계약 ID, 기업명, 공고명, 홍보 대상·목적·카테고리·마감일 및 회신 연락처를 포함하고, 신청자가 예정 예산 구간을 골랐을 때만 그 라벨을 더하며, 자유 입력 요청은 포함하지 않는다. 메일은 신청 접수 요약을 포함한다.
 
 실제 전송은 기존 공통 notification dispatcher와 EMAIL/SLACK sender가 담당한다. Slack webhook 호출은 `SlackNotificationSender`에서 공통 sender 규약에 맞춰 실행한다. Slack provider의 stale 처리 기준은 8분이며 장기 PROCESSING 행은 `UNKNOWN` 처리한다. 실패·미확인 전달은 U-01 응답에 포함되지 않으며 실제 수신을 보장하지 않는다.
 

@@ -9,6 +9,7 @@ import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -114,6 +115,7 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].id").value(CONTRACT_ID))
             .andExpect(jsonPath("$.data.items[0].categories[0]").value("BANNER"))
+            .andExpect(jsonPath("$.data.items[0].budgetRange").value("OVER_3M"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(20))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(1))
@@ -185,6 +187,7 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
+            budgetRange = AdvertisementContractBudgetRange.FROM_500K_TO_1M,
             categories = listOf(AdvertisementProductCategory.BANNER, AdvertisementProductCategory.INSTAGRAM_1),
             scheduleRequest = null,
             advertisementRequest = "인턴 지원자를 대상으로 알려주세요.",
@@ -214,6 +217,7 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.source").value("APPLICATION_FORM"))
             .andExpect(jsonPath("$.data.userId").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.categories[0]").value("BANNER"))
+            .andExpect(jsonPath("$.data.budgetRange").value("FROM_500K_TO_1M"))
             .andExpect(jsonPath("$.data.products[0].contractProductId").value(3001))
             .andExpect(jsonPath("$.data.products[0].productDeleted").value(true))
 
@@ -423,6 +427,7 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
         companyName = "샘플기업",
         recruitmentTitle = "백엔드 인턴 채용",
         recruitmentDeadline = LocalDate.of(2026, 12, 31),
+        budgetRange = AdvertisementContractBudgetRange.OVER_3M,
         categories = listOf(AdvertisementProductCategory.BANNER),
         paymentAmount = null,
         registeredAt = REGISTERED_AT,

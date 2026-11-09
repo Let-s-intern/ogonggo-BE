@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.advertisementcontract.presentation.response
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractDetailResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractProductResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractSummaryResult
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -22,6 +23,7 @@ data class AdminAdvertisementContractSummaryResponse(
     val companyName: String,
     val recruitmentTitle: String,
     val recruitmentDeadline: LocalDate?,
+    val budgetRange: AdvertisementContractBudgetRange?,
     val categories: List<AdvertisementProductCategory>,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
@@ -37,6 +39,7 @@ data class AdminAdvertisementContractSummaryResponse(
             companyName = result.companyName,
             recruitmentTitle = result.recruitmentTitle,
             recruitmentDeadline = result.recruitmentDeadline,
+            budgetRange = result.budgetRange,
             categories = result.categories,
             paymentAmount = result.paymentAmount,
             registeredAt = result.registeredAt,
@@ -57,6 +60,7 @@ data class AdminAdvertisementContractDetailResponse(
     val recruitmentUrl: String?,
     val recruitmentDeadline: LocalDate?,
     val purpose: AdvertisementContractPurpose?,
+    val budgetRange: AdvertisementContractBudgetRange?,
     val categories: List<AdvertisementProductCategory>,
     val scheduleRequest: String?,
     val advertisementRequest: String?,
@@ -83,6 +87,7 @@ data class AdminAdvertisementContractDetailResponse(
             recruitmentUrl = result.recruitmentUrl,
             recruitmentDeadline = result.recruitmentDeadline,
             purpose = result.purpose,
+            budgetRange = result.budgetRange,
             categories = result.categories,
             scheduleRequest = result.scheduleRequest,
             advertisementRequest = result.advertisementRequest,

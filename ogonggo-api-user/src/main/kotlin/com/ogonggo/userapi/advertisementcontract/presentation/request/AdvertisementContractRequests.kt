@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.advertisementcontract.presentation.request
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -35,6 +36,9 @@ data class CreateAdvertisementContractRequest(
 
     val purpose: AdvertisementContractPurpose,
 
+    @field:Schema(description = "예정 예산 구간. 보내지 않으면 고르지 않은 것으로 저장합니다")
+    val budgetRange: AdvertisementContractBudgetRange? = null,
+
     @field:NotEmpty
     @field:Size(max = 6)
     val categories: Set<AdvertisementProductCategory>,
@@ -69,6 +73,7 @@ data class CreateAdvertisementContractRequest(
         recruitmentUrl = recruitmentUrl,
         recruitmentDeadline = recruitmentDeadline,
         purpose = purpose,
+        budgetRange = budgetRange,
         categories = categories,
         scheduleRequest = scheduleRequest,
         advertisementRequest = advertisementRequest,

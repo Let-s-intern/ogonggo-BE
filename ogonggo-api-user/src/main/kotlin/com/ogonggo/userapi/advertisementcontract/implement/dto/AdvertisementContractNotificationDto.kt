@@ -12,23 +12,25 @@ data class AdvertisementContractNotificationDto(
     val recruitmentTitle: String,
     val recruitmentDeadline: String,
     val purpose: String,
+    val budgetRange: String?,
     val categories: List<String>,
     val managerName: String,
     val email: String,
     val phoneNumber: String,
 ) {
-    fun templateParameters(): Map<String, String> = mapOf(
-        "contractId" to contractId.toString(),
-        "promotionTarget" to promotionTarget,
-        "companyName" to companyName,
-        "recruitmentTitle" to recruitmentTitle,
-        "recruitmentDeadline" to recruitmentDeadline,
-        "purpose" to purpose,
-        "categories" to categories.joinToString(" · "),
-        "managerName" to managerName,
-        "email" to email,
-        "phoneNumber" to phoneNumber,
-    )
+    fun templateParameters(): Map<String, String> = buildMap {
+        put("contractId", contractId.toString())
+        put("promotionTarget", promotionTarget)
+        put("companyName", companyName)
+        put("recruitmentTitle", recruitmentTitle)
+        put("recruitmentDeadline", recruitmentDeadline)
+        put("purpose", purpose)
+        budgetRange?.let { put("budgetRange", it) }
+        put("categories", categories.joinToString(" · "))
+        put("managerName", managerName)
+        put("email", email)
+        put("phoneNumber", phoneNumber)
+    }
 
     companion object {
         fun from(contractId: Long, command: CreateAdvertisementContractCommand) = AdvertisementContractNotificationDto(
@@ -38,6 +40,7 @@ data class AdvertisementContractNotificationDto(
             recruitmentTitle = command.recruitmentTitle,
             recruitmentDeadline = command.recruitmentDeadline.toString(),
             purpose = command.purpose.desc,
+            budgetRange = command.budgetRange?.desc,
             categories = command.categories.sortedBy { it.code }.map { it.desc },
             managerName = command.managerName,
             email = command.email,
