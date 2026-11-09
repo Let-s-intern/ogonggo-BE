@@ -40,6 +40,7 @@ class AdvertisementExposureControllerTest @Autowired constructor(
                     id = EXPOSURE_ID,
                     name = "샘플기업 인턴 채용",
                     imageUrl = "https://example.com/banner.png",
+                    mobileImageUrl = "https://example.com/banner-mobile.png",
                     linkUrl = "/jobs/5501",
                     adLabel = true,
                 ),
@@ -58,6 +59,7 @@ class AdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(EXPOSURE_ID))
             .andExpect(jsonPath("$.data.items[0].name").value("샘플기업 인턴 채용"))
             .andExpect(jsonPath("$.data.items[0].imageUrl").value("https://example.com/banner.png"))
+            .andExpect(jsonPath("$.data.items[0].mobileImageUrl").value("https://example.com/banner-mobile.png"))
             .andExpect(jsonPath("$.data.items[0].linkUrl").value("/jobs/5501"))
             .andExpect(jsonPath("$.data.items[0].adLabel").value(true))
             .andExpect(jsonPath("$.data.items[0].contractId").doesNotExist())

@@ -34,6 +34,48 @@ class AdvertisementExposureDomainTest {
     }
 
     @Test
+    fun `카카오톡 CRM 상품은 오공고 화면에 노출하지 않는다`() {
+        assertThrows(InvalidValueException::class.java) {
+            exposure(product(AdvertisementProductCategory.KAKAO_CRM), BANNER_CONTENT)
+        }
+    }
+
+    @Test
+    fun `배너 모바일 이미지는 선택이고 없으면 비워 둔다`() {
+        // when
+        val withMobile = exposure(
+            product(AdvertisementProductCategory.BANNER),
+            BANNER_CONTENT.copy(mobileImageUrl = "https://example.com/banner-mobile.png"),
+        )
+        val withoutMobile = exposure(product(AdvertisementProductCategory.BANNER), BANNER_CONTENT)
+
+        // then
+        assertEquals("https://example.com/banner-mobile.png", withMobile.mobileImageUrl)
+        assertEquals(null, withoutMobile.mobileImageUrl)
+    }
+
+    @Test
+    fun `배너 모바일 이미지는 보내면 비울 수 없다`() {
+        assertThrows(InvalidValueException::class.java) {
+            exposure(product(AdvertisementProductCategory.BANNER), BANNER_CONTENT.copy(mobileImageUrl = " "))
+        }
+    }
+
+    @Test
+    fun `광고 공고는 모바일 이미지를 가질 수 없다`() {
+        assertThrows(InvalidValueException::class.java) {
+            exposure(
+                product(AdvertisementProductCategory.JOB_POSTING),
+                AdvertisementExposureContent(
+                    mobileImageUrl = "https://example.com/banner-mobile.png",
+                    targetType = AdvertisementExposureTargetType.JOB,
+                    targetId = 1L,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `노출 기간은 시작과 끝이 함께 있거나 함께 없다`() {
         assertThrows(InvalidValueException::class.java) { AdvertisementExposurePeriod(startAt = NOW) }
     }

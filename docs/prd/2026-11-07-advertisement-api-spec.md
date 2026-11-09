@@ -156,7 +156,7 @@ API별 도메인 오류의 code·message는 기준 커밋에 실제 존재하는
 
 | 이름 | 허용 값 |
 | --- | --- |
-| AdvertisementProductCategory | `JOB_POSTING`, `BANNER`, `INSTAGRAM_1`, `INSTAGRAM_2`, `KAKAO_1`, `KAKAO_2` |
+| AdvertisementProductCategory | `JOB_POSTING`, `BANNER`, `INSTAGRAM_1`, `INSTAGRAM_2`, `KAKAO_1`, `KAKAO_2`, `KAKAO_CRM`(2026-11-09 추가, LC-3589) |
 | AdvertisementProductPosition | `JOB_HOME_TOP_BANNER`, `JOB_HOME_BOTTOM_BANNER`, `JOB_DETAIL_BANNER`, `BOOTCAMP_LIST_TOP_BANNER`, `BOOTCAMP_LIST_BOTTOM_BANNER`, `BOOTCAMP_DETAIL_BANNER` |
 | AdvertisementContractSource | `APPLICATION_FORM`, `COMPANY_POSTING` |
 | AdvertisementContractStatus | `REQUESTED`, `NEGOTIATING`, `APPROVED`, `REJECTED` |
@@ -227,12 +227,14 @@ POST /api/v1/advertisement-contracts
 | recruitmentUrl | string | 예 | 1~2000자 | 공백 불가. HTTP(S) 절대 URL 형식을 검증 | 누락·null·빈 문자열 불가 |
 | recruitmentDeadline | string(date) | 예 | YYYY-MM-DD | 과거일·당일을 별도로 금지하지 않음 | 누락·null·빈 문자열 불가 |
 | purpose | string(enum) | 예 | 광고 목적 3종 | enum 절 참조 | 누락·null 불가 |
-| categories[] | string(enum)[] | 예 | 하나 이상, 현재 고유값 최대 6종 | 각 원소는 상품 category. 중복은 Set처럼 제거 | 누락·null·빈 배열·null 원소 불가 |
+| categories[] | string(enum)[] | 예 | 하나 이상, 현재 고유값 최대 7종 | 각 원소는 상품 category. 중복은 Set처럼 제거 | 누락·null·빈 배열·null 원소 불가 |
 | scheduleRequest | string | 아니오 | 2000자 이하 | 희망 일정의 자유 텍스트 | 누락·null·공백 문자열은 null 저장 |
 | advertisementRequest | string | 아니오 | 2000자 이하 | 광고 요청사항의 자유 텍스트 | 누락·null·공백 문자열은 null 저장 |
 | managerName | string | 예 | 1~50자 | 공백만으로 구성 불가 | 누락·null·빈 문자열 불가 |
 | email | string | 예 | 1~255자 | 공백 불가. 이메일 형식을 검증 | 누락·null·빈 문자열 불가 |
 | phoneNumber | string | 예 | 1~20자 | 전화 정규식은 추가하지 않음. 대표번호·내선 표기 허용 | 누락·null·빈 문자열 불가 |
+| businessNumberType | string(enum) | 아니오 | BUSINESS_REGISTRATION, CORPORATE_REGISTRATION, OVERSEAS | 기업 회원가입과 같은 규칙(LC-3589). OVERSEAS면 businessNumber를 보내지 않음 | 누락·null이면 사업자 번호 없음 |
+| businessNumber | string | 아니오 | 13자 이하, 숫자만 | businessNumberType 없이 보낼 수 없음. 사업자등록번호 10자리, 법인등록번호 13자리 | 누락·null 허용 |
 | invoiceMethod | string(enum) | 예 | TAX_INVOICE, NEGOTIATE | 청구·영수가 아님 | 누락·null 불가 |
 | creativeMethod | string(enum) | 예 | REQUEST_PRODUCTION, PROVIDE_DIRECTLY | 소재 준비 방식 | 누락·null 불가 |
 
@@ -370,6 +372,7 @@ GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER&page=1&size=10
 | data.items[].id | int64 | 아니오 | 노출 ID |
 | data.items[].name | string | 아니오 | 배너 이름 |
 | data.items[].imageUrl | string | 아니오 | 배너 이미지 URL |
+| data.items[].mobileImageUrl | string | 예 | 모바일 배너 이미지 URL. null이면 모바일에서도 imageUrl을 씀 |
 | data.items[].linkUrl | string | 아니오 | 클릭할 외부 URL 또는 내부 경로. A-12 등록 때 허용한 값을 그대로 반환 |
 | data.items[].adLabel | boolean | 아니오 | 광고 표시 여부 |
 | data.pageInfo.pageNum | int32 | 아니오 | 1부터 시작하는 요청 페이지 |
@@ -383,7 +386,7 @@ GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER&page=1&size=10
 - 서버 Clock의 현재 시각으로 미삭제 상품·미삭제 노출·exposed=true·기간 내 행만 반환한다. 시작·종료 시각은 양 끝을 포함한다. 기간 둘 다 null이면 상시다.
 - 동일 position에 여러 상품이 있어도 전체 노출을 displayOrder ASC, id ASC로 정렬한다. 고정 슬롯 수·랜덤·롤링·상위 N개 제한은 추가하지 않는다.
 - position은 유효하지만 상품·노출이 없으면 200과 `items=[]`다. 유효하지 않은 position은 400이다. 정렬은 `displayOrder ASC, id ASC`를 유지한다.
-- 공개 응답은 `{id, name, imageUrl, linkUrl, adLabel}`만 포함한다. 광고주·상품·계약 ID, 대상 메타데이터, 결제액·기간·연락처는 제외한다. `id`는 노출 ID이지 상품 ID나 계약 ID가 아니다.
+- 공개 응답은 `{id, name, imageUrl, mobileImageUrl, linkUrl, adLabel}`만 포함한다. 광고주·상품·계약 ID, 대상 메타데이터, 결제액·기간·연락처는 제외한다. `id`는 노출 ID이지 상품 ID나 계약 ID가 아니다.
 - `linkUrl`은 A-12의 HTTP(S) 절대 URL 또는 단일 `/` 내부 경로 허용 정책을 따른다. U-03은 추가 검증·정규화·재작성 정책을 두지 않고 저장된 값을 반환한다.
 
 #### 예외
@@ -979,6 +982,8 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 | data.managerName | string | 예 | 폼 담당자 이름 |
 | data.email | string | 예 | 폼 담당자 이메일 |
 | data.phoneNumber | string | 예 | 폼 담당자 연락처 |
+| data.businessNumberType | string(enum) | 예 | 폼 사업자 번호 종류. 보내지 않은 신청과 COMPANY_POSTING은 null |
+| data.businessNumber | string | 예 | 폼 사업자 번호. 해외 기업·보내지 않은 신청·COMPANY_POSTING은 null |
 | data.invoiceMethod | string(enum) | 예 | 폼 계산서 방식 |
 | data.creativeMethod | string(enum) | 예 | 폼 소재 방식 |
 | data.paymentAmount | int32 | 예 | 협의 결제액 |
@@ -1327,6 +1332,7 @@ GET /api/v1/admin/advertisement-exposures?productId=11&contractId=1001&page=1&si
 | data.items[].advertiserCompanyName | string | 예 | 계약 companyName의 조회 시점 값. 계약이 없으면 null |
 | data.items[].name | string | 예 | 배너 이름. 광고 공고면 null |
 | data.items[].imageUrl | string | 예 | 배너 이미지. 광고 공고면 null |
+| data.items[].mobileImageUrl | string | 예 | 배너 모바일 이미지. 없거나 광고 공고면 null |
 | data.items[].linkUrl | string | 예 | 배너 목적지. 광고 공고면 null |
 | data.items[].targetType | string(enum) | 예 | 광고 공고 종류. 배너면 null |
 | data.items[].targetId | int64 | 예 | 광고 공고 ID. 배너면 null |
@@ -1410,6 +1416,7 @@ POST /api/v1/admin/advertisement-exposures
 | contractId | int64 | 아니오 | 1 이상 | 있으면 실제 계약 존재 | 누락·null이면 자체 홍보 |
 | name | string | 배너만 필수 | 1~100자 | BANNER일 때 공백 불가 | JOB_POSTING이면 누락·null이어야 함 |
 | imageUrl | string | 배너만 필수 | 1~2048자 | BANNER일 때 공백 불가. host가 있는 HTTP(S) 절대 URL | JOB_POSTING이면 누락·null이어야 함 |
+| mobileImageUrl | string | 아니오 | 1~2048자 | BANNER 모바일 이미지. 보내면 공백 불가. imageUrl과 같은 URL 검증 | 누락·null이면 모바일에서도 imageUrl. JOB_POSTING이면 누락·null이어야 함 |
 | linkUrl | string | 배너만 필수 | 1~2048자 | BANNER일 때 공백 불가. HTTP(S) URL 또는 단일 `/`로 시작하는 내부 경로. `//`는 거부 | JOB_POSTING이면 누락·null이어야 함 |
 | targetType | string(enum) | 광고 공고만 필수 | JOB, BOOTCAMP | JOB_POSTING 상품일 때 필수 | BANNER이면 누락·null이어야 함 |
 | targetId | int64 | 광고 공고만 필수 | 1 이상 | JOB_POSTING 상품일 때 필수 | BANNER이면 누락·null이어야 함 |
@@ -1506,6 +1513,7 @@ PUT /api/v1/admin/advertisement-exposures/{exposureId}
 | contractId | int64 | 아니오 | 1 이상 | 있으면 실제 계약 존재 | 누락·null이면 자체 홍보 / 기존 연결 해제 |
 | name | string | 배너만 필수 | 1~100자 | BANNER일 때 공백 불가 | JOB_POSTING이면 누락·null이어야 함 |
 | imageUrl | string | 배너만 필수 | 1~2048자 | BANNER일 때 공백 불가. host가 있는 HTTP(S) 절대 URL | JOB_POSTING이면 누락·null이어야 함 |
+| mobileImageUrl | string | 아니오 | 1~2048자 | BANNER 모바일 이미지. 보내면 공백 불가. imageUrl과 같은 URL 검증 | 누락·null이면 모바일에서도 imageUrl. JOB_POSTING이면 누락·null이어야 함 |
 | linkUrl | string | 배너만 필수 | 1~2048자 | BANNER일 때 공백 불가. HTTP(S) URL 또는 단일 `/`로 시작하는 내부 경로. `//`와 지원하지 않는 scheme은 거부 | JOB_POSTING이면 누락·null이어야 함 |
 | targetType | string(enum) | 광고 공고만 필수 | JOB, BOOTCAMP | JOB_POSTING 상품일 때 필수 | BANNER이면 누락·null이어야 함 |
 | targetId | int64 | 광고 공고만 필수 | 1 이상 | JOB_POSTING 상품일 때 필수 | BANNER이면 누락·null이어야 함 |
@@ -1843,7 +1851,7 @@ Response 제안: 기존 카드 필드는 유지하고 광고 카드에만 노출
 
 | 항목 | 이 명세의 제안 | 남은 선택 또는 P-01 결정 |
 | --- | --- | --- |
-| 응답 이름·투영 | 생성 data.id, 날짜 registeredAt, 계약 목록 요약·상세 분리 | P-01~P-05 구현 완료. U-02·U-03·A-01·A-11은 기본 1페이지·10건의 `items`와 `pageInfo`를 반환하며, U-03은 `{id, name, imageUrl, linkUrl, adLabel}`만 반환 |
+| 응답 이름·투영 | 생성 data.id, 날짜 registeredAt, 계약 목록 요약·상세 분리 | P-01~P-05 구현 완료. U-02·U-03·A-01·A-11은 기본 1페이지·10건의 `items`와 `pageInfo`를 반환하며, U-03은 `{id, name, imageUrl, mobileImageUrl, linkUrl, adLabel}`만 반환 |
 | 공개 폼 인증 | 비회원·유효 토큰 선택, 잘못된 토큰은 비회원 | P-02 선택: 토큰 회원 행이 없는 경우도 비회원으로 처리. 인증 필터의 기존 의미와 충돌하지 않음 |
 | URL·이메일 검증 | 폼은 HTTP(S) 절대 URL·이메일 형식, 배너 링크는 내부 경로도 허용 | P-02에서 HTTP 경계 검증을 채택해 구현 |
 | 계약 목록 필터 | `source`, 복수 `status`, `promotionTarget`, `category`, `companyName`, `createdFrom`, `createdTo` | P-02 구현 완료. `page=1`, `size=20` (최대 100), core 0-based, ID 내림차순 |

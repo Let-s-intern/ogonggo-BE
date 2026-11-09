@@ -8,6 +8,7 @@ data class CreateAdminAdvertisementExposureCommand(
     val contractId: Long?,
     val name: String?,
     val imageUrl: String?,
+    val mobileImageUrl: String?,
     val linkUrl: String?,
     val targetType: AdvertisementExposureTargetType?,
     val targetId: Long?,

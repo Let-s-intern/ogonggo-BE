@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.bootcamp.presentation
 
 import com.ogonggo.adminapi.bootcamp.presentation.request.ChangeAdminBootcampVisibilityRequest
+import com.ogonggo.adminapi.bootcamp.presentation.request.ReplaceAdminBootcampRequest
 import com.ogonggo.adminapi.bootcamp.presentation.request.UpdateAdminBootcampRequest
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampDetailResponse
 import com.ogonggo.adminapi.bootcamp.presentation.response.AdminBootcampSummaryResponse
@@ -14,6 +15,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -159,6 +161,43 @@ interface AdminBootcampApi {
     fun updateBootcamp(
         @Positive bootcampId: Long,
         @Valid request: UpdateAdminBootcampRequest,
+    ): ResponseEntity<SuccessResponse<AdminBootcampDetailResponse>>
+
+    @Operation(
+        operationId = "replaceBootcamp",
+        summary = "부트캠프 전체 수정",
+        description = """
+            부트캠프의 모든 내용과 모집 상태를 보낸 값으로 바꾸고 수정된 부트캠프 전체를 반환합니다.
+            칸과 검증은 부트캠프 대리 등록과 같고 노출(visibility)은 받지 않습니다. 대표 이미지는 선택입니다.
+            보내지 않은 선택 칸은 비우고, 커리큘럼과 파트너사는 보낸 목록으로 바꿉니다.
+            status는 RECRUITING 또는 CLOSED입니다. 마감으로 바꾸면 지금을 마감 일시로 남기고, 모집 중으로 되돌리면 마감 일시를 지웁니다.
+            검수 상태와 노출은 바꾸지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: 필수 칸이 비었거나 칸 사이 규칙이 맞지 않거나 status에 DRAFT를 보냈습니다. IMAGE_ASSET_NOT_AVAILABLE: 지워진 이미지입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = BOOTCAMP_NOT_FOUND_DESCRIPTION,
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "INVALID_BOOTCAMP_STATUS_TRANSITION: 임시저장 부트캠프는 바로 마감할 수 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun replaceBootcamp(
+        @Positive bootcampId: Long,
+        @Valid request: ReplaceAdminBootcampRequest,
+        @Parameter(hidden = true) adminUserId: Long,
     ): ResponseEntity<SuccessResponse<AdminBootcampDetailResponse>>
 
     @Operation(

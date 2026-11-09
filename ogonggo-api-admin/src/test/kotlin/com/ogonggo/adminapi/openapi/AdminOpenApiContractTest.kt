@@ -70,6 +70,7 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1jobs~1today/put",
             "/paths/~1api~1v1~1admin~1bootcamps/get",
             "/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/patch",
+            "/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/put",
             "/paths/~1api~1v1~1admin~1recruitment-posts/get",
             "/paths/~1api~1v1~1admin~1recruitment-posts~1visibility/patch",
             "/paths/~1api~1v1~1admin~1concerns/get",
@@ -373,8 +374,12 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf("source", "status", "promotionTarget", "targetId", "companyName", "recruitmentTitle", "recruitmentDeadline", "categories", "paymentAmount", "registeredAt", "updatedAt").forEach { field ->
             assertTrue(summary.at("/properties/$field").isObject, field)
         }
-        listOf("userId", "recruitmentUrl", "purpose", "scheduleRequest", "managerName", "email", "invoiceMethod", "creativeMethod", "products").forEach { field ->
+        listOf("userId", "recruitmentUrl", "purpose", "scheduleRequest", "managerName", "email", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "products").forEach { field ->
             assertTrue(detailSchema.at("/properties/$field").isObject, field)
+        }
+        listOf("businessNumberType", "businessNumber").forEach { field ->
+            assertTrue(detailSchema.at("/properties/$field/nullable").asBoolean(), field)
+            assertFalse(summary.at("/properties/$field").isObject, field)
         }
         assertTrue(detailSchema.at("/properties/products/items").isObject, detailSchema.at("/properties/products").toPrettyString())
         listOf("contractProductId", "productId", "productName", "category", "productDeleted", "addedAt").forEach { field ->
@@ -481,16 +486,19 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(request.at("/properties/contractId/nullable").asBoolean())
         assertEquals(100, request.at("/properties/name/maxLength").asInt())
         assertEquals(2048, request.at("/properties/imageUrl/maxLength").asInt())
+        assertEquals(2048, request.at("/properties/mobileImageUrl/maxLength").asInt())
+        assertTrue(request.at("/properties/mobileImageUrl/nullable").asBoolean())
+        assertFalse(request.at("/required").any { it.asText() == "mobileImageUrl" })
         assertEquals(2048, request.at("/properties/linkUrl/maxLength").asInt())
         assertEquals(setOf("JOB", "BOOTCAMP"), request.at("/properties/targetType/enum").map { it.asText() }.toSet())
         assertEquals("boolean", request.at("/properties/adLabel/type").asText())
         assertEquals("boolean", request.at("/properties/exposed/type").asText())
         listOf(
-            "id", "productId", "contractId", "name", "imageUrl", "linkUrl", "targetType", "targetId", "adLabel",
+            "id", "productId", "contractId", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId", "adLabel",
             "startAt", "endAt", "exposed", "advertiserCompanyName", "displayOrder", "registeredAt", "updatedAt",
         ).forEach { field -> assertTrue(response.at("/properties/$field").isObject, field) }
         listOf(
-            "contractId", "advertiserCompanyName", "name", "imageUrl", "linkUrl", "targetType", "targetId",
+            "contractId", "advertiserCompanyName", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId",
             "startAt", "endAt",
         ).forEach { field -> assertTrue(response.at("/properties/$field/nullable").asBoolean(), field) }
     }
@@ -551,6 +559,8 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertFalse(replaceRequest.has("exposed"))
         assertEquals(100, replaceRequest.at("/properties/name/maxLength").asInt())
         assertEquals(2048, replaceRequest.at("/properties/imageUrl/maxLength").asInt())
+        assertEquals(2048, replaceRequest.at("/properties/mobileImageUrl/maxLength").asInt())
+        assertTrue(replaceRequest.at("/properties/mobileImageUrl/nullable").asBoolean())
         assertEquals(2048, replaceRequest.at("/properties/linkUrl/maxLength").asInt())
         assertTrue(replaceRequest.at("/properties/contractId/nullable").asBoolean())
         assertEquals(setOf("JOB", "BOOTCAMP"), replaceRequest.at("/properties/targetType/enum").map { it.asText() }.toSet())
@@ -655,6 +665,33 @@ class AdminOpenApiContractTest @Autowired constructor(
             assertEquals("boolean", schema.at("/properties/priorityExposed/type").asText(), name)
             assertTrue(schema.at("/required").any { it.asText() == "priorityExposed" }, name)
         }
+    }
+
+    @Test
+    fun `부트캠프 전체 수정은 PUT으로 모든 칸과 모집 상태를 받고 노출은 받지 않으며 수정된 상세를 돌려준다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1admin~1bootcamps~1{bootcampId}/put")
+        val request = document.at("/components/schemas/ReplaceAdminBootcampRequest")
+
+        // then
+        assertEquals("replaceBootcamp", operation.at("/operationId").asText())
+        assertEquals(
+            "#/components/schemas/ReplaceAdminBootcampRequest",
+            operation.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+        )
+        val wrapper = operation.at("/responses/200/content/application~1json/schema/\$ref").asText().substringAfterLast('/')
+        assertEquals(
+            "#/components/schemas/AdminBootcampDetailResponse",
+            document.at("/components/schemas/$wrapper/properties/data/\$ref").asText(),
+        )
+        listOf("instructorInfo", "programFeatures", "completionRequirements", "partners", "curriculums", "status")
+            .forEach { assertTrue(request.at("/properties/$it").isObject, it) }
+        assertTrue(request.at("/required").any { it.asText() == "status" })
+        assertFalse(request.at("/required").any { it.asText() == "representativeImageUrl" })
+        assertTrue(request.at("/properties/visibility").isMissingNode)
     }
 
     @Test

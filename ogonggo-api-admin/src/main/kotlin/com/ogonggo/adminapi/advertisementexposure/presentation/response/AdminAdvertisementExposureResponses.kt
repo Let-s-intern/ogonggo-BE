@@ -14,6 +14,8 @@ data class AdminAdvertisementExposureResponse(
     val name: String?,
     @field:Schema(nullable = true)
     val imageUrl: String?,
+    @field:Schema(description = "모바일 배너 이미지. null이면 모바일에서도 imageUrl을 씁니다.", nullable = true)
+    val mobileImageUrl: String?,
     @field:Schema(nullable = true)
     val linkUrl: String?,
     @field:Schema(nullable = true)
@@ -39,6 +41,7 @@ data class AdminAdvertisementExposureResponse(
             contractId = result.contractId,
             name = result.name,
             imageUrl = result.imageUrl,
+            mobileImageUrl = result.mobileImageUrl,
             linkUrl = result.linkUrl,
             targetType = result.targetType,
             targetId = result.targetId,

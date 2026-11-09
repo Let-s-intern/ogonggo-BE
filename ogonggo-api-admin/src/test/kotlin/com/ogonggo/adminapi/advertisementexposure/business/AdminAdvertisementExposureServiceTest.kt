@@ -77,6 +77,7 @@ class AdminAdvertisementExposureServiceTest {
         contractId = null,
         name = "샘플 배너",
         imageUrl = "https://example.com/banner.png",
+        mobileImageUrl = null,
         linkUrl = "/jobs/5501",
         targetType = null,
         targetId = null,
