@@ -1,6 +1,5 @@
 package com.ogonggo.userapi.advertisementcontract.presentation.request
 
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -14,6 +13,7 @@ import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.hibernate.validator.constraints.URL
 import java.time.LocalDate
@@ -39,8 +39,9 @@ data class CreateAdvertisementContractRequest(
 
     val purpose: AdvertisementContractPurpose,
 
-    @field:Schema(description = "예정 예산 구간. 보내지 않으면 고르지 않은 것으로 저장합니다")
-    val budgetRange: AdvertisementContractBudgetRange? = null,
+    @field:Schema(description = "예정 예산(원). 1 이상 정수. 보내지 않으면 정하지 않은 것으로 저장합니다", example = "1500000")
+    @field:Positive
+    val budgetAmount: Int? = null,
 
     @field:NotEmpty
     @field:Size(max = 7)
@@ -91,7 +92,7 @@ data class CreateAdvertisementContractRequest(
         recruitmentUrl = recruitmentUrl,
         recruitmentDeadline = recruitmentDeadline,
         purpose = purpose,
-        budgetRange = budgetRange,
+        budgetAmount = budgetAmount,
         categories = categories,
         scheduleRequest = scheduleRequest,
         advertisementRequest = advertisementRequest,

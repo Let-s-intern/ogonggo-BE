@@ -149,7 +149,7 @@
 | 광고 계약 | `AdvertisementContract` | 광고주와의 계약. 신청부터 승인·반려까지 한 행이 상태로 거칩니다. 광고 신청 폼이나 비즈니스 공고 등록으로 생깁니다. 기획의 "광고 신청"도 이 행입니다. 신청 폼 계약은 선택으로 사업자 번호(`businessNumberType`·`businessNumber`, 기업 회원가입과 같은 규칙)를 가지며 비즈니스 공고 계약은 비워 둡니다. |
 | 광고 계약 상태 | `AdvertisementContractStatus` | 신청(`REQUESTED`), 협의 중(`NEGOTIATING`), 승인(`APPROVED`), 반려(`REJECTED`). 신청 폼 계약은 운영자가 바꾸며 전이를 막지 않습니다. 비즈니스 공고 계약은 검수 상태를 따라 검수 대기는 신청, 승인은 승인, 반려는 반려입니다. |
 | 광고 계약 경로 | `AdvertisementContractSource` | 광고 신청 폼(`APPLICATION_FORM`), 비즈니스 공고 등록(`COMPANY_POSTING`). 경로마다 채우는 값이 다릅니다. |
-| 예정 예산 구간 | `AdvertisementContractBudgetRange` | 광고 신청 폼에서 신청자가 고르는 예산 범위. 50만원 미만(`UNDER_500K`), 50만~100만원(`FROM_500K_TO_1M`), 100만~300만원(`FROM_1M_TO_3M`), 300만원 이상(`OVER_3M`), 아직 정하지 않았어요(`UNDECIDED`). 선택 입력이라 고르지 않은 신청과 비즈니스 공고 계약은 값이 없습니다. 실제 결제 금액(`paymentAmount`)과 다릅니다. |
+| 예정 예산 | `AdvertisementContract.budgetAmount` | 광고 신청 폼에서 신청자가 직접 적는 예산 금액(원, 1 이상 정수). 선택 입력이라 적지 않은 신청과 비즈니스 공고 계약은 값이 없습니다. 실제 결제 금액(`paymentAmount`)과 다릅니다. |
 | 계약 상품 | `AdvertisementContractProduct` | 운영자가 계약 상세에서 붙인 광고 상품. 판매 기록입니다. |
 | 광고 노출 | `AdvertisementExposure` | 상품 자리에 띄울 배너·광고 공고의 설정. 운영자가 순서·켜짐·기간을 정하며, 노출 중·꺼짐은 켜짐과 기간으로 계산합니다. 광고주 계약이 없는 우리 홍보도 둡니다. 배너는 모바일 이미지(`mobileImageUrl`)를 선택으로 가지며, 없으면 모바일에서도 이미지(`imageUrl`)를 씁니다. |
 | 이미지 | `ImageAsset` | 업로드한 이미지. 업로드 중 → 임시 → 첨부 순으로 바뀌고, 쓰이지 않으면 정리 작업이 지웁니다. 어디에 쓰이는지는 모르고, 쓰는 쪽(본문 이미지 노드, 프로필)이 이미지 식별자와 URL을 가집니다. 채용공고·부트캠프의 로고·대표 이미지는 URL만 가지며, 저장할 때 그 URL의 이미지를 첨부하고 이미 지워진 이미지 URL이면 막습니다. 이 URL로 쓰이는 이미지는 참조를 풀지 않고 정리 작업도 지우지 않습니다. |

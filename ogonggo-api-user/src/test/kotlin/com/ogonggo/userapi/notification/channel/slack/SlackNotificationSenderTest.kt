@@ -52,8 +52,8 @@ class SlackNotificationSenderTest {
     }
 
     @Test
-    @DisplayName("광고 계약 Slack 알림은 예정 예산 구간을 골랐을 때만 함께 보낸다")
-    fun `예정 예산 구간을 고른 신청은 예산 라벨을 포함한다`() {
+    @DisplayName("광고 계약 Slack 알림은 예정 예산을 적었을 때만 함께 보낸다")
+    fun `예정 예산을 적은 신청은 예산 라벨을 포함한다`() {
         // given
         val builder = RestClient.builder()
         val server = MockRestServiceServer.bindTo(builder).build()
@@ -63,10 +63,10 @@ class SlackNotificationSenderTest {
             ObjectMapper(),
         )
         server.expect(requestTo(WEBHOOK_URL))
-            .andExpect(jsonPath("$.blocks[1].fields[9].text").value("*예정 예산*\n100만~300만원"))
+            .andExpect(jsonPath("$.blocks[1].fields[9].text").value("*예정 예산*\n1,500,000원"))
             .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
         val notification = NOTIFICATION.copy(
-            payloadJson = ObjectMapper().writeValueAsString(PARAMETERS + ("budgetRange" to "100만~300만원")),
+            payloadJson = ObjectMapper().writeValueAsString(PARAMETERS + ("budgetAmount" to "1,500,000원")),
         )
 
         // when

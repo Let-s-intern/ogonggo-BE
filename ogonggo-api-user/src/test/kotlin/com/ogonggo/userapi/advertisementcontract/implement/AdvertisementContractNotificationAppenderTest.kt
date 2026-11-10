@@ -52,7 +52,7 @@ class AdvertisementContractNotificationAppenderTest {
         assertEquals("채용 공고", payload["promotionTarget"])
         assertEquals("적합한 지원자 확보", payload["purpose"])
         assertEquals("2026-12-31", payload["recruitmentDeadline"])
-        assertEquals("100만~300만원", payload["budgetRange"])
+        assertEquals("1,500,000원", payload["budgetAmount"])
     }
 
     private companion object {
@@ -63,7 +63,7 @@ class AdvertisementContractNotificationAppenderTest {
             recruitmentTitle = "백엔드 인턴 채용",
             recruitmentDeadline = "2026-12-31",
             purpose = "적합한 지원자 확보",
-            budgetRange = "100만~300만원",
+            budgetAmount = "1,500,000원",
             categories = listOf("배너", "인스타그램 1"),
             managerName = "김담당",
             email = "marketing@example.com",

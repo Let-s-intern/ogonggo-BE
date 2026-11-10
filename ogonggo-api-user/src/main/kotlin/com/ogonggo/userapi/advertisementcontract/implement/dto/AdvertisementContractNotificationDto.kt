@@ -12,7 +12,8 @@ data class AdvertisementContractNotificationDto(
     val recruitmentTitle: String,
     val recruitmentDeadline: String,
     val purpose: String,
-    val budgetRange: String?,
+    /** 예정 예산을 적은 신청만 있다. 천 단위 쉼표를 넣은 원 금액(1,500,000원)이다. */
+    val budgetAmount: String?,
     val categories: List<String>,
     val managerName: String,
     val email: String,
@@ -27,7 +28,7 @@ data class AdvertisementContractNotificationDto(
         put("recruitmentTitle", recruitmentTitle)
         put("recruitmentDeadline", recruitmentDeadline)
         put("purpose", purpose)
-        budgetRange?.let { put("budgetRange", it) }
+        budgetAmount?.let { put("budgetAmount", it) }
         put("categories", categories.joinToString(" · "))
         put("managerName", managerName)
         put("email", email)
@@ -43,7 +44,7 @@ data class AdvertisementContractNotificationDto(
             recruitmentTitle = command.recruitmentTitle,
             recruitmentDeadline = command.recruitmentDeadline.toString(),
             purpose = command.purpose.desc,
-            budgetRange = command.budgetRange?.desc,
+            budgetAmount = command.budgetAmount?.let { "%,d원".format(it) },
             categories = command.categories.sortedBy { it.code }.map { it.desc },
             managerName = command.managerName,
             email = command.email,

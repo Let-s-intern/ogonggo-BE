@@ -1,6 +1,5 @@
 package com.ogonggo.userapi.advertisementcontract.presentation
 
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
@@ -124,7 +123,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.status").value("NEGOTIATING"))
             .andExpect(jsonPath("$.data.recruitmentUrl").value("https://example.com/recruit/backend"))
             .andExpect(jsonPath("$.data.purpose").value("FIT_APPLICANTS"))
-            .andExpect(jsonPath("$.data.budgetRange").value("FROM_1M_TO_3M"))
+            .andExpect(jsonPath("$.data.budgetAmount").value(1_500_000))
             .andExpect(jsonPath("$.data.categories[1]").value("INSTAGRAM_1"))
             .andExpect(jsonPath("$.data.scheduleRequest").value("12월 첫째 주 진행 희망"))
             .andExpect(jsonPath("$.data.advertisementRequest").isEmpty)
@@ -209,7 +208,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             recruitmentUrl = "https://example.com/recruit/backend",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             purpose = AdvertisementContractPurpose.FIT_APPLICANTS,
-            budgetRange = AdvertisementContractBudgetRange.FROM_1M_TO_3M,
+            budgetAmount = 1_500_000,
             categories = listOf(AdvertisementProductCategory.BANNER, AdvertisementProductCategory.INSTAGRAM_1),
             scheduleRequest = "12월 첫째 주 진행 희망",
             advertisementRequest = null,

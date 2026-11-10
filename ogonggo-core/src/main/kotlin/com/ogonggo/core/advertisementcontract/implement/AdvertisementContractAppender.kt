@@ -21,7 +21,7 @@ class AdvertisementContractAppender internal constructor(
             recruitmentUrl = dto.recruitmentUrl,
             recruitmentDeadline = dto.recruitmentDeadline,
             purpose = dto.purpose,
-            budgetRange = dto.budgetRange,
+            budgetAmount = dto.budgetAmount,
             categories = dto.categories,
             scheduleRequest = dto.scheduleRequest,
             advertisementRequest = dto.advertisementRequest,

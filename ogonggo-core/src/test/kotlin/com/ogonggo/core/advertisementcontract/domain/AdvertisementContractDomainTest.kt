@@ -58,14 +58,20 @@ class AdvertisementContractDomainTest {
     }
 
     @Test
-    fun `신청 폼 계약은 예정 예산 구간을 고르지 않아도 된다`() {
-        assertEquals(null, formContract(budgetRange = null).budgetRange)
-        assertEquals(AdvertisementContractBudgetRange.FROM_1M_TO_3M, formContract().budgetRange)
+    fun `신청 폼 계약은 예정 예산을 적지 않아도 된다`() {
+        assertEquals(null, formContract(budgetAmount = null).budgetAmount)
+        assertEquals(1_500_000, formContract().budgetAmount)
     }
 
     @Test
-    fun `비즈니스 공고 계약은 예정 예산 구간을 갖지 않는다`() {
-        assertEquals(null, companyPostingContract().budgetRange)
+    fun `예정 예산은 1원 이상이어야 한다`() {
+        assertThrows(IllegalArgumentException::class.java) { formContract(budgetAmount = 0) }
+        assertThrows(IllegalArgumentException::class.java) { formContract(budgetAmount = -1) }
+    }
+
+    @Test
+    fun `비즈니스 공고 계약은 예정 예산을 갖지 않는다`() {
+        assertEquals(null, companyPostingContract().budgetAmount)
         assertThrows(IllegalArgumentException::class.java) {
             AdvertisementContract(
                 source = AdvertisementContractSource.COMPANY_POSTING,
@@ -78,7 +84,7 @@ class AdvertisementContractDomainTest {
                 recruitmentUrl = null,
                 recruitmentDeadline = null,
                 purpose = null,
-                budgetRange = AdvertisementContractBudgetRange.OVER_3M,
+                budgetAmount = 5_000_000,
                 categories = emptySet(),
                 scheduleRequest = null,
                 advertisementRequest = null,
@@ -132,7 +138,7 @@ class AdvertisementContractDomainTest {
 
     private fun formContract(
         categories: Set<AdvertisementProductCategory> = setOf(AdvertisementProductCategory.BANNER),
-        budgetRange: AdvertisementContractBudgetRange? = AdvertisementContractBudgetRange.FROM_1M_TO_3M,
+        budgetAmount: Int? = 1_500_000,
         businessNumberType: CompanyBusinessNumberType? = null,
         businessNumber: String? = null,
     ) =
@@ -147,7 +153,7 @@ class AdvertisementContractDomainTest {
             recruitmentUrl = "https://example.com/recruit",
             recruitmentDeadline = LocalDate.of(2026, 12, 20),
             purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
-            budgetRange = budgetRange,
+            budgetAmount = budgetAmount,
             categories = categories,
             scheduleRequest = null,
             advertisementRequest = null,

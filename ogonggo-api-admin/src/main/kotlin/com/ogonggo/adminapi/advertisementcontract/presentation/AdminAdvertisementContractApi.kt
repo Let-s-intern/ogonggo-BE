@@ -48,7 +48,7 @@ interface AdminAdvertisementContractApi {
             companyName은 앞뒤 공백을 제거한 뒤 대소문자를 가리지 않는 부분 검색을 합니다.
             createdFrom과 createdTo는 생성일 기준이며 양 끝 날짜를 포함합니다. page는 1부터 시작하고 기본 1, size 기본 20·최대 100입니다.
             COMPANY_POSTING 계약도 포함하며, categories는 신청 희망 카테고리입니다. 연결 상품은 상세 조회에서 확인합니다.
-            budgetRange는 신청 폼에서 고른 예정 예산 구간이며, 고르지 않은 신청과 COMPANY_POSTING 계약은 null입니다.
+            budgetAmount는 신청 폼에 적은 예정 예산(원)이며, 적지 않은 신청과 COMPANY_POSTING 계약은 null입니다.
         """,
     )
     @ApiResponses(
