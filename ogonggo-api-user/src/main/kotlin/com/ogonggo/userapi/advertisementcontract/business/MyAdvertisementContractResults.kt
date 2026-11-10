@@ -1,7 +1,6 @@
 package com.ogonggo.userapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -74,7 +73,7 @@ data class MyAdvertisementContractDetailResult(
     val recruitmentUrl: String,
     val recruitmentDeadline: LocalDate,
     val purpose: AdvertisementContractPurpose,
-    val budgetRange: AdvertisementContractBudgetRange?,
+    val budgetAmount: Int?,
     val categories: List<AdvertisementProductCategory>,
     val scheduleRequest: String?,
     val advertisementRequest: String?,
@@ -102,7 +101,7 @@ data class MyAdvertisementContractDetailResult(
             recruitmentUrl = checkNotNull(contract.recruitmentUrl) { "신청 폼 계약은 recruitmentUrl 값이 있습니다." },
             recruitmentDeadline = checkNotNull(contract.recruitmentDeadline) { "신청 폼 계약은 recruitmentDeadline 값이 있습니다." },
             purpose = checkNotNull(contract.purpose) { "신청 폼 계약은 purpose 값이 있습니다." },
-            budgetRange = contract.budgetRange,
+            budgetAmount = contract.budgetAmount,
             categories = contract.categories.sorted(),
             scheduleRequest = contract.scheduleRequest,
             advertisementRequest = contract.advertisementRequest,

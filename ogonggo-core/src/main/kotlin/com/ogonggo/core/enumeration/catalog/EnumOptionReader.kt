@@ -1,6 +1,5 @@
 package com.ogonggo.core.enumeration.catalog
 
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -183,7 +182,6 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementContractSource>(),
             enumOptionsOf<AdvertisementContractPromotionTarget>(),
             enumOptionsOf<AdvertisementContractPurpose>(),
-            enumOptionsOf<AdvertisementContractBudgetRange>(),
             enumOptionsOf<AdvertisementContractInvoiceMethod>(),
             enumOptionsOf<AdvertisementContractCreativeMethod>(),
             enumOptionsOf<AdvertisementExposureTargetType>(),

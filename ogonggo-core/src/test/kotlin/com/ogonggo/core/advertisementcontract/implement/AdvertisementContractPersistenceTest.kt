@@ -1,7 +1,6 @@
 package com.ogonggo.core.advertisementcontract.implement
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -164,9 +163,9 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `신청 폼 계약은 고른 예정 예산 구간을 저장하고, 고르지 않으면 비워 둔다`() {
+    fun `신청 폼 계약은 적은 예정 예산을 저장하고, 적지 않으면 비워 둔다`() {
         // given
-        val withBudget = appendForm(setOf(AdvertisementProductCategory.BANNER), budgetRange = AdvertisementContractBudgetRange.FROM_500K_TO_1M)
+        val withBudget = appendForm(setOf(AdvertisementProductCategory.BANNER), budgetAmount = 800_000)
         val withoutBudget = appendForm(setOf(AdvertisementProductCategory.BANNER))
         repository.flush()
         entityManager.clear()
@@ -176,8 +175,8 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         val foundWithoutBudget = repository.findById(withoutBudget).get()
 
         // then
-        assertEquals(AdvertisementContractBudgetRange.FROM_500K_TO_1M, foundWithBudget.budgetRange)
-        assertEquals(null, foundWithoutBudget.budgetRange)
+        assertEquals(800_000, foundWithBudget.budgetAmount)
+        assertEquals(null, foundWithoutBudget.budgetAmount)
     }
 
     @Test
@@ -434,7 +433,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     private fun appendForm(
         categories: Set<AdvertisementProductCategory>,
         companyName: String = "렛츠커리어",
-        budgetRange: AdvertisementContractBudgetRange? = null,
+        budgetAmount: Int? = null,
         userId: Long? = null,
         businessNumberType: CompanyBusinessNumberType? = null,
         businessNumber: String? = null,
@@ -448,7 +447,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
                 recruitmentUrl = "https://example.com/recruit",
                 recruitmentDeadline = LocalDate.of(2026, 12, 20),
                 purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
-                budgetRange = budgetRange,
+                budgetAmount = budgetAmount,
                 categories = categories,
                 scheduleRequest = " ",
                 advertisementRequest = null,
@@ -513,7 +512,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         recruitmentUrl = "https://example.com/recruit",
         recruitmentDeadline = LocalDate.of(2026, 12, 20),
         purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
-        budgetRange = null,
+        budgetAmount = null,
         categories = categories,
         scheduleRequest = null,
         advertisementRequest = null,

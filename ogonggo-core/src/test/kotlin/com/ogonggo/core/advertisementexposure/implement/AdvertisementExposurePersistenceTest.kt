@@ -719,7 +719,7 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
             recruitmentUrl = "https://example.com/recruit",
             recruitmentDeadline = LocalDate.of(2026, 12, 20),
             purpose = AdvertisementContractPurpose.BRAND_AWARENESS,
-            budgetRange = null,
+            budgetAmount = null,
             categories = setOf(AdvertisementProductCategory.BANNER),
             scheduleRequest = null,
             advertisementRequest = null,

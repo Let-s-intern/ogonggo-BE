@@ -1,6 +1,5 @@
 package com.ogonggo.userapi.advertisementcontract.presentation.response
 
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractBudgetRange
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
@@ -54,8 +53,8 @@ data class MyAdvertisementContractDetailResponse(
     val recruitmentUrl: String,
     val recruitmentDeadline: LocalDate,
     val purpose: AdvertisementContractPurpose,
-    @field:Schema(description = "예정 예산 구간. 고르지 않았으면 null", nullable = true)
-    val budgetRange: AdvertisementContractBudgetRange?,
+    @field:Schema(description = "예정 예산(원). 적지 않았으면 null", nullable = true)
+    val budgetAmount: Int?,
     @field:Schema(description = "신청 때 고른 광고 카테고리")
     val categories: List<AdvertisementProductCategory>,
     @field:Schema(description = "일정 요청사항. 비워 보냈으면 null", nullable = true)
@@ -88,7 +87,7 @@ data class MyAdvertisementContractDetailResponse(
             recruitmentUrl = result.recruitmentUrl,
             recruitmentDeadline = result.recruitmentDeadline,
             purpose = result.purpose,
-            budgetRange = result.budgetRange,
+            budgetAmount = result.budgetAmount,
             categories = result.categories,
             scheduleRequest = result.scheduleRequest,
             advertisementRequest = result.advertisementRequest,

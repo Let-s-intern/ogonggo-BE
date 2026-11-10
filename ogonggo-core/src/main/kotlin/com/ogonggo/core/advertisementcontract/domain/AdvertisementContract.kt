@@ -56,7 +56,7 @@ class AdvertisementContract internal constructor(
     recruitmentUrl: String?,
     recruitmentDeadline: LocalDate?,
     purpose: AdvertisementContractPurpose?,
-    budgetRange: AdvertisementContractBudgetRange?,
+    budgetAmount: Int?,
     categories: Set<AdvertisementProductCategory>,
     scheduleRequest: String?,
     advertisementRequest: String?,
@@ -72,6 +72,7 @@ class AdvertisementContract internal constructor(
     init {
         require(userId == null || userId > 0) { "회원 식별자는 양수여야 합니다." }
         require(companyName.isNotBlank() && recruitmentTitle.isNotBlank()) { "기업명과 공고명은 비울 수 없습니다." }
+        require(budgetAmount == null || budgetAmount > 0) { "예정 예산은 1원 이상이어야 합니다." }
         require((scheduleRequest?.length ?: 0) <= MAX_REQUEST_LENGTH && (advertisementRequest?.length ?: 0) <= MAX_REQUEST_LENGTH) {
             "요청사항은 ${MAX_REQUEST_LENGTH}자 이하여야 합니다."
         }
@@ -91,7 +92,7 @@ class AdvertisementContract internal constructor(
 
             AdvertisementContractSource.COMPANY_POSTING -> {
                 require(userId != null && targetId != null && targetId > 0) { "비즈니스 공고 계약은 등록한 회원과 공고를 가리켜야 합니다." }
-                require(budgetRange == null) { "비즈니스 공고 계약은 예정 예산 구간을 갖지 않습니다." }
+                require(budgetAmount == null) { "비즈니스 공고 계약은 예정 예산을 갖지 않습니다." }
                 require(businessNumberType == null && businessNumber == null) { "비즈니스 공고 계약은 사업자 번호를 갖지 않습니다." }
             }
         }
@@ -137,9 +138,8 @@ class AdvertisementContract internal constructor(
     @Column(length = 30)
     val purpose: AdvertisementContractPurpose? = purpose /* 광고 목적 */
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "budget_range", length = 30)
-    val budgetRange: AdvertisementContractBudgetRange? = budgetRange /* 예정 예산 구간. 신청 폼에서 고르지 않을 수 있다 */
+    @Column(name = "budget_amount")
+    val budgetAmount: Int? = budgetAmount /* 예정 예산(원). 신청 폼에서 적지 않을 수 있다. 실제 결제 금액(paymentAmount)과 다르다 */
 
     @ElementCollection
     @CollectionTable(name = "advertisement_contract_categories", joinColumns = [JoinColumn(name = "contract_id")])
@@ -220,7 +220,7 @@ class AdvertisementContract internal constructor(
             recruitmentUrl: String,
             recruitmentDeadline: LocalDate,
             purpose: AdvertisementContractPurpose,
-            budgetRange: AdvertisementContractBudgetRange?,
+            budgetAmount: Int?,
             categories: Set<AdvertisementProductCategory>,
             scheduleRequest: String?,
             advertisementRequest: String?,
@@ -242,7 +242,7 @@ class AdvertisementContract internal constructor(
             recruitmentUrl = recruitmentUrl,
             recruitmentDeadline = recruitmentDeadline,
             purpose = purpose,
-            budgetRange = budgetRange,
+            budgetAmount = budgetAmount,
             categories = categories,
             scheduleRequest = scheduleRequest?.takeIf { it.isNotBlank() },
             advertisementRequest = advertisementRequest?.takeIf { it.isNotBlank() },
@@ -274,7 +274,7 @@ class AdvertisementContract internal constructor(
             recruitmentUrl = null,
             recruitmentDeadline = recruitmentDeadline,
             purpose = null,
-            budgetRange = null,
+            budgetAmount = null,
             categories = emptySet(),
             scheduleRequest = null,
             advertisementRequest = null,

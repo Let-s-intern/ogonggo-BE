@@ -241,7 +241,7 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
             recruitmentUrl = "https://example.com/recruit",
             recruitmentDeadline = LocalDate.of(2026, 12, 20),
             purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
-            budgetRange = null,
+            budgetAmount = null,
             categories = setOf(AdvertisementProductCategory.BANNER),
             scheduleRequest = null,
             advertisementRequest = null,
