@@ -250,7 +250,6 @@ class AdvertisementContractControllerTest @Autowired constructor(
         val invalidRequests = listOf(
             VALID_BODY.replace("marketing@example.com", "not-an-email"),
             VALID_BODY.replace("https://example.com/recruit/backend", "ftp://example.com/recruit/backend"),
-            VALID_BODY.replace("\"categories\": [\"BANNER\", \"INSTAGRAM_1\"]", "\"categories\": []"),
             VALID_BODY.replace("\"companyName\": \"샘플기업\"", "\"companyName\": \" \""),
             VALID_BODY.replace("\"managerName\": \"김담당\",", ""),
         )

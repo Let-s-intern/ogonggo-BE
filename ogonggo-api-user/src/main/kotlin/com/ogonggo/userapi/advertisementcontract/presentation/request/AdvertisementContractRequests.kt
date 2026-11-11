@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
@@ -46,7 +45,7 @@ data class CreateAdvertisementContractRequest(
     @field:Positive
     val budgetAmount: Int? = null,
 
-    @field:NotEmpty
+    @field:Schema(description = "희망 광고 카테고리. 고르지 않았으면 빈 배열을 보냅니다")
     @field:Size(max = 7)
     val categories: Set<AdvertisementProductCategory>,
 

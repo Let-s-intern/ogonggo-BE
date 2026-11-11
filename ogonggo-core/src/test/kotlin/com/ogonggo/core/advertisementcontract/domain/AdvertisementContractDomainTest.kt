@@ -53,8 +53,8 @@ class AdvertisementContractDomainTest {
     }
 
     @Test
-    fun `신청 폼 계약은 광고 카테고리를 하나 이상 골라야 한다`() {
-        assertThrows(IllegalArgumentException::class.java) { formContract(categories = emptySet()) }
+    fun `신청 폼 계약은 광고 카테고리를 고르지 않아도 만들 수 있다`() {
+        assertEquals(emptySet<AdvertisementProductCategory>(), formContract(categories = emptySet()).categories)
     }
 
     @Test
