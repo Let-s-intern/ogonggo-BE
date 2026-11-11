@@ -2,6 +2,9 @@ package com.ogonggo.core.job.implement
 
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.jpa.H2JsonFunctions
+import com.ogonggo.core.job.domain.JobAnalysis
+import com.ogonggo.core.job.persistence.JobAnalysisJpaRepository
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobEducationLevel
@@ -33,6 +36,7 @@ import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -46,10 +50,12 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.test.context.jdbc.Sql
 import java.time.LocalDateTime
 
 @DataJpaTest
 @ContextConfiguration(classes = [CoreJpaConfiguration::class])
+@Sql(statements = [H2JsonFunctions.CREATE_ALIAS])
 @Import(
     JobReader::class,
     JobQueryRepository::class,
@@ -79,6 +85,7 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     private val jobBookmarkRepository: JobBookmarkJpaRepository,
     private val jobMetricRepository: JobMetricJpaRepository,
     private val jobRepository: JobJpaRepository,
+    private val jobAnalysisRepository: JobAnalysisJpaRepository,
 ) {
 
     @Test
@@ -1067,6 +1074,29 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `검색어는 공고 분석의 자격 요건과 우대 사항도 대상으로 한다`() {
+        val byRequired = publishNamed(companyName = "오공고", title = "마케터")
+        val byPreferred = publishNamed(companyName = "오공고", title = "콘텐츠 기획자")
+        val byTask = publishNamed(companyName = "오공고", title = "운영 매니저")
+        publishNamed(companyName = "오공고", title = "분석 없는 공고")
+        analyze(byRequired, required = listOf("중국어 회화 가능자"))
+        analyze(byPreferred, preferred = listOf("샤오홍슈 운영 경험"))
+        // 주요 업무에만 있는 단어는 자격 요건·우대 사항이 아니므로 찾지 않는다.
+        analyze(byTask, taskText = "중국어 콘텐츠 번역", required = listOf("영어 가능자"))
+
+        assertEquals(setOf(byRequired), readIds(JobSearchCondition(keyword = "중국어")))
+        assertEquals(setOf(byPreferred), readIds(JobSearchCondition(keyword = "샤오홍슈")))
+    }
+
+    @Test
+    fun `검색어는 공고 분석에서도 대소문자를 가리지 않는다`() {
+        val target = publishNamed(companyName = "오공고", title = "마케터")
+        analyze(target, preferred = listOf("Instagram 운영 경험"))
+
+        assertEquals(setOf(target), readIds(JobSearchCondition(keyword = "instagram")))
+    }
+
+    @Test
     fun `검색어가 비어 있으면 검색 조건을 적용하지 않는다`() {
         val first = publishNamed(companyName = "오공고", title = "백엔드 개발자")
         val second = publishNamed(companyName = "다른회사", title = "데이터 엔지니어")
@@ -1103,6 +1133,36 @@ internal class JobImplementPersistenceTest @Autowired constructor(
 
         assertEquals(listOf(target), page.jobs.map { it.id })
         assertEquals(1L, page.totalElements)
+    }
+
+    private fun analyze(
+        jobId: Long,
+        taskText: String = "업무",
+        required: List<String> = emptyList(),
+        preferred: List<String> = emptyList(),
+    ) {
+        val job = jobRepository.findById(jobId).orElseThrow()
+        val fact = mapOf("value" to null, "note" to null)
+        val content = ObjectMapper().writeValueAsString(
+            mapOf(
+                "tasks" to listOf(mapOf("tag" to "업무", "text" to taskText)),
+                "required" to required,
+                "preferred" to preferred,
+                "employment" to mapOf("type" to fact, "conversion" to fact, "salary" to fact, "affiliation" to fact),
+                "submission" to mapOf("documents" to fact, "essay" to fact, "process" to fact, "deadline" to fact),
+                "competencies" to emptyList<Any>(),
+            ),
+        )
+        jobAnalysisRepository.save(
+            JobAnalysis(
+                jobId = jobId,
+                contentHash = job.contentHash(),
+                content = content,
+                guideVersion = 1,
+                model = "test",
+                jobUpdatedAt = NOW,
+            ),
+        )
     }
 
     private fun publishNamed(

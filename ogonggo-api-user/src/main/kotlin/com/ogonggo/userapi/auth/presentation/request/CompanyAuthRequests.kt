@@ -107,6 +107,13 @@ data class CompanySignInRequest(
     fun toCommand(): CompanySignInCommand = CompanySignInCommand(email = email, password = password)
 }
 
+data class CompanyPasswordResetRequest(
+    @field:NotBlank
+    @field:Email
+    @field:Size(max = 255)
+    val email: String,
+)
+
 /** 빈 문자열은 `@Size`·`@URL`을 통과하지만 도메인은 공백 값을 막으므로, 요청 단계에서 어느 필드인지 알린다. */
 private fun validOptionalText(field: String, value: String?): String? {
     if (value != null && value.isBlank()) {

@@ -1,6 +1,8 @@
 package com.ogonggo.userapi.auth.presentation
 
 import com.ogonggo.userapi.auth.business.CompanyAuthService
+import com.ogonggo.userapi.auth.business.CompanyPasswordResetService
+import com.ogonggo.userapi.auth.presentation.request.CompanyPasswordResetRequest
 import com.ogonggo.userapi.auth.presentation.request.CompanySignInRequest
 import com.ogonggo.userapi.auth.presentation.request.CompanySignUpRequest
 import com.ogonggo.userapi.auth.presentation.response.AuthTokenResponse
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth/company")
 class CompanyAuthController(
     private val companyAuthService: CompanyAuthService,
+    private val companyPasswordResetService: CompanyPasswordResetService,
 ) : CompanyAuthApi {
 
     @PostMapping("/signup")
@@ -28,4 +31,12 @@ class CompanyAuthController(
         @RequestBody request: CompanySignInRequest,
     ): ResponseEntity<SuccessResponse<AuthTokenResponse>> =
         SuccessResponse.ok(AuthTokenResponse.from(companyAuthService.signIn(request.toCommand())))
+
+    @PostMapping("/password-resets")
+    override fun resetPassword(
+        @RequestBody request: CompanyPasswordResetRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        companyPasswordResetService.reset(request.email)
+        return SuccessResponse.ok()
+    }
 }

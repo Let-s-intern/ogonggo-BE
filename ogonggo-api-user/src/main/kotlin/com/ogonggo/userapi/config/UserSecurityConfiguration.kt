@@ -74,6 +74,7 @@ class UserSecurityConfiguration {
                     HttpMethod.POST,
                     "/api/v1/auth/company/signup",
                     "/api/v1/auth/company/signin",
+                    "/api/v1/auth/company/password-resets",
                 ).permitAll()
                 // 광고 문의는 오공고 계정이 없는 기업 담당자가 소개 페이지에서 남긴다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-inquiries").permitAll()
