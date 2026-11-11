@@ -1855,7 +1855,7 @@ Response 제안: 기존 카드 필드는 유지하고 광고 카드에만 노출
 
 **구현 상태 (2026-11-08): 구현 완료.** 새 HTTP 경로·요청 필드·응답 필드는 추가하지 않았다. 계약 저장 이후 공통 `notifications` 대기열에 EMAIL과 SLACK 행을 별도 트랜잭션으로 적재한다. U-01의 201 및 `{ data: { id } }` 응답은 기존과 같다.
 
-**알림 정책:** `AdvertisementContractNotificationAppender`는 계약별 deduplication key로 `advertisement-contract:{contractId}:email`과 `advertisement-contract:{contractId}:slack`을 기록한다. 신청자 이메일은 수신 주소로 저장하고 Slack 수신 주소는 논리 이름 `advertisement-inquiry`로 저장한다. webhook 비밀값은 대기열에 넣지 않고 sender가 `ogonggo.slack.advertisement-inquiry`에서 읽는다. 메일은 `ADVERTISEMENT_CONTRACT_RECEIVED` 템플릿을 사용한다. Slack 메시지는 계약 ID, 기업명, 공고명, 홍보 대상·목적·카테고리·마감일 및 회신 연락처를 포함하고, 신청자가 예정 예산 구간을 골랐을 때만 그 라벨을 더하며, 자유 입력 요청은 포함하지 않는다. 메일은 신청 접수 요약을 포함한다.
+**알림 정책:** `AdvertisementContractNotificationAppender`는 계약별 deduplication key로 `advertisement-contract:{contractId}:email`과 `advertisement-contract:{contractId}:slack`을 기록한다. 신청자 이메일은 수신 주소로 저장하고 Slack 수신 주소는 논리 이름 `advertisement-inquiry`로 저장한다. webhook 비밀값은 대기열에 넣지 않고 sender가 `ogonggo.slack.advertisement-inquiry`에서 읽는다. 메일은 `ADVERTISEMENT_CONTRACT_RECEIVED` 템플릿을 사용한다. Slack 메시지는 계약 ID, 기업명, 공고명, 홍보 대상·목적·카테고리·마감일 및 회신 연락처를 포함하고, 신청자가 예정 예산 구간을 골랐을 때만 그 라벨을 더하며, 자유 입력 요청(scheduleRequest·advertisementRequest)은 포함하지 않는다. 폼 답변(formAnswers)이 있으면 항목 아래·어드민 링크 위에 `신청서 답변` 블록으로 `문항 이름: 답`을 받은 순서대로 한 줄씩 보인다(LC-3607). payload에는 줄로 합친 문자열 하나(`formAnswers`)를 2,500자까지 싣고, Slack section 한도 3,000자를 넘으면 줄 단위로 끊고 생략을 알린다. 메일은 신청 접수 요약을 포함한다.
 
 실제 전송은 기존 공통 notification dispatcher와 EMAIL/SLACK sender가 담당한다. Slack webhook 호출은 `SlackNotificationSender`에서 공통 sender 규약에 맞춰 실행한다. Slack provider의 stale 처리 기준은 8분이며 장기 PROCESSING 행은 `UNKNOWN` 처리한다. 실패·미확인 전달은 U-01 응답에 포함되지 않으며 실제 수신을 보장하지 않는다.
 

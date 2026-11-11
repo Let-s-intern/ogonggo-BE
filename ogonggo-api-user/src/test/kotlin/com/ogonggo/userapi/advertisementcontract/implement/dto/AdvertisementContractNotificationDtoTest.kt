@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.implement.dto
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -9,6 +10,7 @@ import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.userapi.advertisementcontract.business.CreateAdvertisementContractCommand
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 
@@ -45,6 +47,46 @@ class AdvertisementContractNotificationDtoTest {
 
         // then
         assertFalse(parameters.containsKey("businessNumber"))
+    }
+
+    @Test
+    fun `폼 답변은 받은 순서대로 한 줄에 하나씩 문항 이름과 답을 싣는다`() {
+        // when
+        val parameters = AdvertisementContractNotificationDto.from(
+            CONTRACT_ID,
+            COMMAND.copy(
+                formAnswers = listOf(
+                    AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너"),
+                    AdvertisementContractFormAnswer(key = "desiredPeriod", label = "희망 기간", value = "2주"),
+                ),
+            ),
+        ).templateParameters()
+
+        // then
+        assertEquals("희망 상품: 메인 배너\n희망 기간: 2주", parameters["formAnswers"])
+    }
+
+    @Test
+    fun `폼 답변이 없는 신청은 알림 값에 폼 답변이 없다`() {
+        // when
+        val parameters = AdvertisementContractNotificationDto.from(CONTRACT_ID, COMMAND).templateParameters()
+
+        // then
+        assertFalse(parameters.containsKey("formAnswers"))
+    }
+
+    @Test
+    fun `긴 폼 답변은 알림 값 한도에서 자르고 생략을 알린다`() {
+        // given
+        val answer = AdvertisementContractFormAnswer(key = "k", label = "문항", value = "답".repeat(1000))
+
+        // when
+        val formAnswers = AdvertisementContractNotificationDto.from(CONTRACT_ID, COMMAND.copy(formAnswers = List(30) { answer }))
+            .templateParameters().getValue("formAnswers")
+
+        // then
+        assertTrue(formAnswers.endsWith("…(이하 생략, 어드민에서 확인)"))
+        assertTrue(formAnswers.length < AdvertisementContractNotificationDto.MAX_FORM_ANSWERS_LENGTH + 30)
     }
 
     private companion object {
