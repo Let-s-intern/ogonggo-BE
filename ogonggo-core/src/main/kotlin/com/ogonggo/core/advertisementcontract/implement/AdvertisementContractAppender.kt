@@ -32,6 +32,7 @@ class AdvertisementContractAppender internal constructor(
             businessNumber = dto.businessNumber,
             invoiceMethod = dto.invoiceMethod,
             creativeMethod = dto.creativeMethod,
+            formAnswers = dto.formAnswers,
         ),
     )
 

@@ -40,6 +40,7 @@ class AdvertisementContractService internal constructor(
                 businessNumber = command.businessNumber,
                 invoiceMethod = command.invoiceMethod,
                 creativeMethod = command.creativeMethod,
+                formAnswers = command.formAnswers,
             ),
         )
 

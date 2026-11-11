@@ -111,6 +111,71 @@ class SlackNotificationSenderTest {
     }
 
     @Test
+    @DisplayName("광고 계약 Slack 알림은 폼 답변이 있을 때만 항목 아래 어드민 링크 위에 답변 블록을 보낸다")
+    fun `폼 답변이 있을 때만 답변 블록을 보낸다`() {
+        // given
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val sender = SlackNotificationSender(
+            builder.build(),
+            SlackProperties(advertisementInquiry = WEBHOOK_URL, adminBaseUrl = ADMIN_BASE_URL),
+            ObjectMapper(),
+        )
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.blocks.length()").value(4))
+            .andExpect(jsonPath("$.blocks[2].text.text").value("*신청서 답변*\n희망 상품: 메인 배너 &amp; 카카오톡 CRM\n희망 기간: 2주"))
+            .andExpect(jsonPath("$.blocks[3].text.text").value("<https://admin.example.com/business/ad-applications/1001|어드민에서 신청 처리>"))
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.blocks.length()").value(3))
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        // when
+        val withAnswers = sender.send(
+            NOTIFICATION.copy(
+                payloadJson = ObjectMapper().writeValueAsString(
+                    PARAMETERS + ("formAnswers" to "희망 상품: 메인 배너 & 카카오톡 CRM\n희망 기간: 2주"),
+                ),
+            ),
+        )
+        val withoutAnswers = sender.send(NOTIFICATION)
+
+        // then
+        assertEquals(NotificationDeliveryResult.Sent(null), withAnswers)
+        assertEquals(NotificationDeliveryResult.Sent(null), withoutAnswers)
+        server.verify()
+    }
+
+    @Test
+    @DisplayName("이스케이프로 길어진 폼 답변은 Slack section 한도 3000자 안에서 줄 단위로 끊는다")
+    fun `폼 답변 블록은 section 한도를 넘지 않는다`() {
+        // given
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val sender = SlackNotificationSender(
+            builder.build(),
+            SlackProperties(advertisementInquiry = WEBHOOK_URL),
+            ObjectMapper(),
+        )
+        val lines = List(30) { "문항$it: " + "&".repeat(80) }.joinToString("\n")
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.blocks[2].text.text").value(org.hamcrest.Matchers.endsWith("…(이하 생략, 어드민에서 확인)")))
+            .andExpect(
+                jsonPath("$.blocks[2].text.text").value(
+                    org.hamcrest.Matchers.matchesPattern("(?s).{1,3000}"),
+                ),
+            )
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        // when
+        val result = sender.send(NOTIFICATION.copy(payloadJson = ObjectMapper().writeValueAsString(PARAMETERS + ("formAnswers" to lines))))
+
+        // then
+        assertEquals(NotificationDeliveryResult.Sent(null), result)
+        server.verify()
+    }
+
+    @Test
     @DisplayName("Slack 메시지에서 사용자 입력 제어 문자를 이스케이프한다")
     fun `제어 문자를 슬랙 문법으로 처리하지 않는다`() {
         // given

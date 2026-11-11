@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -84,6 +85,7 @@ data class MyAdvertisementContractDetailResult(
     val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod,
     val creativeMethod: AdvertisementContractCreativeMethod,
+    val formAnswers: List<AdvertisementContractFormAnswer>?,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
     val products: List<MyAdvertisementContractProductResult>,
@@ -112,6 +114,7 @@ data class MyAdvertisementContractDetailResult(
             businessNumber = contract.businessNumber,
             invoiceMethod = checkNotNull(contract.invoiceMethod) { "신청 폼 계약은 invoiceMethod 값이 있습니다." },
             creativeMethod = checkNotNull(contract.creativeMethod) { "신청 폼 계약은 creativeMethod 값이 있습니다." },
+            formAnswers = contract.formAnswers,
             paymentAmount = contract.paymentAmount,
             registeredAt = contract.createdAt,
             products = products.map(MyAdvertisementContractProductResult::from),

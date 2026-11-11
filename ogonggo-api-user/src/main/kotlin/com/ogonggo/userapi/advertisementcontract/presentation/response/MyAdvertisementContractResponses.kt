@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.presentation.response
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -11,6 +12,7 @@ import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.userapi.advertisementcontract.business.MyAdvertisementContractDetailResult
 import com.ogonggo.userapi.advertisementcontract.business.MyAdvertisementContractProductResult
 import com.ogonggo.userapi.advertisementcontract.business.MyAdvertisementContractSummaryResult
+import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -70,6 +72,10 @@ data class MyAdvertisementContractDetailResponse(
     val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod,
     val creativeMethod: AdvertisementContractCreativeMethod,
+    @field:ArraySchema(
+        arraySchema = Schema(description = "칸이 따로 없는 폼 문항의 답. 보낸 순서대로. 답 없이 낸 신청과 이 값이 생기기 전 신청은 null", nullable = true),
+    )
+    val formAnswers: List<MyAdvertisementContractFormAnswerResponse>?,
     @field:Schema(description = "협의로 정한 결제 금액(원). 아직 정하지 않았으면 null", nullable = true)
     val paymentAmount: Int?,
     @field:Schema(description = "신청 일시")
@@ -98,9 +104,26 @@ data class MyAdvertisementContractDetailResponse(
             businessNumber = result.businessNumber,
             invoiceMethod = result.invoiceMethod,
             creativeMethod = result.creativeMethod,
+            formAnswers = result.formAnswers?.map(MyAdvertisementContractFormAnswerResponse::from),
             paymentAmount = result.paymentAmount,
             registeredAt = result.registeredAt,
             products = result.products.map(MyAdvertisementContractProductResponse::from),
+        )
+    }
+}
+
+data class MyAdvertisementContractFormAnswerResponse(
+    @field:Schema(description = "문항 키")
+    val key: String,
+    @field:Schema(description = "신청 당시 화면에 보인 문항 이름")
+    val label: String,
+    val value: String,
+) {
+    companion object {
+        fun from(answer: AdvertisementContractFormAnswer) = MyAdvertisementContractFormAnswerResponse(
+            key = answer.key,
+            label = answer.label,
+            value = answer.value,
         )
     }
 }

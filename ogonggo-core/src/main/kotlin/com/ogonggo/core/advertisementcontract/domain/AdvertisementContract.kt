@@ -19,6 +19,8 @@ import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.LocalDate
 
 /**
@@ -67,6 +69,7 @@ class AdvertisementContract internal constructor(
     businessNumber: String?,
     invoiceMethod: AdvertisementContractInvoiceMethod?,
     creativeMethod: AdvertisementContractCreativeMethod?,
+    formAnswers: List<AdvertisementContractFormAnswer>? = null,
 ) : BaseTimeEntity() {
 
     init {
@@ -88,12 +91,16 @@ class AdvertisementContract internal constructor(
                 require(invoiceMethod != null && creativeMethod != null) { "신청 폼 계약은 계산서 발행 방식과 소재 준비 방식이 있어야 합니다." }
                 require(categories.isNotEmpty()) { "신청 폼 계약은 광고 카테고리를 하나 이상 골라야 합니다." }
                 validateBusinessNumber(businessNumberType, businessNumber)
+                require(formAnswers == null || formAnswers.size in 1..AdvertisementContractFormAnswer.MAX_COUNT) {
+                    "폼 답변은 1개 이상 ${AdvertisementContractFormAnswer.MAX_COUNT}개 이하여야 합니다."
+                }
             }
 
             AdvertisementContractSource.COMPANY_POSTING -> {
                 require(userId != null && targetId != null && targetId > 0) { "비즈니스 공고 계약은 등록한 회원과 공고를 가리켜야 합니다." }
                 require(budgetAmount == null) { "비즈니스 공고 계약은 예정 예산을 갖지 않습니다." }
                 require(businessNumberType == null && businessNumber == null) { "비즈니스 공고 계약은 사업자 번호를 갖지 않습니다." }
+                require(formAnswers == null) { "비즈니스 공고 계약은 폼 답변을 갖지 않습니다." }
             }
         }
     }
@@ -179,6 +186,10 @@ class AdvertisementContract internal constructor(
     @Column(name = "creative_method", length = 30)
     val creativeMethod: AdvertisementContractCreativeMethod? = creativeMethod /* 소재 준비 방식 */
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "form_answers")
+    val formAnswers: List<AdvertisementContractFormAnswer>? = formAnswers?.toList() /* 칸이 따로 없는 폼 문항의 답. 받은 순서대로. 이 칸 이전 신청과 비즈니스 공고 계약은 없다 */
+
     @Column(name = "payment_amount")
     var paymentAmount: Int? = null /* 협의로 정한 실제 결제 금액 */
         protected set
@@ -231,6 +242,7 @@ class AdvertisementContract internal constructor(
             businessNumber: String? = null,
             invoiceMethod: AdvertisementContractInvoiceMethod,
             creativeMethod: AdvertisementContractCreativeMethod,
+            formAnswers: List<AdvertisementContractFormAnswer>? = null,
         ): AdvertisementContract = AdvertisementContract(
             source = AdvertisementContractSource.APPLICATION_FORM,
             status = AdvertisementContractStatus.REQUESTED,
@@ -253,6 +265,7 @@ class AdvertisementContract internal constructor(
             businessNumber = businessNumber,
             invoiceMethod = invoiceMethod,
             creativeMethod = creativeMethod,
+            formAnswers = formAnswers?.takeIf { it.isNotEmpty() },
         )
 
         /** 비즈니스로 등록한 공고 하나에 대한 계약이다. 등록 직후 공고는 검수 대기라 신청이다. */

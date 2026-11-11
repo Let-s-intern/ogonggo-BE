@@ -177,10 +177,21 @@ class UserOpenApiContractTest @Autowired constructor(
             setOf(
                 "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline",
                 "purpose", "budgetAmount", "categories", "scheduleRequest", "advertisementRequest", "managerName", "email",
-                "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod",
+                "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "formAnswers",
             ),
             request.at("/properties").fieldNames().asSequence().toSet(),
         )
+        assertEquals("array", request.at("/properties/formAnswers/type").asText())
+        assertEquals(30, request.at("/properties/formAnswers/maxItems").asInt())
+        assertTrue(request.at("/properties/formAnswers/nullable").asBoolean())
+        val formAnswer = document.at("/components/schemas/AdvertisementContractFormAnswerRequest")
+        assertEquals("#/components/schemas/AdvertisementContractFormAnswerRequest", request.at("/properties/formAnswers/items/\$ref").asText())
+        assertEquals(setOf("key", "label", "value"), formAnswer.at("/required").map { it.asText() }.toSet())
+        assertEquals(50, formAnswer.at("/properties/key/maxLength").asInt())
+        assertEquals(50, formAnswer.at("/properties/label/maxLength").asInt())
+        assertEquals(1000, formAnswer.at("/properties/value/maxLength").asInt())
+        // 배열 칸의 nullable이 항목 스키마로 새면 생성된 클라이언트가 항목을 null 가능으로 읽는다.
+        assertTrue(formAnswer.at("/nullable").isMissingNode)
         assertEquals(setOf("promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl", "recruitmentDeadline", "purpose", "categories", "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod"), request.at("/required").map { it.asText() }.toSet())
         assertEquals("integer", request.at("/properties/budgetAmount/type").asText())
         assertEquals("int32", request.at("/properties/budgetAmount/format").asText())
@@ -229,12 +240,12 @@ class UserOpenApiContractTest @Autowired constructor(
             setOf(
                 "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
                 "recruitmentDeadline", "purpose", "budgetAmount", "categories", "scheduleRequest", "advertisementRequest",
-                "managerName", "email", "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "paymentAmount",
-                "registeredAt", "products",
+                "managerName", "email", "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "formAnswers",
+                "paymentAmount", "registeredAt", "products",
             ),
             detailResponse.at("/properties").fieldNames().asSequence().toSet(),
         )
-        listOf("budgetAmount", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "paymentAmount").forEach { field ->
+        listOf("budgetAmount", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "formAnswers", "paymentAmount").forEach { field ->
             assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
         }
         assertEquals(
@@ -242,6 +253,10 @@ class UserOpenApiContractTest @Autowired constructor(
             product.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertTrue(product.at("/properties/position/nullable").asBoolean())
+        assertEquals(
+            setOf("key", "label", "value"),
+            document.at("/components/schemas/MyAdvertisementContractFormAnswerResponse/properties").fieldNames().asSequence().toSet(),
+        )
     }
 
     @Test

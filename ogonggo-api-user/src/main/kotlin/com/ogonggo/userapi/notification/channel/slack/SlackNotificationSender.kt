@@ -97,6 +97,7 @@ internal class SlackNotificationSender(
         val phoneNumber = get("phoneNumber") ?: return null
         val budgetAmount = get("budgetAmount")
         val businessNumber = get("businessNumber")
+        val formAnswers = get("formAnswers")
         val adminUrl = properties.adminUrl("/business/ad-applications/$contractId")
         return SlackMessage.withHeadline(
             headline = "📢 광고 계약 신청 - ${SlackText.escape(companyName)}",
@@ -117,14 +118,34 @@ internal class SlackNotificationSender(
                         budgetAmount?.let { SlackText.labeled("예정 예산", it) },
                     ),
                 ),
-                SlackBlock.text(SlackText.link(adminUrl, "어드민에서 신청 처리")),
-            ),
+            ) + listOfNotNull(
+                formAnswers?.let { SlackBlock.text(formAnswersText(it)) },
+            ) + SlackBlock.text(SlackText.link(adminUrl, "어드민에서 신청 처리")),
         )
+    }
+
+    /** 폼 답변 줄을 그대로 보인다. 이스케이프로 길어져도 section 본문 한도를 넘지 않도록 넘는 줄 앞에서 끊는다. */
+    private fun formAnswersText(formAnswers: String): SlackText {
+        val text = StringBuilder(FORM_ANSWERS_TITLE)
+        formAnswers.lines().forEachIndexed { index, line ->
+            val escaped = (if (index == 0) "" else "\n") + SlackText.escape(line)
+            if (text.length + escaped.length + FORM_ANSWERS_OMITTED.length > SECTION_TEXT_MAX_LENGTH) {
+                text.append(FORM_ANSWERS_OMITTED)
+                return SlackText(text = text.toString())
+            }
+            text.append(escaped)
+        }
+        return SlackText(text = text.toString())
     }
 
     private companion object {
         const val ADVERTISEMENT_INQUIRY_ADDRESS = "advertisement-inquiry"
         const val ADVERTISEMENT_CONTRACT_TEMPLATE_CODE = "advertisement_contract_submitted"
         val STRING_MAP_TYPE = object : TypeReference<Map<String, String>>() {}
+        const val FORM_ANSWERS_TITLE = "*신청서 답변*\n"
+        const val FORM_ANSWERS_OMITTED = "\n…(이하 생략, 어드민에서 확인)"
+
+        /** Slack section 블록 text의 최대 길이다. */
+        const val SECTION_TEXT_MAX_LENGTH = 3000
     }
 }

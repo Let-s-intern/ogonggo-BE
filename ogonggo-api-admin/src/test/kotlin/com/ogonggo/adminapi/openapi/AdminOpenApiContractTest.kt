@@ -377,11 +377,15 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf("userId", "recruitmentUrl", "purpose", "budgetAmount", "scheduleRequest", "managerName", "email", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "products").forEach { field ->
             assertTrue(detailSchema.at("/properties/$field").isObject, field)
         }
-        listOf("businessNumberType", "businessNumber").forEach { field ->
+        listOf("businessNumberType", "businessNumber", "formAnswers").forEach { field ->
             assertTrue(detailSchema.at("/properties/$field/nullable").asBoolean(), field)
             assertFalse(summary.at("/properties/$field").isObject, field)
         }
         assertTrue(detailSchema.at("/properties/products/items").isObject, detailSchema.at("/properties/products").toPrettyString())
+        assertEquals(
+            setOf("key", "label", "value"),
+            document.at("/components/schemas/AdminAdvertisementContractFormAnswerResponse/properties").fieldNames().asSequence().toSet(),
+        )
         listOf("contractProductId", "productId", "productName", "category", "productDeleted", "addedAt").forEach { field ->
             assertTrue(product.at("/properties/$field").isObject, field)
         }

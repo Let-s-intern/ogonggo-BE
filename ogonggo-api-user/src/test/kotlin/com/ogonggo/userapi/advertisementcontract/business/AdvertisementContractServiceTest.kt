@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -106,6 +107,7 @@ class AdvertisementContractServiceTest {
     private companion object {
         const val USER_ID = 42L
         const val CONTRACT_ID = 1001L
+        val FORM_ANSWERS = listOf(AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너"))
         val COMMAND = CreateAdvertisementContractCommand(
             promotionTarget = AdvertisementContractPromotionTarget.JOB,
             companyName = "샘플기업",
@@ -124,6 +126,7 @@ class AdvertisementContractServiceTest {
             businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+            formAnswers = FORM_ANSWERS,
         )
         val EXPECTED_APPEND_DTO = AdvertisementContractFormAppendDto(
             userId = null,
@@ -144,6 +147,7 @@ class AdvertisementContractServiceTest {
             businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+            formAnswers = FORM_ANSWERS,
         )
     }
 }

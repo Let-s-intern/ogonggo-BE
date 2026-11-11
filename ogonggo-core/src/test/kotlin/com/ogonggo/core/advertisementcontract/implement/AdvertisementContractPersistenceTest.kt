@@ -2,6 +2,7 @@ package com.ogonggo.core.advertisementcontract.implement
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -177,6 +178,28 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         // then
         assertEquals(800_000, foundWithBudget.budgetAmount)
         assertEquals(null, foundWithoutBudget.budgetAmount)
+    }
+
+    @Test
+    fun `신청 폼 계약은 폼 답변을 JSON 칸에 순서대로 저장하고 다시 읽는다`() {
+        // given
+        val answers = listOf(
+            AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너, 카카오톡 CRM"),
+            AdvertisementContractFormAnswer(key = "desiredPeriod", label = "희망 기간", value = "2주 \"급구\""),
+            AdvertisementContractFormAnswer(key = "recruitmentType", label = "모집 형태", value = "인턴\n정규직"),
+        )
+        val withAnswers = appendForm(setOf(AdvertisementProductCategory.BANNER), formAnswers = answers)
+        val withoutAnswers = appendForm(setOf(AdvertisementProductCategory.BANNER))
+        repository.flush()
+        entityManager.clear()
+
+        // when
+        val foundWithAnswers = repository.findById(withAnswers).get()
+        val foundWithoutAnswers = repository.findById(withoutAnswers).get()
+
+        // then
+        assertEquals(answers, foundWithAnswers.formAnswers)
+        assertEquals(null, foundWithoutAnswers.formAnswers)
     }
 
     @Test
@@ -437,6 +460,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         userId: Long? = null,
         businessNumberType: CompanyBusinessNumberType? = null,
         businessNumber: String? = null,
+        formAnswers: List<AdvertisementContractFormAnswer>? = null,
     ): Long =
         appender.appendFromForm(
             AdvertisementContractFormAppendDto(
@@ -458,6 +482,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
                 businessNumber = businessNumber,
                 invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
                 creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+                formAnswers = formAnswers,
             ),
         )
 

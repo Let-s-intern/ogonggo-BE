@@ -31,6 +31,9 @@ interface AdvertisementContractApi {
             입력 원문은 보존하며 scheduleRequest와 advertisementRequest만 공백이면 저장 시 null이 됩니다.
             budgetAmount(예정 예산, 원 단위 정수)는 선택이며 보내지 않으면 null로 저장합니다.
 
+            formAnswers는 칸이 따로 없는 폼 문항의 답({ key, label, value })을 화면 순서대로 최대 30개 담습니다. 선택이며 순서를 그대로 저장하고,
+            보내지 않거나 빈 배열이면 null로 저장합니다. key·label은 공백이 아닌 50자 이하, value는 공백이 아닌 1000자 이하이며 key의 뜻은 검사하지 않습니다.
+
             businessNumberType과 businessNumber는 선택입니다. 보내면 기업 회원가입과 같은 규칙으로 검사합니다. 사업자 번호는 하이픈 없는
             숫자로, 사업자등록번호는 10자리, 법인등록번호는 13자리입니다. 해외 기업(OVERSEAS)은 번호를 보내지 않습니다.
         """,
