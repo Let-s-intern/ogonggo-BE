@@ -119,7 +119,8 @@ class AdvertisementContract internal constructor(
         protected set
 
     @Column(name = "user_id")
-    val userId: Long? = userId /* 신청한 회원 식별자. 비회원이면 없다 */
+    var userId: Long? = userId /* 신청한 회원 식별자. 비회원이면 없다가 운영자가 계정을 발급하면 채워진다 */
+        protected set
 
     @Enumerated(EnumType.STRING)
     @Column(name = "promotion_target", nullable = false, length = 20)
@@ -211,6 +212,17 @@ class AdvertisementContract internal constructor(
     fun followReview(reviewStatus: ContentReviewStatus) {
         check(source == AdvertisementContractSource.COMPANY_POSTING) { "비즈니스 공고 계약만 검수 상태를 따릅니다." }
         status = AdvertisementContractStatus.of(reviewStatus)
+    }
+
+    /**
+     * 비회원 신청을 회원에게 붙인다. 운영자가 신청 이메일로 비즈니스 계정을 발급할 때 쓴다.
+     * 이미 회원이 있는 신청은 다른 회원으로 옮기지 않는다.
+     */
+    fun linkMember(userId: Long) {
+        require(userId > 0) { "회원 식별자는 양수여야 합니다." }
+        check(source == AdvertisementContractSource.APPLICATION_FORM) { "신청 폼 계약만 회원을 붙입니다." }
+        check(this.userId == null) { "이미 회원이 있는 신청입니다." }
+        this.userId = userId
     }
 
     fun changePaymentAmount(paymentAmount: Int?) {

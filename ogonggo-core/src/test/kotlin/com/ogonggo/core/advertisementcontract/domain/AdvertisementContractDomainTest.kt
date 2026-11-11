@@ -46,6 +46,23 @@ class AdvertisementContractDomainTest {
     }
 
     @Test
+    fun `비회원 신청 폼 계약에 회원을 붙인다`() {
+        val contract = formContract()
+
+        contract.linkMember(7L)
+
+        assertEquals(7L, contract.userId)
+    }
+
+    @Test
+    fun `이미 회원이 있는 신청이나 비즈니스 공고 계약에는 회원을 붙이지 않는다`() {
+        val linked = formContract().apply { linkMember(7L) }
+
+        assertThrows(IllegalStateException::class.java) { linked.linkMember(8L) }
+        assertThrows(IllegalStateException::class.java) { companyPostingContract().linkMember(8L) }
+    }
+
+    @Test
     fun `신청 폼 계약은 검수 상태를 따르지 않는다`() {
         assertThrows(IllegalStateException::class.java) {
             formContract().followReview(ContentReviewStatus.APPROVED)

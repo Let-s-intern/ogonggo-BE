@@ -30,6 +30,10 @@ class UserReader internal constructor(
             userRepository.findAllById(userIds.toSet()).associate { user -> user.requiredId() to user.role }
         }
 
+    /** 로그인 이메일로 찾는다. 로그인 이메일은 기업 회원에만 있어 일반 회원은 찾지 않는다. */
+    fun readByEmail(email: String): UserAccountDto? =
+        userRepository.findByEmail(email)?.toAccount()
+
     /** 기업 회원 로그인용 조회. 자격증명이 없는 일반 회원 계정은 반환하지 않는다. */
 
     fun readCredentialByEmail(email: String): UserCredentialDto? {
