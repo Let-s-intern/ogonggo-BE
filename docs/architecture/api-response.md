@@ -75,7 +75,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 
 | 목록 | 필터 | 검색어 |
 | --- | --- | --- |
-| `GET /api/v1/jobs` | `employmentType`, `experienceType`, `jobField`, `jobRole`, `region`, `subRegion` | `keyword` — 회사명 또는 공고 제목 |
+| `GET /api/v1/jobs` | `employmentType`, `experienceType`, `jobField`, `jobRole`, `region`, `subRegion` | `keyword` — 회사명, 공고 제목, 공고 분석의 자격 요건·우대 사항 |
 | `GET /api/v1/job-bookmarks` | `GET /api/v1/jobs`와 같음 | `GET /api/v1/jobs`와 같음 |
 | `GET /api/v1/bootcamps` | `category` | `keyword` — 운영 회사명 또는 프로그램명 |
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
