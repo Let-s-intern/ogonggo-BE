@@ -79,7 +79,7 @@ class AdminBusinessAccountServicePersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `새로 만든 계정의 임시 비밀번호를 메일 대기열에 넣고 같은 값이 로그인 비밀번호가 된다`() {
+    fun `새로 만든 계정의 임시 비밀번호를 응답과 메일 대기열에 담고 같은 값이 로그인 비밀번호가 된다`() {
         // given
         val contractId = contractAppender.appendFromForm(form(email))
 
@@ -94,6 +94,8 @@ class AdminBusinessAccountServicePersistenceTest @Autowired constructor(
         assertEquals("company_account_issued", row["template_code"])
         assertEquals(email, row["recipient_address"])
         val temporaryPassword = Regex("\"temporaryPassword\":\"([^\"]+)\"").find(row["payload_json"].toString())!!.groupValues[1]
+        assertEquals(temporaryPassword, result.temporaryPassword)
+        assertEquals(email, result.loginEmail)
         val credential = checkNotNull(userReader.readCredentialByEmail(email))
         assertTrue(BCryptPasswordEncoder().matches(temporaryPassword, credential.encodedPassword))
     }
@@ -110,6 +112,8 @@ class AdminBusinessAccountServicePersistenceTest @Autowired constructor(
         // then
         assertFalse(result.created)
         assertEquals(member.userId, result.userId)
+        assertEquals(email, result.loginEmail)
+        assertEquals(null, result.temporaryPassword)
         assertEquals(1, result.linkedContractCount)
         assertEquals(member.userId, contractReader.read(contractId).userId)
         assertEquals("encoded-password", userReader.readCredentialByEmail(email)?.encodedPassword)

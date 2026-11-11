@@ -1766,6 +1766,8 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/business-account
   "data": {
     "userId": 501,
     "created": true,
+    "loginEmail": "ad@example.com",
+    "temporaryPassword": "Ab3dEf7hJk9m",
     "linkedContractCount": 2
   }
 }
@@ -1777,13 +1779,16 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/business-account
 | --- | --- | --- | --- |
 | data.userId | int64 | 아니오 | 신청을 연결한 비즈니스 회원 식별자 |
 | data.created | boolean | 아니오 | 이번에 새로 만들었으면 true. 이때만 임시 비밀번호 메일을 적재한다 |
+| data.loginEmail | string | 아니오 | 로그인 이메일(아이디). 신청서 이메일과 같다 |
+| data.temporaryPassword | string | 예 | 새로 만든 계정의 임시 비밀번호. 기존 계정에 연결만 했으면 null. 이 응답에서만 볼 수 있다 |
 | data.linkedContractCount | int32 | 아니오 | 이번에 회원에 연결한 비회원 신청 수. 이 계약을 포함한다 |
 
 동작과 경계:
 
 - 신청 이메일이 로그인 이메일이다. 로그인 이메일(`users.email`)은 비즈니스 회원에만 있으므로 렛츠커리어 일반 회원과는 대조하지 않는다.
 - 그 이메일의 비즈니스 회원이 없으면 신청서의 기업명·담당자 이름·연락처·사업자 번호로 `users`(COMPANY)와 `company_profiles`를 만든다. 비밀번호는 12자 무작위 임시 비밀번호(헷갈리는 글자 제외, 영문·숫자 혼합)를 BCrypt로 저장한다.
-- 새로 만들면 `company_account_issued` 이메일을 발송 대기열에 넣는다. 본문에 로그인 이메일·임시 비밀번호·로그인 주소가 들어가고 사용자 API dispatcher가 보낸다. 발송 기한은 두지 않는다. 고객은 로그인 후 `PATCH /api/v1/users/me/password`로 비밀번호를 바꾼다. 바꾸도록 강제하지는 않는다.
+- 운영자가 고객에게 직접 전달할 수 있도록 로그인 이메일과 임시 비밀번호를 응답에 담는다. 임시 비밀번호는 다시 조회할 수 없다. 서버 로그에는 남기지 않는다.
+- 새로 만들면 `company_account_issued` 이메일도 발송 대기열에 넣는다. 본문에 로그인 이메일·임시 비밀번호·로그인 주소가 들어가고 사용자 API dispatcher가 보낸다. 발송 기한은 두지 않는다. 고객은 로그인 후 `PATCH /api/v1/users/me/password`로 비밀번호를 바꾼다. 바꾸도록 강제하지는 않는다.
 - 활성 비즈니스 회원이 이미 있으면 새로 만들지 않고 비밀번호도 바꾸지 않으며 메일도 보내지 않는다.
 - 어느 쪽이든 그 이메일로 낸 비회원 신청 폼 계약(`user_id IS NULL`)을 모두 그 회원에 연결한다. 이메일 비교는 DB 정렬 규칙을 따른다. 이미 회원이 있는 신청은 옮기지 않는다.
 - 응답은 메일 적재까지이며 실제 발송 결과가 아니다. 임시 비밀번호는 알림 행의 변수(`payload_json`)에 평문으로 남고 30일 정리 때 지워진다. 비밀번호 찾기가 없어 메일을 잃으면 다시 보낼 수 없다.

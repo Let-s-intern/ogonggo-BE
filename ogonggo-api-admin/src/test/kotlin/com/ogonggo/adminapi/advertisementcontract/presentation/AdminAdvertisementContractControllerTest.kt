@@ -444,12 +444,22 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
         Mockito.verifyNoInteractions(adminBusinessAccountService)
 
         Mockito.`when`(adminBusinessAccountService.issue(CONTRACT_ID))
-            .thenReturn(AdminBusinessAccountIssueResult(userId = 501, created = true, linkedContractCount = 2))
+            .thenReturn(
+                AdminBusinessAccountIssueResult(
+                    userId = 501,
+                    created = true,
+                    loginEmail = "ad@example.com",
+                    temporaryPassword = "Ab3dEf7hJk9m",
+                    linkedContractCount = 2,
+                ),
+            )
 
         mockMvc.perform(admin(post("$PATH/$CONTRACT_ID/business-account")))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.userId").value(501))
             .andExpect(jsonPath("$.data.created").value(true))
+            .andExpect(jsonPath("$.data.loginEmail").value("ad@example.com"))
+            .andExpect(jsonPath("$.data.temporaryPassword").value("Ab3dEf7hJk9m"))
             .andExpect(jsonPath("$.data.linkedContractCount").value(2))
     }
 

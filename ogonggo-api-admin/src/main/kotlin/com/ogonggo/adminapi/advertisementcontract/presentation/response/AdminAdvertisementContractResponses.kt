@@ -167,6 +167,10 @@ data class AdminBusinessAccountIssueResponse(
     val userId: Long,
     @field:Schema(description = "이번에 새로 만들었으면 true. 이때만 임시 비밀번호 메일을 보낸다")
     val created: Boolean,
+    @field:Schema(description = "로그인 이메일(아이디). 신청서 이메일과 같다")
+    val loginEmail: String,
+    @field:Schema(description = "새로 만든 계정의 임시 비밀번호. 기존 계정에 연결만 했으면 null이다. 다시 조회할 수 없다", nullable = true)
+    val temporaryPassword: String?,
     @field:Schema(description = "이번에 회원에 연결한 비회원 신청 수. 이 계약을 포함한다")
     val linkedContractCount: Int,
 ) {
@@ -174,6 +178,8 @@ data class AdminBusinessAccountIssueResponse(
         fun from(result: AdminBusinessAccountIssueResult) = AdminBusinessAccountIssueResponse(
             userId = result.userId,
             created = result.created,
+            loginEmail = result.loginEmail,
+            temporaryPassword = result.temporaryPassword,
             linkedContractCount = result.linkedContractCount,
         )
     }
