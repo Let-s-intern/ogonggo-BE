@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementCon
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractProductResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractSummaryResult
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -11,6 +12,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
+import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -74,6 +76,13 @@ data class AdminAdvertisementContractDetailResponse(
     val businessNumber: String?,
     val invoiceMethod: AdvertisementContractInvoiceMethod?,
     val creativeMethod: AdvertisementContractCreativeMethod?,
+    @field:ArraySchema(
+        arraySchema = Schema(
+            description = "신청 폼에서 칸이 따로 없는 문항의 답. 받은 순서대로입니다. 답 없이 낸 신청, 이 값이 생기기 전 신청, 비즈니스 공고 계약은 null입니다.",
+            nullable = true,
+        ),
+    )
+    val formAnswers: List<AdminAdvertisementContractFormAnswerResponse>?,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
@@ -103,10 +112,27 @@ data class AdminAdvertisementContractDetailResponse(
             businessNumber = result.businessNumber,
             invoiceMethod = result.invoiceMethod,
             creativeMethod = result.creativeMethod,
+            formAnswers = result.formAnswers?.map(AdminAdvertisementContractFormAnswerResponse::from),
             paymentAmount = result.paymentAmount,
             registeredAt = result.registeredAt,
             updatedAt = result.updatedAt,
             products = result.products.map(AdminAdvertisementContractProductResponse::from),
+        )
+    }
+}
+
+data class AdminAdvertisementContractFormAnswerResponse(
+    @field:Schema(description = "문항 키")
+    val key: String,
+    @field:Schema(description = "신청 당시 화면에 보인 문항 이름")
+    val label: String,
+    val value: String,
+) {
+    companion object {
+        fun from(answer: AdvertisementContractFormAnswer) = AdminAdvertisementContractFormAnswerResponse(
+            key = answer.key,
+            label = answer.label,
+            value = answer.value,
         )
     }
 }

@@ -239,6 +239,10 @@ POST /api/v1/advertisement-contracts
 | businessNumber | string | 아니오 | 13자 이하, 숫자만 | businessNumberType 없이 보낼 수 없음. 사업자등록번호 10자리, 법인등록번호 13자리 | 누락·null 허용 |
 | invoiceMethod | string(enum) | 예 | TAX_INVOICE, NEGOTIATE | 청구·영수가 아님 | 누락·null 불가 |
 | creativeMethod | string(enum) | 예 | REQUEST_PRODUCTION, PROVIDE_DIRECTLY | 소재 준비 방식 | 누락·null 불가 |
+| formAnswers[] | object[] | 아니오 | 최대 30개 | 칸이 따로 없는 폼 문항(희망 상품, 희망 기간, 모집 형태 등)의 답. 보낸 순서를 그대로 저장한다. key의 뜻은 검사하지 않는다(LC-3607) | 누락·null·빈 배열은 null 저장. null 원소 처리는 확인 필요 |
+| formAnswers[].key | string | 예 | 1~50자 | 공백만으로 구성 불가. FE가 정하는 문항 키 | 누락·null·빈 문자열 불가 |
+| formAnswers[].label | string | 예 | 1~50자 | 공백만으로 구성 불가. 신청 당시 화면에 보인 문항 이름 | 누락·null·빈 문자열 불가 |
+| formAnswers[].value | string | 예 | 1~1000자 | 공백만으로 구성 불가. 여러 개를 고른 문항은 FE가 한 문자열로 합친다 | 누락·null·빈 문자열 불가 |
 
 응답 필드:
 
@@ -252,6 +256,7 @@ POST /api/v1/advertisement-contracts
 - 유효한 토큰의 회원 ID가 회원 테이블에 있으면 연결한다. 토큰이 없거나 유효하지 않거나 토큰의 회원 행이 없으면 비회원으로 접수한다. 토큰 검증 실패 시 Security filter는 인증을 비우고 요청을 계속 진행하며, U-01은 `permitAll`이다.
 - 희망 categories만 저장한다. 실제 상품 연결과 노출 생성은 각각 어드민 API로 수행한다. 신청으로 계정·공고·결제·구좌 예약을 자동 생성하지 않는다.
 - 신청 원문을 보존한다. 필수 문자열을 전역 trim하지 않는다. scheduleRequest·advertisementRequest만 공백일 때 null로 정리한다.
+- formAnswers는 `advertisement_contracts.form_answers` JSON 칸에 `[{ key, label, value }]` 목록으로 저장한다(LC-3607). 폼 문항이 자주 바뀌어 문항마다 칸을 두지 않는다. 이 칸이 생기기 전 신청의 scheduleRequest에 `[희망 상품] ...`처럼 섞인 값은 옮기지 않으며, 기존 행의 form_answers는 null이다. scheduleRequest는 이제 신청자가 적은 일정 메모만 담는다. 이 저장소에서 MySQL `JSON` 칸을 쓰는 첫 사례이며(Hibernate `@JdbcTypeCode(SqlTypes.JSON)`), JSON 칸을 언제 쓸지에 대한 일반 규칙은 확인 필요다.
 - 반복 POST는 서로 다른 계약을 만든다. source·target 유니크 제약은 targetId가 null인 폼 중복 제출을 막지 않는다.
 - 계약 저장 뒤 알림 적재를 별도 트랜잭션으로 시도한다. 공통 notification 대기열에 신청자 EMAIL과 영업 SLACK 행을 넣으며, 실제 발송은 공통 dispatcher가 처리한다. 계약 ID별 deduplication key로 중복 행을 막는다. 대기열 적재 실패도 접수 성공 응답을 바꾸지 않으며 U-01은 기존 `data.id`를 반환한다. 실제 전달은 응답에서 보장하지 않는다.
 - U-01은 Request DTO 검증과 기존 사용자 API 예외 처리기를 사용한다. 필드 제약 오류는 필드명을 포함한 400 `BAD_REQUEST`, JSON·enum 등 역직렬화 오류는 기본 문구의 400 `BAD_REQUEST`로 매핑한다. 이 동작은 컨트롤러 계약 테스트에 포함돼 있다.
@@ -526,6 +531,7 @@ GET /api/v1/users/me/advertisement-contracts/{contractId}
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
 | data.id ~ data.creativeMethod | U-01 요청 필드와 같음 | budgetAmount·scheduleRequest·advertisementRequest·businessNumberType·businessNumber만 예 | 신청 때 보낸 값. 보내지 않은 선택 값과 공백 요청사항은 null로 나온다. 해외 기업은 businessNumber가 null이다 |
+| data.formAnswers[] | object[] | 예 | 폼 문항의 답 `{ key, label, value }`, 보낸 순서. 답 없이 낸 신청과 LC-3607 이전 신청은 null. 목록에는 싣지 않는다 |
 | data.status | string(enum) | 아니오 | 계약 상태 |
 | data.paymentAmount | int32 | 예 | 협의 금액. 정하기 전이면 null |
 | data.registeredAt | string(date-time) | 아니오 | 신청 일시(KST) |
@@ -995,6 +1001,7 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 | data.businessNumber | string | 예 | 폼 사업자 번호. 해외 기업·보내지 않은 신청·COMPANY_POSTING은 null |
 | data.invoiceMethod | string(enum) | 예 | 폼 계산서 방식 |
 | data.creativeMethod | string(enum) | 예 | 폼 소재 방식 |
+| data.formAnswers[] | object[] | 예 | 폼 문항의 답 `{ key, label, value }`, 받은 순서. 답 없이 낸 신청, LC-3607 이전 신청, COMPANY_POSTING은 null. 목록에는 싣지 않는다 |
 | data.paymentAmount | int32 | 예 | 협의 결제액 |
 | data.registeredAt | string(date-time) | 아니오 | 생성 일시 |
 | data.updatedAt | string(date-time) | 아니오 | 수정 일시 |

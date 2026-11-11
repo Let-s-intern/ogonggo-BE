@@ -127,6 +127,61 @@ class AdvertisementContractDomainTest {
         }
     }
 
+    @Test
+    fun `신청 폼 계약은 폼 답변을 받은 순서대로 갖고, 빈 목록은 답변 없음으로 둔다`() {
+        val answers = listOf(
+            AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너"),
+            AdvertisementContractFormAnswer(key = "desiredPeriod", label = "희망 기간", value = "2주"),
+        )
+
+        assertEquals(answers, requestByForm(answers).formAnswers)
+        assertEquals(null, requestByForm(emptyList()).formAnswers)
+        assertEquals(null, requestByForm(null).formAnswers)
+    }
+
+    @Test
+    fun `폼 답변은 30개 이하여야 한다`() {
+        val answer = AdvertisementContractFormAnswer(key = "k", label = "문항", value = "답")
+
+        assertEquals(30, requestByForm(List(30) { answer }).formAnswers?.size)
+        assertThrows(IllegalArgumentException::class.java) { requestByForm(List(31) { answer }) }
+    }
+
+    @Test
+    fun `폼 답변의 키·문항 이름·답은 비울 수 없고 길이 제한을 넘을 수 없다`() {
+        assertThrows(IllegalArgumentException::class.java) { AdvertisementContractFormAnswer(key = " ", label = "문항", value = "답") }
+        assertThrows(IllegalArgumentException::class.java) { AdvertisementContractFormAnswer(key = "k", label = "", value = "답") }
+        assertThrows(IllegalArgumentException::class.java) { AdvertisementContractFormAnswer(key = "k", label = "문항", value = " ") }
+        assertThrows(IllegalArgumentException::class.java) { AdvertisementContractFormAnswer(key = "k".repeat(51), label = "문항", value = "답") }
+        assertThrows(IllegalArgumentException::class.java) { AdvertisementContractFormAnswer(key = "k", label = "문".repeat(51), value = "답") }
+        assertThrows(IllegalArgumentException::class.java) { AdvertisementContractFormAnswer(key = "k", label = "문항", value = "답".repeat(1001)) }
+    }
+
+    @Test
+    fun `비즈니스 공고 계약은 폼 답변을 갖지 않는다`() {
+        assertEquals(null, companyPostingContract().formAnswers)
+    }
+
+    private fun requestByForm(formAnswers: List<AdvertisementContractFormAnswer>?) = AdvertisementContract.requestByForm(
+        userId = null,
+        promotionTarget = AdvertisementContractPromotionTarget.JOB,
+        companyName = "렛츠커리어",
+        recruitmentTitle = "브랜드 마케팅 인턴 모집",
+        recruitmentUrl = "https://example.com/recruit",
+        recruitmentDeadline = LocalDate.of(2026, 12, 20),
+        purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
+        budgetAmount = null,
+        categories = setOf(AdvertisementProductCategory.BANNER),
+        scheduleRequest = null,
+        advertisementRequest = null,
+        managerName = "김담당",
+        email = "marketing@example.com",
+        phoneNumber = "010-1234-5678",
+        invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
+        creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+        formAnswers = formAnswers,
+    )
+
     private fun companyPostingContract() = AdvertisementContract.ofCompanyPosting(
         userId = 7L,
         promotionTarget = AdvertisementContractPromotionTarget.JOB,

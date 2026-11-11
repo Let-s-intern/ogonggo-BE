@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisementcontract.presentation
 
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -134,6 +135,11 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.businessNumber").value("1234567890"))
             .andExpect(jsonPath("$.data.invoiceMethod").value("TAX_INVOICE"))
             .andExpect(jsonPath("$.data.creativeMethod").value("REQUEST_PRODUCTION"))
+            .andExpect(jsonPath("$.data.formAnswers.length()").value(2))
+            .andExpect(jsonPath("$.data.formAnswers[0].key").value("desiredProduct"))
+            .andExpect(jsonPath("$.data.formAnswers[0].label").value("희망 상품"))
+            .andExpect(jsonPath("$.data.formAnswers[0].value").value("메인 배너"))
+            .andExpect(jsonPath("$.data.formAnswers[1].key").value("desiredPeriod"))
             .andExpect(jsonPath("$.data.paymentAmount").value(300000))
             .andExpect(jsonPath("$.data.registeredAt").value("2026-11-08T10:00:00"))
             .andExpect(jsonPath("$.data.products[0].contractProductId").value(31))
@@ -219,6 +225,10 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+            formAnswers = listOf(
+                AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너"),
+                AdvertisementContractFormAnswer(key = "desiredPeriod", label = "희망 기간", value = "2주"),
+            ),
             paymentAmount = 300000,
             registeredAt = REGISTERED_AT,
             products = listOf(

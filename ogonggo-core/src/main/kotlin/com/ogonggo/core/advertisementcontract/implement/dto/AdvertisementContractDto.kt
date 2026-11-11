@@ -2,6 +2,7 @@ package com.ogonggo.core.advertisementcontract.implement.dto
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -42,6 +43,7 @@ data class AdvertisementContractFormAppendDto(
     val businessNumber: String? = null,
     val invoiceMethod: AdvertisementContractInvoiceMethod,
     val creativeMethod: AdvertisementContractCreativeMethod,
+    val formAnswers: List<AdvertisementContractFormAnswer>? = null,
 )
 
 data class AdvertisementContractPageDto(

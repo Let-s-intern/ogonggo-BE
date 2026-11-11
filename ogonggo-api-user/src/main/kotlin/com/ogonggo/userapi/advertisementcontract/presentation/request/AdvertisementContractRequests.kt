@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.presentation.request
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -8,7 +9,9 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import com.ogonggo.userapi.advertisementcontract.business.CreateAdvertisementContractCommand
 import com.ogonggo.userapi.user.presentation.request.validCompanyBusinessNumber
+import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -84,6 +87,17 @@ data class CreateAdvertisementContractRequest(
     val invoiceMethod: AdvertisementContractInvoiceMethod,
 
     val creativeMethod: AdvertisementContractCreativeMethod,
+
+    @field:ArraySchema(
+        arraySchema = Schema(
+            description = "칸이 따로 없는 폼 문항의 답. 화면에 보인 순서대로 최대 30개. 선택이며 보내지 않거나 빈 배열이면 null로 저장합니다. " +
+                "key의 뜻은 서버가 검사하지 않습니다.",
+            nullable = true,
+        ),
+    )
+    @field:Valid
+    @field:Size(max = 30)
+    val formAnswers: List<AdvertisementContractFormAnswerRequest>? = null,
 ) {
     fun toCommand(): CreateAdvertisementContractCommand = CreateAdvertisementContractCommand(
         promotionTarget = promotionTarget,
@@ -103,5 +117,25 @@ data class CreateAdvertisementContractRequest(
         businessNumber = validCompanyBusinessNumber(businessNumberType, businessNumber),
         invoiceMethod = invoiceMethod,
         creativeMethod = creativeMethod,
+        formAnswers = formAnswers?.map(AdvertisementContractFormAnswerRequest::toFormAnswer),
     )
+}
+
+data class AdvertisementContractFormAnswerRequest(
+    @field:Schema(description = "문항 키. FE가 정하며 서버는 뜻을 검사하지 않습니다", example = "desiredProduct")
+    @field:NotBlank
+    @field:Size(max = 50)
+    val key: String,
+
+    @field:Schema(description = "신청 당시 화면에 보인 문항 이름", example = "희망 상품")
+    @field:NotBlank
+    @field:Size(max = 50)
+    val label: String,
+
+    @field:Schema(description = "답. 여러 개를 고른 문항은 FE가 한 문자열로 합쳐 보냅니다", example = "메인 배너, 카카오톡 CRM")
+    @field:NotBlank
+    @field:Size(max = 1000)
+    val value: String,
+) {
+    fun toFormAnswer(): AdvertisementContractFormAnswer = AdvertisementContractFormAnswer(key = key, label = label, value = value)
 }

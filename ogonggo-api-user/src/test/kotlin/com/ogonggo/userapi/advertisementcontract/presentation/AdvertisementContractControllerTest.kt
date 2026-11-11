@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementcontract.presentation
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -113,6 +114,65 @@ class AdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.id").value(CONTRACT_ID))
 
         Mockito.verify(advertisementContractService).createContract(null, command)
+    }
+
+    @Test
+    @DisplayName("칸이 없는 폼 문항의 답을 보낸 순서대로 함께 신청한다")
+    fun `칸이 없는 폼 문항의 답을 보낸 순서대로 함께 신청한다`() {
+        // given
+        val body = VALID_BODY.replace(
+            "\"creativeMethod\": \"REQUEST_PRODUCTION\"",
+            "\"creativeMethod\": \"REQUEST_PRODUCTION\",\n  \"formAnswers\": [" +
+                "{\"key\": \"desiredProduct\", \"label\": \"희망 상품\", \"value\": \"메인 배너\"}, " +
+                "{\"key\": \"desiredPeriod\", \"label\": \"희망 기간\", \"value\": \"2주\"}]",
+        )
+        val command = VALID_COMMAND.copy(
+            formAnswers = listOf(
+                AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너"),
+                AdvertisementContractFormAnswer(key = "desiredPeriod", label = "희망 기간", value = "2주"),
+            ),
+        )
+        Mockito.`when`(advertisementContractService.createContract(null, command)).thenReturn(CONTRACT_ID)
+
+        // when
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+            // then
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(CONTRACT_ID))
+
+        Mockito.verify(advertisementContractService).createContract(null, command)
+    }
+
+    @Test
+    @DisplayName("폼 답변이 30개를 넘거나 키·문항 이름·답이 비었거나 길면 400으로 응답한다")
+    fun `폼 답변이 30개를 넘거나 키·문항 이름·답이 비었거나 길면 400으로 응답한다`() {
+        // given
+        fun answer(key: String = "k", label: String = "문항", value: String = "답") =
+            "{\"key\": \"$key\", \"label\": \"$label\", \"value\": \"$value\"}"
+        val invalidAnswers = listOf(
+            List(31) { answer() }.joinToString(", "),
+            answer(key = " "),
+            answer(label = ""),
+            answer(value = " "),
+            answer(key = "k".repeat(51)),
+            answer(label = "문".repeat(51)),
+            answer(value = "답".repeat(1001)),
+        )
+
+        invalidAnswers.forEach { answers ->
+            val body = VALID_BODY.replace(
+                "\"creativeMethod\": \"REQUEST_PRODUCTION\"",
+                "\"creativeMethod\": \"REQUEST_PRODUCTION\",\n  \"formAnswers\": [$answers]",
+            )
+
+            // when
+            mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+                // then
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verifyNoInteractions(advertisementContractService)
     }
 
     @Test

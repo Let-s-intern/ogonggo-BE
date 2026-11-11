@@ -10,6 +10,7 @@ import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companio
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -116,6 +117,7 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].id").value(CONTRACT_ID))
             .andExpect(jsonPath("$.data.items[0].categories[0]").value("BANNER"))
             .andExpect(jsonPath("$.data.items[0].budgetAmount").value(5_000_000))
+            .andExpect(jsonPath("$.data.items[0].formAnswers").doesNotExist())
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(20))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(1))
@@ -198,6 +200,10 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             businessNumber = "1234567890",
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+            formAnswers = listOf(
+                AdvertisementContractFormAnswer(key = "desiredProduct", label = "희망 상품", value = "메인 배너"),
+                AdvertisementContractFormAnswer(key = "recruitmentType", label = "모집 형태", value = "인턴"),
+            ),
             paymentAmount = null,
             registeredAt = REGISTERED_AT,
             updatedAt = REGISTERED_AT,
@@ -220,6 +226,10 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.userId").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.categories[0]").value("BANNER"))
             .andExpect(jsonPath("$.data.budgetAmount").value(800_000))
+            .andExpect(jsonPath("$.data.formAnswers.length()").value(2))
+            .andExpect(jsonPath("$.data.formAnswers[0].label").value("희망 상품"))
+            .andExpect(jsonPath("$.data.formAnswers[1].key").value("recruitmentType"))
+            .andExpect(jsonPath("$.data.formAnswers[1].value").value("인턴"))
             .andExpect(jsonPath("$.data.businessNumberType").value("BUSINESS_REGISTRATION"))
             .andExpect(jsonPath("$.data.businessNumber").value("1234567890"))
             .andExpect(jsonPath("$.data.products[0].contractProductId").value(3001))
