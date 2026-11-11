@@ -24,6 +24,13 @@ internal enum class EmailTemplate(
         subject = "[오공고] 광고 계약 신청이 접수되었습니다",
         bodyPath = "mail/advertisement-contract-received",
     ),
+
+    /** 운영자가 광고 계약 상세에서 비즈니스 계정을 발급하면 관리자 API가 적재한다. */
+    COMPANY_ACCOUNT_ISSUED(
+        templateCode = "company_account_issued",
+        subject = "[오공고] 비즈니스 계정이 발급되었습니다",
+        bodyPath = "mail/company-account-issued",
+    ),
     ;
 
     // 발송마다 파일을 읽지 않도록 처음 쓸 때 한 번만 읽는다. 파일이 없으면 발송 시점에 예외로 드러난다.
