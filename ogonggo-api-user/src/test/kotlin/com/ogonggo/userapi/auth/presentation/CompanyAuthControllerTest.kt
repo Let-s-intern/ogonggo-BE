@@ -9,6 +9,7 @@ import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.error.UserErrorCode
 import com.ogonggo.userapi.auth.business.AuthTokens
 import com.ogonggo.userapi.auth.business.CompanyAuthService
+import com.ogonggo.userapi.auth.business.CompanyPasswordResetService
 import com.ogonggo.userapi.auth.business.CompanySignInCommand
 import com.ogonggo.userapi.auth.business.CompanySignUpCommand
 import com.ogonggo.userapi.auth.error.AuthErrorCode
@@ -39,6 +40,35 @@ class CompanyAuthControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var ogonggoTokenProvider: OgonggoTokenProvider
+
+    @MockBean
+    private lateinit var companyPasswordResetService: CompanyPasswordResetService
+
+    @Test
+    fun `비밀번호 찾기는 로그인 없이 호출하고 계정 유무와 관계없이 200으로 응답한다`() {
+        mockMvc.perform(
+            post("/api/v1/auth/company/password-resets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"ad@example.com"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+
+        Mockito.verify(companyPasswordResetService).reset("ad@example.com")
+    }
+
+    @Test
+    fun `비밀번호 찾기는 이메일 형식이 아니면 400이고 재설정하지 않는다`() {
+        mockMvc.perform(
+            post("/api/v1/auth/company/password-resets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"not-an-email"}"""),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(companyPasswordResetService)
+    }
 
     @Test
     fun `기업 회원가입은 오공고 세션 없이 호출하고 201로 응답한다`() {

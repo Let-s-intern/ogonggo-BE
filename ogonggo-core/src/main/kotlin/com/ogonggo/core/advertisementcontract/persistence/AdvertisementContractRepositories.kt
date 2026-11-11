@@ -26,6 +26,8 @@ internal interface AdvertisementContractJpaRepository : JpaRepository<Advertisem
 
     fun findAllByIdIn(ids: Collection<Long>): List<AdvertisementContract>
 
+    fun findAllBySourceAndEmailAndUserIdIsNull(source: AdvertisementContractSource, email: String): List<AdvertisementContract>
+
     fun findByIdAndUserIdAndSource(id: Long, userId: Long, source: AdvertisementContractSource): AdvertisementContract?
 
     /** 상태와 결제 금액을 동시에 바꿔도 한쪽 변경이 다른 쪽의 낡은 값으로 덮이지 않도록 잠근다. */

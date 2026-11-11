@@ -27,6 +27,20 @@ class AdvertisementContractManager internal constructor(
         advertisementContractRepository.save(contract)
     }
 
+    /**
+     * 이 이메일로 들어온 비회원 신청을 모두 회원에게 붙이고 붙인 수를 돌려준다.
+     * 이메일 비교는 DB 정렬 규칙을 따른다. 운영 MySQL은 대소문자를 구분하지 않는다.
+     */
+    fun linkGuestApplications(email: String, userId: Long): Int {
+        val contracts = advertisementContractRepository.findAllBySourceAndEmailAndUserIdIsNull(
+            AdvertisementContractSource.APPLICATION_FORM,
+            email,
+        )
+        contracts.forEach { it.linkMember(userId) }
+        advertisementContractRepository.saveAll(contracts)
+        return contracts.size
+    }
+
     fun changePaymentAmount(contract: AdvertisementContract, paymentAmount: Int?) {
         contract.changePaymentAmount(paymentAmount)
         advertisementContractRepository.save(contract)

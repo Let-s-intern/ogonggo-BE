@@ -14,6 +14,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
 import com.ogonggo.core.job.domain.QJob.job
+import com.ogonggo.core.job.domain.QJobAnalysis.jobAnalysis
 import com.ogonggo.core.job.domain.QJobBookmark.jobBookmark
 import com.ogonggo.core.job.domain.QJobMetric.jobMetric
 import com.ogonggo.core.job.domain.QTodayJob.todayJob
@@ -25,6 +26,7 @@ import com.querydsl.core.types.OrderSpecifier
 import com.querydsl.core.types.Predicate
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.core.types.dsl.Expressions
+import com.querydsl.core.types.dsl.StringExpression
 import com.querydsl.jpa.JPAExpressions
 import com.querydsl.jpa.impl.JPAQuery
 import com.querydsl.jpa.impl.JPAQueryFactory
@@ -331,7 +333,7 @@ internal class JobQueryRepository(
         condition.jobRoles.takeIf { it.isNotEmpty() }?.let { job.jobRole.`in`(it) },
         condition.region?.let(job.region::eq),
         condition.subRegion?.let(job.subRegion::eq),
-        keywordContains(condition.keyword),
+        publishedKeywordContains(condition.keyword),
         condition.recruitmentStatus?.let(job.recruitmentStatus::eq),
     )
 
@@ -378,6 +380,35 @@ internal class JobQueryRepository(
     }
 
     /**
+     * 공개 목록의 검색어는 제목·회사명에 더해 공고 분석의 자격 요건·우대 사항도 본다.
+     * "중국어", "샤오홍슈"처럼 지원 조건에 적힌 단어로 공고를 찾을 수 있게 하기 위해서다.
+     * 사용자가 상세 화면에서 보는 자격 요건·우대 사항이 분석의 `required`·`preferred`라서 그 두 배열만 찾는다.
+     * 분석 JSON 전체를 찾으면 주요 업무나 역량 설명에 있는 단어까지 걸린다.
+     *
+     * 본문이 바뀐 낡은 분석도 함께 찾는다. 본문 해시를 애플리케이션이 계산해 쿼리로 거를 수 없고,
+     * 낡은 분석은 곧 다시 분석되기 때문이다.
+     */
+    private fun publishedKeywordContains(keyword: String?): BooleanExpression? {
+        val byTitleOrCompany = keywordContains(keyword) ?: return null
+        val byConditions = JPAExpressions.selectOne()
+            .from(jobAnalysis)
+            .where(
+                jobAnalysis.jobId.eq(job.id),
+                analysisArray(REQUIRED_PATH).containsIgnoreCase(keyword)
+                    .or(analysisArray(PREFERRED_PATH).containsIgnoreCase(keyword)),
+            )
+            .exists()
+        return byTitleOrCompany.or(byConditions)
+    }
+
+    /** 분석 JSON에서 배열 하나를 글로 꺼낸다. 비교는 글로 하므로 JSON 값을 문자열로 바꾼다. */
+    private fun analysisArray(path: String): StringExpression = Expressions.stringTemplate(
+        "cast(function('json_extract', {0}, {1}) as String)",
+        jobAnalysis.content,
+        Expressions.constant(path),
+    )
+
+    /**
      * 지표 조인은 조회수순에만 필요하므로 그 정렬에서만 건다.
      * 최신순까지 조인하면 정렬을 인덱스로 해결할 수 없다.
      * 지표 행은 첫 지표 발생 시점에 생기므로 아직 없는 공고는 0으로 본다.
@@ -397,6 +428,9 @@ internal class JobQueryRepository(
     }
 
     companion object {
+        private const val REQUIRED_PATH = "$.required"
+        private const val PREFERRED_PATH = "$.preferred"
+
         /**
          * 공개 목록의 최신순은 크롤러 공고를 앞에 두고 같은 날 등록한 공고를 섞은 정렬 키를 따른다([JobListSortKey]).
          * 정렬 키가 같으면 페이지가 흔들리지 않도록 식별자로 순서를 확정한다.

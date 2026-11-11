@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.auth.presentation
 
+import com.ogonggo.userapi.auth.presentation.request.CompanyPasswordResetRequest
 import com.ogonggo.userapi.auth.presentation.request.CompanySignInRequest
 import com.ogonggo.userapi.auth.presentation.request.CompanySignUpRequest
 import com.ogonggo.userapi.auth.presentation.response.AuthTokenResponse
@@ -70,4 +71,26 @@ interface CompanyAuthApi {
         @Valid
         request: CompanySignInRequest,
     ): ResponseEntity<SuccessResponse<AuthTokenResponse>>
+
+    @Operation(
+        operationId = "resetCompanyPassword",
+        summary = "기업 비밀번호 찾기",
+        description = "로그인 이메일의 비밀번호를 임시 비밀번호로 바로 바꾸고 그 이메일로 보냅니다. 기존 세션은 끊깁니다. " +
+            "계정이 없거나 정지·탈퇴했어도 같은 200을 돌려줍니다. 같은 이메일은 5분에 한 번만 처리하고 그 사이 요청은 아무것도 하지 않고 200입니다. " +
+            "응답은 메일 적재까지이며 실제 발송 결과가 아닙니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: [email] 형식이 올바르지 않습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun resetPassword(
+        @Valid
+        request: CompanyPasswordResetRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
 }

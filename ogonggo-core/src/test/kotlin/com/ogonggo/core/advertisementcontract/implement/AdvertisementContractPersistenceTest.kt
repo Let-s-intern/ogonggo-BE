@@ -203,6 +203,26 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `이메일로 낸 비회원 신청만 회원에게 붙이고 다른 이메일과 회원 신청은 그대로 둔다`() {
+        val first = repository.save(formContract(emptySet(), email = "ad@example.com"))
+        val second = repository.save(formContract(emptySet(), email = "ad@example.com"))
+        val memberOwned = repository.save(formContract(emptySet(), email = "ad@example.com", userId = OTHER_USER_ID))
+        val otherEmail = repository.save(formContract(emptySet(), email = "other@example.com"))
+        entityManager.flush()
+        entityManager.clear()
+
+        val linkedCount = manager.linkGuestApplications("ad@example.com", OWNER_ID)
+        entityManager.flush()
+        entityManager.clear()
+
+        assertEquals(2, linkedCount)
+        assertEquals(OWNER_ID, reader.read(checkNotNull(first.id)).userId)
+        assertEquals(OWNER_ID, reader.read(checkNotNull(second.id)).userId)
+        assertEquals(OTHER_USER_ID, reader.read(checkNotNull(memberOwned.id)).userId)
+        assertEquals(null, reader.read(checkNotNull(otherEmail.id)).userId)
+    }
+
+    @Test
     fun `협의 금액은 0 이상으로 저장하고 null로 해제한다`() {
         // given
         val contractId = appendForm(setOf(AdvertisementProductCategory.BANNER))
@@ -526,10 +546,14 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         recruitmentType = JobRecruitmentType.ALWAYS_OPEN,
     )
 
-    private fun formContract(categories: Set<AdvertisementProductCategory>) = AdvertisementContract(
+    private fun formContract(
+        categories: Set<AdvertisementProductCategory>,
+        email: String = "marketing@example.com",
+        userId: Long? = null,
+    ) = AdvertisementContract(
         source = AdvertisementContractSource.APPLICATION_FORM,
         status = AdvertisementContractStatus.REQUESTED,
-        userId = null,
+        userId = userId,
         promotionTarget = AdvertisementContractPromotionTarget.JOB,
         targetId = null,
         companyName = "렛츠커리어",
@@ -542,7 +566,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         scheduleRequest = null,
         advertisementRequest = null,
         managerName = "김담당",
-        email = "marketing@example.com",
+        email = email,
         phoneNumber = "010-1234-5678",
         businessNumberType = null,
         businessNumber = null,

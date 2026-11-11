@@ -5,6 +5,8 @@ import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementCon
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractProductResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractService
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractSummaryResult
+import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountIssueResult
+import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountService
 import com.ogonggo.adminapi.auth.business.AdminAuthService
 import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companion.ADMIN_AUTHORITY
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
@@ -17,9 +19,9 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpos
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSearchCondition
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
+import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
-import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
@@ -54,6 +56,9 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
 
     @MockBean
     private lateinit var adminAdvertisementContractService: AdminAdvertisementContractService
+
+    @MockBean
+    private lateinit var adminBusinessAccountService: AdminBusinessAccountService
 
     @Test
     fun `관리자 토큰이 없으면 계약 목록과 상세를 조회할 수 없다`() {
@@ -427,6 +432,45 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
 
         Mockito.verify(adminAdvertisementContractService).removeProduct(CONTRACT_ID, 3001)
         Mockito.verify(adminAdvertisementContractService).removeProduct(CONTRACT_ID, 3002)
+    }
+
+    @Test
+    fun `비즈니스 계정 발급은 관리자만 하고 발급 결과를 돌려준다`() {
+        mockMvc.perform(post("$PATH/$CONTRACT_ID/business-account"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+        mockMvc.perform(post("$PATH/$CONTRACT_ID/business-account").with(user("member")))
+            .andExpect(status().isForbidden)
+        Mockito.verifyNoInteractions(adminBusinessAccountService)
+
+        Mockito.`when`(adminBusinessAccountService.issue(CONTRACT_ID))
+            .thenReturn(
+                AdminBusinessAccountIssueResult(
+                    userId = 501,
+                    created = true,
+                    loginEmail = "ad@example.com",
+                    temporaryPassword = "Ab3dEf7hJk9m",
+                    linkedContractCount = 2,
+                ),
+            )
+
+        mockMvc.perform(admin(post("$PATH/$CONTRACT_ID/business-account")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.userId").value(501))
+            .andExpect(jsonPath("$.data.created").value(true))
+            .andExpect(jsonPath("$.data.loginEmail").value("ad@example.com"))
+            .andExpect(jsonPath("$.data.temporaryPassword").value("Ab3dEf7hJk9m"))
+            .andExpect(jsonPath("$.data.linkedContractCount").value(2))
+    }
+
+    @Test
+    fun `발급할 수 없는 계약이면 409와 오류 코드를 돌려준다`() {
+        Mockito.`when`(adminBusinessAccountService.issue(CONTRACT_ID))
+            .thenThrow(ConflictException(AdvertisementContractErrorCode.BUSINESS_ACCOUNT_NOT_ISSUABLE))
+
+        mockMvc.perform(admin(post("$PATH/$CONTRACT_ID/business-account")))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("BUSINESS_ACCOUNT_NOT_ISSUABLE"))
     }
 
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =

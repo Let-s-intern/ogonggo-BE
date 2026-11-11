@@ -55,8 +55,9 @@ UI에서만 관찰된 주차 예약·쿠폰·가입 동시 처리 등의 필드�
 | A-14 | `PATCH /api/v1/admin/advertisement-exposures/{exposureId}/exposed` | 높음 | 높음 | boolean 상태 변경과 core 동작이 일치한다. |
 | A-15 | `POST /api/v1/admin/advertisement-exposures/{exposureId}/move` | 높음 | 높음 | UP·DOWN 입력, 인접 이동과 경계 동작이 core에 구현돼 있다. |
 | A-16 | `DELETE /api/v1/admin/advertisement-exposures/{exposureId}` | 높음 | 높음 | 경로 ID 기반 소프트 삭제와 공통 성공 규칙을 사용한다. |
+| A-17 | `POST /api/v1/admin/advertisement-contracts/{contractId}/business-account` | 높음 | 높음 | 요청 본문이 없고, 회원 생성·비회원 신청 연결·메일 적재를 core 공개 계약으로 구현했다(LC-3600). |
 
-HTTP API 21개 중 Request는 높음 19개·중간 2개, Response는 높음 20개·중간 1개다. 낮음은 없다. 낮음인 F-01은 아직 경로와 노출 조합 규칙이 없는 광고 공고 연동 작업이며, Request·Response 계약을 정할 수 있는 단계가 아니다.
+HTTP API 22개 중 Request는 높음 20개·중간 2개, Response는 높음 21개·중간 1개다. 낮음은 없다. 낮음인 F-01은 아직 경로와 노출 조합 규칙이 없는 광고 공고 연동 작업이며, Request·Response 계약을 정할 수 있는 단계가 아니다.
 
 ### API별 요약
 
@@ -83,8 +84,9 @@ HTTP API 21개 중 Request는 높음 19개·중간 2개, Response는 높음 20�
 | A-14 | PATCH | `/api/v1/admin/advertisement-exposures/{exposureId}/exposed` | 높음 | 독립 boolean 변경이며 core가 동일 상태 변경을 허용한다. |
 | A-15 | POST | `/api/v1/admin/advertisement-exposures/{exposureId}/move` | 높음 | UP·DOWN의 인접 교환과 경계 no-op가 core에 구현돼 있다. |
 | A-16 | DELETE | `/api/v1/admin/advertisement-exposures/{exposureId}` | 높음 | 미삭제 행 조회와 소프트 삭제가 core로 정해진다. |
+| A-17 | POST | `/api/v1/admin/advertisement-contracts/{contractId}/business-account` | 높음 | 비회원 신청 폼 계약의 신청 이메일로 비즈니스 계정을 만들거나 기존 계정에 신청을 붙인다. 비회원 신청 조회 화면을 대신한다. |
 
-HTTP API 21개 중 높음 17개, 중간 4개다. 낮음은 아직 HTTP 경로가 정해지지 않은 광고 공고 연동 F-01에 해당한다. 근거가 충분한 API를 등급 분포 때문에 낮음으로 내리지 않는다.
+HTTP API 22개 중 높음 18개, 중간 4개다. 낮음은 아직 HTTP 경로가 정해지지 않은 광고 공고 연동 F-01에 해당한다. 근거가 충분한 API를 등급 분포 때문에 낮음으로 내리지 않는다.
 
 | 연동 작업 | 확정 가능성 | Request·Response 결정 범위 |
 | --- | --- | --- |
@@ -1744,6 +1746,65 @@ DELETE /api/v1/admin/advertisement-exposures/{exposureId}
 | --- | --- | --- | --- |
 | 입력 누락·타입·enum·길이·범위·형식 오류 | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` 또는 `[필드] 검증 메시지` |
 | 노출이 없거나 소프트 삭제됨 | 404 | `ADVERTISEMENT_EXPOSURE_NOT_FOUND` | 광고 노출을 찾을 수 없습니다. |
+
+### A-17. 비즈니스 계정 발급
+
+```http
+POST /api/v1/admin/advertisement-contracts/{contractId}/business-account
+```
+
+확정 가능성: 높음. 비회원 신청 조회 화면(조회 링크·이메일 인증 조회)을 만들지 않고, 운영자가 계약 시점에 계정을 발급한다(LC-3600). 고객은 로그인해 U-04·U-05로 신청 내역을 본다.
+
+인증: 관리자 Bearer 필수. 요청 본문 없음.
+
+성공 응답: 200
+
+```json
+{
+  "status": 200,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "userId": 501,
+    "created": true,
+    "loginEmail": "ad@example.com",
+    "temporaryPassword": "Ab3dEf7hJk9m",
+    "linkedContractCount": 2
+  }
+}
+```
+
+응답 필드:
+
+| JSON 경로 | 타입 | nullable | 설명 |
+| --- | --- | --- | --- |
+| data.userId | int64 | 아니오 | 신청을 연결한 비즈니스 회원 식별자 |
+| data.created | boolean | 아니오 | 이번에 새로 만들었으면 true. 이때만 임시 비밀번호 메일을 적재한다 |
+| data.loginEmail | string | 아니오 | 로그인 이메일(아이디). 신청서 이메일과 같다 |
+| data.temporaryPassword | string | 예 | 새로 만든 계정의 임시 비밀번호. 기존 계정에 연결만 했으면 null. 이 응답에서만 볼 수 있다 |
+| data.linkedContractCount | int32 | 아니오 | 이번에 회원에 연결한 비회원 신청 수. 이 계약을 포함한다 |
+
+동작과 경계:
+
+- 신청 이메일이 로그인 이메일이다. 로그인 이메일(`users.email`)은 비즈니스 회원에만 있으므로 렛츠커리어 일반 회원과는 대조하지 않는다.
+- 그 이메일의 비즈니스 회원이 없으면 신청서의 기업명·담당자 이름·연락처·사업자 번호로 `users`(COMPANY)와 `company_profiles`를 만든다. 비밀번호는 12자 무작위 임시 비밀번호(헷갈리는 글자 제외, 영문·숫자 혼합)를 BCrypt로 저장한다.
+- 운영자가 고객에게 직접 전달할 수 있도록 로그인 이메일과 임시 비밀번호를 응답에 담는다. 임시 비밀번호는 다시 조회할 수 없다. 서버 로그에는 남기지 않는다.
+- 새로 만들면 `company_account_issued` 이메일도 발송 대기열에 넣는다. 본문에 로그인 이메일·임시 비밀번호·로그인 주소가 들어가고 사용자 API dispatcher가 보낸다. 발송 기한은 두지 않는다. 고객은 로그인 후 `PATCH /api/v1/users/me/password`로 비밀번호를 바꾼다. 바꾸도록 강제하지는 않는다.
+- 활성 비즈니스 회원이 이미 있으면 새로 만들지 않고 비밀번호도 바꾸지 않으며 메일도 보내지 않는다.
+- 어느 쪽이든 그 이메일로 낸 비회원 신청 폼 계약(`user_id IS NULL`)을 모두 그 회원에 연결한다. 이메일 비교는 DB 정렬 규칙을 따른다. 이미 회원이 있는 신청은 옮기지 않는다.
+- 응답은 메일 적재까지이며 실제 발송 결과가 아니다. 임시 비밀번호는 알림 행의 변수(`payload_json`)에 평문으로 남고 30일 정리 때 지워진다. 비밀번호 찾기가 없어 메일을 잃으면 다시 보낼 수 없다.
+- 계약을 잠가 읽고 회원 생성·신청 연결·메일 적재를 한 트랜잭션에서 한다.
+
+#### 예외
+
+공통 관리자 인증 오류 401·403에 더해 다음을 적용한다.
+
+| 상황 | status | code | message |
+| --- | --- | --- | --- |
+| contractId가 양수가 아님 | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` |
+| 계약이 없음 | 404 | `ADVERTISEMENT_CONTRACT_NOT_FOUND` | 광고 계약을 찾을 수 없습니다. |
+| 비즈니스 공고 계약이거나 이미 회원이 있는 신청 | 409 | `BUSINESS_ACCOUNT_NOT_ISSUABLE` | 비회원이 광고 신청 폼으로 낸 계약에만 비즈니스 계정을 발급할 수 있습니다. |
+| 그 이메일의 비즈니스 회원이 정지·탈퇴 상태 | 409 | `BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE` | 신청 이메일로 가입한 비즈니스 회원이 정지·탈퇴 상태라 연결할 수 없습니다. |
+| 같은 이메일이 동시에 가입함 | 409 | `EMAIL_ALREADY_EXISTS` | 이미 사용 중인 이메일입니다. 다시 요청하면 그 회원에 연결한다 |
 
 ## 5. API별 선행·후속 관계
 

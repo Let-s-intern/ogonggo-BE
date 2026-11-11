@@ -136,6 +136,17 @@ ogonggo:
 - 조회·적재는 관리자 Business Service의 한 트랜잭션으로 처리한다. `NotificationAppender.appendAndGetId`는 기존 적재·이벤트 발행 규칙을 유지하고 새 기록 ID를 반환한다. 관리자 요청은 24시간 발송 기한을 가지며 `batchId`·알림함은 생성하지 않는다.
 - 201과 `notificationId`, `recipientUserId`, `templateCode`, `scheduledAt`을 반환한다. 응답은 적재 완료이며 실제 SMTP 접수 성공을 의미하지 않는다. 사용자 API dispatcher가 발송하고 최근 결과 조회의 같은 `notificationId`에서 `status`·`sentAt`·실패 사유를 확인한다. 로그에는 기록 ID·관리자 ID·수신 회원 ID만 남긴다.
 
+### 관리자 비즈니스 계정 발급 메일
+
+- 운영자가 광고 계약에서 비즈니스 계정을 새로 만들 때(`POST /api/v1/admin/advertisement-contracts/{contractId}/business-account`) 관리자 API가 `company_account_issued` EMAIL 기록 하나를 적재한다. 기존 계정에 신청만 붙일 때는 적재하지 않는다.
+- 변수는 `managerName`, `companyName`, `email`, `temporaryPassword`이고 사용자 API의 `EmailTemplate.COMPANY_ACCOUNT_ISSUED`가 본문을 만든다. 중복 방지 키는 `company_account_issued:user:{userId}`로 계정마다 한 번이다.
+- 임시 비밀번호가 없으면 로그인할 수 없으므로 발송 기한(`dispatch_expires_at`)을 두지 않는다. 변수에 평문 임시 비밀번호가 남으며 30일 정리 때 행과 함께 지워진다. 로그에는 남기지 않는다.
+
+### 비즈니스 회원 비밀번호 찾기 메일
+
+- `POST /api/v1/auth/company/password-resets`로 비밀번호를 임시 비밀번호로 바꾸면 사용자 API가 `company_password_reset` EMAIL 기록 하나를 적재한다. 변수는 `managerName`, `email`, `temporaryPassword`다.
+- 요청마다 새 비밀번호라 중복 방지 키에 UUID 회차(`company_password_reset:user:{userId}:{uuid}`)를 넣는다. 발송 기한은 두지 않는다.
+
 ### FCM 설정과 payload
 
 FCM sender를 활성화하려면 사용자 API 설정에 Firebase 서비스 계정 정보를 넣는다. 모든 값을 생략하면 Google Application Default Credentials를 사용한다. 일부 값만 설정하면 기동 시 실패한다.
