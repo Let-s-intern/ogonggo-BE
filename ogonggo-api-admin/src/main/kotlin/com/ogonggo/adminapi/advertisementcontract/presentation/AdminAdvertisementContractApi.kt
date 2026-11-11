@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdm
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractStatusRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractDetailResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractSummaryResponse
+import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminBusinessAccountIssueResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.CreateAdminAdvertisementContractProductResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.response.ErrorResponse
@@ -33,6 +34,11 @@ import java.time.LocalDate
 private const val CONTRACT_NOT_FOUND = "ADVERTISEMENT_CONTRACT_NOT_FOUND: 광고 계약을 찾을 수 없습니다."
 private const val CONTRACT_PRODUCT_NOT_FOUND = "ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND: 계약에 붙인 광고 상품을 찾을 수 없습니다."
 private const val CONTRACT_FOLLOWS_REVIEW = "ADVERTISEMENT_CONTRACT_FOLLOWS_REVIEW: 비즈니스 공고 계약의 상태는 공고 검수로만 바뀝니다."
+private const val BUSINESS_ACCOUNT_NOT_ISSUABLE =
+    "BUSINESS_ACCOUNT_NOT_ISSUABLE: 비회원이 광고 신청 폼으로 낸 계약에만 비즈니스 계정을 발급할 수 있습니다."
+private const val BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE =
+    "BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE: 신청 이메일로 가입한 비즈니스 회원이 정지·탈퇴 상태라 연결할 수 없습니다."
+private const val EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS: 같은 이메일로 동시에 가입했습니다. 다시 요청하면 그 회원에 연결합니다."
 private const val PRODUCT_NOT_FOUND = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
 
 @Tag(name = "관리자 광고 계약")
@@ -215,4 +221,32 @@ interface AdminAdvertisementContractApi {
         @Positive contractId: Long,
         @Positive contractProductId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "issueAdvertisementContractBusinessAccount",
+        summary = "비즈니스 계정 발급",
+        description = "비회원 신청 폼 계약의 신청 이메일로 비즈니스 계정을 발급합니다. " +
+            "그 이메일의 비즈니스 회원이 없으면 신청서의 기업명·담당자·연락처·사업자 번호로 만들고 임시 비밀번호 메일을 발송 대기열에 넣습니다(created=true). " +
+            "있으면 새로 만들지 않고 비밀번호도 바꾸지 않습니다(created=false). " +
+            "어느 쪽이든 그 이메일로 낸 비회원 신청을 모두 그 회원에 연결하고 연결한 수를 돌려줍니다. 응답은 메일 적재까지이며 실제 발송 결과가 아닙니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "발급 또는 연결 완료", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: contractId는 양수여야 합니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(responseCode = "404", description = CONTRACT_NOT_FOUND, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(
+                responseCode = "409",
+                description = "$BUSINESS_ACCOUNT_NOT_ISSUABLE $BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE $EMAIL_ALREADY_EXISTS",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun issueBusinessAccount(@Positive contractId: Long): ResponseEntity<SuccessResponse<AdminBusinessAccountIssueResponse>>
 }

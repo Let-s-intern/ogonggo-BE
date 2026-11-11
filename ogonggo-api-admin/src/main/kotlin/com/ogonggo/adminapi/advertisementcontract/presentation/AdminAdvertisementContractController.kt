@@ -1,6 +1,8 @@
 package com.ogonggo.adminapi.advertisementcontract.presentation
 
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractService
+import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountService
+import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminBusinessAccountIssueResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractProductRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractPaymentAmountRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractStatusRequest
@@ -34,6 +36,7 @@ import java.time.LocalDate
 @RequestMapping("/api/v1/admin/advertisement-contracts")
 class AdminAdvertisementContractController(
     private val adminAdvertisementContractService: AdminAdvertisementContractService,
+    private val adminBusinessAccountService: AdminBusinessAccountService,
 ) : AdminAdvertisementContractApi {
 
     @GetMapping
@@ -123,4 +126,10 @@ class AdminAdvertisementContractController(
         adminAdvertisementContractService.removeProduct(contractId, contractProductId)
         return SuccessResponse.ok()
     }
+
+    @PostMapping("/{contractId}/business-account")
+    override fun issueBusinessAccount(
+        @PathVariable("contractId") contractId: Long,
+    ): ResponseEntity<SuccessResponse<AdminBusinessAccountIssueResponse>> =
+        SuccessResponse.ok(AdminBusinessAccountIssueResponse.from(adminBusinessAccountService.issue(contractId)))
 }
