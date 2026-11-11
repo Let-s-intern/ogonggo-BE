@@ -89,7 +89,6 @@ class AdvertisementContract internal constructor(
                     "신청 폼 계약은 담당자 이름, 이메일, 연락처가 있어야 합니다."
                 }
                 require(invoiceMethod != null && creativeMethod != null) { "신청 폼 계약은 계산서 발행 방식과 소재 준비 방식이 있어야 합니다." }
-                require(categories.isNotEmpty()) { "신청 폼 계약은 광고 카테고리를 하나 이상 골라야 합니다." }
                 validateBusinessNumber(businessNumberType, businessNumber)
                 require(formAnswers == null || formAnswers.size in 1..AdvertisementContractFormAnswer.MAX_COUNT) {
                     "폼 답변은 1개 이상 ${AdvertisementContractFormAnswer.MAX_COUNT}개 이하여야 합니다."

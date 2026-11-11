@@ -229,7 +229,7 @@ POST /api/v1/advertisement-contracts
 | recruitmentDeadline | string(date) | 예 | YYYY-MM-DD | 과거일·당일을 별도로 금지하지 않음 | 누락·null·빈 문자열 불가 |
 | purpose | string(enum) | 예 | 광고 목적 3종 | enum 절 참조 | 누락·null 불가 |
 | budgetAmount | int32 | 아니오 | 예정 예산(원) | 1 이상 정수. 0 이하는 400 `BAD_REQUEST` | 누락·null은 null 저장. 구간(budgetRange)을 대신한다 |
-| categories[] | string(enum)[] | 예 | 하나 이상, 현재 고유값 최대 7종 | 각 원소는 상품 category. 중복은 Set처럼 제거 | 누락·null·빈 배열·null 원소 불가 |
+| categories[] | string(enum)[] | 예 | 0개 이상, 현재 고유값 최대 7종 | 각 원소는 상품 category. 중복은 Set처럼 제거. 고르지 않았으면 빈 배열이며 알림에는 `고르지 않음`으로 보인다 | 누락·null·null 원소 불가 |
 | scheduleRequest | string | 아니오 | 2000자 이하 | 희망 일정의 자유 텍스트 | 누락·null·공백 문자열은 null 저장 |
 | advertisementRequest | string | 아니오 | 2000자 이하 | 광고 요청사항의 자유 텍스트 | 누락·null·공백 문자열은 null 저장 |
 | managerName | string | 예 | 1~50자 | 공백만으로 구성 불가 | 누락·null·빈 문자열 불가 |

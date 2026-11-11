@@ -37,7 +37,7 @@ data class AdvertisementContractNotificationDto(
         put("recruitmentDeadline", recruitmentDeadline)
         put("purpose", purpose)
         budgetAmount?.let { put("budgetAmount", it) }
-        put("categories", categories.joinToString(" · "))
+        put("categories", categories.ifEmpty { listOf(NO_CATEGORY) }.joinToString(" · "))
         put("managerName", managerName)
         put("email", email)
         put("phoneNumber", phoneNumber)
@@ -49,6 +49,7 @@ data class AdvertisementContractNotificationDto(
         /** Slack section 본문 한도(3000자)보다 작게 잡는다. 넘는 부분은 어드민 상세에서 본다. */
         const val MAX_FORM_ANSWERS_LENGTH = 2500
         private const val OMITTED = "\n…(이하 생략, 어드민에서 확인)"
+        private const val NO_CATEGORY = "고르지 않음"
 
         fun from(contractId: Long, command: CreateAdvertisementContractCommand) = AdvertisementContractNotificationDto(
             contractId = contractId,
