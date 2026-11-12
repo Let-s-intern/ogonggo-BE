@@ -16,6 +16,7 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -184,9 +185,9 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         append(createdAt = at(2026, 10, 27, 9, 30))
 
         // when & then: 23:59에 만든 문의는 빠지고 00:00에 만든 문의는 들어간다.
-        assertEquals(2, reader(at(2026, 10, 27, 10, 0)).countToday())
+        assertEquals(2, reader(at(2026, 10, 27, 10, 0)).countToday(null))
         // 하루 전 23:59의 시점에서 보면 그날의 문의 하나뿐이다.
-        assertEquals(1, reader(at(2026, 10, 26, 23, 59, 30)).countToday())
+        assertEquals(1, reader(at(2026, 10, 26, 23, 59, 30)).countToday(null))
     }
 
     @Test
@@ -202,13 +203,43 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         val reader = reader(at(2026, 10, 27, 10, 0))
 
         // when & then: 접수·연락함·집행 완료는 세고 반려만 뺀다.
-        assertEquals(3, reader.countToday())
+        assertEquals(3, reader.countToday(null))
 
         changeStatus(received, AdvertisementInquiryStatus.REJECTED)
-        assertEquals(2, reader.countToday())
+        assertEquals(2, reader.countToday(null))
 
         changeStatus(rejected, AdvertisementInquiryStatus.RECEIVED)
-        assertEquals(3, reader.countToday())
+        assertEquals(3, reader.countToday(null))
+    }
+
+    @Test
+    fun `오늘 건수는 문의 유형을 주면 그 유형만 센다`() {
+        // given
+        append(createdAt = at(2026, 11, 12, 9, 0))
+        append(inquiryType = AdvertisementInquiryType.LAUNCH_ALERT, createdAt = at(2026, 11, 12, 9, 10))
+        append(inquiryType = AdvertisementInquiryType.PAID_ADVERTISEMENT, campaignCode = null, createdAt = at(2026, 11, 12, 9, 20))
+        val reader = reader(at(2026, 11, 12, 10, 0))
+
+        // when & then
+        assertEquals(1, reader.countToday(AdvertisementInquiryType.PAID_ADVERTISEMENT))
+        assertEquals(1, reader.countToday(AdvertisementInquiryType.FREE_PROMOTION))
+        assertEquals(3, reader.countToday(null))
+    }
+
+    @Test
+    fun `유료 광고 문의는 광고 목적과 희망 예산을 저장하고 홍보 채널과 설문 답변은 비워 둔다`() {
+        // given
+        val id = append(inquiryType = AdvertisementInquiryType.PAID_ADVERTISEMENT, campaignCode = null)
+        entityManager.clear()
+
+        // when
+        val saved = repository.findById(id).get()
+
+        // then
+        assertEquals("신입 마케터 채용 홍보", saved.purpose)
+        assertEquals(1_500_000, saved.budgetAmount)
+        assertNull(saved.promotionChannel)
+        assertNull(saved.promotionAnswer)
     }
 
     @Test
@@ -253,6 +284,7 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
         createdAt: LocalDateTime? = null,
         companyNameSource: AdvertisementInquiryCompanyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
     ): Long {
+        val paid = !inquiryType.isFreePromotionForm
         val id = appender.append(
             AdvertisementInquiryAppendDto(
                 inquiryType = inquiryType,
@@ -263,10 +295,12 @@ internal class AdvertisementInquiryPersistenceTest @Autowired constructor(
                 managerTitle = "매니저",
                 email = "manager@ogonggo.co.kr",
                 phoneNumber = "010-1234-5678",
-                promotionChannel = AdvertisementInquiryPromotionChannel.INSTAGRAM,
+                promotionChannel = AdvertisementInquiryPromotionChannel.INSTAGRAM.takeUnless { paid },
                 hiringJobName = "마케팅 인턴",
                 jobPostingUrl = "https://example.com/jobs/1",
-                promotionAnswer = "사람인에 올리고 있습니다.",
+                promotionAnswer = "사람인에 올리고 있습니다.".takeUnless { paid },
+                purpose = "신입 마케터 채용 홍보".takeIf { paid },
+                budgetAmount = 1_500_000.takeIf { paid },
                 marketingConsent = true,
                 userId = userId,
                 memberType = memberType,

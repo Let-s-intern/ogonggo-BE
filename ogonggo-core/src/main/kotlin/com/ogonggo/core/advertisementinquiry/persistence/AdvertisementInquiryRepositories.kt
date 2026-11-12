@@ -3,6 +3,7 @@ package com.ogonggo.core.advertisementinquiry.persistence
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.QAdvertisementInquiry.advertisementInquiry
 import com.ogonggo.core.jpa.pageOf
 import com.ogonggo.core.jpa.paged
@@ -17,12 +18,6 @@ import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
 internal interface AdvertisementInquiryJpaRepository : JpaRepository<AdvertisementInquiry, Long> {
-    fun countByStatusNotAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
-        status: AdvertisementInquiryStatus,
-        from: LocalDateTime,
-        to: LocalDateTime,
-    ): Long
-
     /** 상태와 메모를 동시에 바꿔도 한쪽 변경이 다른 쪽의 낡은 값으로 덮이지 않도록 잠근다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AdvertisementInquiry a where a.id = :id")
@@ -59,4 +54,21 @@ internal class AdvertisementInquiryQueryRepository(
 
         return pageOf(content, pageable, countQuery)
     }
+
+    /** `[from, to)`에 들어온 문의 중 [excludedStatus]가 아닌 문의 수다. 문의 유형을 주지 않으면 가리지 않는다. */
+    fun countCreatedBetween(
+        inquiryType: AdvertisementInquiryType?,
+        excludedStatus: AdvertisementInquiryStatus,
+        from: LocalDateTime,
+        to: LocalDateTime,
+    ): Long =
+        queryFactory.select(advertisementInquiry.count())
+            .from(advertisementInquiry)
+            .where(
+                inquiryType?.let(advertisementInquiry.inquiryType::eq),
+                advertisementInquiry.status.ne(excludedStatus),
+                advertisementInquiry.createdAt.goe(from),
+                advertisementInquiry.createdAt.lt(to),
+            )
+            .fetchOne() ?: 0L
 }

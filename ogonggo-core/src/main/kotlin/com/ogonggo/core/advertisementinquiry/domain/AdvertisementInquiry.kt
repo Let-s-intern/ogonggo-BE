@@ -13,6 +13,7 @@ import jakarta.persistence.Table
 
 /**
  * 기업 담당자가 남긴 광고 문의다. 무료 홍보 신청만이 아니라 광고 문의 전체를 담고 문의 유형과 캠페인 코드로 나눈다.
+ * 무료 홍보 폼은 희망 홍보 채널과 설문 답변을, 유료 광고 문의는 광고 목적과 희망 예산을 받는다.
  *
  * 로그인 없이도 남길 수 있어 회원 식별자가 없을 수 있다. 회원 구분은 문의 시점의 값이다.
  * 영업이 처리 상태와 메모만 바꾸고, 문의 내용과 유입 정보는 남긴 그대로 둔다.
@@ -34,10 +35,12 @@ class AdvertisementInquiry internal constructor(
     managerTitle: String?,
     email: String,
     phoneNumber: String,
-    promotionChannel: AdvertisementInquiryPromotionChannel,
+    promotionChannel: AdvertisementInquiryPromotionChannel?,
     hiringJobName: String?,
     jobPostingUrl: String?,
-    promotionAnswer: String,
+    promotionAnswer: String?,
+    purpose: String?,
+    budgetAmount: Int?,
     marketingConsent: Boolean,
     userId: Long?,
     memberType: AdvertisementInquiryMemberType,
@@ -48,7 +51,14 @@ class AdvertisementInquiry internal constructor(
         require(companyName.isNotBlank() && managerName.isNotBlank() && email.isNotBlank() && phoneNumber.isNotBlank()) {
             "회사명, 담당자 이름, 이메일, 연락처는 비울 수 없습니다."
         }
-        require(promotionAnswer.isNotBlank()) { "설문 답변은 비울 수 없습니다." }
+        if (inquiryType.isFreePromotionForm) {
+            require(promotionChannel != null && !promotionAnswer.isNullOrBlank()) {
+                "무료 홍보 문의는 희망 홍보 채널과 설문 답변을 비울 수 없습니다."
+            }
+        } else {
+            require(!purpose.isNullOrBlank()) { "유료 광고 문의는 광고 목적을 비울 수 없습니다." }
+        }
+        require(budgetAmount == null || budgetAmount > 0) { "희망 예산은 양수여야 합니다." }
         require(userId == null || userId > 0) { "회원 식별자는 양수여야 합니다." }
         require((memberType == AdvertisementInquiryMemberType.GUEST) == (userId == null)) {
             "비회원 문의에만 회원 식별자가 없습니다."
@@ -87,8 +97,8 @@ class AdvertisementInquiry internal constructor(
     val phoneNumber: String = phoneNumber /* 담당자 연락처 */
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "promotion_channel", nullable = false, length = 40)
-    val promotionChannel: AdvertisementInquiryPromotionChannel = promotionChannel /* 희망 홍보 채널 */
+    @Column(name = "promotion_channel", length = 40)
+    val promotionChannel: AdvertisementInquiryPromotionChannel? = promotionChannel /* 희망 홍보 채널. 무료 홍보 폼에만 있다 */
 
     @Column(name = "hiring_job_name", length = 100)
     val hiringJobName: String? = hiringJobName /* 채용 직무명 */
@@ -96,8 +106,14 @@ class AdvertisementInquiry internal constructor(
     @Column(name = "job_posting_url", length = 500)
     val jobPostingUrl: String? = jobPostingUrl /* 채용공고 링크 */
 
-    @Column(name = "promotion_answer", nullable = false, length = 2000)
-    val promotionAnswer: String = promotionAnswer /* 현재 쓰는 채용 홍보 채널과 어려운 점 */
+    @Column(name = "promotion_answer", length = 2000)
+    val promotionAnswer: String? = promotionAnswer /* 현재 쓰는 채용 홍보 채널과 어려운 점. 무료 홍보 폼에만 있다 */
+
+    @Column(length = 2000)
+    val purpose: String? = purpose /* 광고 목적. 유료 광고 문의에만 있다 */
+
+    @Column(name = "budget_amount")
+    val budgetAmount: Int? = budgetAmount /* 희망 예산(원). 유료 광고 문의의 선택 값이다 */
 
     @Column(name = "marketing_consent", nullable = false)
     val marketingConsent: Boolean = marketingConsent /* 마케팅 정보 수신 동의 */

@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.advertisementinquiry.business
 
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.implement.AdvertisementInquiryReader
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,8 +19,8 @@ class AdminAdvertisementInquiryService(
     ): AdminAdvertisementInquiryPageResult =
         AdminAdvertisementInquiryPageResult.from(advertisementInquiryReader.readPage(condition, page, size))
 
-    /** 메뉴 숫자용. 한국 시간 오늘 0시부터 들어온 문의 중 반려하지 않은 문의 수이며 문의 유형은 가리지 않는다. */
-    fun getTodayCount(): Long = advertisementInquiryReader.countToday()
+    /** 메뉴 숫자용. 한국 시간 오늘 0시부터 들어온 문의 중 반려하지 않은 문의 수다. 문의 유형을 주지 않으면 가리지 않는다. */
+    fun getTodayCount(inquiryType: AdvertisementInquiryType?): Long = advertisementInquiryReader.countToday(inquiryType)
 
     /** 어느 상태로든 바꾼다. 바뀐 문의 전체를 돌려준다. */
     @Transactional

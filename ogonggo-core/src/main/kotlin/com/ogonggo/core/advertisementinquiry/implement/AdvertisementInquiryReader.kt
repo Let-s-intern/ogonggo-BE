@@ -3,6 +3,7 @@ package com.ogonggo.core.advertisementinquiry.implement
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiry
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquirySearchCondition
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryStatus
+import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.error.AdvertisementInquiryErrorCode
 import com.ogonggo.core.advertisementinquiry.implement.dto.AdvertisementInquiryPageDto
 import com.ogonggo.core.advertisementinquiry.persistence.AdvertisementInquiryJpaRepository
@@ -40,12 +41,14 @@ class AdvertisementInquiryReader internal constructor(
     }
 
     /**
-     * 서비스 시간대(한국 시간)로 오늘 0시부터 들어온 문의 중 반려하지 않은 문의 수다. 문의 유형은 가리지 않는다.
+     * 서비스 시간대(한국 시간)로 오늘 0시부터 들어온 문의 중 반려하지 않은 문의 수다.
+     * 문의 유형을 주면 그 유형만, 주지 않으면 모든 유형을 센다.
      * 반려로 바꾸면 줄고, 반려를 다른 상태로 되돌리면 다시 는다.
      */
-    fun countToday(): Long {
+    fun countToday(inquiryType: AdvertisementInquiryType?): Long {
         val today = LocalDate.now(clock)
-        return advertisementInquiryRepository.countByStatusNotAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+        return advertisementInquiryQueryRepository.countCreatedBetween(
+            inquiryType,
             AdvertisementInquiryStatus.REJECTED,
             today.atStartOfDay(),
             today.plusDays(1).atStartOfDay(),

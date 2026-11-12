@@ -77,8 +77,12 @@ class AdminAdvertisementInquiryController(
     }
 
     @GetMapping("/today-count")
-    override fun getTodayCount(): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryTodayCountResponse>> =
-        SuccessResponse.ok(AdminAdvertisementInquiryTodayCountResponse(adminAdvertisementInquiryService.getTodayCount()))
+    override fun getTodayCount(
+        @RequestParam(name = "inquiryType", required = false) inquiryType: AdvertisementInquiryType?,
+    ): ResponseEntity<SuccessResponse<AdminAdvertisementInquiryTodayCountResponse>> =
+        SuccessResponse.ok(
+            AdminAdvertisementInquiryTodayCountResponse(adminAdvertisementInquiryService.getTodayCount(inquiryType)),
+        )
 
     @PatchMapping("/{inquiryId}/status")
     override fun changeStatus(

@@ -24,13 +24,18 @@ data class AdminAdvertisementInquiryResponse(
     val managerTitle: String?,
     val email: String,
     val phoneNumber: String,
-    val promotionChannel: AdvertisementInquiryPromotionChannel,
+    @Schema(description = "희망 홍보 채널. 무료 홍보 문의에만 있고 유료 광고 문의는 null입니다.")
+    val promotionChannel: AdvertisementInquiryPromotionChannel?,
     @Schema(description = "채용 직무명. 이 필드가 생기기 전 폼에서 온 문의는 null입니다.")
     val hiringJobName: String?,
     @Schema(description = "채용공고 링크. 이 필드가 생기기 전 폼에서 온 문의는 null입니다.")
     val jobPostingUrl: String?,
-    @Schema(description = "현재 사용 중인 채용 홍보 채널과 어려운 점")
-    val promotionAnswer: String,
+    @Schema(description = "현재 사용 중인 채용 홍보 채널과 어려운 점. 무료 홍보 문의에만 있고 유료 광고 문의는 null입니다.")
+    val promotionAnswer: String?,
+    @Schema(description = "광고 목적. 유료 광고 문의에만 있고 무료 홍보 문의는 null입니다.")
+    val purpose: String?,
+    @Schema(description = "희망 예산(원). 유료 광고 문의에서 적었을 때만 있습니다.", example = "1500000")
+    val budgetAmount: Int?,
     @Schema(description = "마케팅 정보 수신 동의")
     val marketingConsent: Boolean,
     @Schema(description = "문의한 회원 식별자. 비회원이면 null입니다.")
@@ -72,6 +77,8 @@ data class AdminAdvertisementInquiryResponse(
                 hiringJobName = result.hiringJobName,
                 jobPostingUrl = result.jobPostingUrl,
                 promotionAnswer = result.promotionAnswer,
+                purpose = result.purpose,
+                budgetAmount = result.budgetAmount,
                 marketingConsent = result.marketingConsent,
                 userId = result.userId,
                 memberType = result.memberType,

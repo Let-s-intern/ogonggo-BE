@@ -71,23 +71,68 @@ class AdvertisementInquiryDomainTest {
         assertEquals(AdvertisementInquiryMemberType.GUEST, AdvertisementInquiryMemberType.of(null))
     }
 
+    @Test
+    fun `무료 홍보 문의는 희망 홍보 채널과 설문 답변이 있어야 한다`() {
+        listOf(AdvertisementInquiryType.FREE_PROMOTION, AdvertisementInquiryType.LAUNCH_ALERT).forEach { type ->
+            assertThrows(IllegalArgumentException::class.java) { inquiry(inquiryType = type, promotionChannel = null) }
+            assertThrows(IllegalArgumentException::class.java) { inquiry(inquiryType = type, promotionAnswer = " ") }
+        }
+    }
+
+    @Test
+    fun `유료 광고 문의는 광고 목적만 있으면 되고 홍보 채널과 설문 답변이 없어도 된다`() {
+        val inquiry = paidInquiry(purpose = "신입 마케터 채용 홍보", budgetAmount = null)
+
+        assertEquals(AdvertisementInquiryType.PAID_ADVERTISEMENT, inquiry.inquiryType)
+        assertEquals("신입 마케터 채용 홍보", inquiry.purpose)
+        assertNull(inquiry.promotionChannel)
+        assertNull(inquiry.budgetAmount)
+    }
+
+    @Test
+    fun `유료 광고 문의는 광고 목적이 비어 있으면 만들 수 없다`() {
+        assertThrows(IllegalArgumentException::class.java) { paidInquiry(purpose = null) }
+        assertThrows(IllegalArgumentException::class.java) { paidInquiry(purpose = "  ") }
+    }
+
+    @Test
+    fun `희망 예산은 적었다면 양수여야 한다`() {
+        assertEquals(1_500_000, paidInquiry(budgetAmount = 1_500_000).budgetAmount)
+        assertThrows(IllegalArgumentException::class.java) { paidInquiry(budgetAmount = 0) }
+    }
+
+    private fun paidInquiry(purpose: String? = "신입 마케터 채용 홍보", budgetAmount: Int? = 1_500_000) = inquiry(
+        inquiryType = AdvertisementInquiryType.PAID_ADVERTISEMENT,
+        promotionChannel = null,
+        promotionAnswer = null,
+        purpose = purpose,
+        budgetAmount = budgetAmount,
+    )
+
     private fun inquiry(
         userId: Long? = null,
         memberType: AdvertisementInquiryMemberType = AdvertisementInquiryMemberType.GUEST,
         companyNameSource: AdvertisementInquiryCompanyNameSource = AdvertisementInquiryCompanyNameSource.MANUAL,
+        inquiryType: AdvertisementInquiryType = AdvertisementInquiryType.FREE_PROMOTION,
+        promotionChannel: AdvertisementInquiryPromotionChannel? = AdvertisementInquiryPromotionChannel.INSTAGRAM,
+        promotionAnswer: String? = "사람인에 올리고 있습니다.",
+        purpose: String? = null,
+        budgetAmount: Int? = null,
     ) = AdvertisementInquiry(
-        inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
-        campaignCode = "launch_free_promo",
+        inquiryType = inquiryType,
+        campaignCode = "launch_free_promo".takeIf { inquiryType.isFreePromotionForm },
         companyName = "렛츠커리어",
         companyNameSource = companyNameSource,
         managerName = "김담당",
         managerTitle = "매니저",
         email = "manager@ogonggo.co.kr",
         phoneNumber = "010-1234-5678",
-        promotionChannel = AdvertisementInquiryPromotionChannel.INSTAGRAM,
+        promotionChannel = promotionChannel,
         hiringJobName = "마케팅 인턴",
         jobPostingUrl = "https://example.com/jobs/1",
-        promotionAnswer = "사람인에 올리고 있습니다.",
+        promotionAnswer = promotionAnswer,
+        purpose = purpose,
+        budgetAmount = budgetAmount,
         marketingConsent = false,
         userId = userId,
         memberType = memberType,

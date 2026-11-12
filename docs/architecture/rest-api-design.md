@@ -271,6 +271,7 @@ PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/memo   메모 저장
 - 메모는 본문 `{ "memo": "..." }`로 통째로 바꿉니다. 2000자 이하이고 `null`이거나 공백만 있으면 지웁니다. 상태와 메모 변경 이력은 남기지 않습니다.
 - 두 PATCH는 콘솔의 부분 수정처럼 바뀐 문의 전체를 `data`로 돌려줍니다. 없는 문의는 404 `ADVERTISEMENT_INQUIRY_NOT_FOUND`입니다. 상태와 메모를 동시에 바꿔도 서로 덮지 않도록 행을 잠가 읽습니다.
 - 수정·삭제 경로는 두지 않습니다. 문의 내용은 남긴 그대로 둡니다.
+- 유료 광고 문의(`PAID_ADVERTISEMENT`)도 같은 경로로 받습니다(2026-11-12, LC-3613). 같은 테이블에 저장하는 같은 개념이므로 [이름 규칙](layers-and-modules.md#코드api-db-이름-맞추기)대로 경로를 나누지 않고, 유형마다 다른 필수값은 서버가 본문의 `inquiryType`으로 검사합니다.
 - 응답 계약은 [API 성공 응답의 B2B 광고 문의](api-response.md#b2b-광고-문의)를 따릅니다.
 
 ### 회사명 검색

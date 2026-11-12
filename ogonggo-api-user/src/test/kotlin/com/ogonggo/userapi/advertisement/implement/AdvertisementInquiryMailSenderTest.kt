@@ -64,6 +64,28 @@ class AdvertisementInquiryMailSenderTest {
     }
 
     @Test
+    fun `유료 광고 문의는 홍보 채널 대신 희망 예산을 담고 광고 목적은 다시 싣지 않는다`() {
+        val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = FROM))
+        Mockito.doNothing().`when`(javaMailSender).send(Mockito.any(MimeMessage::class.java))
+
+        sender.sendConfirmation(
+            NOTIFICATION.copy(
+                inquiryType = AdvertisementInquiryType.PAID_ADVERTISEMENT,
+                promotionChannel = null,
+                promotionAnswer = null,
+                purpose = "신입 마케터 채용 홍보",
+                budgetAmount = 1_500_000,
+            ),
+        )
+
+        val body = textOf(capturedMessage())
+        assertTrue(body.contains("유료 광고 문의"))
+        assertTrue(body.contains("희망 예산: 1,500,000원"))
+        assertTrue(!body.contains("희망 홍보 채널"))
+        assertTrue(!body.contains("신입 마케터 채용 홍보"))
+    }
+
+    @Test
     fun `발신 주소가 없으면 보내지 않는다`() {
         val sender = AdvertisementInquiryMailSender(javaMailSender, OgonggoMailProperties(from = ""))
 
@@ -112,6 +134,8 @@ class AdvertisementInquiryMailSenderTest {
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            purpose = null,
+            budgetAmount = null,
             memberType = AdvertisementInquiryMemberType.GUEST,
             inflowChannel = AdvertisementInquiryInflowChannel.DIRECT,
             utmSource = null,
