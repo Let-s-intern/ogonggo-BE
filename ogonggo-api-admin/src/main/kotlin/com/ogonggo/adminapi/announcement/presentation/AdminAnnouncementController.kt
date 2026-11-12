@@ -1,5 +1,7 @@
 package com.ogonggo.adminapi.announcement.presentation
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import com.ogonggo.core.announcement.domain.AnnouncementCategory
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementService
 import com.ogonggo.adminapi.announcement.presentation.request.CreateAdminAnnouncementRequest
@@ -35,12 +37,14 @@ class AdminAnnouncementController(
         @RequestParam(name = "keyword", required = false) keyword: String?,
         @RequestParam(name = "visibility", required = false) visibility: AdminContentVisibility?,
         @RequestParam(name = "pinned", required = false) pinned: Boolean?,
+        @RequestParam(name = "category", required = false) category: AnnouncementCategory?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminAnnouncementSummaryResponse>>> {
         val result = adminAnnouncementService.getAnnouncements(
             condition = AnnouncementManagementSearchCondition(
                 published = visibility?.published,
                 pinned = pinned,
                 keyword = keyword?.takeIf { it.isNotBlank() },
+                category = category,
             ),
             page = page - 1,
             size = size,
@@ -65,19 +69,21 @@ class AdminAnnouncementController(
     /** 등록이 커밋된 뒤의 공지를 다시 읽어 응답한다. */
     @PostMapping
     override fun createAnnouncement(
+        @AuthenticationPrincipal adminUserId: Long,
         @RequestBody request: CreateAdminAnnouncementRequest,
     ): ResponseEntity<SuccessResponse<AdminAnnouncementDetailResponse>> {
-        val announcementId = adminAnnouncementService.createAnnouncement(request.toCommand())
+        val announcementId = adminAnnouncementService.createAnnouncement(request.toCommand(), adminUserId)
         return SuccessResponse.created(AdminAnnouncementDetailResponse.from(adminAnnouncementService.getAnnouncement(announcementId)))
     }
 
     /** 수정이 커밋된 뒤의 공지를 다시 읽어 응답한다. */
     @PatchMapping("/{announcementId}")
     override fun updateAnnouncement(
+        @AuthenticationPrincipal adminUserId: Long,
         @PathVariable("announcementId") announcementId: Long,
         @RequestBody request: UpdateAdminAnnouncementRequest,
     ): ResponseEntity<SuccessResponse<AdminAnnouncementDetailResponse>> {
-        adminAnnouncementService.updateAnnouncement(announcementId, request.toCommand())
+        adminAnnouncementService.updateAnnouncement(announcementId, request.toCommand(), adminUserId)
         return SuccessResponse.ok(AdminAnnouncementDetailResponse.from(adminAnnouncementService.getAnnouncement(announcementId)))
     }
 

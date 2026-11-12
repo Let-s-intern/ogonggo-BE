@@ -28,6 +28,35 @@ class AnnouncementDomainTest {
     }
 
     @Test
+    fun `요약이 300자를 넘으면 공지를 만들거나 고칠 수 없다`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Announcement(title = "공지", content = CONTENT, pinned = false, published = true, summary = "가".repeat(301))
+        }
+        assertThrows(IllegalArgumentException::class.java) { announcement().changeSummary("가".repeat(301)) }
+    }
+
+    @Test
+    fun `썸네일과 요약은 빈 글자를 주면 지운다`() {
+        // given
+        val announcement = Announcement(
+            title = "공지",
+            content = CONTENT,
+            pinned = false,
+            published = true,
+            thumbnailUrl = "https://example.com/thumb.png",
+            summary = "요약",
+        )
+
+        // when
+        announcement.changeThumbnailUrl("")
+        announcement.changeSummary(" ")
+
+        // then
+        assertEquals(null, announcement.thumbnailUrl)
+        assertEquals(null, announcement.summary)
+    }
+
+    @Test
     fun `다시 삭제해도 최초 삭제 일시를 유지하고 삭제된 공지는 고칠 수 없다`() {
         // given
         val announcement = announcement()
@@ -41,6 +70,7 @@ class AnnouncementDomainTest {
         assertThrows(IllegalStateException::class.java) { announcement.edit(title = "바뀐 제목", content = null) }
         assertThrows(IllegalStateException::class.java) { announcement.publish() }
         assertThrows(IllegalStateException::class.java) { announcement.pin(true) }
+        assertThrows(IllegalStateException::class.java) { announcement.changeCategory(AnnouncementCategory.NEW_JOB_NOTE) }
     }
 
     private fun announcement(title: String = "서비스 점검 안내", content: String = CONTENT): Announcement =

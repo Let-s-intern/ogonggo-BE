@@ -16,6 +16,9 @@ class AnnouncementManager internal constructor(
         if (dto.title != null || dto.content != null) {
             announcement.edit(title = dto.title, content = dto.content)
         }
+        dto.category?.let(announcement::changeCategory)
+        dto.thumbnailUrl?.let(announcement::changeThumbnailUrl)
+        dto.summary?.let(announcement::changeSummary)
         dto.pinned?.let(announcement::pin)
         when (dto.published) {
             true -> announcement.publish()

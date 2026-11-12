@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.announcement.presentation.response
 
+import com.ogonggo.core.announcement.domain.AnnouncementCategory
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementResult
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementSummary
@@ -11,6 +12,9 @@ data class AdminAnnouncementSummaryResponse(
     val title: String,
     val pinned: Boolean,
     val visibility: AdminContentVisibility,
+    val category: AnnouncementCategory,
+    val thumbnailUrl: String?,
+    val summary: String?,
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
 ) {
@@ -20,6 +24,9 @@ data class AdminAnnouncementSummaryResponse(
             title = result.title,
             pinned = result.pinned,
             visibility = result.visibility,
+            category = result.category,
+            thumbnailUrl = result.thumbnailUrl,
+            summary = result.summary,
             registeredAt = result.registeredAt,
             updatedAt = result.updatedAt,
         )
@@ -33,6 +40,9 @@ data class AdminAnnouncementDetailResponse(
     val content: String,
     val pinned: Boolean,
     val visibility: AdminContentVisibility,
+    val category: AnnouncementCategory,
+    val thumbnailUrl: String?,
+    val summary: String?,
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
 ) {
@@ -45,6 +55,9 @@ data class AdminAnnouncementDetailResponse(
                 content = result.content,
                 pinned = summary.pinned,
                 visibility = summary.visibility,
+                category = summary.category,
+                thumbnailUrl = summary.thumbnailUrl,
+                summary = summary.summary,
                 registeredAt = summary.registeredAt,
                 updatedAt = summary.updatedAt,
             )

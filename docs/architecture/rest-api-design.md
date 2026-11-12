@@ -421,6 +421,7 @@ AI 서버 채용공고와 같은 계약입니다. 소유자가 없고 원문 URL
 
 ```text
 GET    /api/v1/announcements                          사용자 API, 로그인 없이 조회
+GET    /api/v1/announcements/categories               카테고리별 공지 수와 최근 공지
 GET    /api/v1/announcements/{announcementId}
 
 GET    /api/v1/admin/announcements                    관리자 콘솔
