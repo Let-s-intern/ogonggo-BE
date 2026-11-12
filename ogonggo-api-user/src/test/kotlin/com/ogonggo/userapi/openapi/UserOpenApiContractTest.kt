@@ -76,6 +76,29 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("기업 채용공고는 원문 이미지를 선택으로 받고 돌려주며, 공개 상세는 등록 경로를 알린다")
+    fun `기업 채용공고는 원문 이미지를 선택으로 받고 돌려주며, 공개 상세는 등록 경로를 알린다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val create = document.at("/components/schemas/CreateCompanyJobRequest")
+        val update = document.at("/components/schemas/UpdateCompanyJobRequest")
+        val detail = document.at("/components/schemas/CompanyJobDetailResponse")
+        val publicDetail = document.at("/components/schemas/UserJobDetailResponse")
+
+        // then
+        listOf(create, update).forEach { request ->
+            assertEquals("array", request.at("/properties/sourceImageUrls/type").asText())
+            assertEquals(10, request.at("/properties/sourceImageUrls/maxItems").asInt())
+            assertFalse(request.at("/required").any { it.asText() == "sourceImageUrls" })
+        }
+        assertEquals("array", detail.at("/properties/sourceImageUrls/type").asText())
+        assertTrue(publicDetail.at("/properties/source").isObject)
+        assertTrue(publicDetail.at("/required").any { it.asText() == "source" })
+    }
+
+    @Test
     @DisplayName("광고 상품 신청 목록은 비회원 공개이며 신청 화면 필드만 반환한다")
     fun `광고 상품 신청 목록은 비회원 공개이며 신청 화면 필드만 반환한다`() {
         // given

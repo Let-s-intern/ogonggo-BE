@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.presentation
 
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampCategory
@@ -116,6 +117,7 @@ class UserReadControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.qualifications").value("자격 요건"))
             .andExpect(jsonPath("$.data.recruitmentNotice").value("제출 서류: 이력서"))
             .andExpect(jsonPath("$.data.applyEmail").value("recruit@example.com"))
+            .andExpect(jsonPath("$.data.source").value("CRAWLER"))
             .andExpect(jsonPath("$.data.bookmarked").value(true))
             .andExpect(jsonPath("$.data.viewCount").value(12))
             .andExpect(jsonPath("$.data.bookmarkCount").value(3))
@@ -874,6 +876,7 @@ class UserReadControllerTest @Autowired constructor(
         recruitmentNotice = "제출 서류: 이력서",
         sourceUrl = null,
         sourceHtml = "<h2>주요 업무</h2><p>백엔드 개발</p>",
+        source = ContentSource.CRAWLER,
         applyEmail = "recruit@example.com",
         closedAt = null,
         registeredAt = LocalDateTime.of(2026, 11, 4, 4, 10),

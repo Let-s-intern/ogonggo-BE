@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.business
 
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobEducationLevel
@@ -69,6 +70,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
+        Mockito.`when`(job.source).thenReturn(ContentSource.CRAWLER)
         Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
         Mockito.`when`(job.companyAndTeamIntroduction).thenReturn("회사 및 팀 소개")
@@ -472,6 +474,7 @@ class UserJobServiceTest {
         Mockito.`when`(job.employmentType).thenReturn(JobEmploymentType.FULL_TIME)
         Mockito.`when`(job.experienceType).thenReturn(JobExperienceType.EXPERIENCED)
         Mockito.`when`(job.educationLevel).thenReturn(JobEducationLevel.ANY)
+        Mockito.`when`(job.source).thenReturn(ContentSource.CRAWLER)
         Mockito.`when`(job.region).thenReturn(Region.SEOUL)
         Mockito.`when`(job.recruitmentType).thenReturn(JobRecruitmentType.PERIOD)
     }

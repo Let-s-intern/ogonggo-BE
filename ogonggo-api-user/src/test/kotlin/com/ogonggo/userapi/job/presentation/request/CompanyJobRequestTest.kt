@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.userapi.error.InvalidRequestFieldException
+import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -27,6 +28,37 @@ class CompanyJobRequestTest {
         // then
         assertEquals("https://example.com/logo.png", command.logoUrl)
         assertEquals("recruit@example.com", command.applyEmail)
+    }
+
+    @Test
+    fun `원문 이미지는 10장까지 받는다`() {
+        val validator = Validation.buildDefaultValidatorFactory().validator
+        val urls = (1..11).map { "https://example.com/poster-$it.png" }
+
+        val tenViolations = validator.validate(request(sourceImageUrls = urls.take(10)))
+        val elevenViolations = validator.validate(request(sourceImageUrls = urls))
+
+        assertEquals(emptySet<Any>(), tenViolations)
+        assertEquals(listOf("sourceImageUrls"), elevenViolations.map { it.propertyPath.toString() })
+    }
+
+    @Test
+    fun `원문 이미지 주소가 http(s) 주소가 아니면 몇 번째 이미지가 틀렸는지 알린다`() {
+        val cases = listOf("poster.png", "javascript:alert(1)", "", "ftp://example.com/a.png")
+
+        cases.forEach { url ->
+            val exception = assertThrows<InvalidRequestFieldException> {
+                request(sourceImageUrls = listOf("https://example.com/a.png", url)).validatedSourceImageUrls()
+            }
+            assertEquals("sourceImageUrls[1]", exception.fieldName)
+        }
+    }
+
+    @Test
+    fun `원문 이미지 주소를 보낸 순서대로 돌려준다`() {
+        val urls = listOf("https://example.com/b.png", "https://example.com/a.png")
+
+        assertEquals(urls, request(sourceImageUrls = urls).validatedSourceImageUrls())
     }
 
     @Test
@@ -106,6 +138,7 @@ class CompanyJobRequestTest {
         recruitmentType: JobRecruitmentType = JobRecruitmentType.ALWAYS_OPEN,
         recruitmentStartAt: LocalDateTime? = null,
         recruitmentEndAt: LocalDateTime? = null,
+        sourceImageUrls: List<String>? = null,
     ) = CreateCompanyJobRequest(
         companyName = "오공고",
         parentCompanyName = null,
@@ -138,5 +171,6 @@ class CompanyJobRequestTest {
         applicationMethod = applicationMethod,
         applyEmail = applyEmail,
         sourceUrl = null,
+        sourceImageUrls = sourceImageUrls,
     )
 }

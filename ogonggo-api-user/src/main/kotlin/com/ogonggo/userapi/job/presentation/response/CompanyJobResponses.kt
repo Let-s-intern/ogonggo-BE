@@ -94,6 +94,8 @@ data class CompanyJobDetailResponse(
     val applicationMethod: JobApplicationMethod?,
     val applyEmail: String?,
     val sourceUrl: String?,
+    @Schema(description = "선택으로 올린 원문 이미지 주소. 올린 순서이며, 없으면 빈 목록입니다.")
+    val sourceImageUrls: List<String>,
     val publicationStatus: JobPublicationStatus,
     @Schema(description = REVIEW_STATUS_DESCRIPTION)
     val reviewStatus: ContentReviewStatus?,
@@ -133,6 +135,7 @@ data class CompanyJobDetailResponse(
             applicationMethod = result.applicationMethod,
             applyEmail = result.applyEmail,
             sourceUrl = result.sourceUrl,
+            sourceImageUrls = result.sourceImageUrls,
             publicationStatus = result.publicationStatus,
             reviewStatus = result.reviewStatus,
             closedAt = result.closedAt,

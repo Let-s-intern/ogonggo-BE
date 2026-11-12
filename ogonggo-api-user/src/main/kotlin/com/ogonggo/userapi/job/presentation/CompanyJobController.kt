@@ -3,6 +3,7 @@ package com.ogonggo.userapi.job.presentation
 import com.ogonggo.userapi.job.business.CompanyJobService
 import com.ogonggo.userapi.job.presentation.request.CreateCompanyJobRequest
 import com.ogonggo.userapi.job.presentation.request.UpdateCompanyJobRequest
+import com.ogonggo.userapi.job.presentation.request.validatedSourceImageUrls
 import com.ogonggo.userapi.job.presentation.response.CompanyJobDetailResponse
 import com.ogonggo.userapi.job.presentation.response.CompanyJobSummaryResponse
 import com.ogonggo.userapi.job.presentation.response.CreateCompanyJobResponse
@@ -33,7 +34,11 @@ class CompanyJobController(
         @AuthenticationPrincipal userId: Long,
         @RequestBody request: CreateCompanyJobRequest,
     ): ResponseEntity<SuccessResponse<CreateCompanyJobResponse>> =
-        SuccessResponse.created(CreateCompanyJobResponse(companyJobService.create(userId, request.toCommand())))
+        SuccessResponse.created(
+            CreateCompanyJobResponse(
+                companyJobService.create(userId, request.toCommand(), request.validatedSourceImageUrls()),
+            ),
+        )
 
     @GetMapping
     override fun getJobs(
@@ -66,7 +71,7 @@ class CompanyJobController(
         @PathVariable("jobId") jobId: Long,
         @RequestBody request: UpdateCompanyJobRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        companyJobService.update(userId, jobId, request.toCommand())
+        companyJobService.update(userId, jobId, request.toCommand(), request.validatedSourceImageUrls())
         return SuccessResponse.ok()
     }
 

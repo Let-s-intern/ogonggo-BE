@@ -19,6 +19,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
+import java.net.URI
 import java.time.LocalDateTime
 import org.hibernate.validator.constraints.URL
 
@@ -64,6 +65,25 @@ interface CompanyJobWriteRequest {
     val applyEmail: String?
     /** 지원 링크로도 함께 사용한다. */
     val sourceUrl: String?
+    /** 선택으로 올린 원문 이미지. 공고 상세 `공고 원문` 탭에 글 아래로 보인다. 공고 칸이 아니라 원문으로 저장한다. */
+    val sourceImageUrls: List<String>?
+}
+
+const val MAX_SOURCE_IMAGES = 10
+private const val MAX_SOURCE_IMAGE_URL_LENGTH = 2048
+
+/**
+ * 원문 이미지 주소를 하나씩 검사해 돌려준다. 목록 원소에 붙인 Bean Validation 제약은 Kotlin이 바이트코드에 남기지 않아
+ * 검증되지 않으므로 여기서 본다. 원문 HTML의 `src` 로 들어가므로 http(s) 절대 주소만 받는다.
+ */
+fun CompanyJobWriteRequest.validatedSourceImageUrls(): List<String>? = sourceImageUrls?.onEachIndexed { index, url ->
+    val uri = runCatching { URI(url) }.getOrNull()
+    val valid = url.isNotBlank() &&
+        url.length <= MAX_SOURCE_IMAGE_URL_LENGTH &&
+        uri != null &&
+        uri.scheme?.lowercase() in setOf("http", "https") &&
+        !uri.host.isNullOrBlank()
+    if (!valid) invalid("sourceImageUrls[$index]", "http(s) 이미지 주소여야 합니다.")
 }
 
 /** 학력을 보내지 않으면 조건을 두지 않는다는 뜻이므로 학력 무관으로 본다. */
@@ -106,6 +126,9 @@ data class CreateCompanyJobRequest(
     override val applicationMethod: JobApplicationMethod?,
     @field:Size(max = 320) @field:Email override val applyEmail: String?,
     @field:Size(max = 2048) @field:URL override val sourceUrl: String?,
+    @field:Schema(description = "원문 이미지 주소(선택, 최대 10장). 올린 순서대로 공고 원문에 보입니다. 비우거나 보내지 않으면 원문 이미지가 없습니다.")
+    @field:Size(max = MAX_SOURCE_IMAGES)
+    override val sourceImageUrls: List<String>? = null,
 ) : CompanyJobWriteRequest {
 
     fun toCommand(): JobAppendDto = JobAppendDto(
@@ -176,6 +199,9 @@ data class UpdateCompanyJobRequest(
     override val applicationMethod: JobApplicationMethod?,
     @field:Size(max = 320) @field:Email override val applyEmail: String?,
     @field:Size(max = 2048) @field:URL override val sourceUrl: String?,
+    @field:Schema(description = "원문 이미지 주소(선택, 최대 10장). 보내지 않으면(null) 지금 원문 이미지를 그대로 두고, 빈 목록이면 모두 뺍니다. 값이 있으면 그 이미지들로 바꿉니다.")
+    @field:Size(max = MAX_SOURCE_IMAGES)
+    override val sourceImageUrls: List<String>? = null,
 ) : CompanyJobWriteRequest {
 
     fun toCommand(): JobUpdateDto = JobUpdateDto(
