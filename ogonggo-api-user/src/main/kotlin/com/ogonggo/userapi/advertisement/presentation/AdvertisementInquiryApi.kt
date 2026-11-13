@@ -30,6 +30,10 @@ interface AdvertisementInquiryApi {
             토큰이 없거나 유효하지 않으면 비회원으로 저장합니다. 요청 본문의 회원 구분·회원 식별자는 받지 않습니다.
 
             유입 경로는 utmSource와 referrer로 서버가 판정합니다. 캠페인 코드도 서버가 정합니다.
+
+            문의 유형(inquiryType)마다 필수값이 다릅니다. 무료 홍보 문의(FREE_PROMOTION·LAUNCH_ALERT)는 promotionChannel과
+            promotionAnswer가, 유료 광고 문의(PAID_ADVERTISEMENT)는 purpose가 필요하고 budgetAmount는 선택입니다.
+            유형에 맞지 않는 값은 보내도 저장하지 않습니다.
         """,
     )
     @ApiResponses(
@@ -37,7 +41,7 @@ interface AdvertisementInquiryApi {
             ApiResponse(responseCode = "201", description = "접수 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 필수값이 없거나 형식·길이가 맞지 않습니다.",
+                description = "BAD_REQUEST: 필수값이 없거나 형식·길이가 맞지 않습니다. 문의 유형에 필요한 값이 없어도 같습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],

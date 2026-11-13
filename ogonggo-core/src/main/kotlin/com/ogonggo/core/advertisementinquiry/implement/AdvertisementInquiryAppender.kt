@@ -26,6 +26,8 @@ class AdvertisementInquiryAppender internal constructor(
                 hiringJobName = dto.hiringJobName,
                 jobPostingUrl = dto.jobPostingUrl,
                 promotionAnswer = dto.promotionAnswer,
+                purpose = dto.purpose,
+                budgetAmount = dto.budgetAmount,
                 marketingConsent = dto.marketingConsent,
                 userId = dto.userId,
                 memberType = dto.memberType,

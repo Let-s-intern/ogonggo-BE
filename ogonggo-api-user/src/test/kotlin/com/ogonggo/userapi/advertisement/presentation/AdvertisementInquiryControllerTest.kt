@@ -216,6 +216,47 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
         Mockito.verifyNoInteractions(advertisementInquiryAppender)
     }
 
+    @Test
+    fun `유료 광고 문의는 광고 목적과 희망 예산을 저장하고 캠페인 코드와 무료 홍보 값은 비운다`() {
+        val requestBody = paidBody(extra = ""","promotionChannel":"INSTAGRAM","promotionAnswer":"보내도 무시"""")
+
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(requestBody))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(INQUIRY_ID))
+
+        val saved = appended.single()
+        assertEquals(AdvertisementInquiryType.PAID_ADVERTISEMENT, saved.inquiryType)
+        assertEquals("신입 마케터 채용 홍보", saved.purpose)
+        assertEquals(1_500_000, saved.budgetAmount)
+        assertNull(saved.campaignCode)
+        assertNull(saved.promotionChannel)
+        assertNull(saved.promotionAnswer)
+    }
+
+    @Test
+    fun `유료 광고 문의의 희망 예산은 보내지 않아도 된다`() {
+        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(paidBody(budgetAmount = null)))
+            .andExpect(status().isCreated)
+
+        assertNull(appended.single().budgetAmount)
+    }
+
+    @Test
+    fun `문의 유형에 필요한 값이 없거나 희망 예산이 양수가 아니면 400으로 응답한다`() {
+        listOf(
+            paidBody(purpose = " ") to "purpose",
+            paidBody(budgetAmount = 0) to "budgetAmount",
+            body().replace(""""promotionChannel": "OPEN_CHAT_MARKETING",""", "") to "promotionChannel",
+        ).forEach { (requestBody, field) ->
+            mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(requestBody))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value(startsWith("[$field] ")))
+        }
+
+        Mockito.verifyNoInteractions(advertisementInquiryAppender)
+    }
+
     private fun request(): MockHttpServletRequestBuilder =
         post(PATH).contentType(MediaType.APPLICATION_JSON).content(body())
 
@@ -265,6 +306,21 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             }
         """.trimIndent()
 
+        private fun paidBody(
+            purpose: String = "신입 마케터 채용 홍보",
+            budgetAmount: Int? = 1_500_000,
+            extra: String = "",
+        ): String = """
+            {
+              "companyName": "렛츠커리어",
+              "managerName": "김담당",
+              "email": "manager@ogonggo.co.kr",
+              "phoneNumber": "010-1234-5678",
+              "inquiryType": "PAID_ADVERTISEMENT",
+              "purpose": "$purpose"${budgetAmount?.let { ",\"budgetAmount\": $it" }.orEmpty()}$extra
+            }
+        """.trimIndent()
+
         private val LEGACY_BODY = """
             {
               "companyName": "렛츠커리어",
@@ -285,6 +341,8 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            purpose = null,
+            budgetAmount = null,
             memberType = AdvertisementInquiryMemberType.GUEST,
             inflowChannel = AdvertisementInquiryInflowChannel.COLDMAIL,
             utmSource = "coldmail",
@@ -306,6 +364,8 @@ class AdvertisementInquiryControllerTest @Autowired constructor(
             hiringJobName = null,
             jobPostingUrl = null,
             promotionAnswer = "",
+            purpose = null,
+            budgetAmount = null,
             marketingConsent = false,
             userId = null,
             memberType = AdvertisementInquiryMemberType.GUEST,

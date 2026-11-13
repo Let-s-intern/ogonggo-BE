@@ -287,16 +287,17 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 결정일: 2026-10-27 (LC-3514) / 리뷰 상태: 팀 리뷰 필요
 - 제출할 때마다 새 행이 생기므로 201과 `data.id`로 응답합니다. 2026-10-27까지는 저장하지 않고 슬랙으로만 전달해 200과 `data: null`로 응답했습니다.
 - 로그인 없이 보낼 수 있고 토큰이 선택입니다. 토큰이 있으면 그 회원의 현재 역할로 회원 구분(`COMPANY`·`USER`, 멘토·관리자는 `USER`)과 회원 식별자를 함께 저장하고, 토큰이 없거나 유효하지 않으면 `GUEST`로 저장합니다. 요청 본문의 회원 구분·회원 식별자는 받지 않습니다.
-- 캠페인 코드는 서버가 정합니다. 지금 이 API를 부르는 진입 페이지는 `/biz` 하나라 `launch_free_promo`로 저장합니다.
+- 캠페인 코드는 서버가 정합니다. 무료 홍보 폼의 진입 페이지는 `/biz` 하나라 `launch_free_promo`로 저장하고, 유료 광고 문의는 이벤트가 아니라 비워 둡니다.
+- 문의 유형마다 필수값이 다릅니다(2026-11-12, LC-3613). 무료 홍보 문의(`FREE_PROMOTION`·`LAUNCH_ALERT`)는 `promotionChannel`·`promotionAnswer`, 유료 광고 문의(`PAID_ADVERTISEMENT`)는 `purpose`(광고 목적, 2000자 이하)가 필요하고 `budgetAmount`(희망 예산, 원 단위 1 이상 정수)는 선택입니다. 빠지면 400 `BAD_REQUEST`이며 메시지는 `[필드명]`으로 시작합니다. 유형에 맞지 않는 값은 보내도 저장하지 않습니다. 슬랙 알림과 확인 메일도 유형에 맞는 값만 싣고, 슬랙의 어드민 링크는 무료 홍보 문의면 `/business/ad-inquiries`, 유료 광고 문의면 `/business/paid-ad-inquiries`입니다.
 - 유입 경로(`inflowChannel`)는 저장할 때 `utmSource`와 `referrer`로 한 번 판정해 함께 저장합니다(`AdvertisementInquiryInflowChannel.classify`). 판정에 쓴 원본 값도 그대로 남깁니다.
 - 회사명 입력 방식(`companyNameSource`)은 회사명 검색에서 골랐으면 `SEARCH`, 기업 회원 정보로 채웠으면 `MEMBER_PROFILE`, 직접 입력했으면 `MANUAL`이고 선택입니다. 보내지 않으면 `MANUAL`로 저장합니다. 검증 수단이 아니라 영업이 표기를 정리할 행을 고르는 표시라 보낸 값을 그대로 믿습니다(2026-10-28).
 - 직함·채용 직무명·공고 링크·마케팅 동의·유입 원본 필드는 선택입니다. 이 필드가 생기기 전의 폼(`apps/launch-notice`)이 이전될 때까지 같은 API를 부르기 때문입니다. 마케팅 동의를 보내지 않으면 동의하지 않은 것으로 저장합니다.
 - 슬랙 알림은 저장한 뒤 동기로 보내고, 실패하면 `error` 로그만 남기고 성공으로 응답합니다. 문의는 저장돼 어드민에서 다시 볼 수 있으므로 알림 실패로 접수를 실패로 만들 이유가 없습니다. 이전의 503 `ADVERTISEMENT_INQUIRY_NOTIFICATION_FAILED`는 없앴습니다.
 - 저장은 한 행이라 유스케이스에 트랜잭션을 열지 않습니다. 열면 슬랙 응답을 기다리는 동안 커넥션을 붙잡고 커밋 전에 알림이 나갑니다.
 
-관리자 콘솔은 `GET /api/v1/admin/advertisement-inquiries`로 목록을 봅니다. 최근에 들어온 순(`id DESC`)이고 정렬은 고를 수 없으며, 항목에 문의의 모든 값(유입 원본 포함)과 처리 상태·메모·접수 일시(`registeredAt`)를 싣습니다. 카드에 모든 값을 보이므로 상세 조회는 두지 않습니다. 접수 기간 `createdFrom`·`createdTo`(`YYYY-MM-DD`)는 두 날짜를 모두 포함하고, 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[createdFrom]`으로 시작합니다. 처리 상태 `status`는 `status=RECEIVED&status=CONTACTED&status=EXECUTED`처럼 여러 번 보내 그중 하나인 문의를 고릅니다(2026-10-28, LC-3525). 콘솔의 `광고 문의` 탭은 반려 외의 세 상태를, `반려한 문의` 탭은 `status=REJECTED`를 보냅니다. 반려 제외 전용 파라미터는 두지 않습니다. 값을 하나만 보내면 이전과 같습니다. 현재 조건의 건수는 `pageInfo.totalElements`입니다.
+관리자 콘솔은 `GET /api/v1/admin/advertisement-inquiries`로 목록을 봅니다. 최근에 들어온 순(`id DESC`)이고 정렬은 고를 수 없으며, 항목에 문의의 모든 값(유입 원본 포함)과 처리 상태·메모·접수 일시(`registeredAt`)를 싣습니다. `promotionChannel`·`promotionAnswer`는 유료 광고 문의에서, `purpose`·`budgetAmount`는 무료 홍보 문의에서 `null`입니다. 카드에 모든 값을 보이므로 상세 조회는 두지 않습니다. 접수 기간 `createdFrom`·`createdTo`(`YYYY-MM-DD`)는 두 날짜를 모두 포함하고, 시작일이 종료일보다 늦으면 400 `BAD_REQUEST`이며 메시지는 `[createdFrom]`으로 시작합니다. 처리 상태 `status`는 `status=RECEIVED&status=CONTACTED&status=EXECUTED`처럼 여러 번 보내 그중 하나인 문의를 고릅니다(2026-10-28, LC-3525). 콘솔의 `광고 문의` 탭은 반려 외의 세 상태를, `반려한 문의` 탭은 `status=REJECTED`를 보냅니다. 반려 제외 전용 파라미터는 두지 않습니다. 값을 하나만 보내면 이전과 같습니다. 현재 조건의 건수는 `pageInfo.totalElements`입니다.
 
-메뉴 숫자용 `GET /api/v1/admin/advertisement-inquiries/today-count`는 `{ "count": 3 }`만 줍니다. 한국 시간 오늘 0시부터 들어온 문의 중 반려(`REJECTED`)하지 않은 문의 수이며 문의 유형은 가리지 않습니다. 반려로 바꾸면 바로 줄고, 접수·연락함·집행 완료 사이를 오가면 그대로입니다(2026-10-28 변경, LC-3525. 이전에는 처리 상태를 가리지 않았습니다). 목록을 크기 1로 불러 총 건수를 쓰면 클라이언트가 시간대까지 맞춰 기간을 보내야 해서 따로 둡니다.
+메뉴 숫자용 `GET /api/v1/admin/advertisement-inquiries/today-count`는 `{ "count": 3 }`만 줍니다. 한국 시간 오늘 0시부터 들어온 문의 중 반려(`REJECTED`)하지 않은 문의 수입니다. `inquiryType`을 보내면 그 유형만 세고, 보내지 않으면 유형을 가리지 않습니다(2026-11-12, LC-3613). 메뉴가 유형별로 나뉘어 각 메뉴가 자기 유형을 보냅니다. 반려로 바꾸면 바로 줄고, 접수·연락함·집행 완료 사이를 오가면 그대로입니다(2026-10-28 변경, LC-3525. 이전에는 처리 상태를 가리지 않았습니다). 목록을 크기 1로 불러 총 건수를 쓰면 클라이언트가 시간대까지 맞춰 기간을 보내야 해서 따로 둡니다.
 
 슬랙 알림과 함께 문의를 남긴 담당자에게 접수 확인 메일을 보냅니다. 이 메일은 실패해도 접수를 되돌리지 않고 `warn` 로그만 남깁니다. 슬랙 알림이 실패해도 메일은 보냅니다.
 

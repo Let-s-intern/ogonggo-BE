@@ -182,13 +182,23 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
 
     @Test
     fun `오늘 건수는 건수 하나만 준다`() {
-        Mockito.`when`(adminAdvertisementInquiryService.getTodayCount()).thenReturn(3L)
+        Mockito.`when`(adminAdvertisementInquiryService.getTodayCount(null)).thenReturn(3L)
 
         mockMvc.perform(get("$PATH/today-count").with(admin()))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.count").value(3))
             .andExpect(jsonPath("$.data.length()").value(1))
+    }
+
+    @Test
+    fun `오늘 건수는 보낸 문의 유형만 센다`() {
+        Mockito.`when`(adminAdvertisementInquiryService.getTodayCount(AdvertisementInquiryType.PAID_ADVERTISEMENT))
+            .thenReturn(2L)
+
+        mockMvc.perform(get("$PATH/today-count").param("inquiryType", "PAID_ADVERTISEMENT").with(admin()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.count").value(2))
     }
 
     @Test
@@ -291,6 +301,8 @@ class AdminAdvertisementInquiryControllerTest @Autowired constructor(
             hiringJobName = "영업 인턴",
             jobPostingUrl = "https://example.com/jobs/1",
             promotionAnswer = "사람인에 올리고 있습니다.",
+            purpose = null,
+            budgetAmount = null,
             marketingConsent = true,
             userId = 3L,
             memberType = AdvertisementInquiryMemberType.COMPANY,

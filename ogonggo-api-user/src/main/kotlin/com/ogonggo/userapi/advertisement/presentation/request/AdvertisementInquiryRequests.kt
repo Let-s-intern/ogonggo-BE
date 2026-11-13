@@ -5,10 +5,12 @@ import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryPromotionChannel
 import com.ogonggo.userapi.advertisement.business.AdvertisementInquiryInflowCommand
 import com.ogonggo.userapi.advertisement.business.CreateAdvertisementInquiryCommand
+import com.ogonggo.userapi.error.InvalidRequestFieldException
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 
 /**
@@ -18,6 +20,9 @@ import jakarta.validation.constraints.Size
  * 직함·채용 직무명·공고 링크·마케팅 동의·유입 원본은 선택이다. 이 필드가 생기기 전의 폼(`apps/launch-notice`)이
  * 이전될 때까지 같은 API를 부르므로 필수로 두면 그 폼의 접수가 끊긴다. 새 폼은 화면에서 필수로 받는다.
  * 회원 구분과 회원 식별자는 받지 않는다. 서버가 토큰으로 정하며 보내도 무시한다.
+ *
+ * 문의 유형마다 필수값이 다르다. 무료 홍보 폼(FREE_PROMOTION·LAUNCH_ALERT)은 희망 홍보 채널과 설문 답변을,
+ * 유료 광고 문의(PAID_ADVERTISEMENT)는 광고 목적을 받는다. 유형에 맞지 않는 값은 저장하지 않는다.
  */
 data class CreateAdvertisementInquiryRequest(
     @field:NotBlank
@@ -42,8 +47,8 @@ data class CreateAdvertisementInquiryRequest(
     @field:NotNull
     val inquiryType: AdvertisementInquiryType,
     /** 폼에서 한 곳만 고르므로 목록이 아니라 단일 값으로 받는다. */
-    @field:NotNull
-    val promotionChannel: AdvertisementInquiryPromotionChannel,
+    @Schema(description = "희망 홍보 채널. 무료 홍보 문의(FREE_PROMOTION·LAUNCH_ALERT)에서 필수이고 유료 광고 문의에서는 받지 않습니다.")
+    val promotionChannel: AdvertisementInquiryPromotionChannel? = null,
     @Schema(description = "채용 직무명")
     @field:Size(max = 100)
     val hiringJobName: String? = null,
@@ -51,10 +56,15 @@ data class CreateAdvertisementInquiryRequest(
     @field:Size(max = 500)
     val jobPostingUrl: String? = null,
     /** 슬랙 section 블록의 3000자 제한 안에 들어가도록 상한을 둔다. */
-    @Schema(description = "현재 사용 중인 채용 홍보 채널과 어려운 점")
-    @field:NotBlank
+    @Schema(description = "현재 사용 중인 채용 홍보 채널과 어려운 점. 무료 홍보 문의에서 필수이고 유료 광고 문의에서는 받지 않습니다.")
     @field:Size(max = 2000)
-    val promotionAnswer: String,
+    val promotionAnswer: String? = null,
+    @Schema(description = "광고 목적. 유료 광고 문의(PAID_ADVERTISEMENT)에서 필수이고 무료 홍보 문의에서는 받지 않습니다.")
+    @field:Size(max = 2000)
+    val purpose: String? = null,
+    @Schema(description = "희망 예산(원). 유료 광고 문의의 선택 값이며 1 이상 정수입니다. 무료 홍보 문의에서는 받지 않습니다.", example = "1500000")
+    @field:Positive
+    val budgetAmount: Int? = null,
     @Schema(description = "마케팅 정보 수신 동의. 보내지 않으면 동의하지 않은 것으로 저장합니다.")
     val marketingConsent: Boolean? = null,
     @Schema(description = "진입 URL의 utm_source. 유입 경로 판정에 씁니다.")
@@ -79,27 +89,42 @@ data class CreateAdvertisementInquiryRequest(
     @field:Size(max = 2000)
     val landingPath: String? = null,
 ) {
-    fun toCommand(): CreateAdvertisementInquiryCommand = CreateAdvertisementInquiryCommand(
-        companyName = companyName,
-        companyNameSource = companyNameSource ?: AdvertisementInquiryCompanyNameSource.MANUAL,
-        managerName = managerName,
-        managerTitle = managerTitle,
-        email = email,
-        phoneNumber = phoneNumber,
-        inquiryType = inquiryType,
-        promotionChannel = promotionChannel,
-        hiringJobName = hiringJobName,
-        jobPostingUrl = jobPostingUrl,
-        promotionAnswer = promotionAnswer,
-        marketingConsent = marketingConsent ?: false,
-        inflow = AdvertisementInquiryInflowCommand(
-            utmSource = utmSource,
-            utmMedium = utmMedium,
-            utmCampaign = utmCampaign,
-            utmContent = utmContent,
-            referrer = referrer,
-            entryHost = entryHost,
-            landingPath = landingPath,
-        ),
-    )
+    fun toCommand(): CreateAdvertisementInquiryCommand {
+        val freePromotionForm = inquiryType.isFreePromotionForm
+        if (freePromotionForm) {
+            if (promotionChannel == null) {
+                throw InvalidRequestFieldException("promotionChannel", "무료 홍보 문의는 희망 홍보 채널이 필요합니다.")
+            }
+            if (promotionAnswer.isNullOrBlank()) {
+                throw InvalidRequestFieldException("promotionAnswer", "무료 홍보 문의는 설문 답변이 필요합니다.")
+            }
+        } else if (purpose.isNullOrBlank()) {
+            throw InvalidRequestFieldException("purpose", "유료 광고 문의는 광고 목적이 필요합니다.")
+        }
+        return CreateAdvertisementInquiryCommand(
+            companyName = companyName,
+            companyNameSource = companyNameSource ?: AdvertisementInquiryCompanyNameSource.MANUAL,
+            managerName = managerName,
+            managerTitle = managerTitle,
+            email = email,
+            phoneNumber = phoneNumber,
+            inquiryType = inquiryType,
+            promotionChannel = promotionChannel.takeIf { freePromotionForm },
+            hiringJobName = hiringJobName,
+            jobPostingUrl = jobPostingUrl,
+            promotionAnswer = promotionAnswer.takeIf { freePromotionForm },
+            purpose = purpose.takeUnless { freePromotionForm },
+            budgetAmount = budgetAmount.takeUnless { freePromotionForm },
+            marketingConsent = marketingConsent ?: false,
+            inflow = AdvertisementInquiryInflowCommand(
+                utmSource = utmSource,
+                utmMedium = utmMedium,
+                utmCampaign = utmCampaign,
+                utmContent = utmContent,
+                referrer = referrer,
+                entryHost = entryHost,
+                landingPath = landingPath,
+            ),
+        )
+    }
 }

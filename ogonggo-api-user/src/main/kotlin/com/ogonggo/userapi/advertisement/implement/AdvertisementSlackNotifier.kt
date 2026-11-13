@@ -35,7 +35,7 @@ internal class AdvertisementSlackNotifier(
 
         slackRestClient.post()
             .uri(properties.advertisementInquiry)
-            .body(notification.toSlackMessage(properties.adminUrl(ADMIN_INQUIRY_LIST_PATH)))
+            .body(notification.toSlackMessage(properties.adminUrl(notification.adminListPath())))
             .retrieve()
             .toBodilessEntity()
     }
@@ -57,10 +57,15 @@ private fun AdvertisementInquiryNotification.toSlackMessage(adminUrl: String): S
                     SlackText.labeled("이메일", email),
                     SlackText.labeled("전화번호", phoneNumber),
                     SlackText.labeled("신청 유형", inquiryType.desc),
-                    SlackText.labeled("희망 홍보 채널", promotionChannel.desc),
+                ) + listOfNotNull(
+                    promotionChannel?.let { SlackText.labeled("희망 홍보 채널", it.desc) },
+                    budgetAmount?.let { SlackText.labeled("희망 예산", "%,d원".format(it)) },
                 ),
             ),
-            SlackBlock.text(SlackText.labeled("현재 홍보 채널 · 어려운 점", promotionAnswer)),
+        ) + listOfNotNull(
+            promotionAnswer?.let { SlackBlock.text(SlackText.labeled("현재 홍보 채널 · 어려운 점", it)) },
+            purpose?.let { SlackBlock.text(SlackText.labeled("광고 목적", it)) },
+        ) + listOf(
             // 영업이 슬랙만 보고도 어디서 온 신청인지 알 수 있게 한다.
             SlackBlock.text(SlackText.labeled("회원 구분 · 유입 경로", "${memberType.desc} · ${inflowLabel()}")),
             SlackBlock.text(SlackText.link(adminUrl, "어드민에서 보기")),
@@ -87,5 +92,9 @@ private fun AdvertisementInquiryNotification.inflowLabel(): String {
     return (listOf(name) + details).joinToString(" · ")
 }
 
-/** 어드민 광고 문의 목록 경로다. 문의는 목록에서 다른 건과 함께 처리하므로 목록으로 보낸다. */
-private const val ADMIN_INQUIRY_LIST_PATH = "/business/ad-inquiries"
+/** 어드민 광고 문의 목록 경로다. 문의는 목록에서 다른 건과 함께 처리하므로 유형별 목록으로 보낸다. */
+private fun AdvertisementInquiryNotification.adminListPath(): String =
+    if (inquiryType.isFreePromotionForm) ADMIN_FREE_PROMOTION_LIST_PATH else ADMIN_PAID_ADVERTISEMENT_LIST_PATH
+
+private const val ADMIN_FREE_PROMOTION_LIST_PATH = "/business/ad-inquiries"
+private const val ADMIN_PAID_ADVERTISEMENT_LIST_PATH = "/business/paid-ad-inquiries"

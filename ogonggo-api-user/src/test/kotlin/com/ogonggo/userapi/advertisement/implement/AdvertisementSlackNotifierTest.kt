@@ -51,6 +51,28 @@ class AdvertisementSlackNotifierTest {
     }
 
     @Test
+    fun `유료 광고 문의는 희망 예산과 광고 목적을 싣고 유료 광고 문의 목록으로 보낸다`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val notifier = AdvertisementSlackNotifier(builder.build(), properties(WEBHOOK_URL))
+
+        server.expect(requestTo(WEBHOOK_URL))
+            .andExpect(jsonPath("$.text").value("📢 B2B 광고 문의 - 렛츠커리어 (유료 광고 문의)"))
+            .andExpect(jsonPath("$.blocks[1].fields.length()").value(6))
+            .andExpect(jsonPath("$.blocks[1].fields[5].text").value("*희망 예산*\n1,500,000원"))
+            .andExpect(jsonPath("$.blocks[2].text.text").value("*광고 목적*\n신입 마케터 채용 홍보"))
+            .andExpect(
+                jsonPath("$.blocks[4].text.text")
+                    .value("<https://admin.ogonggo.co.kr/business/paid-ad-inquiries|어드민에서 보기>"),
+            )
+            .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN))
+
+        notifier.notify(PAID_NOTIFICATION)
+
+        server.verify()
+    }
+
+    @Test
     fun `회원 구분과 유입 경로를 UTM 값과 함께 한 줄로 싣는다`() {
         val builder = RestClient.builder()
         val server = MockRestServiceServer.bindTo(builder).build()
@@ -180,12 +202,21 @@ class AdvertisementSlackNotifierTest {
             inquiryType = AdvertisementInquiryType.FREE_PROMOTION,
             promotionChannel = AdvertisementInquiryPromotionChannel.OPEN_CHAT_MARKETING,
             promotionAnswer = PROMOTION_ANSWER,
+            purpose = null,
+            budgetAmount = null,
             memberType = AdvertisementInquiryMemberType.COMPANY,
             inflowChannel = AdvertisementInquiryInflowChannel.COLDMAIL,
             utmSource = "coldmail",
             utmCampaign = "free_promo",
             utmContent = "templateA",
             referrer = null,
+        )
+        private val PAID_NOTIFICATION = NOTIFICATION.copy(
+            inquiryType = AdvertisementInquiryType.PAID_ADVERTISEMENT,
+            promotionChannel = null,
+            promotionAnswer = null,
+            purpose = "신입 마케터 채용 홍보",
+            budgetAmount = 1_500_000,
         )
     }
 }
