@@ -27,6 +27,7 @@ class Ec2InstanceClientTest {
 
     private val redash = Ec2Instance.REDASH
     private val crawler = Ec2Instance.CRAWLER
+    private val properties = Ec2InstanceProperties(redashInstanceId = "i-redash", crawlerInstanceId = "i-crawler")
 
     @Test
     fun `AWS가 돌려준 인스턴스 ID를 인스턴스별 상태로 읽는다`() {
@@ -36,12 +37,13 @@ class Ec2InstanceClientTest {
                 describe = {
                     DescribeInstancesResponse.builder()
                         .reservations(
-                            Reservation.builder().instances(instance(redash.instanceId, InstanceStateName.RUNNING)).build(),
-                            Reservation.builder().instances(instance(crawler.instanceId, InstanceStateName.STOPPED)).build(),
+                            Reservation.builder().instances(instance("i-redash", InstanceStateName.RUNNING)).build(),
+                            Reservation.builder().instances(instance("i-crawler", InstanceStateName.STOPPED)).build(),
                         )
                         .build()
                 },
             ),
+            properties,
         )
 
         // when
@@ -67,6 +69,7 @@ class Ec2InstanceClientTest {
                         .build()
                 },
             ),
+            properties,
         )
 
         // when & then
@@ -76,7 +79,7 @@ class Ec2InstanceClientTest {
 
     @Test
     fun `AWS가 지금 상태에서 받지 않는 요청은 409로 알린다`() {
-        val client = Ec2InstanceClient(FakeEc2Client(start = { throw ec2Exception("IncorrectInstanceState") }))
+        val client = Ec2InstanceClient(FakeEc2Client(start = { throw ec2Exception("IncorrectInstanceState") }), properties)
 
         val exception = assertThrows<ConflictException> { client.start(redash) }
 
@@ -85,11 +88,28 @@ class Ec2InstanceClientTest {
 
     @Test
     fun `권한 부족 같은 그 밖의 AWS 거절은 502로 알린다`() {
-        val client = Ec2InstanceClient(FakeEc2Client(stop = { throw ec2Exception("UnauthorizedOperation") }))
+        val client = Ec2InstanceClient(FakeEc2Client(stop = { throw ec2Exception("UnauthorizedOperation") }), properties)
 
         val exception = assertThrows<InternalServerException> { client.stop(crawler) }
 
         assertEquals(Ec2InstanceErrorCode.EC2_UNAVAILABLE, exception.errorCode)
+    }
+
+    @Test
+    fun `인스턴스 ID가 설정되지 않았으면 AWS를 부르지 않고 503으로 알린다`() {
+        // given: ID가 비어 있고, AWS를 부르면 FakeEc2Client가 실패한다
+        val client = Ec2InstanceClient(FakeEc2Client(), Ec2InstanceProperties(redashInstanceId = "i-redash"))
+
+        // when & then
+        val exception = assertThrows<InternalServerException> { client.start(crawler) }
+        assertEquals(Ec2InstanceErrorCode.EC2_INSTANCE_NOT_CONFIGURED, exception.errorCode)
+    }
+
+    @Test
+    fun `인스턴스 ID가 하나도 설정되지 않았으면 상태 조회도 AWS를 부르지 않는다`() {
+        val client = Ec2InstanceClient(FakeEc2Client(), Ec2InstanceProperties())
+
+        assertEquals(emptyMap<Ec2Instance, Ec2InstanceState>(), client.readStates(listOf(redash, crawler)))
     }
 
     private fun instance(instanceId: String, state: InstanceStateName): Instance =

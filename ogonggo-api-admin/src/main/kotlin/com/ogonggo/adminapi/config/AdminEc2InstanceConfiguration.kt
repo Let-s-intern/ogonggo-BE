@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.config
 
+import com.ogonggo.adminapi.ec2instance.implement.Ec2InstanceProperties
 import com.ogonggo.core.storage.s3.CloudAwsProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -10,7 +11,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.ec2.Ec2Client
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(CloudAwsProperties::class)
+@EnableConfigurationProperties(Ec2InstanceProperties::class, CloudAwsProperties::class)
 class AdminEc2InstanceConfiguration {
 
     /**

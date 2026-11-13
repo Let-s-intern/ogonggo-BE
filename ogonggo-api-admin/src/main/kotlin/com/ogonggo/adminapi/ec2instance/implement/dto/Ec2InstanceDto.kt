@@ -4,17 +4,15 @@ import com.ogonggo.core.enumeration.EnumField
 
 /**
  * 관리자 콘솔에서 켜고 끌 수 있는 EC2 인스턴스다. 콘솔은 이 이름으로만 고르고 인스턴스 ID는 모른다.
- *
- * [instanceId]는 JSON과 `/enums` 응답에 나가지 않는다. enum은 이름으로 직렬화되고 선택지는 이름·설명만 내보낸다.
- * 인스턴스를 바꾸거나 늘리면 여기를 고친다. 인스턴스 ID는 비밀이 아니지만 콘솔이 알 필요가 없다.
+ * 실제 인스턴스 ID는 코드에 두지 않고 [com.ogonggo.adminapi.ec2instance.implement.Ec2InstanceProperties] 설정에서 읽는다.
+ * 인스턴스 종류를 늘릴 때만 여기를 고친다.
  */
 enum class Ec2Instance(
     override val code: Int,
     override val desc: String,
-    val instanceId: String,
 ) : EnumField {
-    REDASH(1, "리대시", "i-0b277b7cfbfe0d9c2"),
-    CRAWLER(2, "크롤러", "i-0eaf16dee5d8e17f3"),
+    REDASH(1, "리대시"),
+    CRAWLER(2, "크롤러"),
 }
 
 /**

@@ -22,15 +22,18 @@ import software.amazon.awssdk.services.ec2.model.InstanceStateName
 @Component
 class Ec2InstanceClient(
     private val ec2Client: Ec2Client,
+    private val properties: Ec2InstanceProperties,
 ) {
 
-    /** 인스턴스별 상태다. AWS가 돌려주지 않은 인스턴스는 빠진다. */
+    /** 인스턴스별 상태다. ID가 설정되지 않았거나 AWS가 돌려주지 않은 인스턴스는 빠진다. */
     fun readStates(instances: List<Ec2Instance>): Map<Ec2Instance, Ec2InstanceState> {
-        if (instances.isEmpty()) return emptyMap()
-        val response = call("describe", instances.joinToString { it.instanceId }) {
-            ec2Client.describeInstances { it.instanceIds(instances.map(Ec2Instance::instanceId)) }
+        val byInstanceId = instances
+            .mapNotNull { instance -> properties.instanceId(instance)?.let { it to instance } }
+            .toMap()
+        if (byInstanceId.isEmpty()) return emptyMap()
+        val response = call("describe", byInstanceId.keys.joinToString()) {
+            ec2Client.describeInstances { it.instanceIds(byInstanceId.keys) }
         }
-        val byInstanceId = instances.associateBy(Ec2Instance::instanceId)
         return response.reservations()
             .flatMap { it.instances() }
             .mapNotNull { found -> byInstanceId[found.instanceId()]?.let { it to found.state().name().toState() } }
@@ -38,18 +41,26 @@ class Ec2InstanceClient(
     }
 
     fun start(instance: Ec2Instance): Ec2InstanceState {
-        val response = call("start", instance.instanceId) {
-            ec2Client.startInstances { it.instanceIds(instance.instanceId) }
+        val instanceId = configuredInstanceId(instance)
+        val response = call("start", instanceId) {
+            ec2Client.startInstances { it.instanceIds(instanceId) }
         }
         return response.startingInstances().single().currentState().name().toState()
     }
 
     fun stop(instance: Ec2Instance): Ec2InstanceState {
-        val response = call("stop", instance.instanceId) {
-            ec2Client.stopInstances { it.instanceIds(instance.instanceId) }
+        val instanceId = configuredInstanceId(instance)
+        val response = call("stop", instanceId) {
+            ec2Client.stopInstances { it.instanceIds(instanceId) }
         }
         return response.stoppingInstances().single().currentState().name().toState()
     }
+
+    private fun configuredInstanceId(instance: Ec2Instance): String =
+        properties.instanceId(instance) ?: run {
+            log.error("EC2 인스턴스 ID가 설정되지 않았습니다. instance={}", instance)
+            throw InternalServerException(Ec2InstanceErrorCode.EC2_INSTANCE_NOT_CONFIGURED)
+        }
 
     private fun <T> call(action: String, instanceIds: String, request: () -> T): T =
         try {

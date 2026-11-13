@@ -22,7 +22,7 @@ interface AdminEc2InstanceApi {
     @Operation(
         operationId = "listEc2Instances",
         summary = "EC2 인스턴스 상태 목록",
-        description = "관리자 콘솔에서 켜고 끌 수 있는 인스턴스(REDASH, CRAWLER)와 지금 AWS 상태를 돌려줍니다. 인스턴스 ID는 내보내지 않습니다.",
+        description = "관리자 콘솔에서 켜고 끌 수 있는 인스턴스(REDASH, CRAWLER)와 지금 AWS 상태를 돌려줍니다. 인스턴스 ID는 내보내지 않습니다. 서버에 ID가 설정되지 않은 인스턴스는 UNKNOWN입니다.",
     )
     @ApiResponses(
         value = [
@@ -59,6 +59,11 @@ interface AdminEc2InstanceApi {
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
+                responseCode = "503",
+                description = "EC2_INSTANCE_NOT_CONFIGURED: 서버 설정에 그 인스턴스의 ID가 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
                 responseCode = "502",
                 description = "EC2_UNAVAILABLE: AWS EC2 호출에 실패했습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
@@ -89,6 +94,11 @@ interface AdminEc2InstanceApi {
             ApiResponse(
                 responseCode = "409",
                 description = "EC2_INSTANCE_STATE_CONFLICT: 켜는 중이라 지금은 끌 수 없습니다. 켜진 뒤 다시 시도합니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "503",
+                description = "EC2_INSTANCE_NOT_CONFIGURED: 서버 설정에 그 인스턴스의 ID가 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
