@@ -540,6 +540,21 @@ GET /api/v1/admin/work24/{apiName}?{고용24 요청 파라미터}
 - 인증키(`authKey`), 응답 형식(`returnType`), 명세가 값을 고정한 파라미터는 서버가 채우므로 보내도 무시합니다. 값이 빈 파라미터는 보내지 않은 것으로 봅니다.
 - 응답 계약은 [API 성공 응답의 고용24 Open API 조회](api-response.md#고용24-open-api-조회)를 따릅니다.
 
+### 관리자 EC2 인스턴스 켜고 끄기
+
+```text
+GET  /api/v1/admin/ec2-instances
+POST /api/v1/admin/ec2-instances/{instanceName}/start
+POST /api/v1/admin/ec2-instances/{instanceName}/stop
+```
+
+- 결정일: 2026-11-12 / 리뷰 상태: 팀 리뷰 필요
+- 운영자가 리대시(`redash`)·크롤러(`crawler`) EC2 인스턴스를 콘솔에서 켜고 끕니다. 서버가 AWS EC2 API를 대신 부르고 DB에 남기지 않습니다.
+- `instanceName`은 관리자 API 설정 `ogonggo.ec2-instance.instances`의 키입니다. 인스턴스 ID를 직접 받지 않아 목록 밖 인스턴스는 건드릴 수 없고, 없는 이름은 404 `EC2_INSTANCE_NOT_FOUND`입니다.
+- 켜기·끄기는 상태 전이 명령이라 동사형 하위 경로의 POST이며 200과 요청 직후 상태(`PENDING`·`STOPPING`)를 `data`로 돌려줍니다. 최종 상태는 목록을 다시 불러 확인합니다.
+- 이미 켜진 인스턴스를 켜거나 꺼진 인스턴스를 끄면 AWS가 그대로 성공시키므로 반복 요청해도 됩니다. 끄는 중에 켜는 것처럼 AWS가 받지 않는 전이는 409 `EC2_INSTANCE_STATE_CONFLICT`, AWS 호출 실패는 502 `EC2_UNAVAILABLE`입니다.
+- 매일 켜고 끄는 AWS 스케줄(크롤러 EventBridge Scheduler, 리대시 SSM Quick Setup)은 그대로 둡니다. 콘솔에서 켜도 끄는 시각이 되면 다시 꺼집니다.
+
 ## 6. 현재 보류하는 항목
 
 다음은 실제 기능과 클라이언트 요구가 생길 때 결정합니다.
