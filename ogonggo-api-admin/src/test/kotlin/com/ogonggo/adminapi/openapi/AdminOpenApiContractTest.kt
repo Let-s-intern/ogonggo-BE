@@ -99,8 +99,8 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1company-content-priority/get",
             "/paths/~1api~1v1~1admin~1company-content-priority/put",
             "/paths/~1api~1v1~1admin~1ec2-instances/get",
-            "/paths/~1api~1v1~1admin~1ec2-instances~1{instanceName}~1start/post",
-            "/paths/~1api~1v1~1admin~1ec2-instances~1{instanceName}~1stop/post",
+            "/paths/~1api~1v1~1admin~1ec2-instances~1{instance}~1start/post",
+            "/paths/~1api~1v1~1admin~1ec2-instances~1{instance}~1stop/post",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }

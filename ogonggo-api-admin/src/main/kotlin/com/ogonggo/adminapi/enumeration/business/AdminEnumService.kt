@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.enumeration.business
 
 import com.ogonggo.adminapi.content.business.AdminContentSortType
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
+import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2Instance
 import com.ogonggo.core.enumeration.EnumOption
 import com.ogonggo.core.enumeration.catalog.EnumOptionReader
 import com.ogonggo.core.enumeration.enumOptionMapOf
@@ -27,6 +28,8 @@ class AdminEnumService(
             // 채용공고·부트캠프·모집글·공지 관리 목록 공통
             enumOptionsOf<AdminContentSortType>(),
             enumOptionsOf<AdminContentVisibility>(),
+            // 켜고 끌 수 있는 EC2 인스턴스
+            enumOptionsOf<Ec2Instance>(),
         )
     }
 }

@@ -20,15 +20,15 @@ class AdminEc2InstanceController(
     override fun listEc2Instances(): ResponseEntity<SuccessResponse<List<AdminEc2InstanceResponse>>> =
         SuccessResponse.ok(adminEc2InstanceService.list().map(AdminEc2InstanceResponse::from))
 
-    @PostMapping("/{instanceName}/start")
+    @PostMapping("/{$EC2_INSTANCE_PATH_VARIABLE}/start")
     override fun startEc2Instance(
-        @PathVariable("instanceName") instanceName: String,
+        @PathVariable(EC2_INSTANCE_PATH_VARIABLE) instance: String,
     ): ResponseEntity<SuccessResponse<AdminEc2InstanceResponse>> =
-        SuccessResponse.ok(AdminEc2InstanceResponse.from(adminEc2InstanceService.start(instanceName)))
+        SuccessResponse.ok(AdminEc2InstanceResponse.from(adminEc2InstanceService.start(parseEc2Instance(instance))))
 
-    @PostMapping("/{instanceName}/stop")
+    @PostMapping("/{$EC2_INSTANCE_PATH_VARIABLE}/stop")
     override fun stopEc2Instance(
-        @PathVariable("instanceName") instanceName: String,
+        @PathVariable(EC2_INSTANCE_PATH_VARIABLE) instance: String,
     ): ResponseEntity<SuccessResponse<AdminEc2InstanceResponse>> =
-        SuccessResponse.ok(AdminEc2InstanceResponse.from(adminEc2InstanceService.stop(instanceName)))
+        SuccessResponse.ok(AdminEc2InstanceResponse.from(adminEc2InstanceService.stop(parseEc2Instance(instance))))
 }

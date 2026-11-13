@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.ec2instance.presentation
 
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
+import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2Instance
 import com.ogonggo.adminapi.ec2instance.presentation.response.AdminEc2InstanceResponse
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -21,7 +22,7 @@ interface AdminEc2InstanceApi {
     @Operation(
         operationId = "listEc2Instances",
         summary = "EC2 인스턴스 상태 목록",
-        description = "관리자 콘솔에서 켜고 끌 수 있는 인스턴스(리대시 redash, 크롤러 crawler)와 지금 AWS 상태를 돌려줍니다.",
+        description = "관리자 콘솔에서 켜고 끌 수 있는 인스턴스(REDASH, CRAWLER)와 지금 AWS 상태를 돌려줍니다. 인스턴스 ID는 내보내지 않습니다.",
     )
     @ApiResponses(
         value = [
@@ -48,8 +49,8 @@ interface AdminEc2InstanceApi {
         value = [
             ApiResponse(responseCode = "200", description = "켜기 요청 성공", useReturnTypeSchema = true),
             ApiResponse(
-                responseCode = "404",
-                description = "EC2_INSTANCE_NOT_FOUND: 켜고 끌 수 있는 인스턴스 이름이 아닙니다.",
+                responseCode = "400",
+                description = "BAD_REQUEST: REDASH·CRAWLER가 아닌 인스턴스입니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -65,8 +66,8 @@ interface AdminEc2InstanceApi {
         ],
     )
     fun startEc2Instance(
-        @Parameter(description = "인스턴스 이름", schema = Schema(type = "string", allowableValues = ["redash", "crawler"]))
-        instanceName: String,
+        @Parameter(description = "인스턴스. 대소문자를 가리지 않습니다.", schema = Schema(implementation = Ec2Instance::class))
+        instance: String,
     ): ResponseEntity<SuccessResponse<AdminEc2InstanceResponse>>
 
     @Operation(
@@ -81,8 +82,8 @@ interface AdminEc2InstanceApi {
         value = [
             ApiResponse(responseCode = "200", description = "끄기 요청 성공", useReturnTypeSchema = true),
             ApiResponse(
-                responseCode = "404",
-                description = "EC2_INSTANCE_NOT_FOUND: 켜고 끌 수 있는 인스턴스 이름이 아닙니다.",
+                responseCode = "400",
+                description = "BAD_REQUEST: REDASH·CRAWLER가 아닌 인스턴스입니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -98,7 +99,7 @@ interface AdminEc2InstanceApi {
         ],
     )
     fun stopEc2Instance(
-        @Parameter(description = "인스턴스 이름", schema = Schema(type = "string", allowableValues = ["redash", "crawler"]))
-        instanceName: String,
+        @Parameter(description = "인스턴스. 대소문자를 가리지 않습니다.", schema = Schema(implementation = Ec2Instance::class))
+        instance: String,
     ): ResponseEntity<SuccessResponse<AdminEc2InstanceResponse>>
 }

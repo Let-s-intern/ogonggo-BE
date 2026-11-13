@@ -1,8 +1,8 @@
 package com.ogonggo.adminapi.ec2instance.implement
 
 import com.ogonggo.adminapi.ec2instance.error.Ec2InstanceErrorCode
+import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2Instance
 import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2InstanceState
-import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2InstanceTarget
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.InternalServerException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -25,19 +25,19 @@ import software.amazon.awssdk.services.ec2.model.StopInstancesResponse
 
 class Ec2InstanceClientTest {
 
-    private val redash = Ec2InstanceTarget("redash", "i-redash")
-    private val crawler = Ec2InstanceTarget("crawler", "i-crawler")
+    private val redash = Ec2Instance.REDASH
+    private val crawler = Ec2Instance.CRAWLER
 
     @Test
-    fun `인스턴스 ID별 AWS 상태를 읽는다`() {
+    fun `AWS가 돌려준 인스턴스 ID를 인스턴스별 상태로 읽는다`() {
         // given
         val client = Ec2InstanceClient(
             FakeEc2Client(
                 describe = {
                     DescribeInstancesResponse.builder()
                         .reservations(
-                            Reservation.builder().instances(instance("i-redash", InstanceStateName.RUNNING)).build(),
-                            Reservation.builder().instances(instance("i-crawler", InstanceStateName.STOPPED)).build(),
+                            Reservation.builder().instances(instance(redash.instanceId, InstanceStateName.RUNNING)).build(),
+                            Reservation.builder().instances(instance(crawler.instanceId, InstanceStateName.STOPPED)).build(),
                         )
                         .build()
                 },
@@ -48,7 +48,7 @@ class Ec2InstanceClientTest {
         val states = client.readStates(listOf(redash, crawler))
 
         // then
-        assertEquals(mapOf("i-redash" to Ec2InstanceState.RUNNING, "i-crawler" to Ec2InstanceState.STOPPED), states)
+        assertEquals(mapOf(redash to Ec2InstanceState.RUNNING, crawler to Ec2InstanceState.STOPPED), states)
     }
 
     @Test

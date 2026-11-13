@@ -6,10 +6,10 @@ import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.ec2instance.business.AdminEc2InstanceResult
 import com.ogonggo.adminapi.ec2instance.business.AdminEc2InstanceService
 import com.ogonggo.adminapi.ec2instance.error.Ec2InstanceErrorCode
+import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2Instance
 import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2InstanceState
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.error.ConflictException
-import com.ogonggo.core.error.EntityNotFoundException
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -46,28 +46,29 @@ class AdminEc2InstanceControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `인스턴스 목록과 상태를 data에 담는다`() {
+    fun `인스턴스 이름과 상태를 data에 담고 인스턴스 ID는 내보내지 않는다`() {
         // given
         Mockito.`when`(adminEc2InstanceService.list()).thenReturn(
             listOf(
-                AdminEc2InstanceResult("redash", "i-redash", Ec2InstanceState.RUNNING),
-                AdminEc2InstanceResult("crawler", "i-crawler", Ec2InstanceState.STOPPED),
+                AdminEc2InstanceResult(Ec2Instance.REDASH, Ec2InstanceState.RUNNING),
+                AdminEc2InstanceResult(Ec2Instance.CRAWLER, Ec2InstanceState.STOPPED),
             ),
         )
 
         // when & then
         mockMvc.perform(admin(get("/api/v1/admin/ec2-instances")))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data[0].name").value("redash"))
+            .andExpect(jsonPath("$.data[0].instance").value("REDASH"))
             .andExpect(jsonPath("$.data[0].state").value("RUNNING"))
-            .andExpect(jsonPath("$.data[1].instanceId").value("i-crawler"))
+            .andExpect(jsonPath("$.data[1].instance").value("CRAWLER"))
             .andExpect(jsonPath("$.data[1].state").value("STOPPED"))
+            .andExpect(jsonPath("$.data[0].instanceId").doesNotExist())
     }
 
     @Test
-    fun `켜기는 요청 직후 상태를 돌려준다`() {
-        Mockito.`when`(adminEc2InstanceService.start("crawler"))
-            .thenReturn(AdminEc2InstanceResult("crawler", "i-crawler", Ec2InstanceState.PENDING))
+    fun `경로의 인스턴스는 대소문자를 가리지 않고 켜기 직후 상태를 돌려준다`() {
+        Mockito.`when`(adminEc2InstanceService.start(Ec2Instance.CRAWLER))
+            .thenReturn(AdminEc2InstanceResult(Ec2Instance.CRAWLER, Ec2InstanceState.PENDING))
 
         mockMvc.perform(admin(post("/api/v1/admin/ec2-instances/crawler/start")))
             .andExpect(status().isOk)
@@ -75,23 +76,21 @@ class AdminEc2InstanceControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `목록에 없는 이름은 404로 알린다`() {
-        Mockito.`when`(adminEc2InstanceService.stop("db")).thenThrow(
-            EntityNotFoundException(Ec2InstanceErrorCode.EC2_INSTANCE_NOT_FOUND),
-        )
-
+    fun `REDASH·CRAWLER가 아닌 인스턴스는 400으로 알린다`() {
         mockMvc.perform(admin(post("/api/v1/admin/ec2-instances/db/stop")))
-            .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.code").value("EC2_INSTANCE_NOT_FOUND"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("[instance] REDASH 또는 CRAWLER만 쓸 수 있습니다."))
+
+        Mockito.verifyNoInteractions(adminEc2InstanceService)
     }
 
     @Test
     fun `상태를 바꾸는 중이면 409로 알린다`() {
-        Mockito.`when`(adminEc2InstanceService.start("redash")).thenThrow(
+        Mockito.`when`(adminEc2InstanceService.start(Ec2Instance.REDASH)).thenThrow(
             ConflictException(Ec2InstanceErrorCode.EC2_INSTANCE_STATE_CONFLICT),
         )
 
-        mockMvc.perform(admin(post("/api/v1/admin/ec2-instances/redash/start")))
+        mockMvc.perform(admin(post("/api/v1/admin/ec2-instances/REDASH/start")))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EC2_INSTANCE_STATE_CONFLICT"))
     }

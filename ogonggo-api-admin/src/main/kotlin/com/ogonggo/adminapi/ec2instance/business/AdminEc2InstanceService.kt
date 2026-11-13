@@ -1,7 +1,7 @@
 package com.ogonggo.adminapi.ec2instance.business
 
 import com.ogonggo.adminapi.ec2instance.implement.Ec2InstanceClient
-import com.ogonggo.adminapi.ec2instance.implement.Ec2InstanceProperties
+import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2Instance
 import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2InstanceState
 import org.springframework.stereotype.Service
 
@@ -13,31 +13,23 @@ import org.springframework.stereotype.Service
  */
 @Service
 class AdminEc2InstanceService(
-    private val properties: Ec2InstanceProperties,
     private val ec2InstanceClient: Ec2InstanceClient,
 ) {
 
     fun list(): List<AdminEc2InstanceResult> {
-        val targets = properties.targets()
-        val states = ec2InstanceClient.readStates(targets)
-        return targets.map {
-            AdminEc2InstanceResult(it.name, it.instanceId, states[it.instanceId] ?: Ec2InstanceState.UNKNOWN)
-        }
+        val instances = Ec2Instance.entries
+        val states = ec2InstanceClient.readStates(instances)
+        return instances.map { AdminEc2InstanceResult(it, states[it] ?: Ec2InstanceState.UNKNOWN) }
     }
 
-    fun start(name: String): AdminEc2InstanceResult {
-        val target = properties.target(name)
-        return AdminEc2InstanceResult(target.name, target.instanceId, ec2InstanceClient.start(target))
-    }
+    fun start(instance: Ec2Instance): AdminEc2InstanceResult =
+        AdminEc2InstanceResult(instance, ec2InstanceClient.start(instance))
 
-    fun stop(name: String): AdminEc2InstanceResult {
-        val target = properties.target(name)
-        return AdminEc2InstanceResult(target.name, target.instanceId, ec2InstanceClient.stop(target))
-    }
+    fun stop(instance: Ec2Instance): AdminEc2InstanceResult =
+        AdminEc2InstanceResult(instance, ec2InstanceClient.stop(instance))
 }
 
 data class AdminEc2InstanceResult(
-    val name: String,
-    val instanceId: String,
+    val instance: Ec2Instance,
     val state: Ec2InstanceState,
 )

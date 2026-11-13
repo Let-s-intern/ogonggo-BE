@@ -1,8 +1,8 @@
 package com.ogonggo.adminapi.ec2instance.implement
 
 import com.ogonggo.adminapi.ec2instance.error.Ec2InstanceErrorCode
+import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2Instance
 import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2InstanceState
-import com.ogonggo.adminapi.ec2instance.implement.dto.Ec2InstanceTarget
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.InternalServerException
 import org.slf4j.LoggerFactory
@@ -24,27 +24,29 @@ class Ec2InstanceClient(
     private val ec2Client: Ec2Client,
 ) {
 
-    /** 인스턴스 ID별 상태다. AWS가 돌려주지 않은 인스턴스는 빠진다. */
-    fun readStates(targets: List<Ec2InstanceTarget>): Map<String, Ec2InstanceState> {
-        if (targets.isEmpty()) return emptyMap()
-        val response = call("describe", targets.joinToString { it.instanceId }) {
-            ec2Client.describeInstances { it.instanceIds(targets.map(Ec2InstanceTarget::instanceId)) }
+    /** 인스턴스별 상태다. AWS가 돌려주지 않은 인스턴스는 빠진다. */
+    fun readStates(instances: List<Ec2Instance>): Map<Ec2Instance, Ec2InstanceState> {
+        if (instances.isEmpty()) return emptyMap()
+        val response = call("describe", instances.joinToString { it.instanceId }) {
+            ec2Client.describeInstances { it.instanceIds(instances.map(Ec2Instance::instanceId)) }
         }
+        val byInstanceId = instances.associateBy(Ec2Instance::instanceId)
         return response.reservations()
             .flatMap { it.instances() }
-            .associate { it.instanceId() to it.state().name().toState() }
+            .mapNotNull { found -> byInstanceId[found.instanceId()]?.let { it to found.state().name().toState() } }
+            .toMap()
     }
 
-    fun start(target: Ec2InstanceTarget): Ec2InstanceState {
-        val response = call("start", target.instanceId) {
-            ec2Client.startInstances { it.instanceIds(target.instanceId) }
+    fun start(instance: Ec2Instance): Ec2InstanceState {
+        val response = call("start", instance.instanceId) {
+            ec2Client.startInstances { it.instanceIds(instance.instanceId) }
         }
         return response.startingInstances().single().currentState().name().toState()
     }
 
-    fun stop(target: Ec2InstanceTarget): Ec2InstanceState {
-        val response = call("stop", target.instanceId) {
-            ec2Client.stopInstances { it.instanceIds(target.instanceId) }
+    fun stop(instance: Ec2Instance): Ec2InstanceState {
+        val response = call("stop", instance.instanceId) {
+            ec2Client.stopInstances { it.instanceIds(instance.instanceId) }
         }
         return response.stoppingInstances().single().currentState().name().toState()
     }
