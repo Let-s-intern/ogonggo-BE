@@ -6,4 +6,5 @@ data class AnnouncementManagementSearchCondition(
     val pinned: Boolean? = null,
     /** 제목에서 대소문자를 가리지 않고 부분 일치로 찾는다. */
     val keyword: String? = null,
+    val category: AnnouncementCategory? = null,
 )

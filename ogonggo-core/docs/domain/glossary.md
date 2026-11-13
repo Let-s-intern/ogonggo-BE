@@ -134,6 +134,8 @@
 | 용어 | 코드 | 설명 |
 | --- | --- | --- |
 | 공지 | `Announcement` | 관리자가 올리는 공지. 노출 여부와 상단 고정을 따로 관리합니다. |
+| 공지 카테고리 | `AnnouncementCategory` | 오공고 업데이트(`OGONGGO_UPDATE`), 새로운 공고 노트(`NEW_JOB_NOTE`), 서비스 안내(`SERVICE_NOTICE`), 비즈니스 공지(`BUSINESS_NOTICE`). 공지사항 화면의 카테고리 칸입니다. 새로운 공고 노트는 나중에 자동으로 올릴 주기 정리 글이고, 비즈니스 공지는 기업회원에게 알리는 공지입니다. |
+| 공지 푸시 대상 | `AnnouncementPushTarget` | 공지를 노출할 때 푸시를 보낼 대상. 보내지 않음(`NONE`), 전체 회원(`ALL`), 일반 회원(`GENERAL_MEMBERS`), 기업 회원(`COMPANY_MEMBERS`). 공지 하나에 한 번만 보냅니다. |
 | 서비스 의견 | `ServiceFeedback` | 좋은 점·아쉬운 점 의견. 비로그인으로도 남길 수 있습니다. |
 | 광고 문의 | `AdvertisementInquiry` | 기업 담당자가 남긴 광고 문의. 무료 홍보 신청을 포함한 광고 문의 전체를 한 테이블에 두고 문의 유형과 캠페인 코드로 나눕니다. 저장한 뒤 Slack과 확인 메일로 알립니다. 비회원도 남길 수 있습니다. |
 | 문의 유형 | `AdvertisementInquiryType` | 무료 홍보(`FREE_PROMOTION`), 출시 알림(`LAUNCH_ALERT`). 유료 홍보 같은 문의가 생기면 값을 더합니다. |

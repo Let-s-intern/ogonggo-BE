@@ -79,7 +79,7 @@ Business Service는 Response를 만들지 않고 유스케이스 `Result`를 반
 | `GET /api/v1/job-bookmarks` | `GET /api/v1/jobs`와 같음 | `GET /api/v1/jobs`와 같음 |
 | `GET /api/v1/bootcamps` | `category` | `keyword` — 운영 회사명 또는 프로그램명 |
 | `GET /api/v1/bootcamp-bookmarks` | `GET /api/v1/bootcamps`와 같음 | `GET /api/v1/bootcamps`와 같음 |
-| `GET /api/v1/announcements` | 없음. `sort`도 받지 않습니다([공지사항](#공지사항) 참고) | 없음 |
+| `GET /api/v1/announcements` | `category`, `pinned`. `sort`는 받지 않습니다([공지사항](#공지사항) 참고) | `keyword`(제목·요약·본문, 1자 이상 100자 이하) |
 | `GET /api/v1/concerns` | `category`. `sort`는 `LATEST`·`VIEW_COUNT`·`COMMENT_COUNT`([취준고민](#취준고민) 참고) | 없음 |
 
 검색어는 대소문자를 가리지 않는 부분 일치이며 2자 이상 100자 이하입니다. 직군(`jobField`)과 직무(`jobRole`)는 [enum 선택지](#enum-선택지)의 `JobField`·`JobRole` 값을 받으며, `jobField`만 보내면 그 직군의 직무 공고도 함께 걸립니다. 고용 형태(`employmentType`), 경력 유형(`experienceType`), 직무(`jobRole`)는 `jobRole=IT_BACKEND&jobRole=IT_FRONTEND_FULLSTACK`처럼 여러 번 보내 여러 개를 고를 수 있고 그중 하나라도 맞는 공고가 걸리며(고용 형태·경력 유형은 2026-10-10부터), 나머지 필터는 하나씩 고릅니다. 근무 지역은 시·도(`region`)와 시·군·구(`subRegion`) enum이며 [enum 선택지](#enum-선택지)의 `Region`·`SubRegion` 값을 받습니다. `region`만 보내면 그 시·도의 시·군·구 공고도 함께 걸립니다. 북마크 목록은 정렬을 고를 수 없고 최근 북마크 순을 유지합니다. 부트캠프의 `status`는 공개 목록이 다루는 `RECRUITING`과 `CLOSED`만 받고, `DRAFT`처럼 공개 목록에 없는 값을 보내면 빈 목록 대신 400 `BAD_REQUEST`로 응답하며 메시지가 `[status]`로 문제가 된 파라미터를 알립니다. 값 자체가 enum에 없으면 다른 파라미터와 같이 400 `BAD_REQUEST`입니다.
@@ -454,7 +454,10 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 사용자 목록은 노출 중인 미삭제 공지만 고정 공지를 먼저 두고 최신순으로 줍니다. 목록에는 본문을 싣지 않습니다. 고정 공지도 정렬로 앞에 오는 것이라 2쪽부터는 반복되지 않습니다.
 - 사용자 상세는 비노출·삭제 공지를 없는 공지와 같이 404 `ANNOUNCEMENT_NOT_FOUND`로 응답합니다. 조회 수는 세지 않습니다.
 - 콘솔 등록은 201과 등록한 공지 전체를, 수정(`PATCH`)은 수정된 공지 전체를 `data`로 돌려줍니다. 삭제는 소프트 삭제이며 반복해도 200입니다.
-- 공지 본문에는 이미지를 넣지 않습니다. 그래서 커뮤니티 모집글과 달리 이미지 자산과 연결하지 않고, 관리자 API에도 이미지 업로드를 두지 않습니다.
+- 공지 본문에는 이미지를 넣지 않습니다. 관리자 API에도 이미지 업로드를 두지 않습니다.
+- 공지는 카테고리(`category`, `AnnouncementCategory`: `OGONGGO_UPDATE` 오공고 업데이트, `NEW_JOB_NOTE` 새로운 공고 노트, `SERVICE_NOTICE` 서비스 안내), 썸네일 주소(`thumbnailUrl`, 선택, 2048자 이하), 요약(`summary`, 선택, 300자 이하)을 가집니다(2026-11-12, LC-3614, 리뷰 상태: 팀 리뷰 필요). 콘솔 등록은 카테고리가 필수이고, 수정에서 썸네일·요약에 빈 글자를 보내면 지웁니다. 썸네일은 콘솔이 사용자 API `POST /api/v1/images`(`usage=NOTIFICATION`)로 올린 이미지이며, 등록·수정할 때 관리자 본인이 올린 이미지면 첨부해 정리 작업이 지우지 않게 합니다. `NEW_JOB_NOTE`는 나중에 백엔드가 새 공고 수를 정리해 자동으로 올릴 카테고리이며, 그 전까지는 콘솔에서 직접 올립니다.
+- 사용자 목록은 `category`, `pinned`, `keyword`로 거릅니다. 검색어는 제목·요약·본문에서 대소문자를 가리지 않는 부분 일치입니다. 본문은 Lexical JSON이라 JSON 키(영문)에도 걸릴 수 있으나 글자만 편 칸을 따로 두지 않았습니다. 공지사항 화면의 맨 위 추천 카드는 고정 공지(`pinned=true`)입니다.
+- `GET /api/v1/announcements/categories`는 공지사항 화면의 `전체 카테고리` 칸들입니다. 모든 카테고리를 정의 순서대로 주고, 카테고리마다 노출 중인 공지 수(`count`)와 최근 공지 3건(`recentAnnouncements`, 고정 여부와 상관없는 최신순)을 싣습니다. 공지가 없는 카테고리도 0건과 빈 목록으로 줍니다.
 
 ### 취준고민
 

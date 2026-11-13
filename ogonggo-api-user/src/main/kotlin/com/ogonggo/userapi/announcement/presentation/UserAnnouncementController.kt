@@ -1,6 +1,9 @@
 package com.ogonggo.userapi.announcement.presentation
 
+import com.ogonggo.core.announcement.domain.AnnouncementCategory
+import com.ogonggo.core.announcement.domain.AnnouncementPublicSearchCondition
 import com.ogonggo.userapi.announcement.business.UserAnnouncementService
+import com.ogonggo.userapi.announcement.presentation.response.UserAnnouncementCategoryResponse
 import com.ogonggo.userapi.announcement.presentation.response.UserAnnouncementDetailResponse
 import com.ogonggo.userapi.announcement.presentation.response.UserAnnouncementSummaryResponse
 import com.ogonggo.userapi.response.PageResponse
@@ -24,8 +27,15 @@ class UserAnnouncementController(
     override fun getAnnouncements(
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
+        @RequestParam(name = "category", required = false) category: AnnouncementCategory?,
+        @RequestParam(name = "pinned", required = false) pinned: Boolean?,
+        @RequestParam(name = "keyword", required = false) keyword: String?,
     ): ResponseEntity<SuccessResponse<PageResponse<UserAnnouncementSummaryResponse>>> {
-        val result = userAnnouncementService.getAnnouncements(page = page - 1, size = size)
+        val result = userAnnouncementService.getAnnouncements(
+            condition = AnnouncementPublicSearchCondition(category = category, pinned = pinned, keyword = keyword),
+            page = page - 1,
+            size = size,
+        )
         return SuccessResponse.ok(
             PageResponse.fromZeroBased(
                 items = result.items.map(UserAnnouncementSummaryResponse::from),
@@ -36,6 +46,10 @@ class UserAnnouncementController(
             ),
         )
     }
+
+    @GetMapping("/categories")
+    override fun getAnnouncementCategories(): ResponseEntity<SuccessResponse<List<UserAnnouncementCategoryResponse>>> =
+        SuccessResponse.ok(userAnnouncementService.getCategories().map(UserAnnouncementCategoryResponse::from))
 
     @GetMapping("/{announcementId}")
     override fun getAnnouncement(

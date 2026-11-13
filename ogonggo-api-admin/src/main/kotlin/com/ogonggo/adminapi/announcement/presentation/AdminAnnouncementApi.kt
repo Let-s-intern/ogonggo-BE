@@ -1,5 +1,7 @@
 package com.ogonggo.adminapi.announcement.presentation
 
+import io.swagger.v3.oas.annotations.Parameter
+import com.ogonggo.core.announcement.domain.AnnouncementCategory
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.adminapi.announcement.presentation.request.CreateAdminAnnouncementRequest
@@ -56,6 +58,7 @@ interface AdminAnnouncementApi {
         @Size(max = 100) keyword: String?,
         visibility: AdminContentVisibility?,
         pinned: Boolean?,
+        category: AnnouncementCategory?,
     ): ResponseEntity<SuccessResponse<PageResponse<AdminAnnouncementSummaryResponse>>>
 
     @Operation(operationId = "getAnnouncement", summary = "공지사항 상세 조회")
@@ -79,6 +82,8 @@ interface AdminAnnouncementApi {
         description = """
             등록한 공지 전체를 반환합니다. visibility가 VISIBLE이면 곧바로 사용자에게 노출됩니다.
             content는 Lexical EditorState JSON 문자열이며 200,000자 이하여야 합니다.
+            pushTarget을 정하고 VISIBLE로 등록하면 그 대상에게 푸시 알림을 한 번 보냅니다. HIDDEN으로 등록하면 나중에 노출할 때 보냅니다.
+            푸시 제목은 공지 제목(100자까지), 본문은 요약(없으면 기본 문구)이고 누르면 사용자 공지 상세로 이동합니다.
         """,
     )
     @ApiResponses(
@@ -92,6 +97,7 @@ interface AdminAnnouncementApi {
         ],
     )
     fun createAnnouncement(
+        @Parameter(hidden = true) adminUserId: Long,
         @Valid request: CreateAdminAnnouncementRequest,
     ): ResponseEntity<SuccessResponse<AdminAnnouncementDetailResponse>>
 
@@ -100,7 +106,10 @@ interface AdminAnnouncementApi {
         summary = "공지사항 수정",
         description = """
             보낸 값만 바꾸고 수정된 공지 전체를 반환합니다. 제목과 본문은 비울 수 없습니다.
-            노출(visibility)과 상단 고정(pinned)도 이 API로 바꿉니다.
+            노출(visibility)과 상단 고정(pinned), 카테고리(category)도 이 API로 바꿉니다.
+            썸네일(thumbnailUrl)과 요약(summary)은 빈 글자를 보내면 지웁니다. 상단 고정 공지는 사용자 공지사항 화면의 추천 카드입니다.
+            푸시 대상(pushTarget)이 정해진 공지가 이 수정으로 노출 상태가 되면 푸시를 한 번 보냅니다. 노출 중인 공지에 대상을 정해도 바로 보냅니다.
+            NONE이면 노출해도 보내지 않고, 이미 보낸 공지는 숨겼다 다시 노출해도 다시 보내지 않습니다.
         """,
     )
     @ApiResponses(
@@ -112,6 +121,11 @@ interface AdminAnnouncementApi {
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
+                responseCode = "409",
+                description = "ANNOUNCEMENT_PUSH_ALREADY_SENT: 이미 푸시를 보낸 공지의 푸시 대상을 바꾸려 했습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
                 responseCode = "404",
                 description = ANNOUNCEMENT_NOT_FOUND_DESCRIPTION,
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
@@ -119,6 +133,7 @@ interface AdminAnnouncementApi {
         ],
     )
     fun updateAnnouncement(
+        @Parameter(hidden = true) adminUserId: Long,
         @Positive announcementId: Long,
         @Valid request: UpdateAdminAnnouncementRequest,
     ): ResponseEntity<SuccessResponse<AdminAnnouncementDetailResponse>>

@@ -17,6 +17,10 @@ class AnnouncementAppender internal constructor(
                 content = dto.content,
                 pinned = dto.pinned,
                 published = dto.published,
+                category = dto.category,
+                thumbnailUrl = dto.thumbnailUrl,
+                summary = dto.summary,
+                pushTarget = dto.pushTarget,
             ),
         )
 }

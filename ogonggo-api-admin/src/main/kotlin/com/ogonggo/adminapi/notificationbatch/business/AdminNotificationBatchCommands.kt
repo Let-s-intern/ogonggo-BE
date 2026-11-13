@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.notificationbatch.business
 
+import com.ogonggo.adminapi.notificationbatch.implement.dto.NotificationBatchCreateDto
 import com.ogonggo.core.notificationbatch.domain.NotificationBatchTargetType
 
 data class CreateNotificationBatchCommand(
@@ -14,4 +15,16 @@ data class CreateNotificationBatchCommand(
     val advertisement: Boolean = false,
     val imageId: String? = null,
     val imageUrl: String? = null,
-)
+) {
+    fun toDto(): NotificationBatchCreateDto = NotificationBatchCreateDto(
+        targetType = targetType,
+        userIds = userIds,
+        title = title,
+        body = body,
+        data = data,
+        jobRoles = jobRoles,
+        advertisement = advertisement,
+        imageId = imageId,
+        imageUrl = imageUrl,
+    )
+}

@@ -12,6 +12,11 @@ import com.ogonggo.adminapi.announcement.business.AdminAnnouncementPageResult
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementResult
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementService
 import com.ogonggo.adminapi.announcement.business.AdminAnnouncementSummary
+import com.ogonggo.adminapi.announcement.business.AdminAnnouncementUpdateCommand
+import com.ogonggo.core.announcement.domain.AnnouncementCategory
+import com.ogonggo.core.announcement.domain.AnnouncementPushTarget
+import com.ogonggo.core.announcement.error.AnnouncementErrorCode
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.announcement.domain.AnnouncementManagementSearchCondition
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -20,7 +25,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -71,13 +78,16 @@ class AdminAnnouncementControllerTest @Autowired constructor(
             content = CONTENT,
             pinned = true,
             visibility = AdminContentVisibility.VISIBLE,
+            category = AnnouncementCategory.SERVICE_NOTICE,
+            thumbnailUrl = THUMBNAIL_URL,
+            summary = "이번 주 일요일 새벽 점검",
         )
-        Mockito.`when`(adminAnnouncementService.createAnnouncement(command)).thenReturn(ANNOUNCEMENT_ID)
+        Mockito.`when`(adminAnnouncementService.createAnnouncement(command, ADMIN_ID)).thenReturn(ANNOUNCEMENT_ID)
         Mockito.`when`(adminAnnouncementService.getAnnouncement(ANNOUNCEMENT_ID)).thenReturn(announcementResult())
 
         // when & then
         mockMvc.perform(
-            admin(
+            adminWithId(
                 post("/api/v1/admin/announcements")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
@@ -87,6 +97,9 @@ class AdminAnnouncementControllerTest @Autowired constructor(
                                 "content" to CONTENT,
                                 "pinned" to true,
                                 "visibility" to "VISIBLE",
+                                "category" to "SERVICE_NOTICE",
+                                "thumbnailUrl" to THUMBNAIL_URL,
+                                "summary" to "이번 주 일요일 새벽 점검",
                             ),
                         ),
                     ),
@@ -96,6 +109,103 @@ class AdminAnnouncementControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.id").value(ANNOUNCEMENT_ID))
             .andExpect(jsonPath("$.data.content").value(CONTENT))
+            .andExpect(jsonPath("$.data.category").value("SERVICE_NOTICE"))
+            .andExpect(jsonPath("$.data.thumbnailUrl").value(THUMBNAIL_URL))
+            .andExpect(jsonPath("$.data.pushTarget").value("ALL"))
+            .andExpect(jsonPath("$.data.pushBatchId").value(PUSH_BATCH_ID))
+    }
+
+    @Test
+    fun `등록할 때 카테고리를 빠뜨리면 오공고 업데이트로, 푸시 대상은 보낸 값으로 옮긴다`() {
+        // given
+        val command = AdminAnnouncementCreateCommand(
+            title = "공지",
+            content = CONTENT,
+            pinned = false,
+            visibility = AdminContentVisibility.VISIBLE,
+            category = AnnouncementCategory.OGONGGO_UPDATE,
+            thumbnailUrl = null,
+            summary = null,
+            pushTarget = AnnouncementPushTarget.COMPANY_MEMBERS,
+        )
+        Mockito.`when`(adminAnnouncementService.createAnnouncement(command, ADMIN_ID)).thenReturn(ANNOUNCEMENT_ID)
+        Mockito.`when`(adminAnnouncementService.getAnnouncement(ANNOUNCEMENT_ID)).thenReturn(announcementResult())
+
+        // when & then
+        mockMvc.perform(
+            adminWithId(
+                post("/api/v1/admin/announcements")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            mapOf(
+                                "title" to "공지",
+                                "content" to CONTENT,
+                                "pinned" to false,
+                                "visibility" to "VISIBLE",
+                                "pushTarget" to "COMPANY_MEMBERS",
+                            ),
+                        ),
+                    ),
+            ),
+        )
+            .andExpect(status().isCreated)
+
+        Mockito.verify(adminAnnouncementService).createAnnouncement(command, ADMIN_ID)
+    }
+
+    @Test
+    fun `이미 푸시를 보낸 공지의 푸시 대상을 바꾸면 409다`() {
+        // given
+        Mockito.`when`(
+            adminAnnouncementService.updateAnnouncement(
+                ANNOUNCEMENT_ID,
+                AdminAnnouncementUpdateCommand(pushTarget = AnnouncementPushTarget.NONE),
+                ADMIN_ID,
+            ),
+        ).thenThrow(ConflictException(AnnouncementErrorCode.ANNOUNCEMENT_PUSH_ALREADY_SENT))
+
+        // when & then
+        mockMvc.perform(
+            adminWithId(
+                patch("/api/v1/admin/announcements/$ANNOUNCEMENT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(mapOf("pushTarget" to "NONE"))),
+            ),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("ANNOUNCEMENT_PUSH_ALREADY_SENT"))
+    }
+
+    @Test
+    fun `요약이 300자를 넘거나 썸네일이 주소가 아니면 등록하지 않는다`() {
+        val cases = listOf(
+            mapOf("summary" to "가".repeat(301)),
+            mapOf("thumbnailUrl" to "thumbnail.png"),
+        )
+
+        cases.forEach { extra ->
+            mockMvc.perform(
+                adminWithId(
+                    post("/api/v1/admin/announcements")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                            objectMapper.writeValueAsString(
+                                mapOf(
+                                    "title" to "공지",
+                                    "content" to CONTENT,
+                                    "pinned" to false,
+                                    "visibility" to "VISIBLE",
+                                    "category" to "OGONGGO_UPDATE",
+                                ) + extra,
+                            ),
+                        ),
+                ),
+            )
+                .andExpect(status().isBadRequest)
+        }
+
+        Mockito.verifyNoInteractions(adminAnnouncementService)
     }
 
     @Test
@@ -120,17 +230,26 @@ class AdminAnnouncementControllerTest @Autowired constructor(
             content = "평문",
             pinned = false,
             visibility = AdminContentVisibility.HIDDEN,
+            category = AnnouncementCategory.OGONGGO_UPDATE,
+            thumbnailUrl = null,
+            summary = null,
         )
-        Mockito.`when`(adminAnnouncementService.createAnnouncement(command))
+        Mockito.`when`(adminAnnouncementService.createAnnouncement(command, ADMIN_ID))
             .thenThrow(InvalidRequestFieldException("content", "에디터 내용 JSON 형식이 올바르지 않습니다."))
 
         mockMvc.perform(
-            admin(
+            adminWithId(
                 post("/api/v1/admin/announcements")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            mapOf("title" to "공지", "content" to "평문", "pinned" to false, "visibility" to "HIDDEN"),
+                            mapOf(
+                                "title" to "공지",
+                                "content" to "평문",
+                                "pinned" to false,
+                                "visibility" to "HIDDEN",
+                                "category" to "OGONGGO_UPDATE",
+                            ),
                         ),
                     ),
             ),
@@ -142,7 +261,7 @@ class AdminAnnouncementControllerTest @Autowired constructor(
     @Test
     fun `수정할 때 제목을 비울 수 없다`() {
         mockMvc.perform(
-            admin(
+            adminWithId(
                 patch("/api/v1/admin/announcements/$ANNOUNCEMENT_ID")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(mapOf("title" to " "))),
@@ -160,6 +279,12 @@ class AdminAnnouncementControllerTest @Autowired constructor(
             title = "서비스 점검 안내",
             pinned = true,
             visibility = AdminContentVisibility.VISIBLE,
+            category = AnnouncementCategory.SERVICE_NOTICE,
+            thumbnailUrl = THUMBNAIL_URL,
+            summary = "이번 주 일요일 새벽 점검",
+            pushTarget = AnnouncementPushTarget.ALL,
+            pushBatchId = PUSH_BATCH_ID,
+            pushedAt = NOW,
             registeredAt = NOW,
             updatedAt = NOW,
         ),
@@ -169,8 +294,19 @@ class AdminAnnouncementControllerTest @Autowired constructor(
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
         request.with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY)))
 
+    /** 등록·수정은 썸네일을 올린 관리자로 첨부하므로 관리자 식별자가 주체여야 한다. */
+    private fun adminWithId(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
+        request.with(
+            authentication(
+                UsernamePasswordAuthenticationToken(ADMIN_ID, null, listOf(SimpleGrantedAuthority(ADMIN_AUTHORITY))),
+            ),
+        )
+
     private companion object {
         const val ANNOUNCEMENT_ID = 7L
+        const val ADMIN_ID = 9L
+        const val PUSH_BATCH_ID = "3f1c2b4e-1111-4a5b-9c0d-000000000001"
+        const val THUMBNAIL_URL = "https://bucket.example.com/ogonggo/notification/thumb.png"
         const val CONTENT = """{"root":{"children":[],"type":"root","version":1}}"""
         val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 22, 10, 0)
     }
