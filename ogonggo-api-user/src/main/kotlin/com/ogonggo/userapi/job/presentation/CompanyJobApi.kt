@@ -39,6 +39,7 @@ interface CompanyJobApi {
         summary = "채용공고 등록",
         description = """
             등록한 공고는 항상 임시저장 상태로 만들어집니다. 지원자에게 노출하려면 게시를 따로 요청해야 합니다.
+            원문 이미지(`sourceImageUrls`)는 선택이며, 올리면 공고 상세 `공고 원문`에 글 아래로 보입니다.
         """,
     )
     @ApiResponses(
@@ -95,8 +96,11 @@ summary = "내 채용공고 목록 조회", description = "최근에 등록한 �
         @Positive jobId: Long,
     ): ResponseEntity<SuccessResponse<CompanyJobDetailResponse>>
 
-    @Operation(operationId = "replaceMyJob",
-summary = "내 채용공고 수정", description = "보낸 값으로 공고 전체를 교체합니다.")
+    @Operation(
+        operationId = "replaceMyJob",
+        summary = "내 채용공고 수정",
+        description = "보낸 값으로 공고 전체를 교체합니다. 원문 이미지(`sourceImageUrls`)만 예외로, 보내지 않으면 지금 원문 이미지를 그대로 둡니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),

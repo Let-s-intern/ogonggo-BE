@@ -107,12 +107,13 @@ data class CompanyJobResult(
     val applicationMethod: JobApplicationMethod?,
     val applyEmail: String?,
     val sourceUrl: String?,
+    val sourceImageUrls: List<String>,
     val publicationStatus: JobPublicationStatus,
     val reviewStatus: ContentReviewStatus?,
     val closedAt: LocalDateTime?,
 ) {
     companion object {
-        internal fun from(job: Job): CompanyJobResult = CompanyJobResult(
+        internal fun from(job: Job, sourceImageUrls: List<String>): CompanyJobResult = CompanyJobResult(
             id = job.requiredId(),
             companyName = job.companyName,
             parentCompanyName = job.parentCompanyName,
@@ -145,6 +146,7 @@ data class CompanyJobResult(
             applicationMethod = job.applicationMethod,
             applyEmail = job.applyEmail,
             sourceUrl = job.sourceUrl,
+            sourceImageUrls = sourceImageUrls,
             publicationStatus = job.publicationStatus,
             reviewStatus = job.reviewStatus,
             closedAt = job.closedAt,

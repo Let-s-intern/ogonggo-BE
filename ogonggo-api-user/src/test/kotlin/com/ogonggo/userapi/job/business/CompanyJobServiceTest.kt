@@ -14,6 +14,8 @@ import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractApp
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractCompanyPostingAppendDto
 import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.implement.JobSourceManager
+import com.ogonggo.core.job.implement.JobSourceReader
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
 import com.ogonggo.core.user.error.UserErrorCode
@@ -37,6 +39,8 @@ class CompanyJobServiceTest {
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val jobAppender = Mockito.mock(JobAppender::class.java)
     private val jobManager = Mockito.mock(JobManager::class.java)
+    private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
+    private val jobSourceManager = Mockito.mock(JobSourceManager::class.java)
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-28T01:00:00Z"), ZONE)
     private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
@@ -46,6 +50,8 @@ class CompanyJobServiceTest {
         jobReader,
         jobAppender,
         jobManager,
+        jobSourceReader,
+        jobSourceManager,
         imageAssetManager,
         advertisementContractAppender,
         clock,
@@ -164,6 +170,69 @@ class CompanyJobServiceTest {
     }
 
     @Test
+    fun `등록할 때 원문 이미지를 올리면 원문으로 저장하고 첨부한다`() {
+        // given
+        givenAccount(role = UserRole.COMPANY)
+        val saved = Mockito.mock(Job::class.java)
+        Mockito.`when`(saved.id).thenReturn(JOB_ID)
+        Mockito.`when`(jobAppender.append(command().copy(ownerUserId = USER_ID))).thenReturn(saved)
+
+        // when
+        service.create(USER_ID, command(), listOf(SOURCE_IMAGE_URL, OTHER_SOURCE_IMAGE_URL))
+
+        // then
+        Mockito.verify(imageAssetManager).attachImageUrls(USER_ID, listOf(SOURCE_IMAGE_URL, OTHER_SOURCE_IMAGE_URL))
+        Mockito.verify(jobSourceManager).save(
+            JOB_ID,
+            """<p><img src="$SOURCE_IMAGE_URL" alt="공고 원문 이미지"></p>""" +
+                """<p><img src="$OTHER_SOURCE_IMAGE_URL" alt="공고 원문 이미지"></p>""",
+        )
+    }
+
+    @Test
+    fun `등록할 때 원문 이미지가 없으면 원문을 만들지 않는다`() {
+        givenAccount(role = UserRole.COMPANY)
+        val saved = Mockito.mock(Job::class.java)
+        Mockito.`when`(saved.id).thenReturn(JOB_ID)
+        Mockito.`when`(jobAppender.append(command().copy(ownerUserId = USER_ID))).thenReturn(saved)
+
+        service.create(USER_ID, command(), emptyList())
+
+        Mockito.verifyNoInteractions(jobSourceManager)
+    }
+
+    @Test
+    fun `수정할 때 원문 이미지를 보내지 않으면 원문을 그대로 둔다`() {
+        givenAccount(role = UserRole.COMPANY)
+        Mockito.`when`(jobReader.readOwnedForUpdate(USER_ID, JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
+
+        service.update(USER_ID, JOB_ID, updateCommand(), null)
+
+        Mockito.verifyNoInteractions(jobSourceManager)
+    }
+
+    @Test
+    fun `수정할 때 원문 이미지를 빈 목록으로 보내면 원문을 지운다`() {
+        givenAccount(role = UserRole.COMPANY)
+        Mockito.`when`(jobReader.readOwnedForUpdate(USER_ID, JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
+
+        service.update(USER_ID, JOB_ID, updateCommand(), emptyList())
+
+        Mockito.verify(jobSourceManager).delete(JOB_ID, NOW)
+    }
+
+    @Test
+    fun `수정할 때 원문 이미지를 보내면 그 이미지로 원문을 바꾼다`() {
+        givenAccount(role = UserRole.COMPANY)
+        Mockito.`when`(jobReader.readOwnedForUpdate(USER_ID, JOB_ID)).thenReturn(Mockito.mock(Job::class.java))
+
+        service.update(USER_ID, JOB_ID, updateCommand(), listOf(SOURCE_IMAGE_URL))
+
+        Mockito.verify(jobSourceManager).save(JOB_ID, """<p><img src="$SOURCE_IMAGE_URL" alt="공고 원문 이미지"></p>""")
+        Mockito.verify(imageAssetManager).attachImageUrls(USER_ID, listOf(SOURCE_IMAGE_URL))
+    }
+
+    @Test
     fun `정지되거나 탈퇴한 계정은 사용할 수 없다`() {
         givenAccount(role = UserRole.COMPANY, status = UserStatus.SUSPENDED)
         assertEquals(
@@ -235,6 +304,14 @@ class CompanyJobServiceTest {
         )
     }
 
+    private fun updateCommand(): JobUpdateDto = JobUpdateDto(
+        companyName = "오공고",
+        title = "백엔드 개발자",
+        employmentType = JobEmploymentType.FULL_TIME,
+        experienceType = JobExperienceType.EXPERIENCED,
+        recruitmentType = JobRecruitmentType.PERIOD,
+    )
+
     private fun command(): JobAppendDto = JobAppendDto(
         companyName = "오공고",
         title = "백엔드 개발자",
@@ -252,5 +329,7 @@ class CompanyJobServiceTest {
         private const val ACCOUNT_EMAIL = "company@example.com"
         private const val LOGO_URL = "https://bucket.example.com/ogonggo/etc/logo.png"
         private const val COVER_URL = "https://bucket.example.com/ogonggo/etc/cover.png"
+        private const val SOURCE_IMAGE_URL = "https://bucket.example.com/ogonggo/etc/poster-1.png"
+        private const val OTHER_SOURCE_IMAGE_URL = "https://bucket.example.com/ogonggo/etc/poster-2.png"
     }
 }

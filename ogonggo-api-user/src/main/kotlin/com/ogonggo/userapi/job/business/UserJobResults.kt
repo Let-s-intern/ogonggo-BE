@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.business
 
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
@@ -164,8 +165,10 @@ data class UserJobResult(
     val hiringProcess: String?,
     val recruitmentNotice: String?,
     val sourceUrl: String?,
-    /** AI 서버가 보낸 원문 HTML이다. 원문이 없는 공고와 기업회원 공고는 null이다. */
+    /** 원문 HTML이다. AI 서버가 보낸 원문이나 기업회원이 올린 원문 이미지이며, 없으면 null이다. */
     val sourceHtml: String?,
+    /** 등록 경로. 기업회원 공고는 원문 HTML이 원문 이미지뿐이라 화면이 글 칸과 함께 그린다. */
+    val source: ContentSource,
     /** 이메일로 지원받는 공고가 지원서를 받는 주소다. */
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
@@ -212,6 +215,7 @@ data class UserJobResult(
             recruitmentNotice = job.recruitmentNotice,
             sourceUrl = job.sourceUrl,
             sourceHtml = sourceHtml,
+            source = job.source,
             applyEmail = job.applyEmail,
             closedAt = job.closedAt,
             registeredAt = job.publicRegisteredAt(),

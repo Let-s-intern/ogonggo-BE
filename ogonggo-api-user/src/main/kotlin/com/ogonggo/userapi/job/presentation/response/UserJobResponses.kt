@@ -1,5 +1,6 @@
 package com.ogonggo.userapi.job.presentation.response
 
+import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.job.domain.JobAnalysisContent
 import com.ogonggo.core.job.domain.JobEducationLevel
 import com.ogonggo.core.job.domain.JobEmploymentType
@@ -151,8 +152,10 @@ data class UserJobDetailResponse(
     @field:Schema(description = "채용 안내사항. 제출 서류·근무 조건·유의사항 등")
     val recruitmentNotice: String?,
     val sourceUrl: String?,
-    @field:Schema(description = "채용공고 원문 HTML. 원문 페이지의 본문 영역에서 안전한 태그(제목·문단·목록·표·굵게·링크·이미지)만 남긴 것으로, 그대로 그리면 됩니다. 스타일 속성은 없습니다. 원문이 없는 공고는 null입니다")
+    @field:Schema(description = "채용공고 원문 HTML. 원문 페이지의 본문 영역에서 안전한 태그(제목·문단·목록·표·굵게·링크·이미지)만 남긴 것으로, 그대로 그리면 됩니다. 스타일 속성은 없습니다. 기업회원 공고는 기업이 올린 원문 이미지(문단마다 이미지 하나)입니다. 원문이 없는 공고는 null입니다")
     val sourceHtml: String?,
+    @field:Schema(description = "등록 경로. COMPANY(기업회원 등록)이면 sourceHtml은 기업이 선택으로 올린 원문 이미지뿐이므로, 본문 칸을 함께 그리고 그 아래에 sourceHtml을 그립니다. 그 밖에는 sourceHtml이 있으면 그것이 원문 전체입니다")
+    val source: ContentSource,
     val applyEmail: String?,
     val closedAt: LocalDateTime?,
     @field:Schema(description = "공고 등록 일시(한국 시간). 사용자에게 보이기 시작한 시각으로, 수집 공고는 오공고에 들어온 시각이고 기업회원 공고는 처음 승인된 시각입니다. 모집 시작 일시와 다릅니다. 웹은 24시간 안이면 NEW를 답니다")
@@ -192,6 +195,7 @@ data class UserJobDetailResponse(
             recruitmentNotice = result.recruitmentNotice,
             sourceUrl = result.sourceUrl,
             sourceHtml = result.sourceHtml,
+            source = result.source,
             applyEmail = result.applyEmail,
             closedAt = result.closedAt,
             registeredAt = result.registeredAt,
