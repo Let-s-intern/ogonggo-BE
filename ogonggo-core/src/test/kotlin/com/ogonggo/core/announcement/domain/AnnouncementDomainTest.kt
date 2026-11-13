@@ -1,6 +1,9 @@
 package com.ogonggo.core.announcement.domain
 
+import com.ogonggo.core.error.ConflictException
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
@@ -71,6 +74,40 @@ class AnnouncementDomainTest {
         assertThrows(IllegalStateException::class.java) { announcement.publish() }
         assertThrows(IllegalStateException::class.java) { announcement.pin(true) }
         assertThrows(IllegalStateException::class.java) { announcement.changeCategory(AnnouncementCategory.NEW_JOB_NOTE) }
+    }
+
+    @Test
+    fun `푸시는 노출 중이고 대상이 정해졌고 아직 보내지 않았을 때만 보낼 차례다`() {
+        // given
+        val hidden = Announcement(title = "공지", content = CONTENT, pinned = false, published = false, pushTarget = AnnouncementPushTarget.ALL)
+        val noTarget = announcement()
+
+        // when & then
+        assertFalse(hidden.isPushDue())
+        assertFalse(noTarget.isPushDue())
+        hidden.publish()
+        assertTrue(hidden.isPushDue())
+        noTarget.changePushTarget(AnnouncementPushTarget.GENERAL_MEMBERS)
+        assertTrue(noTarget.isPushDue())
+    }
+
+    @Test
+    fun `푸시를 보낸 뒤에는 다시 노출해도 보낼 차례가 아니고 대상을 바꿀 수 없다`() {
+        // given
+        val announcement = Announcement(title = "공지", content = CONTENT, pinned = false, published = true, pushTarget = AnnouncementPushTarget.ALL)
+
+        // when
+        announcement.markPushed("batch-1", NOW)
+        announcement.hide()
+        announcement.publish()
+
+        // then
+        assertEquals("batch-1", announcement.pushBatchId)
+        assertEquals(NOW, announcement.pushedAt)
+        assertFalse(announcement.isPushDue())
+        assertThrows(ConflictException::class.java) { announcement.changePushTarget(AnnouncementPushTarget.NONE) }
+        announcement.changePushTarget(AnnouncementPushTarget.ALL)
+        assertThrows(IllegalStateException::class.java) { announcement.markPushed("batch-2", NOW) }
     }
 
     private fun announcement(title: String = "서비스 점검 안내", content: String = CONTENT): Announcement =

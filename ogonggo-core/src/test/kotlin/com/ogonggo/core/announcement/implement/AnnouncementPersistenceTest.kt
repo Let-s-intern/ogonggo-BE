@@ -76,7 +76,7 @@ internal class AnnouncementPersistenceTest @Autowired constructor(
 
         // then
         assertEquals(AnnouncementCategory.entries, digests.map { it.category })
-        assertEquals(listOf(4L, 1L, 0L), digests.map { it.count })
+        assertEquals(listOf(4L, 1L, 0L, 0L), digests.map { it.count })
         assertEquals(updates.takeLast(3).reversed().map { it.id }, digests[0].recentAnnouncements.map { it.id })
         assertEquals(listOf(note.id), digests[1].recentAnnouncements.map { it.id })
         assertEquals(emptyList<Any>(), digests[2].recentAnnouncements)

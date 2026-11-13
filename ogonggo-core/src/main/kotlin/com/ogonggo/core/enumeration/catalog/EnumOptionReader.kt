@@ -67,6 +67,7 @@ import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.announcement.domain.AnnouncementCategory
+import com.ogonggo.core.announcement.domain.AnnouncementPushTarget
 import com.ogonggo.core.contentreview.domain.ContentReviewTargetType
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
@@ -136,6 +137,7 @@ class EnumOptionReader {
             enumOptionsOf<ContentReviewStatus>(),
             enumOptionsOf<ContentSource>(),
             enumOptionsOf<AnnouncementCategory>(),
+            enumOptionsOf<AnnouncementPushTarget>(),
             // 공고 상세의 렛츠커리어 콘텐츠 추천
             enumOptionsOf<LetsCareerContentKind>(),
             enumOptionsOf<LetsCareerContentTopic>(),

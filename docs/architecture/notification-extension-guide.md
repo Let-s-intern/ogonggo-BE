@@ -387,6 +387,16 @@ ogonggo:
 - 관리자 API에 위 설정이 없어도 기동한다. 광고성 발송만 503으로 거부한다.
 - 배포 순서: 렛츠커리어에 동의 조회 API를 먼저 배포한 뒤, [`2026-10-31-notification-member-topics.sql`](../schema/2026-10-31-notification-member-topics.sql)의 `notification_batches` 칸 추가를 적용하고 관리자 API를 배포한다.
 
+### 공지 노출 푸시
+
+- 결정일: 2026-11-13
+- 공지(`Announcement`)에 푸시 대상(`pushTarget`: `NONE`·`ALL`·`GENERAL_MEMBERS`·`COMPANY_MEMBERS`)을 둔다. 관리자가 공지를 등록·수정할 때 고른다. 기본값은 `NONE`이다.
+- 공지가 노출 상태가 되는 순간 한 번 보낸다. 노출로 등록할 때, 숨김에서 노출로 바꿀 때, 노출 중인 공지에 대상을 정할 때다. `NONE`이면 노출해도 보내지 않는다.
+- 보낸 뒤에는 발송 묶음 식별자(`push_batch_id`)와 일시(`pushed_at`)를 남겨, 숨겼다 다시 노출하거나 내용을 고쳐도 다시 보내지 않는다. 보낸 공지의 대상을 바꾸면 409 `ANNOUNCEMENT_PUSH_ALREADY_SENT`다.
+- 발송은 [어드민 FCM 발송](#어드민-fcm-발송)과 같은 `NotificationBatchCreator`(관리자 API `notificationbatch/implement`)를 부른다. 토픽 게이트, 알림함, 24시간 발송 기한, 결과 조회가 관리자 발송과 같다. 공지 저장과 발송 적재는 한 트랜잭션이라, 적재가 실패하면 공지 저장도 되돌린다.
+- 제목은 공지 제목을 유니코드 100자까지, 본문은 요약(없으면 기본 문구), `data.url`은 `{ogonggo.announcement.push.web-base-url}/notices/{id}`다. 설정의 기본값은 `https://www.ogonggo.co.kr`이고 개발 환경은 이 키로 바꾼다.
+- 스키마: [`2026-11-13-lc-3614-announcement-push.sql`](../schema/2026-11-13-lc-3614-announcement-push.sql).
+
 ## 구현 규칙
 
 ### 적재와 중복 방지
@@ -610,4 +620,5 @@ ogonggo:
 - 예약형 적재: [JobBookmarkReminderEnqueueService](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/business/JobBookmarkReminderEnqueueService.kt), [JobBookmarkReminderScheduler](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/intake/implement/reminder/JobBookmarkReminderScheduler.kt)
 - 발송 확장: [NotificationDispatcher](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationDispatcher.kt), [NotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/delivery/implement/NotificationSender.kt), [KakaoNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/alimtalk/KakaoNotificationSender.kt), [EmailNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/email/EmailNotificationSender.kt)
 - FCM 토큰·sender: [FcmTokenController](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/fcm/presentation/FcmTokenController.kt), [FcmNotificationSender](../../ogonggo-api-user/src/main/kotlin/com/ogonggo/userapi/notification/channel/fcm/FcmNotificationSender.kt)
+- 관리자 발송·공지 노출 푸시: [NotificationBatchCreator](../../ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/notificationbatch/implement/NotificationBatchCreator.kt), [AdminAnnouncementService](../../ogonggo-api-admin/src/main/kotlin/com/ogonggo/adminapi/announcement/business/AdminAnnouncementService.kt)
 - 운영 주기: [스케줄 작업 가이드](scheduling.md), [시간 처리 가이드](time-handling.md)

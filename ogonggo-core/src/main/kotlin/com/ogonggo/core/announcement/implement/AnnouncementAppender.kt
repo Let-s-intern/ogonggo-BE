@@ -20,6 +20,7 @@ class AnnouncementAppender internal constructor(
                 category = dto.category,
                 thumbnailUrl = dto.thumbnailUrl,
                 summary = dto.summary,
+                pushTarget = dto.pushTarget,
             ),
         )
 }

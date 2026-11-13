@@ -1,5 +1,7 @@
 package com.ogonggo.core.announcement.domain
 
+import com.ogonggo.core.announcement.error.AnnouncementErrorCode
+import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.jpa.BaseTimeEntity
 import com.ogonggo.core.editor.lexical.LexicalEditorStateJson
 import jakarta.persistence.Column
@@ -21,6 +23,9 @@ import java.time.LocalDateTime
  * 사용자 공지사항 화면은 고정 공지를 맨 위 `추천` 카드로 보인다.
  *
  * 카테고리·썸네일·요약은 공지사항 화면의 카테고리 칸과 추천 카드에 쓴다(LC-3614). 썸네일과 요약은 선택이다.
+ *
+ * 푸시 대상([AnnouncementPushTarget])을 정해 두면 노출 상태가 되는 순간 한 번 푸시를 보낸다. 보낸 뒤에는 발송 묶음 식별자가
+ * 남아 다시 보내지 않고 대상도 바꿀 수 없다.
  */
 @Entity
 @Table(
@@ -37,6 +42,7 @@ class Announcement internal constructor(
     category: AnnouncementCategory = AnnouncementCategory.OGONGGO_UPDATE,
     thumbnailUrl: String? = null,
     summary: String? = null,
+    pushTarget: AnnouncementPushTarget = AnnouncementPushTarget.NONE,
 ) : BaseTimeEntity() {
 
     init {
@@ -80,6 +86,19 @@ class Announcement internal constructor(
     var summary: String? = summary?.takeIf { it.isNotBlank() } /* 목록·추천 카드에 보이는 한두 줄 요약 */
         protected set
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "push_target", nullable = false, length = 30)
+    var pushTarget: AnnouncementPushTarget = pushTarget /* 노출할 때 푸시를 보낼 대상 */
+        protected set
+
+    @Column(name = "push_batch_id", length = 36)
+    var pushBatchId: String? = null /* 보낸 푸시의 발송 묶음 식별자. 보내기 전에는 null */
+        protected set
+
+    @Column(name = "pushed_at")
+    var pushedAt: LocalDateTime? = null /* 푸시를 보낸 일시 */
+        protected set
+
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 삭제 일시 */
         protected set
@@ -109,6 +128,25 @@ class Announcement internal constructor(
         checkNotDeleted()
         validateSummary(summary)
         this.summary = summary.takeIf { it.isNotBlank() }
+    }
+
+    /** 이미 푸시를 보낸 공지는 대상을 바꿀 수 없다. 같은 값을 다시 보내는 것은 허용한다. */
+    fun changePushTarget(pushTarget: AnnouncementPushTarget) {
+        checkNotDeleted()
+        if (pushBatchId != null && pushTarget != this.pushTarget) {
+            throw ConflictException(AnnouncementErrorCode.ANNOUNCEMENT_PUSH_ALREADY_SENT)
+        }
+        this.pushTarget = pushTarget
+    }
+
+    /** 지금 푸시를 보내야 하는가. 노출 중이고, 대상이 정해져 있고, 아직 보내지 않았을 때다. */
+    fun isPushDue(): Boolean =
+        deletedAt == null && published && pushTarget != AnnouncementPushTarget.NONE && pushBatchId == null
+
+    fun markPushed(batchId: String, now: LocalDateTime) {
+        check(isPushDue()) { "푸시를 보낼 수 없는 공지입니다." }
+        pushBatchId = batchId
+        pushedAt = now
     }
 
     fun pin(pinned: Boolean) {

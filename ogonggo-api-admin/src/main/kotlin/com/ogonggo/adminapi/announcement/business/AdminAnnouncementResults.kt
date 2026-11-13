@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.announcement.business
 
 import com.ogonggo.core.announcement.domain.AnnouncementCategory
+import com.ogonggo.core.announcement.domain.AnnouncementPushTarget
 import com.ogonggo.adminapi.content.business.AdminContentVisibility
 import com.ogonggo.core.announcement.domain.Announcement
 import com.ogonggo.core.announcement.implement.dto.AnnouncementPageDto
@@ -32,6 +33,9 @@ data class AdminAnnouncementSummary(
     val category: AnnouncementCategory,
     val thumbnailUrl: String?,
     val summary: String?,
+    val pushTarget: AnnouncementPushTarget,
+    val pushBatchId: String?,
+    val pushedAt: LocalDateTime?,
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
 ) {
@@ -44,6 +48,9 @@ data class AdminAnnouncementSummary(
             category = announcement.category,
             thumbnailUrl = announcement.thumbnailUrl,
             summary = announcement.summary,
+            pushTarget = announcement.pushTarget,
+            pushBatchId = announcement.pushBatchId,
+            pushedAt = announcement.pushedAt,
             registeredAt = announcement.createdAt,
             updatedAt = announcement.updatedAt,
         )
