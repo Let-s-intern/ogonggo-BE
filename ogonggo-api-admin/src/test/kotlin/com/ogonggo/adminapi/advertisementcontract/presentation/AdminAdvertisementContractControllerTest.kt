@@ -24,6 +24,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -82,7 +83,7 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
         mockMvc.perform(
             post("$PATH/$CONTRACT_ID/products")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"productId":11}"""),
+                .content("""{"productId":11,$DATES}"""),
         ).andExpect(status().isUnauthorized).andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
         mockMvc.perform(delete("$PATH/$CONTRACT_ID/products/3001"))
             .andExpect(status().isUnauthorized)
@@ -219,6 +220,8 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
                     productName = "채용공고 홈 상단 배너",
                     category = AdvertisementProductCategory.BANNER,
                     productDeleted = true,
+                    startDate = START_DATE,
+                    endDate = END_DATE,
                     addedAt = REGISTERED_AT.plusHours(1),
                 ),
             ),
@@ -239,6 +242,8 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.businessNumber").value("1234567890"))
             .andExpect(jsonPath("$.data.products[0].contractProductId").value(3001))
             .andExpect(jsonPath("$.data.products[0].productDeleted").value(true))
+            .andExpect(jsonPath("$.data.products[0].startDate").value("2026-11-02"))
+            .andExpect(jsonPath("$.data.products[0].endDate").value("2026-11-05"))
 
         Mockito.verify(adminAdvertisementContractService).getContract(CONTRACT_ID)
     }
@@ -368,52 +373,73 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
 
     @Test
     fun `계약에 상품을 연결하면 연결 ID를 201로 반환한다`() {
-        Mockito.`when`(adminAdvertisementContractService.addProduct(CONTRACT_ID, 11)).thenReturn(3001)
+        Mockito.`when`(adminAdvertisementContractService.addProduct(CONTRACT_ID, 11, START_DATE, END_DATE)).thenReturn(3001)
 
         mockMvc.perform(
             admin(
                 post("$PATH/$CONTRACT_ID/products")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("""{"productId":11}"""),
+                    .content("""{"productId":11,$DATES}"""),
             ),
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.id").value(3001))
 
-        Mockito.verify(adminAdvertisementContractService).addProduct(CONTRACT_ID, 11)
+        Mockito.verify(adminAdvertisementContractService).addProduct(CONTRACT_ID, 11, START_DATE, END_DATE)
     }
 
     @Test
-    fun `계약 상품 연결은 양수 상품 ID를 요구하고 없는 계약은 404다`() {
+    fun `계약 상품 연결은 양수 상품 ID와 게시 기간을 요구하고 없는 계약은 404다`() {
         val url = "$PATH/$CONTRACT_ID/products"
         listOf(
             "{}",
-            """{"productId":0}""",
-            """{"productId":11.9}""",
-            """{"productId":"11"}""",
-            """{"productId":-1}""",
+            """{"productId":0,$DATES}""",
+            """{"productId":11.9,$DATES}""",
+            """{"productId":"11",$DATES}""",
+            """{"productId":-1,$DATES}""",
+            """{"productId":11}""",
+            """{"productId":11,"startDate":"2026-11-02"}""",
+            """{"productId":11,"startDate":"2026-11-02","endDate":null}""",
+            """{"productId":11,"startDate":"2026/11/02","endDate":"2026-11-05"}""",
         ).forEach { body ->
             mockMvc.perform(admin(post(url).contentType(MediaType.APPLICATION_JSON).content(body)))
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
         }
 
-        Mockito.`when`(adminAdvertisementContractService.addProduct(CONTRACT_ID, 11))
+        Mockito.`when`(adminAdvertisementContractService.addProduct(CONTRACT_ID, 11, START_DATE, END_DATE))
             .thenThrow(EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND))
-        mockMvc.perform(admin(post(url).contentType(MediaType.APPLICATION_JSON).content("""{"productId":11}""")))
+        mockMvc.perform(admin(post(url).contentType(MediaType.APPLICATION_JSON).content("""{"productId":11,$DATES}""")))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
 
         Mockito.doThrow(EntityNotFoundException(AdvertisementProductErrorCode.ADVERTISEMENT_PRODUCT_NOT_FOUND))
             .`when`(adminAdvertisementContractService)
-            .addProduct(CONTRACT_ID, 12)
-        mockMvc.perform(admin(post(url).contentType(MediaType.APPLICATION_JSON).content("""{"productId":12}""")))
+            .addProduct(CONTRACT_ID, 12, START_DATE, END_DATE)
+        mockMvc.perform(admin(post(url).contentType(MediaType.APPLICATION_JSON).content("""{"productId":12,$DATES}""")))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
 
-        Mockito.verify(adminAdvertisementContractService).addProduct(CONTRACT_ID, 11)
-        Mockito.verify(adminAdvertisementContractService).addProduct(CONTRACT_ID, 12)
+        Mockito.verify(adminAdvertisementContractService).addProduct(CONTRACT_ID, 11, START_DATE, END_DATE)
+        Mockito.verify(adminAdvertisementContractService).addProduct(CONTRACT_ID, 12, START_DATE, END_DATE)
+    }
+
+    @Test
+    fun `게시 시작일이 종료일보다 늦으면 400이다`() {
+        val startDate = LocalDate.parse("2026-11-06")
+        Mockito.`when`(adminAdvertisementContractService.addProduct(CONTRACT_ID, 11, startDate, END_DATE))
+            .thenThrow(InvalidValueException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID))
+
+        mockMvc.perform(
+            admin(
+                post("$PATH/$CONTRACT_ID/products")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"productId":11,"startDate":"2026-11-06","endDate":"2026-11-05"}"""),
+            ),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID"))
     }
 
     @Test
@@ -496,5 +522,8 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
         const val PATH = "/api/v1/admin/advertisement-contracts"
         const val CONTRACT_ID = 1001L
         val REGISTERED_AT = LocalDateTime.parse("2026-11-07T17:30:00")
+        val START_DATE: LocalDate = LocalDate.parse("2026-11-02")
+        val END_DATE: LocalDate = LocalDate.parse("2026-11-05")
+        const val DATES = "\"startDate\":\"2026-11-02\",\"endDate\":\"2026-11-05\""
     }
 }

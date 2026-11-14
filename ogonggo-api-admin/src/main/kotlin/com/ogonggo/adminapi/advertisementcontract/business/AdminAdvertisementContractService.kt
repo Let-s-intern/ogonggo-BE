@@ -1,5 +1,6 @@
 package com.ogonggo.adminapi.advertisementcontract.business
 
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSearchCondition
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
@@ -8,6 +9,7 @@ import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReade
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Service
@@ -48,10 +50,11 @@ class AdminAdvertisementContractService(
     }
 
     @Transactional
-    fun addProduct(contractId: Long, productId: Long): Long {
+    fun addProduct(contractId: Long, productId: Long, startDate: LocalDate, endDate: LocalDate): Long {
+        val period = AdvertisementContractProductPeriod(startDate, endDate)
         val contract = advertisementContractReader.readForUpdate(contractId)
         val product = advertisementProductReader.readForUpdate(productId)
-        return advertisementContractManager.addProduct(contract, product)
+        return advertisementContractManager.addProduct(contract, product, period)
     }
 
     @Transactional

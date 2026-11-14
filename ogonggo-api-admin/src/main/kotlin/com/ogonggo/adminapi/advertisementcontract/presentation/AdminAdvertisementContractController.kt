@@ -114,7 +114,7 @@ class AdminAdvertisementContractController(
     ): ResponseEntity<SuccessResponse<CreateAdminAdvertisementContractProductResponse>> =
         SuccessResponse.created(
             CreateAdminAdvertisementContractProductResponse(
-                adminAdvertisementContractService.addProduct(contractId, request.productId),
+                adminAdvertisementContractService.addProduct(contractId, request.productId, request.startDate, request.endDate),
             ),
         )
 

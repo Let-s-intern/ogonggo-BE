@@ -11,6 +11,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
+import java.time.LocalDate
 
 data class ChangeAdminAdvertisementContractStatusRequest(
     @field:JsonDeserialize(using = StrictAdvertisementContractStatusDeserializer::class)
@@ -29,6 +30,10 @@ data class AddAdminAdvertisementContractProductRequest(
     @field:Positive
     @field:JsonDeserialize(using = StrictLongDeserializer::class)
     val productId: Long,
+    @field:Schema(description = "게시 시작일(yyyy-MM-dd).", example = "2026-11-02", requiredMode = Schema.RequiredMode.REQUIRED)
+    val startDate: LocalDate,
+    @field:Schema(description = "게시 종료일(yyyy-MM-dd). 이 날까지 게시하며 시작일과 같아도 됩니다.", example = "2026-11-05", requiredMode = Schema.RequiredMode.REQUIRED)
+    val endDate: LocalDate,
 )
 
 internal class StrictAdvertisementContractStatusDeserializer : JsonDeserializer<AdvertisementContractStatus>() {

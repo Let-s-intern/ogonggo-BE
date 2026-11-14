@@ -543,6 +543,8 @@ GET /api/v1/users/me/advertisement-contracts/{contractId}
 | data.products[].category | string(enum) | 아니오 | 조회 시점의 상품 카테고리 |
 | data.products[].position | string(enum) | 예 | 노출 자리. 외부 채널 상품은 null |
 | data.products[].productDeleted | boolean | 아니오 | 운영자가 상품을 지웠는지 |
+| data.products[].startDate | string(date) | 예 | 게시 시작일. 기간 도입 전에 붙인 상품은 null |
+| data.products[].endDate | string(date) | 예 | 게시 종료일(포함). 기간 도입 전에 붙인 상품은 null |
 
 동작과 경계:
 
@@ -1013,6 +1015,8 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 | data.products[].productName | string | 아니오 | 현재 상품명. 판매 당시 이름 스냅샷 아님 |
 | data.products[].category | string(enum) | 아니오 | 현재 상품 category |
 | data.products[].productDeleted | boolean | 아니오 | 상품이 소프트 삭제됐는지 |
+| data.products[].startDate | string(date) | 예 | 게시 시작일. 기간 도입 전에 붙인 상품은 null |
+| data.products[].endDate | string(date) | 예 | 게시 종료일(포함). 기간 도입 전에 붙인 상품은 null |
 | data.products[].addedAt | string(date-time) | 아니오 | 계약에 상품을 붙인 일시 |
 
 동작과 경계:
@@ -1182,7 +1186,9 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/products
 
 ```json
 {
-  "productId": 11
+  "productId": 11,
+  "startDate": "2026-11-02",
+  "endDate": "2026-11-05"
 }
 ```
 
@@ -1209,6 +1215,8 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/products
 | JSON 경로 | 타입 | 필수 | 길이·범위 | 허용 조건 | null·빈 값 |
 | --- | --- | --- | --- | --- | --- |
 | productId | int64 | 예 | 1 이상 | 삭제되지 않은 상품 | 누락·null 불가 |
+| startDate | string(date) | 예 | `yyyy-MM-dd` | 게시 시작일 | 누락·null 불가 |
+| endDate | string(date) | 예 | `yyyy-MM-dd` | 게시 종료일(이 날까지 게시). startDate와 같거나 뒤 | 누락·null 불가 |
 
 응답 필드:
 
@@ -1220,6 +1228,7 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/products
 
 - 동일 계약에 동일 상품을 반복 추가하면 새 연결 행을 각각 만들고 201을 반환한다. 중복 409를 추가하지 않는다.
 - source·status별 상품 추가 제한과 신청 categories와의 일치 검증은 현 core에 없다. 신청 카테고리와 다른 상품도 운영자가 협의 후 붙일 수 있는 안이다.
+- 게시 기간은 하루 단위이고 종료일을 포함한다. 시작일과 종료일이 같으면 하루 게시다. 노출 설정(A-12)의 기간과 연동하지 않는다.
 - 판매 기록만 생성한다. 노출은 A-12에서 별도 생성하며, 외부 채널 상품은 계약 상품 기록만 남길 수 있다.
 - 계약 잠금 조회 후 상품 `readForUpdate`를 호출해 활성 상태를 확인하고 연결 행을 추가한다. 상품 잠금과 연결 행 추가는 같은 서비스 트랜잭션에서 수행한다. 생성 뒤 A-06으로 products를 재조회한다.
 
@@ -1230,6 +1239,7 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/products
 | 상황 | status | code | message |
 | --- | --- | --- | --- |
 | 입력 누락·타입·enum·길이·범위·형식 오류 | 400 | `BAD_REQUEST` | `잘못된 요청입니다.` 또는 `[필드] 검증 메시지` |
+| 게시 시작일이 종료일보다 늦음 | 400 | `ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID` | 게시 시작일은 종료일보다 늦을 수 없습니다. |
 | 계약이 없음 | 404 | `ADVERTISEMENT_CONTRACT_NOT_FOUND` | 광고 계약을 찾을 수 없습니다. |
 | 상품이 없거나 소프트 삭제됨 | 404 | `ADVERTISEMENT_PRODUCT_NOT_FOUND` | 광고 상품을 찾을 수 없습니다. |
 

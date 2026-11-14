@@ -100,7 +100,7 @@ class AdminAdvertisementProductContractConcurrencyTest @Autowired constructor(
         val link = linkExecutor.submit<Result<Long>> {
             check(productLocked.await(10, TimeUnit.SECONDS)) { "삭제 트랜잭션이 상품 잠금을 얻어야 합니다." }
             linkStarted.countDown()
-            runCatching { contractService.addProduct(contractId, productId) }
+            runCatching { contractService.addProduct(contractId, productId, LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 5)) }
                 .also { linkCompleted.countDown() }
         }
 
@@ -157,7 +157,7 @@ class AdminAdvertisementProductContractConcurrencyTest @Autowired constructor(
             newTransaction().execute {
                 contractReader.readForUpdate(contractId)
                 productReader.readForUpdate(productId)
-                contractService.addProduct(contractId, productId)
+                contractService.addProduct(contractId, productId, LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 5))
                 linkCreated.countDown()
                 check(allowLinkCommit.await(10, TimeUnit.SECONDS)) { "상품 연결 커밋 신호를 받지 못했습니다." }
             }

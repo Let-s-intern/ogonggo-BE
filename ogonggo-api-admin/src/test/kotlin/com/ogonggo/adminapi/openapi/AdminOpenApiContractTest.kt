@@ -442,6 +442,12 @@ class AdminOpenApiContractTest @Autowired constructor(
         )
         assertEquals("integer", addProductRequest.at("/properties/productId/type").asText())
         assertEquals("int64", addProductRequest.at("/properties/productId/format").asText())
+        listOf("startDate", "endDate").forEach { field ->
+            assertEquals("string", addProductRequest.at("/properties/$field/type").asText())
+            assertEquals("date", addProductRequest.at("/properties/$field/format").asText())
+            assertTrue(addProductRequest.at("/required").any { it.asText() == field })
+            assertEquals("date", document.at("/components/schemas/AdminAdvertisementContractProductResponse/properties/$field/format").asText())
+        }
         assertTrue(addProduct.at("/responses/201/content/application~1json/schema/\$ref").asText().endsWith("CreateAdminAdvertisementContractProductResponse"))
     }
 

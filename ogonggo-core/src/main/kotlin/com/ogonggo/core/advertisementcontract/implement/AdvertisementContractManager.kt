@@ -2,6 +2,7 @@ package com.ogonggo.core.advertisementcontract.implement
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
@@ -46,13 +47,14 @@ class AdvertisementContractManager internal constructor(
         advertisementContractRepository.save(contract)
     }
 
-    /** 운영자가 계약 상세에서 상품을 붙인다. 같은 상품을 여러 번 붙여도 막지 않는다(기간을 나눠 파는 경우). */
-    fun addProduct(contract: AdvertisementContract, product: AdvertisementProduct): Long {
+    /** 운영자가 계약 상세에서 상품을 게시 기간과 함께 붙인다. 같은 상품을 여러 번 붙여도 막지 않는다(기간을 나눠 파는 경우). */
+    fun addProduct(contract: AdvertisementContract, product: AdvertisementProduct, period: AdvertisementContractProductPeriod): Long {
         product.checkNotDeleted()
         val saved = advertisementContractProductRepository.save(
             AdvertisementContractProduct(
                 contractId = checkNotNull(contract.id) { "광고 계약 식별자가 없습니다." },
                 productId = checkNotNull(product.id) { "광고 상품 식별자가 없습니다." },
+                period = period,
             ),
         )
         return checkNotNull(saved.id) { "계약 상품 식별자가 없습니다." }

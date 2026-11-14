@@ -138,6 +138,10 @@ data class MyAdvertisementContractProductResponse(
     val position: AdvertisementProductPosition?,
     @field:Schema(description = "운영자가 상품을 지웠는지. 지운 상품도 계약에 붙어 있으면 이름과 함께 준다")
     val productDeleted: Boolean,
+    @field:Schema(description = "게시 시작일. 기간을 넣기 전에 붙인 상품은 null", nullable = true)
+    val startDate: LocalDate?,
+    @field:Schema(description = "게시 종료일(이 날까지 게시). 기간을 넣기 전에 붙인 상품은 null", nullable = true)
+    val endDate: LocalDate?,
 ) {
     companion object {
         fun from(result: MyAdvertisementContractProductResult) = MyAdvertisementContractProductResponse(
@@ -146,6 +150,8 @@ data class MyAdvertisementContractProductResponse(
             category = result.category,
             position = result.position,
             productDeleted = result.productDeleted,
+            startDate = result.startDate,
+            endDate = result.endDate,
         )
     }
 }

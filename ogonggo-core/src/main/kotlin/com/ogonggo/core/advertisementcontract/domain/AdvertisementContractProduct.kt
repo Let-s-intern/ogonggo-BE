@@ -1,5 +1,7 @@
 package com.ogonggo.core.advertisementcontract.domain
 
+import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -8,10 +10,14 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
  * 운영자가 계약 상세에서 계약에 붙인 광고 상품이다. 무엇을 팔았는지의 기록이다.
+ *
+ * 게시 기간([startDate]~[endDate])은 계약한 기간이다. 하루 단위이고 종료일도 포함한다.
+ * 이 칼럼을 넣기 전에 붙인 상품은 기간이 없다.
  *
  * 실제로 언제 어떻게 노출하는지는 노출 설정([com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure])이 가진다.
  * 인스타그램·카카오톡처럼 오공고 화면에 노출하지 않는 상품은 이 기록만 남는다.
@@ -27,6 +33,7 @@ import java.time.LocalDateTime
 class AdvertisementContractProduct internal constructor(
     contractId: Long,
     productId: Long,
+    period: AdvertisementContractProductPeriod,
 ) : BaseTimeEntity() {
 
     init {
@@ -44,6 +51,14 @@ class AdvertisementContractProduct internal constructor(
     @Column(name = "product_id", nullable = false)
     val productId: Long = productId /* 광고 상품 식별자 */
 
+    @Column(name = "start_date")
+    var startDate: LocalDate? = period.startDate /* 게시 시작일. 기간을 넣기 전에 붙인 상품은 없다 */
+        protected set
+
+    @Column(name = "end_date")
+    var endDate: LocalDate? = period.endDate /* 게시 종료일(포함). 기간을 넣기 전에 붙인 상품은 없다 */
+        protected set
+
     @Column(name = "deleted_at")
     var deletedAt: LocalDateTime? = null /* 계약에서 뺀 일시 */
         protected set
@@ -51,6 +66,18 @@ class AdvertisementContractProduct internal constructor(
     fun delete(now: LocalDateTime) {
         if (deletedAt == null) {
             deletedAt = now
+        }
+    }
+}
+
+/** 계약 상품의 게시 기간이다. 하루 단위이고 시작일과 종료일이 같아도 된다(하루 게시). */
+data class AdvertisementContractProductPeriod(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+) {
+    init {
+        if (startDate.isAfter(endDate)) {
+            throw InvalidValueException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID)
         }
     }
 }

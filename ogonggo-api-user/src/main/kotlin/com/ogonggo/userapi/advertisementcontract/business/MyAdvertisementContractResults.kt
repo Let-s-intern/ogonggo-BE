@@ -128,6 +128,8 @@ data class MyAdvertisementContractProductResult(
     val category: AdvertisementProductCategory,
     val position: AdvertisementProductPosition?,
     val productDeleted: Boolean,
+    val startDate: LocalDate?,
+    val endDate: LocalDate?,
 ) {
     companion object {
         internal fun from(product: AdvertisementContractProductDto): MyAdvertisementContractProductResult =
@@ -137,6 +139,8 @@ data class MyAdvertisementContractProductResult(
                 category = product.category,
                 position = product.position,
                 productDeleted = product.productDeleted,
+                startDate = product.startDate,
+                endDate = product.endDate,
             )
     }
 }

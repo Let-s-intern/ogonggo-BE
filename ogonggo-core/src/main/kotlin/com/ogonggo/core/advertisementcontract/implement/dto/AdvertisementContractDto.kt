@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
@@ -54,7 +55,7 @@ data class AdvertisementContractPageDto(
     val totalPages: Int,
 )
 
-/** 계약에 붙인 상품이다. 상품을 지웠어도 이름을 보여 준다. */
+/** 계약에 붙인 상품이다. 상품을 지웠어도 이름을 보여 준다. 게시 기간은 기간을 넣기 전에 붙인 상품이면 없다. */
 data class AdvertisementContractProductDto(
     val contractProductId: Long,
     val productId: Long,
@@ -62,17 +63,21 @@ data class AdvertisementContractProductDto(
     val category: AdvertisementProductCategory,
     val position: AdvertisementProductPosition?,
     val productDeleted: Boolean,
+    val startDate: LocalDate?,
+    val endDate: LocalDate?,
     val addedAt: LocalDateTime,
 ) {
     companion object {
-        fun of(contractProductId: Long, product: AdvertisementProduct, addedAt: LocalDateTime) = AdvertisementContractProductDto(
-            contractProductId = contractProductId,
+        fun of(contractProduct: AdvertisementContractProduct, product: AdvertisementProduct) = AdvertisementContractProductDto(
+            contractProductId = checkNotNull(contractProduct.id),
             productId = checkNotNull(product.id),
             productName = product.name,
             category = product.category,
             position = product.position,
             productDeleted = product.deletedAt != null,
-            addedAt = addedAt,
+            startDate = contractProduct.startDate,
+            endDate = contractProduct.endDate,
+            addedAt = contractProduct.createdAt,
         )
     }
 }

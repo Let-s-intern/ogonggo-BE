@@ -206,7 +206,7 @@ class AdminAdvertisementProductConcurrencyTest @Autowired constructor(
         assertFalse(productService.getProducts(0, 100).items.any { it.id == productId }, "관리자 상품 목록에 삭제 상품이 없어야 합니다.")
         assertFalse(productReader.readAll().any { it.id == productId }, "사용자 상품 목록의 공통 reader에서 삭제 상품이 없어야 합니다.")
 
-        val error = runCatching { contractService.addProduct(contractId, productId) }.exceptionOrNull()
+        val error = runCatching { contractService.addProduct(contractId, productId, LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 5)) }.exceptionOrNull()
         assertTrue(error is EntityNotFoundException)
         assertEquals(AdvertisementProductErrorCode.ADVERTISEMENT_PRODUCT_NOT_FOUND, (error as EntityNotFoundException).errorCode)
         assertTrue(contractReader.readProducts(contractId).isEmpty(), "삭제 상품의 새 계약 연결이 생기면 안 됩니다.")
