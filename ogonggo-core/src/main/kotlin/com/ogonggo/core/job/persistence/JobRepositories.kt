@@ -9,6 +9,7 @@ import com.ogonggo.core.job.domain.JobListSortKey
 import com.ogonggo.core.job.domain.JobMetric
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentStatus
+import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobSource
 import com.ogonggo.core.job.domain.JobTag
 import com.ogonggo.core.job.domain.Tag
@@ -186,6 +187,32 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     )
     fun findAnalysisCandidates(
         pageable: Pageable,
+        @Param("published") published: JobPublicationStatus = JobPublicationStatus.PUBLISHED,
+        @Param("recruiting") recruiting: JobRecruitmentStatus = JobRecruitmentStatus.RECRUITING,
+    ): List<Job>
+
+    /**
+     * AI 서버가 원문을 열어 아직 모집 중인지 확인할 상시 채용 공고다. 등록 경로는 가리지 않는다.
+     * 게시 중인 모집 중 공고 가운데 원문 URL이 있는 것을 `afterId` 다음부터 식별자 순으로 읽는다.
+     */
+    @Query(
+        """
+        select job
+        from Job job
+        where job.id > :afterId
+          and job.recruitmentType = :alwaysOpen
+          and job.publicationStatus = :published
+          and job.recruitmentStatus = :recruiting
+          and job.deletedAt is null
+          and job.sourceUrl is not null
+          and job.sourceUrl <> ''
+        order by job.id
+        """,
+    )
+    fun findSourceCheckTargets(
+        @Param("afterId") afterId: Long,
+        pageable: Pageable,
+        @Param("alwaysOpen") alwaysOpen: JobRecruitmentType = JobRecruitmentType.ALWAYS_OPEN,
         @Param("published") published: JobPublicationStatus = JobPublicationStatus.PUBLISHED,
         @Param("recruiting") recruiting: JobRecruitmentStatus = JobRecruitmentStatus.RECRUITING,
     ): List<Job>
