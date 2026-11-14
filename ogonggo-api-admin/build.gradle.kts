@@ -28,6 +28,9 @@ dependencies {
     // 고용24 훈련과정 상세 화면(HTML)을 읽는다. Open API가 주지 않는 훈련목표·교과편성이 화면에만 있다.
     implementation("org.jsoup:jsoup:1.18.1")
 
+    // 관리자 콘솔에서 리대시·크롤러 EC2 인스턴스를 켜고 끈다. core의 S3와 같은 SDK 버전을 쓴다.
+    implementation("software.amazon.awssdk:ec2:2.32.16")
+
     // 사용자 API가 발급한 액세스 토큰을 검증만 한다. 발급은 사용자 API가 한다.
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
