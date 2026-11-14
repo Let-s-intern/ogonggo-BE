@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
@@ -22,6 +23,7 @@ import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReade
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.contentreview.persistence.ContentRejectionQueryRepository
 import com.ogonggo.core.contentreview.implement.ContentRejectionManager
@@ -251,14 +253,44 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
 
         // when
-        val firstId = manager.addProduct(contract, product)
-        val secondId = manager.addProduct(contract, product)
+        val firstId = manager.addProduct(contract, product, PERIOD)
+        val secondId = manager.addProduct(contract, product, PERIOD)
         repository.flush()
         entityManager.clear()
 
         // then
         assertNotEquals(firstId, secondId)
         assertEquals(listOf(firstId, secondId), reader.readProducts(checkNotNull(contract.id)).map { it.contractProductId })
+    }
+
+    @Test
+    fun `계약 상품은 게시 시작일과 종료일을 함께 저장하고 읽는다`() {
+        // given
+        val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
+        val oneDay = AdvertisementContractProductPeriod(LocalDate.of(2026, 11, 4), LocalDate.of(2026, 11, 4))
+
+        // when
+        manager.addProduct(contract, product, PERIOD)
+        manager.addProduct(contract, product, oneDay)
+        repository.flush()
+        entityManager.clear()
+
+        // then
+        val products = reader.readProducts(checkNotNull(contract.id))
+        assertEquals(listOf(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 4)), products.map { it.startDate })
+        assertEquals(listOf(LocalDate.of(2026, 11, 5), LocalDate.of(2026, 11, 4)), products.map { it.endDate })
+    }
+
+    @Test
+    fun `게시 시작일이 종료일보다 늦으면 계약 상품 기간을 만들 수 없다`() {
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            AdvertisementContractProductPeriod(LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 5))
+        }
+
+        // then
+        assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID, exception.errorCode)
     }
 
     @Test
@@ -423,8 +455,8 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
         val top = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
         val bottom = productReader.read(productAppender.append(productDto("채용공고 홈 하단")))
-        val removed = manager.addProduct(contract, top)
-        manager.addProduct(contract, bottom)
+        val removed = manager.addProduct(contract, top, PERIOD)
+        manager.addProduct(contract, bottom, PERIOD)
         manager.removeProduct(contract, removed, NOW)
         productManager.delete(bottom, NOW)
         repository.flush()
@@ -445,7 +477,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
         val other = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
         val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
-        val contractProductId = manager.addProduct(other, product)
+        val contractProductId = manager.addProduct(other, product, PERIOD)
 
         // when
         val exception = assertThrows(EntityNotFoundException::class.java) {
@@ -461,7 +493,7 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         // given
         val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
         val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
-        val contractProductId = manager.addProduct(contract, product)
+        val contractProductId = manager.addProduct(contract, product, PERIOD)
         manager.removeProduct(contract, contractProductId, NOW)
 
         // when
@@ -578,5 +610,6 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         private const val OWNER_ID = 7L
         private const val OTHER_USER_ID = 8L
         private val NOW = LocalDateTime.of(2026, 11, 7, 12, 0)
+        private val PERIOD = AdvertisementContractProductPeriod(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 5))
     }
 }

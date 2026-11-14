@@ -74,9 +74,8 @@ class AdvertisementContractReader internal constructor(
         val products = advertisementProductReader.readAllByIds(contractProducts.map { it.productId })
         return contractProducts.map {
             AdvertisementContractProductDto.of(
-                contractProductId = checkNotNull(it.id),
+                contractProduct = it,
                 product = checkNotNull(products[it.productId]) { "계약에 붙인 광고 상품이 없습니다." },
-                addedAt = it.createdAt,
             )
         }
     }

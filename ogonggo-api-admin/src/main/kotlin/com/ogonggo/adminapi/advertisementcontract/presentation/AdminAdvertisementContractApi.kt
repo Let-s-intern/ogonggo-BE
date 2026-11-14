@@ -171,14 +171,15 @@ interface AdminAdvertisementContractApi {
     @Operation(
         operationId = "createAdvertisementContractProduct",
         summary = "계약에 상품 추가",
-        description = "미삭제 상품을 계약에 연결합니다. 같은 상품의 중복 연결을 허용하며 노출 설정은 만들지 않습니다.",
+        description = "미삭제 상품을 게시 기간(시작일~종료일, 하루 단위)과 함께 계약에 연결합니다. 같은 상품의 중복 연결을 허용하며 노출 설정은 만들지 않습니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "연결 생성", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: contractId 또는 productId는 양수여야 합니다.",
+                description = "BAD_REQUEST: contractId 또는 productId는 양수여야 하고 startDate·endDate가 필요합니다. " +
+                    "ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID: 게시 시작일은 종료일보다 늦을 수 없습니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

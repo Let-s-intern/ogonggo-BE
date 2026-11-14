@@ -147,6 +147,8 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.products[0].category").value("BANNER"))
             .andExpect(jsonPath("$.data.products[0].position").value("JOB_HOME_TOP_BANNER"))
             .andExpect(jsonPath("$.data.products[0].productDeleted").value(false))
+            .andExpect(jsonPath("$.data.products[0].startDate").value("2026-11-02"))
+            .andExpect(jsonPath("$.data.products[0].endDate").value("2026-11-05"))
             .andExpect(jsonPath("$.data.userId").doesNotExist())
             .andExpect(jsonPath("$.data.source").doesNotExist())
             .andExpect(jsonPath("$.data.targetId").doesNotExist())
@@ -238,6 +240,8 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
                     category = AdvertisementProductCategory.BANNER,
                     position = AdvertisementProductPosition.JOB_HOME_TOP_BANNER,
                     productDeleted = false,
+                    startDate = LocalDate.parse("2026-11-02"),
+                    endDate = LocalDate.parse("2026-11-05"),
                 ),
             ),
         )

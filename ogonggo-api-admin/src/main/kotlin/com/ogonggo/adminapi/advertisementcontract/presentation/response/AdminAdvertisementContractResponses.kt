@@ -144,6 +144,8 @@ data class AdminAdvertisementContractProductResponse(
     val productName: String,
     val category: AdvertisementProductCategory,
     val productDeleted: Boolean,
+    val startDate: LocalDate?,
+    val endDate: LocalDate?,
     val addedAt: LocalDateTime,
 ) {
     companion object {
@@ -153,6 +155,8 @@ data class AdminAdvertisementContractProductResponse(
             productName = result.productName,
             category = result.category,
             productDeleted = result.productDeleted,
+            startDate = result.startDate,
+            endDate = result.endDate,
             addedAt = result.addedAt,
         )
     }
