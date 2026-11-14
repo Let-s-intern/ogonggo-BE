@@ -553,6 +553,7 @@ POST /api/v1/admin/ec2-instances/{instance}/stop
 - `instance`는 관리자 API enum `Ec2Instance`(`REDASH`, `CRAWLER`)의 이름이며 대소문자를 가리지 않습니다. 콘솔은 선택지를 `/enums`의 `Ec2Instance`로 받습니다. 인스턴스 ID는 코드에 두지 않고 관리자 API 운영 설정 `ogonggo.ec2-instance.redash-instance-id`·`crawler-instance-id`에서 읽으며, 요청으로 받지도 응답으로 내보내지도 않아 콘솔은 ID를 모릅니다. 설정에 없는 인스턴스는 목록에서 `UNKNOWN`, 켜고 끄기는 503 `EC2_INSTANCE_NOT_CONFIGURED`입니다. 다른 값은 `[instance]` 400 `BAD_REQUEST`입니다.
 - 켜기·끄기는 상태 전이 명령이라 동사형 하위 경로의 POST이며 200과 요청 직후 상태(`PENDING`·`STOPPING`)를 `data`로 돌려줍니다. 최종 상태는 목록을 다시 불러 확인합니다.
 - 이미 켜진 인스턴스를 켜거나 꺼진 인스턴스를 끄면 AWS가 그대로 성공시키므로 반복 요청해도 됩니다. 끄는 중에 켜는 것처럼 AWS가 받지 않는 전이는 409 `EC2_INSTANCE_STATE_CONFLICT`, AWS 호출 실패는 502 `EC2_UNAVAILABLE`입니다.
+- 리대시·크롤러는 S3 버킷과 다른 AWS 계정에 있어서 `cloud.aws` 접근 키를 쓰지 않습니다. 인스턴스가 있는 계정의 IAM 사용자 접근 키를 `ogonggo.ec2-instance.access-key`·`secret-key`로 따로 받고, 지역만 `cloud.aws` 지역을 씁니다. 그 사용자에게 `ec2:DescribeInstances`·`ec2:StartInstances`·`ec2:StopInstances` 권한이 필요합니다.
 - 매일 켜고 끄는 AWS 스케줄(크롤러 EventBridge Scheduler, 리대시 SSM Quick Setup)은 그대로 둡니다. 콘솔에서 켜도 끄는 시각이 되면 다시 꺼집니다.
 
 ## 6. 현재 보류하는 항목

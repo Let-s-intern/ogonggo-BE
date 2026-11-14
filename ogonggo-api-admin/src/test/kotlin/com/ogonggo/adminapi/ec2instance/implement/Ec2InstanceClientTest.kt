@@ -112,6 +112,13 @@ class Ec2InstanceClientTest {
         assertEquals(emptyMap<Ec2Instance, Ec2InstanceState>(), client.readStates(listOf(redash, crawler)))
     }
 
+    @Test
+    fun `EC2 접근 키는 두 값이 다 있을 때만 쓴다`() {
+        assertEquals(true, Ec2InstanceProperties(accessKey = "key", secretKey = "secret").credentialsConfigured)
+        assertEquals(false, Ec2InstanceProperties(accessKey = "key").credentialsConfigured)
+        assertEquals(false, Ec2InstanceProperties().credentialsConfigured)
+    }
+
     private fun instance(instanceId: String, state: InstanceStateName): Instance =
         Instance.builder().instanceId(instanceId).state(InstanceState.builder().name(state).build()).build()
 
