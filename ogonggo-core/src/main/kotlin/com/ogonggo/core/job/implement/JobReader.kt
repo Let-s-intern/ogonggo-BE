@@ -159,6 +159,13 @@ class JobReader internal constructor(
         return jobQueryRepository.findPublishedCalendar(condition, calendarCondition, rangeStart, rangeEndExclusive)
     }
 
+    /** AI 서버가 원문을 확인할 게시 중 모집 중 상시 채용 공고를 `afterId` 다음부터 `size`건 읽는다. */
+    fun readSourceCheckTargets(afterId: Long, size: Int): List<Job> {
+        require(afterId >= 0) { "원문 확인 대상의 시작 식별자는 0 이상이어야 합니다." }
+        require(size > 0) { "원문 확인 대상은 1건 이상 읽습니다." }
+        return jobRepository.findSourceCheckTargets(afterId, PageRequest.of(0, size))
+    }
+
     fun readForUpdate(jobId: Long): Job =
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)
