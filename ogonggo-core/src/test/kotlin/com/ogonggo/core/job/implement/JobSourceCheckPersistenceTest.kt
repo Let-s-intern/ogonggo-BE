@@ -95,6 +95,7 @@ internal class JobSourceCheckPersistenceTest @Autowired constructor(
             responsibilities = "서버 개발",
             sourceUrl = sourceUrl,
             source = source,
+            externalId = if (source == ContentSource.WORK24) "work24-${counter}" else null,
             publicationStatus = publicationStatus,
         ),
     )

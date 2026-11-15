@@ -39,7 +39,8 @@ class AiJobSourceCheckControllerTest @Autowired constructor(
     @Test
     fun `원문 확인 대상을 원문 URL과 함께 돌려준다`() {
         // given
-        Mockito.`when`(aiJobSourceCheckService.getTargets(30, 100)).thenReturn(listOf(job()))
+        val target = job()
+        Mockito.`when`(aiJobSourceCheckService.getTargets(30, 100)).thenReturn(listOf(target))
 
         // when & then
         mockMvc.perform(
