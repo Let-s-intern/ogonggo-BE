@@ -105,7 +105,7 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
                     }
                     snapshotEstablished.countDown()
                     check(continueUpdate.await(10, TimeUnit.SECONDS)) { "A-13 수정 진행 신호를 받지 못했습니다." }
-                    service.updateExposure(updateCommand(exposureId))
+                    service.updateExposure(updateCommand(exposureId), ADMIN_ID)
                 }
             }
         }
@@ -198,7 +198,7 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
             check(productLocked.await(10, TimeUnit.SECONDS)) { "상품 잠금이 준비되지 않았습니다." }
             runCatching {
                 transaction.execute {
-                    service.updateExposure(updateCommand(exposureId))
+                    service.updateExposure(updateCommand(exposureId), ADMIN_ID)
                 }
             }
         }
@@ -265,5 +265,6 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
 
     private companion object {
         val NOW: LocalDateTime = LocalDateTime.parse("2026-11-08T09:00:00")
+        const val ADMIN_ID = 7L
     }
 }
