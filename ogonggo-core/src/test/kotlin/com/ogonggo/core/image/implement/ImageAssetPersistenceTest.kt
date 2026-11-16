@@ -1,6 +1,12 @@
 package com.ogonggo.core.image.implement
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureContent
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposurePeriod
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.bootcamp.domain.Bootcamp
 import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
 import com.ogonggo.core.bootcamp.domain.BootcampOperationType
@@ -9,6 +15,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAsset
 import com.ogonggo.core.image.domain.ImageAssetStatus
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.error.ImageUploadErrorCode
 import com.ogonggo.core.image.persistence.ImageAssetJpaRepository
 import com.ogonggo.core.image.persistence.ImageUrlReferenceQueryRepository
@@ -137,6 +144,66 @@ internal class ImageAssetPersistenceTest @Autowired constructor(
         assertEquals(ImageUploadErrorCode.IMAGE_ASSET_NOT_AVAILABLE, exception.errorCode)
     }
 
+    @Test
+    fun `배너에서 빠진 이미지는 참조를 풀어 정리 작업이 지우고 다른 배너가 쓰는 이미지와 다른 용도 이미지는 남긴다`() {
+        // given
+        val replaced = upload("replaced-banner", OWNER_ID, "notification")
+        val shared = upload("shared-banner", OWNER_ID + 1, "notification")
+        val profile = upload("profile-image", OWNER_ID, "profile")
+        listOf(replaced, shared, profile).forEach { manager.replaceImage(it.ownerUserId, null, it.id, NOW) }
+        val product = bannerProduct()
+        banner(product, imageUrl = "https://example.com/new-banner.png")
+        banner(product, imageUrl = shared.url)
+        flush()
+
+        // when
+        manager.unreferenceImageUrls(listOf(replaced.url, shared.url, profile.url, null), ImageAssetUsage.NOTIFICATION, NOW)
+        flush()
+        val deletedCount = manager.cleanup(NOW.plusDays(2), Duration.ofHours(24))
+        flush()
+
+        // then
+        assertEquals(1, deletedCount)
+        assertEquals(ImageAssetStatus.DELETED, repository.findById(replaced.id).orElseThrow().status)
+        assertEquals(ImageAssetStatus.ATTACHED, repository.findById(shared.id).orElseThrow().status)
+        assertEquals(ImageAssetStatus.ATTACHED, repository.findById(profile.id).orElseThrow().status)
+        Mockito.verify(storage).delete(replaced.storageKey)
+    }
+
+    @Test
+    fun `삭제한 배너만 쓰던 이미지는 참조를 풀고 정리 작업도 지운다`() {
+        // given
+        val image = upload("deleted-banner", OWNER_ID, "notification")
+        manager.replaceImage(OWNER_ID, null, image.id, NOW)
+        banner(bannerProduct(), imageUrl = image.url).delete(NOW)
+        flush()
+
+        // when
+        manager.unreferenceImageUrls(listOf(image.url), ImageAssetUsage.NOTIFICATION, NOW)
+        flush()
+        val deletedCount = manager.cleanup(NOW.plusDays(2), Duration.ofHours(24))
+
+        // then
+        assertEquals(1, deletedCount)
+        Mockito.verify(storage).delete(image.storageKey)
+    }
+
+    @Test
+    fun `첨부되지 않은 배너 이미지도 배너가 쓰고 있으면 정리 작업이 지우지 않고 첨부로 되돌린다`() {
+        // given
+        val image = upload("unattached-banner", OWNER_ID + 1, "notification")
+        banner(bannerProduct(), imageUrl = image.url)
+        flush()
+
+        // when
+        val deletedCount = manager.cleanup(LocalDateTime.now().plusDays(2), Duration.ofHours(24))
+        flush()
+
+        // then
+        assertEquals(0, deletedCount)
+        assertEquals(ImageAssetStatus.ATTACHED, repository.findById(image.id).orElseThrow().status)
+    }
+
     private fun flush() {
         entityManager.flush()
         entityManager.clear()
@@ -175,12 +242,31 @@ internal class ImageAssetPersistenceTest @Autowired constructor(
             applicationUrl = "https://example.com/apply",
         ).also(entityManager::persist)
 
-    private fun upload(id: String, ownerUserId: Long): ImageAsset = repository.save(
+    private fun bannerProduct(): AdvertisementProduct =
+        AdvertisementProduct(
+            AdvertisementProductCategory.BANNER,
+            AdvertisementProductPosition.JOB_HOME_TOP_BANNER,
+            "홈 상단 배너",
+            null,
+        ).also(entityManager::persist)
+
+    private fun banner(product: AdvertisementProduct, imageUrl: String): AdvertisementExposure =
+        AdvertisementExposure(
+            product = product,
+            contractId = null,
+            content = AdvertisementExposureContent(name = "배너", imageUrl = imageUrl, linkUrl = "/jobs"),
+            adLabel = false,
+            period = AdvertisementExposurePeriod.ALWAYS,
+            exposed = true,
+            displayOrder = 1,
+        ).also(entityManager::persist)
+
+    private fun upload(id: String, ownerUserId: Long, directory: String = "etc"): ImageAsset = repository.save(
         ImageAsset.uploading(
             id = id,
             ownerUserId = ownerUserId,
-            storageKey = "ogonggo/etc/$id.png",
-            url = "https://bucket.example.com/ogonggo/etc/$id.png",
+            storageKey = "ogonggo/$directory/$id.png",
+            url = "https://bucket.example.com/ogonggo/$directory/$id.png",
             mimeType = "image/png",
             size = 3L,
         ).also { it.markUploaded() },

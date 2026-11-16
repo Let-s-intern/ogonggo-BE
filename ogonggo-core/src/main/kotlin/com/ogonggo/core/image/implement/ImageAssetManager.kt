@@ -178,6 +178,21 @@ class ImageAssetManager internal constructor(
         unreference(ownerUserId, imageIds.toSet(), now)
     }
 
+    /**
+     * URL로 저장하던 자리에서 빠진 이미지의 참조를 풀어 보존 기간이 지나면 정리되게 한다. 관리자 콘솔이 올린 배너 이미지처럼 여러 관리자가
+     * 함께 고치는 자리라 소유자를 보지 않는 대신, [usage] 폴더의 이미지만 푼다. 다른 용도(프로필·모집글 등)의 이미지 URL이 들어 있어도
+     * 건드리지 않는다. 다른 곳(공고·부트캠프·다른 배너·푸시)이 그 URL을 쓰고 있으면 풀지 않는다.
+     */
+    fun unreferenceImageUrls(urls: Collection<String?>, usage: ImageAssetUsage, now: LocalDateTime) {
+        val targets = urls.filterNotNull().filter(String::isNotBlank).toSet()
+        if (targets.isEmpty()) return
+        release(
+            imageAssetRepository.findAllByUrlIn(targets)
+                .filter { it.deletedAt == null && it.storageKey.startsWith("ogonggo/${usage.directory}/") },
+            now,
+        )
+    }
+
     fun cleanup(now: LocalDateTime, retention: java.time.Duration, batchSize: Int = 100): Int {
         val cutoff = now.minus(retention)
         val candidates = linkedSetOf<ImageAsset>().apply {
@@ -203,8 +218,8 @@ class ImageAssetManager internal constructor(
             )
         }
 
-        val usedByPostings = imageUrlReferenceQueryRepository.findUrlsUsedByPostings(candidates.map(ImageAsset::url))
-        val (kept, deletable) = candidates.partition { it.url in usedByPostings }
+        val inUse = imageUrlReferenceQueryRepository.findUrlsInUse(candidates.map(ImageAsset::url))
+        val (kept, deletable) = candidates.partition { it.url in inUse }
         imageAssetRepository.saveAll(kept.onEach(ImageAsset::restoreAttached))
 
         var deletedCount = 0
@@ -287,11 +302,15 @@ class ImageAssetManager internal constructor(
             imageAssetRepository.findAllByIdInAndOwnerUserIdAndDeletedAtIsNull(ids, ownerUserId)
         }
 
-    /** 채용공고·부트캠프가 URL로 쓰는 이미지는 참조를 풀지 않는다. 기업 로고를 바꿔도 그 로고를 넣은 공고가 남아 있을 수 있다. */
     private fun unreference(ownerUserId: Long, ids: Set<String>, now: LocalDateTime) {
-        val assets = readOwnedAssets(ownerUserId, ids)
-        val usedByPostings = imageUrlReferenceQueryRepository.findUrlsUsedByPostings(assets.map(ImageAsset::url))
-        val released = assets.filterNot { it.url in usedByPostings }.onEach { it.unreference(now) }
+        release(readOwnedAssets(ownerUserId, ids), now)
+    }
+
+    /** URL로 쓰는 곳(`ImageUrlReferenceQueryRepository`)이 남은 이미지는 참조를 풀지 않는다. 기업 로고를 바꿔도 그 로고를 넣은 공고가 남아 있을 수 있다. */
+    private fun release(assets: List<ImageAsset>, now: LocalDateTime) {
+        if (assets.isEmpty()) return
+        val inUse = imageUrlReferenceQueryRepository.findUrlsInUse(assets.map(ImageAsset::url))
+        val released = assets.filterNot { it.url in inUse }.onEach { it.unreference(now) }
         imageAssetRepository.saveAll(released)
     }
 

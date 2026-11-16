@@ -10,6 +10,7 @@ import com.ogonggo.adminapi.advertisementexposure.presentation.response.CreateAd
 import com.ogonggo.adminapi.response.SuccessResponse
 import com.ogonggo.adminapi.response.PageResponse
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -50,20 +51,22 @@ class AdminAdvertisementExposureController(
 
     @PostMapping
     override fun createExposure(
+        @AuthenticationPrincipal adminUserId: Long,
         @RequestBody request: CreateAdminAdvertisementExposureRequest,
     ): ResponseEntity<SuccessResponse<CreateAdminAdvertisementExposureResponse>> =
         SuccessResponse.created(
             CreateAdminAdvertisementExposureResponse.from(
-                adminAdvertisementExposureService.createExposure(request.toCommand()),
+                adminAdvertisementExposureService.createExposure(request.toCommand(), adminUserId),
             ),
         )
 
     @PutMapping("/{exposureId}")
     override fun updateExposure(
+        @AuthenticationPrincipal adminUserId: Long,
         @PathVariable(name = "exposureId") exposureId: Long,
         @RequestBody request: UpdateAdminAdvertisementExposureRequest,
     ): ResponseEntity<SuccessResponse<Unit>> {
-        adminAdvertisementExposureService.updateExposure(request.toCommand(exposureId))
+        adminAdvertisementExposureService.updateExposure(request.toCommand(exposureId), adminUserId)
         return SuccessResponse.ok()
     }
 

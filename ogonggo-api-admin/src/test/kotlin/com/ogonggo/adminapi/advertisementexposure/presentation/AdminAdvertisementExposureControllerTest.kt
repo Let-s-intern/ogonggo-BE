@@ -22,7 +22,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -155,6 +157,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                     endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
                     exposed = true,
                 ),
+                ADMIN_ID,
             ),
         ).thenReturn(501L)
 
@@ -180,6 +183,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
                 exposed = true,
             ),
+            ADMIN_ID,
         )
     }
 
@@ -217,6 +221,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         Mockito.`when`(
             adminAdvertisementExposureService.createExposure(
                 Mockito.any(CreateAdminAdvertisementExposureCommand::class.java) ?: exposureCommand(),
+                Mockito.eq(ADMIN_ID),
             ),
         )
             .thenAnswer { throw failures.next() }
@@ -232,7 +237,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
 
         Mockito.verify(adminAdvertisementExposureService, Mockito.times(3))
-            .createExposure(Mockito.any(CreateAdminAdvertisementExposureCommand::class.java) ?: exposureCommand())
+            .createExposure(Mockito.any(CreateAdminAdvertisementExposureCommand::class.java) ?: exposureCommand(), Mockito.eq(ADMIN_ID))
     }
 
     @Test
@@ -256,6 +261,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 startAt = null,
                 endAt = null,
             ),
+            ADMIN_ID,
         )
     }
 
@@ -283,6 +289,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 startAt = null,
                 endAt = null,
             ),
+            ADMIN_ID,
         )
     }
 
@@ -379,7 +386,11 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
     )
 
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
-        request.with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY)))
+        request.with(
+            authentication(
+                UsernamePasswordAuthenticationToken(ADMIN_ID, null, listOf(SimpleGrantedAuthority(ADMIN_AUTHORITY))),
+            ),
+        )
 
     private fun exposureResult() = AdminAdvertisementExposureResult(
         id = 501,
@@ -403,6 +414,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
 
     private companion object {
         const val PATH = "/api/v1/admin/advertisement-exposures"
+        const val ADMIN_ID = 7L
         const val BANNER_REQUEST = """{"productId":11,"contractId":1001,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":"2026-11-01T00:00:00","endAt":"2026-11-30T23:59:59","exposed":true}"""
         const val UPDATE_REQUEST = """{"contractId":null,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":null,"endAt":null}"""
     }
