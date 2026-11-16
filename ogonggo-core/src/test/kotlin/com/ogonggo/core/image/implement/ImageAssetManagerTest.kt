@@ -377,7 +377,7 @@ class ImageAssetManagerTest {
 
     /** 채용공고·부트캠프의 로고·대표 이미지 칼럼이 [urls]를 쓴다. */
     private fun givenUsedByPostings(vararg urls: String) {
-        Mockito.`when`(references.findUrlsUsedByPostings(Mockito.anyCollection()))
+        Mockito.`when`(references.findUrlsInUse(Mockito.anyCollection()))
             .thenAnswer { invocation -> invocation.getArgument<Collection<String>>(0).filter { it in urls }.toSet() }
     }
 

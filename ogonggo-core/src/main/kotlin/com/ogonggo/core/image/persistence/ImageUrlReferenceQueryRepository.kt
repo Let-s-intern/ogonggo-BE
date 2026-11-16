@@ -1,22 +1,25 @@
 package com.ogonggo.core.image.persistence
 
+import com.ogonggo.core.advertisementexposure.domain.QAdvertisementExposure.advertisementExposure
 import com.ogonggo.core.bootcamp.domain.QBootcamp.bootcamp
 import com.ogonggo.core.job.domain.QJob.job
+import com.ogonggo.core.notificationbatch.domain.QNotificationBatch.notificationBatch
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.stereotype.Repository
 
 /**
- * 이미지를 식별자가 아니라 URL로 저장하는 칼럼(채용공고 `logo_url`·`cover_image_url`, 부트캠프 `logo_url`·`representative_image_url`)이
- * 이미지 URL을 쓰는지 본다. 이 칼럼들은 이미지 상태를 맞추지 않고 저장될 수 있어(관리자 수정, AI 등록, 기업 로고 재사용),
- * 참조를 풀거나 지우기 전에 실제 사용 여부를 확인한다. 삭제된 공고도 되살릴 수 있어 함께 본다.
+ * 이미지를 식별자가 아니라 URL로 저장하는 칼럼(채용공고 `logo_url`·`cover_image_url`, 부트캠프 `logo_url`·`representative_image_url`,
+ * 광고 노출 `image_url`·`mobile_image_url`, 푸시 발송 `image_url`)이 이미지 URL을 쓰는지 본다. 이 칼럼들은 이미지 상태를 맞추지 않고
+ * 저장될 수 있어(관리자 수정, AI 등록, 기업 로고 재사용, 다른 관리자가 올린 배너 이미지), 참조를 풀거나 지우기 전에 실제 사용 여부를 확인한다.
+ * 삭제된 공고도 되살릴 수 있어 함께 본다. 광고 노출은 되살리지 않아 삭제되지 않은 것만 본다. 푸시 이미지는 지난 알림이 계속 보여 주므로 모두 본다.
  */
 @Repository
 internal class ImageUrlReferenceQueryRepository(
     private val queryFactory: JPAQueryFactory,
 ) {
 
-    /** [urls] 중 채용공고·부트캠프의 로고·대표 이미지로 쓰이는 URL을 돌려준다. */
-    fun findUrlsUsedByPostings(urls: Collection<String>): Set<String> {
+    /** [urls] 중 채용공고·부트캠프의 로고·대표 이미지, 광고 노출의 배너 이미지, 푸시 이미지로 쓰이는 URL을 돌려준다. */
+    fun findUrlsInUse(urls: Collection<String>): Set<String> {
         if (urls.isEmpty()) return emptySet()
         val jobUrls = queryFactory
             .select(job.logoUrl, job.coverImageUrl)
@@ -32,6 +35,22 @@ internal class ImageUrlReferenceQueryRepository(
             .where(bootcamp.logoUrl.`in`(urls).or(bootcamp.representativeImageUrl.`in`(urls)))
             .fetch()
             .flatMap { listOf(it.get(bootcamp.logoUrl), it.get(bootcamp.representativeImageUrl)) }
-        return (jobUrls + bootcampUrls).filterNotNull().filter { it in urls }.toSet()
+        val bannerUrls = queryFactory
+            .select(advertisementExposure.imageUrl, advertisementExposure.mobileImageUrl)
+            .distinct()
+            .from(advertisementExposure)
+            .where(
+                advertisementExposure.deletedAt.isNull,
+                advertisementExposure.imageUrl.`in`(urls).or(advertisementExposure.mobileImageUrl.`in`(urls)),
+            )
+            .fetch()
+            .flatMap { listOf(it.get(advertisementExposure.imageUrl), it.get(advertisementExposure.mobileImageUrl)) }
+        val pushUrls = queryFactory
+            .select(notificationBatch.imageUrl)
+            .distinct()
+            .from(notificationBatch)
+            .where(notificationBatch.imageUrl.`in`(urls))
+            .fetch()
+        return (jobUrls + bootcampUrls + bannerUrls + pushUrls).filterNotNull().filter { it in urls }.toSet()
     }
 }

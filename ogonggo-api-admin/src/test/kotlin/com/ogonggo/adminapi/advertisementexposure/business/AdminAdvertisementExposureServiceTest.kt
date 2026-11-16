@@ -12,6 +12,7 @@ import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReade
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposureUpdateTargetDto
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 class AdminAdvertisementExposureServiceTest {
@@ -104,6 +106,55 @@ class AdminAdvertisementExposureServiceTest {
         Mockito.verify(imageAssetManager).attachImageUrls(ADMIN_ID, listOf(IMAGE_URL, null))
     }
 
+    @Test
+    @DisplayName("배너 이미지를 바꾸면 빠진 이전 이미지만 참조를 풀어 정리 작업이 지우게 한다")
+    fun `배너 수정은 바뀐 이전 이미지의 참조를 푼다`() {
+        // given
+        val exposureReader = Mockito.mock(AdvertisementExposureReader::class.java)
+        val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+        val exposure = Mockito.mock(AdvertisementExposure::class.java)
+        Mockito.`when`(exposure.imageUrl).thenReturn(IMAGE_URL)
+        Mockito.`when`(exposure.mobileImageUrl).thenReturn(MOBILE_IMAGE_URL)
+        val updateTarget = AdvertisementExposureUpdateTargetDto(exposure, product(AdvertisementProductCategory.BANNER))
+        Mockito.`when`(exposureReader.readForUpdateWithActiveProduct(EXPOSURE_ID)).thenReturn(updateTarget)
+        val target = service(
+            Mockito.mock(AdvertisementProductReader::class.java),
+            Mockito.mock(AdvertisementExposureAppender::class.java),
+            exposureReader = exposureReader,
+            imageAssetManager = imageAssetManager,
+        )
+
+        // when
+        target.updateExposure(updateCommand().copy(mobileImageUrl = NEW_MOBILE_IMAGE_URL), ADMIN_ID)
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceImageUrls(listOf(MOBILE_IMAGE_URL), ImageAssetUsage.NOTIFICATION, NOW)
+    }
+
+    @Test
+    @DisplayName("배너를 지우면 PC·모바일 이미지의 참조를 푼다")
+    fun `배너 삭제는 이미지 참조를 푼다`() {
+        // given
+        val exposureReader = Mockito.mock(AdvertisementExposureReader::class.java)
+        val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
+        val exposure = Mockito.mock(AdvertisementExposure::class.java)
+        Mockito.`when`(exposure.imageUrl).thenReturn(IMAGE_URL)
+        Mockito.`when`(exposure.mobileImageUrl).thenReturn(MOBILE_IMAGE_URL)
+        Mockito.`when`(exposureReader.readForUpdate(EXPOSURE_ID)).thenReturn(exposure)
+        val target = service(
+            Mockito.mock(AdvertisementProductReader::class.java),
+            Mockito.mock(AdvertisementExposureAppender::class.java),
+            exposureReader = exposureReader,
+            imageAssetManager = imageAssetManager,
+        )
+
+        // when
+        target.deleteExposure(EXPOSURE_ID)
+
+        // then
+        Mockito.verify(imageAssetManager).unreferenceImageUrls(listOf(IMAGE_URL, MOBILE_IMAGE_URL), ImageAssetUsage.NOTIFICATION, NOW)
+    }
+
     private fun service(
         productReader: AdvertisementProductReader,
         exposureAppender: AdvertisementExposureAppender,
@@ -166,5 +217,7 @@ class AdminAdvertisementExposureServiceTest {
         const val ADMIN_ID = 7L
         const val IMAGE_URL = "https://example.com/banner.png"
         const val MOBILE_IMAGE_URL = "https://example.com/banner-mobile.png"
+        const val NEW_MOBILE_IMAGE_URL = "https://example.com/banner-mobile-new.png"
+        val NOW: LocalDateTime = LocalDateTime.of(2026, 11, 8, 9, 0)
     }
 }

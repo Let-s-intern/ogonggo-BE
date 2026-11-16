@@ -13,6 +13,7 @@ import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposur
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -77,6 +78,7 @@ class AdminAdvertisementExposureService(
         if (!product.category.exposable) {
             throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE)
         }
+        val previousImageUrls = listOf(exposure.imageUrl, exposure.mobileImageUrl)
         advertisementExposureManager.update(
             exposure = exposure,
             dto = AdvertisementExposureUpdateDto(
@@ -93,7 +95,10 @@ class AdminAdvertisementExposureService(
                 period = AdvertisementExposurePeriod(command.startAt, command.endAt),
             ),
         )
-        imageAssetManager.attachImageUrls(adminUserId, listOf(command.imageUrl, command.mobileImageUrl))
+        val imageUrls = listOf(command.imageUrl, command.mobileImageUrl)
+        imageAssetManager.attachImageUrls(adminUserId, imageUrls)
+        // 바꿔서 빠진 이전 이미지는 참조를 풀어 정리 작업이 지우게 한다(LC-3623).
+        imageAssetManager.unreferenceImageUrls(previousImageUrls - imageUrls.toSet(), ImageAssetUsage.NOTIFICATION, LocalDateTime.now(clock))
     }
 
     @Transactional
@@ -109,10 +114,10 @@ class AdminAdvertisementExposureService(
 
     @Transactional
     fun deleteExposure(exposureId: Long) {
-        advertisementExposureManager.delete(
-            exposure = advertisementExposureReader.readForUpdate(exposureId),
-            now = LocalDateTime.now(clock),
-        )
+        val exposure = advertisementExposureReader.readForUpdate(exposureId)
+        val now = LocalDateTime.now(clock)
+        advertisementExposureManager.delete(exposure = exposure, now = now)
+        imageAssetManager.unreferenceImageUrls(listOf(exposure.imageUrl, exposure.mobileImageUrl), ImageAssetUsage.NOTIFICATION, now)
     }
 
 }
