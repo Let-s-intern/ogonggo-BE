@@ -11,6 +11,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractPageDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractProductDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -139,6 +140,8 @@ data class AdminAdvertisementContractProductResult(
     val productId: Long,
     val productName: String,
     val category: AdvertisementProductCategory,
+    val position: AdvertisementProductPosition? = null,
+    val price: Int? = null,
     val productDeleted: Boolean,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
@@ -151,6 +154,8 @@ data class AdminAdvertisementContractProductResult(
                 productId = product.productId,
                 productName = product.productName,
                 category = product.category,
+                position = product.position,
+                price = product.price,
                 productDeleted = product.productDeleted,
                 startDate = product.startDate,
                 endDate = product.endDate,

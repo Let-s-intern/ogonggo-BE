@@ -18,9 +18,13 @@ const val USER_INTERNAL_API_KEY_SCHEME = "InternalApiKey"
 class UserOpenApiConfiguration {
 
     @Bean
-    fun optionalBearerAdvertisementContractOpenApiCustomizer(): OpenApiCustomizer =
+    fun optionalBearerAdvertisementOpenApiCustomizer(): OpenApiCustomizer =
         OpenApiCustomizer { openApi ->
-            openApi.paths?.get("/api/v1/advertisement-contracts")?.post?.let { operation ->
+            listOf(
+                openApi.paths?.get("/api/v1/advertisement-contracts")?.post,
+                openApi.paths?.get("/api/v1/advertisement-events")?.post,
+            ).forEach { operation ->
+                operation ?: return@forEach
                 val requirements = operation.security.orEmpty()
                 if (requirements.none { it.isEmpty() }) {
                     // springdoc 2.5.0 ignores @SecurityRequirement(name = ""); add OpenAPI's empty requirement directly.

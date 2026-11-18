@@ -42,6 +42,8 @@ The API modules own their actor-specific Presentation and Business layers. `ogon
 
 Read [오공고 레이어와 모듈 아키텍처](docs/architecture/layers-and-modules.md) before adding a domain feature or changing module dependencies.
 
+For the advertising analytics flow, data model, report APIs, and retention policy, read [광고 성과 데이터 수집과 리포트](docs/architecture/advertisement-reporting-guide.md).
+
 ## Run tests
 
 Install JDK 17 and 21. Run Gradle with JDK 21; module toolchains compile and test the user API on 21 and core/admin on 17.
@@ -148,7 +150,7 @@ The project intentionally follows the current LetsCareer approach and does not i
 
 운영의 두 API는 모두 `spring.jpa.hibernate.ddl-auto=none`으로 띄웁니다. 두 서비스가 하나의 DB를 공유하므로, 어느 한쪽이라도 `update`로 뜨면 병렬 배포 중 동시에 스키마를 바꿀 수 있습니다. 운영 시크릿(`APPLICATION_SECRET_USER`, `APPLICATION_SECRET_ADMIN`)에 `none` 외의 값을 넣지 않습니다.
 
-엔티티를 바꿔 스키마가 달라지면 두 API를 배포하기 전에 운영 DB에 변경을 한 번 적용합니다. 일반 스키마 변경 SQL은 저장하지 않지만, 현재 브랜치의 notification·FCM 초기 배포 SQL은 예외적으로 `docs/schema`에 포함합니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
+엔티티를 바꿔 스키마가 달라지면 두 API를 배포하기 전에 운영 DB에 변경을 한 번 적용합니다. 일반 스키마 변경 SQL은 저장하지 않지만 notification·FCM·광고 리포트의 초기 배포 및 필수 마이그레이션 SQL은 예외적으로 `docs/schema`에 포함합니다. `none`은 스키마를 검사하지도 않으므로, SQL을 빠뜨리면 기동은 되고 해당 칼럼·테이블을 쓰는 요청에서 오류가 납니다.
 
 로컬과 테스트는 빈 DB에서 시작하므로 `update`나 `create-drop`을 씁니다.
 

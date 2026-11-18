@@ -12,6 +12,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpos
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
@@ -143,6 +144,10 @@ data class AdminAdvertisementContractProductResponse(
     val productId: Long,
     val productName: String,
     val category: AdvertisementProductCategory,
+    @field:Schema(description = "현재 상품의 오공고 노출 자리. 정해진 자리가 없는 상품이면 null입니다.", nullable = true)
+    val position: AdvertisementProductPosition?,
+    @field:Schema(description = "현재 상품의 소개 가격(원). null은 견적 문의이며 계약 결제액과 다릅니다.", nullable = true)
+    val price: Int?,
     val productDeleted: Boolean,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
@@ -154,6 +159,8 @@ data class AdminAdvertisementContractProductResponse(
             productId = result.productId,
             productName = result.productName,
             category = result.category,
+            position = result.position,
+            price = result.price,
             productDeleted = result.productDeleted,
             startDate = result.startDate,
             endDate = result.endDate,

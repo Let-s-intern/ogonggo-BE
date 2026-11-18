@@ -106,12 +106,12 @@ PUT  /api/v1/users/me/jobs/{jobId}   replaceMyJob
 
 로그인과 토큰 재발급처럼 공개된 작업에는 Security Requirement를 붙이지 않습니다. 전역 인증 요구를 선언한 뒤 공개 작업에서 해제하는 방식은 실제 Security 정책과 어긋나기 쉬워 사용하지 않습니다.
 
-### P-02 U-01 선택 인증 표현
+### 광고 API의 선택 인증 표현
 
 - 상태: 결정됨
 - 결정일: 2026-11-08
 
-`POST /api/v1/advertisement-contracts`는 비회원 호출과 Bearer 토큰 호출을 모두 허용하므로 OpenAPI `security`에 `[{}, {BearerAuth: []}]`를 기록합니다. Swagger 계약에서 두 호출 방식을 모두 선택할 수 있도록 하며, 이 결정은 U-01에 적용합니다. `UserOpenApiContractTest`가 공개 호출과 Bearer 호출 요구사항을 함께 확인합니다.
+`POST /api/v1/advertisement-contracts`와 `POST /api/v1/advertisement-events`는 비회원 호출과 Bearer 토큰 호출을 모두 허용하므로 OpenAPI `security`에 `[{}, {BearerAuth: []}]`를 기록합니다. Swagger 계약에서 두 호출 방식을 모두 선택할 수 있도록 합니다. `UserOpenApiConfiguration`이 두 작업에 빈 보안 요구사항을 추가합니다.
 
 ### 채용·부트캠프 목록의 선택 인증 — 확인 필요
 

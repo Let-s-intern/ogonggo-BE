@@ -80,6 +80,10 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-inquiries").permitAll()
                 // 광고 신청은 비회원도 접수하고, 유효한 토큰은 선택적으로 회원 연결에 사용한다.
                 it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-contracts").permitAll()
+                // 광고 이벤트도 비회원이 기록하며, 유효한 토큰이 있으면 회원 ID를 서버가 연결한다.
+                it.requestMatchers(HttpMethod.POST, "/api/v1/advertisement-events").permitAll()
+                // 광고 계약 리포트는 로그인한 기업 회원 본인만 조회한다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-contracts/*/report").authenticated()
                 // 광고 상품은 신청 화면에서 비회원도 조회한다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-products").permitAll()
                 // 화면 자리별 광고 배너는 비회원도 조회한다.
