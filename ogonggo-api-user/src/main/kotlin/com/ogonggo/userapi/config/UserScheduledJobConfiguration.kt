@@ -2,6 +2,7 @@ package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.userapi.bootcamp.presentation.BootcampAutoCloseScheduler
+import com.ogonggo.userapi.advertisementevent.presentation.AdvertisementEventCleanupScheduler
 import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.job.presentation.JobAutoCloseScheduler
@@ -22,6 +23,14 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration(proxyBeanMethods = false)
 class UserScheduledJobConfiguration {
+    @Bean
+    fun advertisementEventCleanupJob(scheduler: AdvertisementEventCleanupScheduler) = ScheduledJobDefinition(
+        name = AdvertisementEventCleanupScheduler.SCHEDULER_NAME,
+        defaultCron = "0 0 4 * * *",
+        description = "1년 지난 광고 이벤트 사용자 식별 정보 정리 (매일 04:00)",
+        action = scheduler::cleanup,
+    )
+
     @Bean
     fun fcmTopicSyncJob(scheduler: com.ogonggo.userapi.notification.fcm.presentation.FcmTopicSyncScheduler) = ScheduledJobDefinition(
         name = com.ogonggo.userapi.notification.fcm.presentation.FcmTopicSyncScheduler.SCHEDULER_NAME,

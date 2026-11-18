@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCode
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposureUpdateTargetDto
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposurePageDto
+import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposureEventTargetDto
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureJpaRepository
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureQueryRepository
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
@@ -49,6 +50,25 @@ class AdvertisementExposureReader internal constructor(
      * A-15도 다른 노출 변경과 같은 상품 → 대상 노출 잠금 순서를 사용한다.
      */
     fun readForMove(exposureId: Long): AdvertisementExposure = readForUpdate(exposureId)
+
+    /** 사용자 API가 이벤트를 적재할 때 당시 노출·상품 설정을 고정해 읽는다. */
+    fun readEventTarget(exposureId: Long): AdvertisementExposureEventTargetDto {
+        val exposure = advertisementExposureRepository.findByIdAndDeletedAtIsNull(exposureId)
+            ?: throw EntityNotFoundException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_NOT_FOUND)
+        val product = advertisementProductReader.read(exposure.productId)
+        return AdvertisementExposureEventTargetDto(
+            exposureId = exposureId,
+            productId = checkNotNull(product.id),
+            contractId = exposure.contractId,
+            category = product.category,
+            position = product.position,
+            targetType = exposure.targetType,
+            targetId = exposure.targetId,
+            exposed = exposure.exposed,
+            startAt = exposure.startAt,
+            endAt = exposure.endAt,
+        )
+    }
 
     /**
      * 세팅 화면의 한 탭(상품 자리)이다. 꺼졌거나 기간이 지난 것도 모두 순서대로 준다.

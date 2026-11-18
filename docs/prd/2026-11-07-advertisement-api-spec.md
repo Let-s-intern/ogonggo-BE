@@ -965,6 +965,8 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
         "productId": 11,
         "productName": "채용공고 홈 상단 배너",
         "category": "BANNER",
+        "position": "JOB_HOME_TOP_BANNER",
+        "price": 300000,
         "productDeleted": false,
         "addedAt": "2026-11-07T18:00:00"
       }
@@ -1014,6 +1016,8 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 | data.products[].productId | int64 | 아니오 | 상품 ID |
 | data.products[].productName | string | 아니오 | 현재 상품명. 판매 당시 이름 스냅샷 아님 |
 | data.products[].category | string(enum) | 아니오 | 현재 상품 category |
+| data.products[].position | string(enum) | 예 | 현재 상품 노출 자리. 외부 채널 상품 등 자리가 없으면 null |
+| data.products[].price | int32 | 예 | 현재 상품 소개 가격. 견적 문의 상품이면 null이며 계약 결제액과 다름 |
 | data.products[].productDeleted | boolean | 아니오 | 상품이 소프트 삭제됐는지 |
 | data.products[].startDate | string(date) | 예 | 게시 시작일. 기간 도입 전에 붙인 상품은 null |
 | data.products[].endDate | string(date) | 예 | 게시 종료일(포함). 기간 도입 전에 붙인 상품은 null |
@@ -1025,7 +1029,7 @@ GET /api/v1/admin/advertisement-contracts/{contractId}
 - COMPANY_POSTING은 userId·targetId가 있고 recruitmentUrl·purpose·budgetAmount·요청사항·폼 담당자·계산서·소재 방식은 null, categories는 []다. 등록 당시 이름·제목을 보존하며 최신 공고로 자동 교체하지 않는다.
 - 비즈니스 공고 계약의 담당자 연락처를 기업 프로필에서 채워 이 필드의 null 의미를 바꾸지 않는다. 별도 기업 정보 확장이 필요하면 신규 합의한다.
 - 상품을 제거한 연결 행은 제외한다. 상품 자체가 삭제됐어도 연결은 포함하고 productDeleted=true다.
-- productName·category는 현재 상품 값이며 판매 시점 스냅샷으로 보장하지 않는다. products에는 개별 금액·기간이 없다. 계약의 paymentAmount만 실제 금액이다.
+- productName·category·position·price는 현재 상품 값이며 판매 시점 스냅샷으로 보장하지 않는다. products에는 개별 계약 금액·집행 기간이 없다. price는 상품 소개용이고 계약의 paymentAmount만 실제 계약 금액이다.
 - 계약에 연결된 노출은 A-11의 contractId 필터로 조회한다. 상세 응답에 노출 전체를 자동 포함하지 않는다.
 
 #### 예외
