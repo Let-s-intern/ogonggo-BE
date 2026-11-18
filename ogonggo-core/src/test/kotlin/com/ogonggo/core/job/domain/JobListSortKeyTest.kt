@@ -10,14 +10,27 @@ import java.time.LocalDate
 class JobListSortKeyTest {
 
     @Test
-    fun `크롤러 공고와 기업회원 공고는 등록일과 무작위 값에 관계없이 고용24 공고보다 앞에 온다`() {
+    fun `늦게 등록한 날의 공고는 경로와 무작위 값에 관계없이 앞에 온다`() {
         // given
-        val newestWork24 = JobListSortKey.of(ContentSource.WORK24, LocalDate.of(2026, 12, 31), false, -1)
+        val day = LocalDate.of(2026, 11, 17)
+        val todayWork24 = JobListSortKey.of(ContentSource.WORK24, day, false, Int.MIN_VALUE)
 
         // when & then
         listOf(ContentSource.CRAWLER, ContentSource.COMPANY).forEach { source ->
-            val oldest = JobListSortKey.of(source, LocalDate.of(2026, 1, 1), false, Int.MIN_VALUE)
-            assertTrue(oldest > newestWork24)
+            val yesterday = JobListSortKey.of(source, day.minusDays(1), true, -1)
+            assertTrue(todayWork24 > yesterday)
+        }
+    }
+
+    @Test
+    fun `같은 날에는 크롤러 공고와 기업회원 공고가 PICK 직군과 무작위 값에 관계없이 고용24 공고보다 앞에 온다`() {
+        // given
+        val day = LocalDate.of(2026, 11, 17)
+        val work24 = JobListSortKey.of(ContentSource.WORK24, day, true, -1)
+
+        // when & then
+        listOf(ContentSource.CRAWLER, ContentSource.COMPANY).forEach { source ->
+            assertTrue(JobListSortKey.of(source, day, false, 0) > work24)
         }
     }
 

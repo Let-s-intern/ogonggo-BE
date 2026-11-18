@@ -153,9 +153,13 @@ internal class JobImplementPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `사용자 공고 목록 최신순은 크롤러 공고를 먼저 두고 그 안에서 늦게 등록한 날의 공고를 먼저 두며 게시된 미삭제 공고만 페이징한다`() {
+    fun `사용자 공고 목록 최신순은 늦게 등록한 날의 공고를 경로와 관계없이 먼저 두고 같은 날에는 크롤러 공고를 먼저 두며 게시된 미삭제 공고만 페이징한다`() {
         // given
         val oldCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 28, 10, 0))
+        val sameDayWork24 = appendAndPublish(
+            createCommand().copy(source = ContentSource.WORK24, externalId = "K0"),
+            LocalDateTime.of(2026, 9, 29, 9, 0),
+        )
         val newCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 29, 10, 0))
         val deletedCrawled = appendAndPublish(createCommand(), LocalDateTime.of(2026, 9, 30, 10, 0))
         val newestWork24 = appendAndPublish(
@@ -165,12 +169,12 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         jobManager.delete(jobReader.read(deletedCrawled), NOW)
 
         // when
-        val pages = (0..2).map { readPage(page = it, size = 1, sortType = JobSortType.LATEST) }
+        val pages = (0..3).map { readPage(page = it, size = 1, sortType = JobSortType.LATEST) }
 
         // then
-        assertEquals(listOf(newCrawled, oldCrawled, newestWork24), pages.flatMap { page -> page.jobs.map { it.id } })
-        assertEquals(3L, pages.first().totalElements)
-        assertEquals(listOf(true, true, false), pages.map { it.hasNext })
+        assertEquals(listOf(newestWork24, newCrawled, sameDayWork24, oldCrawled), pages.flatMap { page -> page.jobs.map { it.id } })
+        assertEquals(4L, pages.first().totalElements)
+        assertEquals(listOf(true, true, true, false), pages.map { it.hasNext })
     }
 
     @Test
@@ -248,9 +252,11 @@ internal class JobImplementPersistenceTest @Autowired constructor(
         val listed = pages.flatMap { page -> page.jobs.map { checkNotNull(it.id) } }
 
         // then
-        // 9월 29일 공고는 경로와 관계없이 그날의 무작위 순서로 섞이고, 그 뒤에 등록일 순서대로 이어진다.
-        assertEquals(sameDayIds.toSet(), listed.take(8).toSet())
-        assertEquals(listOf(oldCrawled, companyOld, work24), listed.drop(8))
+        // 등록일이 가장 늦은 고용24 공고가 먼저 오고, 9월 29일 공고는 경로와 관계없이 그날의 무작위 순서로 섞이고,
+        // 그 뒤에 등록일 순서대로 이어진다.
+        assertEquals(work24, listed.first())
+        assertEquals(sameDayIds.toSet(), listed.drop(1).take(8).toSet())
+        assertEquals(listOf(oldCrawled, companyOld), listed.drop(9))
         assertEquals(11L, pages.first().totalElements)
         assertEquals(listOf(true, true, true, false), pages.map { it.hasNext })
     }
