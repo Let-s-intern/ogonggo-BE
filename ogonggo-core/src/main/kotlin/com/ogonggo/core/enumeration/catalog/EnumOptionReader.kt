@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
+import com.ogonggo.core.advertisementevent.domain.AdvertisementEventType
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureMoveDirection
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementinquiry.domain.AdvertisementInquiryCompanyNameSource
@@ -183,6 +184,7 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementInquiryMemberType>(),
             enumOptionsOf<AdvertisementInquiryInflowChannel>(),
             enumOptionsOf<AdvertisementInquiryCompanyNameSource>(),
+            enumOptionsOf<AdvertisementEventType>(),
             enumOptionsOf<AdvertisementProductCategory>(),
             enumOptionsOf<AdvertisementProductPosition>(),
             enumOptionsOf<AdvertisementContractStatus>(),
