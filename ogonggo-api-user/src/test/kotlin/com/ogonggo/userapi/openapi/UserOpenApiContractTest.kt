@@ -270,7 +270,7 @@ class UserOpenApiContractTest @Autowired constructor(
             }
             .toList()
 
-        assertEquals(4, advertisementOperations.size, "기존 광고 문의와 신규 광고 API를 모두 검사합니다.")
+        assertEquals(6, advertisementOperations.size, "기존 광고 문의와 노출·상품·이벤트·리포트 API를 모두 검사합니다.")
         advertisementOperations.forEach { (path, operation) ->
             assertEquals(listOf("광고"), operation.at("/tags").map { it.asText() }, path)
         }
