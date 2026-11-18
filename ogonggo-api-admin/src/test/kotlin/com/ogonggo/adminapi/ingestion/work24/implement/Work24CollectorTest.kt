@@ -13,7 +13,9 @@ import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.domain.JobRole
+import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.JobAppender
+import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import com.ogonggo.core.region.domain.Region
@@ -54,6 +56,12 @@ class Work24CollectorTest {
     private val appendedBootcamps = mutableListOf<BootcampAppendDto>()
     private val jobAppender = Mockito.mock(JobAppender::class.java) { invocation ->
         appendedJobs += invocation.getArgument<JobAppendDto>(0)
+        null
+    }
+    /** 마감한 공고를 기록한다. */
+    private val closedJobIds = mutableListOf<Long?>()
+    private val jobManager = Mockito.mock(JobManager::class.java) { invocation ->
+        if (invocation.method.name == "close") closedJobIds += invocation.getArgument<Job>(0).id
         null
     }
     private val bootcampAppender = Mockito.mock(BootcampAppender::class.java) { invocation ->
@@ -561,6 +569,63 @@ class Work24CollectorTest {
         assertEquals(listOf(3, null), appendedJobs.map { it.experienceMinYears })
     }
 
+    @Test
+    fun `구인인증번호만 새로 받아 다시 올린 공고는 등록하고 같은 회사·제목의 이전 공고를 마감한다`() {
+        // given
+        val previous = job(id = 1, startAt = LocalDateTime.of(2026, 10, 21, 0, 0), externalId = "K131512610210007")
+        val reposted = job(id = 2, startAt = LocalDateTime.of(2026, 11, 17, 0, 0), externalId = "K131512611170002")
+        Mockito.`when`(jobReader.readRecruitingSameTitle(ContentSource.WORK24, "삼삼푸드주식회사", "수·발주 담당자 모집"))
+            .thenReturn(listOf(previous, reposted))
+        expectOneJob("K131512611170002", regDt = "26-11-17")
+
+        // when
+        val result = collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
+
+        // then
+        assertEquals(1, result.appendedCount)
+        assertEquals(listOf<Long?>(1), closedJobIds)
+    }
+
+    @Test
+    fun `목록이 이전 공고를 나중에 주면 방금 등록한 이전 공고를 마감하고 최근 공고를 남긴다`() {
+        // given
+        val latest = job(id = 1, startAt = LocalDateTime.of(2026, 11, 17, 0, 0), externalId = "K131512611170002")
+        val older = job(id = 2, startAt = LocalDateTime.of(2026, 10, 21, 0, 0), externalId = "K131512610210007")
+        Mockito.`when`(jobReader.readRecruitingSameTitle(ContentSource.WORK24, "삼삼푸드주식회사", "수·발주 담당자 모집"))
+            .thenReturn(listOf(latest, older))
+        expectOneJob("K131512610210007", regDt = "26-10-21")
+
+        // when
+        collector().collect(Work24CollectionTarget.RECRUITMENTS, NOW)
+
+        // then
+        assertEquals(listOf<Long?>(2), closedJobIds)
+    }
+
+    private fun expectOneJob(wantedAuthNo: String, regDt: String) {
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
+            .andRespond(
+                xml(
+                    "<wantedRoot><total>1</total><wanted><wantedAuthNo>$wantedAuthNo</wantedAuthNo>" +
+                        "<jobsCd>133201</jobsCd><regDt>$regDt</regDt><wantedInfoUrl>$WORKNET/$wantedAuthNo</wantedInfoUrl>" +
+                        "</wanted></wantedRoot>",
+                ),
+            )
+        server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210D01.do")))
+            .andRespond(
+                xml(
+                    "<wantedDtl><corpInfo><corpNm>삼삼푸드주식회사</corpNm></corpInfo>" +
+                        "<wantedInfo><wantedTitle>수·발주 담당자 모집</wantedTitle></wantedInfo></wantedDtl>",
+                ),
+            )
+    }
+
+    private fun job(id: Long, startAt: LocalDateTime, externalId: String): Job = Mockito.mock(Job::class.java).also {
+        Mockito.`when`(it.id).thenReturn(id)
+        Mockito.`when`(it.recruitmentStartAt).thenReturn(startAt)
+        Mockito.`when`(it.externalId).thenReturn(externalId)
+    }
+
     private fun collector(): Work24Collector {
         val properties = Work24Properties(
             baseUrl = BASE_URL,
@@ -572,6 +637,7 @@ class Work24CollectorTest {
             Work24Client(restClientBuilder.build(), properties, ObjectMapper()),
             jobReader,
             jobAppender,
+            jobManager,
             bootcampReader,
             bootcampAppender,
             Work24CoursePageReader(restClientBuilder.build()),

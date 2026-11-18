@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.ogonggo.adminapi.ingestion.work24.implement.dto.Work24CollectDto
 import com.ogonggo.core.bootcamp.implement.BootcampAppender
 import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.JobAppender
+import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.contentreview.domain.ContentSource
 import org.slf4j.LoggerFactory
@@ -18,6 +20,7 @@ import java.time.LocalDateTime
  * 운영자가 지운 콘텐츠도 등록한 것으로 봐서 다시 넣지 않는다. 새 항목만 상세 API를 불러 본문을 채운다.
  * 훈련과정(부트캠프, 일학습병행 채용공고)은 고용24 과정 상세 화면도 읽어 Open API에 없는 칸을 채운다. 화면을 못 읽어도 Open API 값만으로 등록한다.
  * 부트캠프는 훈련기관 소개 화면의 로고와 사진도 오공고 이미지 저장소로 옮겨 넣는다.
+ * 기업이 같은 공고를 구인인증번호만 새로 받아 다시 올리면 가장 최근 것만 남기고 나머지를 마감한다([closeReposted]).
  * 한 항목이 실패해도 다음 항목으로 넘어가지만, 연달아 [MAX_CONSECUTIVE_FAILURES]번 실패하면 고용24 장애로 보고 이 대상을 멈춘다.
  *
  * 페이지를 넘기다 다음 중 하나면 멈춘다.
@@ -33,6 +36,7 @@ class Work24Collector(
     private val work24Client: Work24Client,
     private val jobReader: JobReader,
     private val jobAppender: JobAppender,
+    private val jobManager: JobManager,
     private val bootcampReader: BootcampReader,
     private val bootcampAppender: BootcampAppender,
     private val work24CoursePageReader: Work24CoursePageReader,
@@ -90,7 +94,7 @@ class Work24Collector(
                 Outcome.EXCLUDED
             } else {
                 when (target.destination) {
-                    Work24Destination.JOB -> importJob(target, item)
+                    Work24Destination.JOB -> importJob(target, item, now)
                     Work24Destination.BOOTCAMP -> importBootcamp(target, item, now)
                     Work24Destination.WORK_STUDY_JOB -> importWorkStudyJob(target, item, now)
                 }
@@ -105,7 +109,7 @@ class Work24Collector(
      * AI 서버가 같은 원문을 먼저 등록했어도 건너뛰어 같은 공고가 두 번 보이지 않게 한다.
      * 임시로 최소 경력이 [TEMPORARY_MAX_CAREER_YEARS]년보다 긴 공고는 뺀다. 연수는 상세에만 있다.
      */
-    private fun importJob(target: Work24CollectionTarget, item: JsonNode): Outcome {
+    private fun importJob(target: Work24CollectionTarget, item: JsonNode, now: LocalDateTime): Outcome {
         val externalId = requireNotNull(id(target, item)) { "구인인증번호가 없습니다." }
         val sourceUrl = requireNotNull(Work24JobMapper.sourceUrl(item)) { "채용정보 URL이 없습니다." }
         if (jobReader.existsByExternalId(ContentSource.WORK24, externalId) || jobReader.existsBySourceUrl(sourceUrl)) {
@@ -116,8 +120,26 @@ class Work24Collector(
         if ((Work24JobMapper.minCareerYears(detail) ?: 0) > TEMPORARY_MAX_CAREER_YEARS) {
             return Outcome.EXCLUDED
         }
-        jobAppender.append(Work24JobMapper.toAppendDto(item, detail, sourceUrl, externalId))
+        val job = Work24JobMapper.toAppendDto(item, detail, sourceUrl, externalId)
+        jobAppender.append(job)
+        closeReposted(job.companyName, job.title, now)
         return Outcome.APPENDED
+    }
+
+    /**
+     * 회사명·제목이 같은 모집 중 고용24 공고가 여럿이면 가장 최근에 올린 것만 남기고 마감한다 (2026-11-18, LC-3645).
+     *
+     * 기업이 같은 공고를 구인인증번호만 새로 받아 다시 올려 이전 공고와 함께 모집 중으로 보였다(모집 중 고용24 공고
+     * 2,461건 중 32쌍). 새 공고를 건너뛰면 이전 공고가 먼저 마감된 뒤 공고가 사라지므로 새 공고를 남긴다.
+     * 최근은 등록 순서가 아니라 고용24 등록일과 구인인증번호로 정한다. 목록이 새 공고를 이전 공고보다 먼저 줄 수 있다.
+     */
+    private fun closeReposted(companyName: String, title: String, now: LocalDateTime) {
+        val same = jobReader.readRecruitingSameTitle(ContentSource.WORK24, companyName, title)
+        val latest = same.maxWithOrNull(LATEST_FIRST) ?: return
+        same.filter { it !== latest }.forEach { job ->
+            log.info("고용24에 다시 올라온 공고라 이전 공고를 마감합니다. jobId={}, kept={}", job.id, latest.id)
+            jobManager.close(job, now)
+        }
     }
 
     /** 일학습병행 훈련과정을 채용공고로 넣는다. 과정 ID와 회차로 이미 등록했으면 건너뛴다. */
@@ -193,6 +215,7 @@ class Work24Collector(
         private const val MAX_PAGE = 1000
         private const val MAX_CONSECUTIVE_FAILURES = 10
         private const val ID_SEPARATOR = "-"
+        private val LATEST_FIRST = compareBy<Job>({ it.recruitmentStartAt }, { it.externalId }, { it.id })
         private val log = LoggerFactory.getLogger(Work24Collector::class.java)
 
         /** XML을 옮긴 JSON은 항목이 하나면 객체, 여럿이면 배열이다. 항목이 없으면 요소가 없거나 빈 문자열이다. */

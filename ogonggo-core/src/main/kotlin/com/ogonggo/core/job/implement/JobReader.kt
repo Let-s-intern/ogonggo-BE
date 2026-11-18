@@ -7,6 +7,7 @@ import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.domain.JobCalendarSearchCondition
 import com.ogonggo.core.job.domain.JobManagementSearchCondition
 import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.domain.JobRecruitmentStatus
 import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.core.job.domain.JobSearchCondition
 import com.ogonggo.core.job.domain.JobSortType
@@ -42,6 +43,18 @@ class JobReader internal constructor(
     /** 같은 곳에서 같은 식별값으로 이미 수집한 공고가 있는지 확인한다. 삭제된 공고도 센다. */
     fun existsByExternalId(source: ContentSource, externalId: String): Boolean =
         jobRepository.existsBySourceAndExternalId(source, externalId)
+
+    /**
+     * 같은 곳에서 수집한, 회사명과 제목이 글자까지 같은 모집 중 공고다. 고용24가 구인인증번호만 새로 받아
+     * 다시 올린 공고를 찾는다. 삭제된 공고는 뺀다.
+     */
+    fun readRecruitingSameTitle(source: ContentSource, companyName: String, title: String): List<Job> =
+        jobRepository.findAllBySourceAndCompanyNameAndTitleAndRecruitmentStatusAndDeletedAtIsNull(
+            source,
+            companyName,
+            title,
+            JobRecruitmentStatus.RECRUITING,
+        )
 
     /** AI 서버가 등록 응답의 식별자를 잃었을 때 원문 URL로 되찾는다. AI 서버는 자신이 등록한 공고만 다룬다. */
     fun readCrawledBySourceUrl(sourceUrl: String): Job =
