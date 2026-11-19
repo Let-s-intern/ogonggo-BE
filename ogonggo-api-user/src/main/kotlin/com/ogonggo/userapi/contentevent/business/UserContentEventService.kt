@@ -6,6 +6,7 @@ import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentevent.implement.ContentEventAppender
 import com.ogonggo.core.contentevent.implement.ContentEventValidator
 import com.ogonggo.core.contentevent.implement.dto.ContentEventAppendDto
+import com.ogonggo.userapi.contentevent.implement.ContentEventRequestGuard
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -15,15 +16,18 @@ import java.time.LocalDateTime
 class UserContentEventService(
     private val contentEventValidator: ContentEventValidator,
     private val contentEventAppender: ContentEventAppender,
+    private val contentEventRequestGuard: ContentEventRequestGuard,
     private val clock: Clock,
 ) {
 
     /**
      * 브라우저가 묶어 보낸 이벤트를 저장한다. 비로그인이면 userId가 없다.
      * 저장할 수 없는 건은 그 건만 버리고, 시각은 받은 시각 하나로 적는다.
+     * 봇이거나 방문자·IP의 분당 요청 상한을 넘으면 아무것도 저장하지 않는다.
      */
     @Transactional
     fun collect(userId: Long?, command: CollectContentEventsCommand) {
+        if (!contentEventRequestGuard.isAllowed(command.visitorId, command.clientIp, command.userAgent)) return
         val now = LocalDateTime.now(clock)
         val events = command.events.map {
             ContentEventAppendDto(
@@ -45,6 +49,8 @@ class UserContentEventService(
 data class CollectContentEventsCommand(
     val visitorId: String,
     val events: List<CollectContentEventCommand>,
+    val clientIp: String?,
+    val userAgent: String?,
 )
 
 data class CollectContentEventCommand(

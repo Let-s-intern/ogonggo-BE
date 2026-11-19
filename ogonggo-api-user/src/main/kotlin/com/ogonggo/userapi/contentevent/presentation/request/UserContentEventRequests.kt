@@ -23,9 +23,11 @@ data class CreateContentEventsRequest(
     @field:Valid
     val events: List<ContentEventRequest>,
 ) {
-    fun toCommand(): CollectContentEventsCommand = CollectContentEventsCommand(
+    fun toCommand(clientIp: String?, userAgent: String?): CollectContentEventsCommand = CollectContentEventsCommand(
         visitorId = visitorId,
         events = events.map(ContentEventRequest::toCommand),
+        clientIp = clientIp,
+        userAgent = userAgent,
     )
 
     companion object {

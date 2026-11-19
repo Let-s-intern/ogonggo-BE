@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
@@ -40,7 +41,7 @@ class UserContentEventControllerTest @Autowired constructor(
     @Test
     fun `로그인 없이 이벤트를 보내면 회원 없이 넘기고 본문 없는 202로 응답한다`() {
         // when & then
-        mockMvc.perform(post(PATH).contentType(MediaType.APPLICATION_JSON).content(BODY))
+        mockMvc.perform(post(PATH).header(HttpHeaders.USER_AGENT, USER_AGENT).contentType(MediaType.APPLICATION_JSON).content(BODY))
             .andExpect(status().isAccepted)
             .andExpect(content().string(""))
 
@@ -53,6 +54,7 @@ class UserContentEventControllerTest @Autowired constructor(
         mockMvc.perform(
             post(PATH)
                 .with(authentication(UsernamePasswordAuthenticationToken(USER_ID, null, emptyList())))
+                .header(HttpHeaders.USER_AGENT, USER_AGENT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(BODY),
         )
@@ -65,10 +67,25 @@ class UserContentEventControllerTest @Autowired constructor(
     @Test
     fun `text plain 본문도 JSON으로 읽는다`() {
         // when & then
-        mockMvc.perform(post(PATH).contentType("text/plain;charset=UTF-8").content(BODY))
+        mockMvc.perform(post(PATH).header(HttpHeaders.USER_AGENT, USER_AGENT).contentType("text/plain;charset=UTF-8").content(BODY))
             .andExpect(status().isAccepted)
 
         Mockito.verify(userContentEventService).collect(null, COMMAND)
+    }
+
+    @Test
+    fun `프록시가 붙인 첫 주소를 방문자 IP로 넘긴다`() {
+        // when & then
+        mockMvc.perform(
+            post(PATH)
+                .header("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
+                .header(HttpHeaders.USER_AGENT, USER_AGENT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(BODY),
+        )
+            .andExpect(status().isAccepted)
+
+        Mockito.verify(userContentEventService).collect(null, COMMAND.copy(clientIp = "203.0.113.7"))
     }
 
     @Test
@@ -94,6 +111,7 @@ class UserContentEventControllerTest @Autowired constructor(
         const val PATH = "/api/v1/events"
         const val USER_ID = 17L
         const val VISITOR_ID = "5f0c2e9e-1b7a-4c1e-9a43-0d2f3b6c7a11"
+        const val USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0 Safari/537.36"
         val BODY = """
             {
               "visitorId": "$VISITOR_ID",
@@ -111,6 +129,8 @@ class UserContentEventControllerTest @Autowired constructor(
                 CollectContentEventCommand(ContentEventType.SCROLL, ContentEventTargetType.JOB, 15818L, null, ContentEventSource.LIST, 72, 48_000L),
                 CollectContentEventCommand(ContentEventType.AD_CLICK, null, null, 12L, ContentEventSource.BANNER, null, null),
             ),
+            clientIp = "127.0.0.1",
+            userAgent = USER_AGENT,
         )
     }
 }
