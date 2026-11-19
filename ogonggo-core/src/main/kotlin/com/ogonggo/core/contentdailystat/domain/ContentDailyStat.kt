@@ -62,6 +62,7 @@ internal class ContentDailyStat(
     @Column(name = "scroll_reach_75", nullable = false) val scrollReach75: Long, /* 75%까지 내린 순 방문자 수 */
     @Column(name = "scroll_reach_100", nullable = false) val scrollReach100: Long, /* 끝까지 내린 순 방문자 수 */
     @Column(nullable = false) val impressions: Long, /* 광고 노출수 */
+    @Column(name = "unique_impressions", nullable = false) val uniqueImpressions: Long, /* 같은 방문자·노출은 하루 한 번으로 센 광고 노출수 */
     @Column(name = "ad_clicks", nullable = false) val adClicks: Long, /* 광고 소재 클릭수 */
 ) {
 
@@ -86,6 +87,7 @@ internal class ContentDailyStat(
         scrollReach75 = scrollReach75,
         scrollReach100 = scrollReach100,
         impressions = impressions,
+        uniqueImpressions = uniqueImpressions,
         adClicks = adClicks,
     )
 
@@ -111,6 +113,7 @@ internal class ContentDailyStat(
             scrollReach75 = metric.scrollReach75,
             scrollReach100 = metric.scrollReach100,
             impressions = metric.impressions,
+            uniqueImpressions = metric.uniqueImpressions,
             adClicks = metric.adClicks,
         )
     }

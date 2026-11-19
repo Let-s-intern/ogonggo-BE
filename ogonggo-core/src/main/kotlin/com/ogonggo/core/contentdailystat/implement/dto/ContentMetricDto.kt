@@ -6,6 +6,7 @@ package com.ogonggo.core.contentdailystat.implement.dto
  * - 조회수는 같은 방문자가 같은 대상을 30분 안에 다시 연 것을 뺀 값이다.
  * - 순 방문자 수는 이 범위 안에서 센 값이라, 여러 범위를 더하면 같은 방문자가 두 번 셀 수 있다.
  * - 스크롤 도달 수는 상세를 연 순 방문자 중 그 깊이까지 내린 방문자 수다. 방문자마다 가장 깊이 내린 값으로 센다.
+ * - 순 노출수([uniqueImpressions])는 같은 방문자가 같은 노출을 하루(KST)에 여러 번 봐도 한 번으로 센 노출수다. 날짜를 더하면 하루 한 번씩 센 값이 된다.
  */
 data class ContentMetricDto(
     val views: Long = 0,
@@ -23,6 +24,7 @@ data class ContentMetricDto(
     val scrollReach75: Long = 0,
     val scrollReach100: Long = 0,
     val impressions: Long = 0,
+    val uniqueImpressions: Long = 0,
     val adClicks: Long = 0,
 ) {
     operator fun plus(other: ContentMetricDto) = ContentMetricDto(
@@ -41,6 +43,7 @@ data class ContentMetricDto(
         scrollReach75 = scrollReach75 + other.scrollReach75,
         scrollReach100 = scrollReach100 + other.scrollReach100,
         impressions = impressions + other.impressions,
+        uniqueImpressions = uniqueImpressions + other.uniqueImpressions,
         adClicks = adClicks + other.adClicks,
     )
 

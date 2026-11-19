@@ -7,7 +7,9 @@ import com.ogonggo.core.contentevent.domain.ContentEventSource
 import com.ogonggo.core.contentevent.domain.ContentEventTargetType
 import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentevent.domain.QContentEvent.contentEvent
+import com.ogonggo.core.user.domain.QUserProfile.userProfile
 import com.querydsl.core.types.Projections
+import com.querydsl.core.types.dsl.CaseBuilder
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.jpa.repository.JpaRepository
@@ -123,6 +125,60 @@ internal class ContentDailyStatQueryRepository(
             }
     }
 
+    /** 노출을 본 서로 다른 방문자 수를 집계 행 단위로 센다. 하루 범위로 부르면 "하루 한 번" 순 노출수다. */
+    fun countUniqueImpressions(scope: ContentMetricScope, from: LocalDateTime, toExclusive: LocalDateTime): List<ContentAdEventCount> {
+        if (scope.isEmpty) return emptyList()
+        val visitors = visitorKey.countDistinct()
+        return queryFactory
+            .select(contentEvent.targetType, contentEvent.targetId, contentEvent.exposureId, contentEvent.source, visitors)
+            .from(contentEvent)
+            .where(
+                eventScope(scope),
+                contentEvent.eventType.eq(ContentEventType.IMPRESSION),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .groupBy(contentEvent.targetType, contentEvent.targetId, contentEvent.exposureId, contentEvent.source)
+            .fetch()
+            .map {
+                ContentAdEventCount(
+                    eventType = ContentEventType.IMPRESSION,
+                    targetType = it.get(contentEvent.targetType),
+                    targetId = it.get(contentEvent.targetId),
+                    exposureId = it.get(contentEvent.exposureId),
+                    source = it.get(contentEvent.source)!!,
+                    count = it.get(visitors) ?: 0L,
+                )
+            }
+    }
+
+    /** 광고 소재를 누른 회원 식별자다. */
+    fun findAdClickMemberIds(scope: ContentMetricScope, from: LocalDateTime, toExclusive: LocalDateTime): Set<Long> {
+        if (scope.isEmpty) return emptySet()
+        return queryFactory.select(contentEvent.userId).distinct()
+            .from(contentEvent)
+            .where(
+                eventScope(scope),
+                contentEvent.eventType.eq(ContentEventType.AD_CLICK),
+                contentEvent.userId.isNotNull,
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .fetch()
+            .filterNotNull()
+            .toSet()
+    }
+
+    /** 회원의 희망 직무 원문(렛츠커리어 선택지를 `, `로 이은 값)이다. 프로필이 없거나 비어 있으면 넣지 않는다. */
+    fun findWishJobs(userIds: Collection<Long>): Map<Long, String> {
+        if (userIds.isEmpty()) return emptyMap()
+        return queryFactory.select(userProfile.userId, userProfile.wishJob)
+            .from(userProfile)
+            .where(userProfile.userId.`in`(userIds), userProfile.wishJob.isNotNull)
+            .fetch()
+            .associate { checkNotNull(it.get(userProfile.userId)) to checkNotNull(it.get(userProfile.wishJob)) }
+    }
+
     fun findFirstOccurredAt(): LocalDateTime? =
         queryFactory.select(contentEvent.occurredAt.min()).from(contentEvent).fetchOne()
 
@@ -145,6 +201,11 @@ internal class ContentDailyStatQueryRepository(
         is ContentMetricScope.Target -> contentDailyStat.targetType.eq(scope.targetType).and(contentDailyStat.targetId.eq(scope.targetId))
         ContentMetricScope.All -> null
     }
+
+    /** 방문자는 회원이면 회원 식별자, 아니면 익명 방문자 식별자다. */
+    private val visitorKey = CaseBuilder()
+        .`when`(contentEvent.userId.isNotNull).then(contentEvent.userId.stringValue().prepend("u:"))
+        .otherwise(contentEvent.visitorId.prepend("v:"))
 
     private companion object {
         val DETAIL_EVENT_TYPES = listOf(ContentEventType.VIEW, ContentEventType.CTA_CLICK, ContentEventType.SCROLL)

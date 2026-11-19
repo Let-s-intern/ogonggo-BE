@@ -33,14 +33,39 @@ internal object ContentMetricCalculator {
 
     fun statKeyOf(row: ContentEventRow) = ContentStatKey(row.targetType, row.targetId, row.exposureId, row.source)
 
-    fun adMetricsByKey(counts: List<ContentAdEventCount>): Map<ContentStatKey, ContentMetricDto> =
-        counts.groupBy { ContentStatKey(it.targetType, it.targetId, it.exposureId, it.source) }
-            .mapValues { (_, keyCounts) ->
-                ContentMetricDto(
-                    impressions = keyCounts.filter { it.eventType == ContentEventType.IMPRESSION }.sumOf { it.count },
-                    adClicks = keyCounts.filter { it.eventType == ContentEventType.AD_CLICK }.sumOf { it.count },
+    /** 광고 노출·클릭 수와 순 노출수를 집계 행 키마다 묶는다. [uniqueImpressions]는 하루 범위로 센 값이어야 한다. */
+    fun adMetricsByKey(counts: List<ContentAdEventCount>, uniqueImpressions: List<ContentAdEventCount>): Map<ContentStatKey, ContentMetricDto> {
+        val unique = uniqueImpressions.groupBy(::keyOf).mapValues { (_, keyCounts) -> keyCounts.sumOf { it.count } }
+        val totals = counts.groupBy(::keyOf)
+        return (totals.keys + unique.keys).associateWith { key ->
+            val keyCounts = totals[key].orEmpty()
+            ContentMetricDto(
+                impressions = keyCounts.filter { it.eventType == ContentEventType.IMPRESSION }.sumOf { it.count },
+                uniqueImpressions = unique[key] ?: 0L,
+                adClicks = keyCounts.filter { it.eventType == ContentEventType.AD_CLICK }.sumOf { it.count },
+            )
+        }
+    }
+
+    private fun keyOf(count: ContentAdEventCount) = ContentStatKey(count.targetType, count.targetId, count.exposureId, count.source)
+
+    /**
+     * 회원마다 [from] 뒤의 상세 활동이다. 조회수는 30분 안 재조회를 뺀 값이다. 비회원은 넣지 않는다.
+     */
+    fun memberActivities(rows: List<ContentEventRow>, from: LocalDateTime): Map<Long, MemberActivity> {
+        val countedViews = countedViews(rows)
+        return rows.filter { it.userId != null && !it.occurredAt.isBefore(from) }
+            .groupBy { it.userId!! }
+            .mapValues { (_, memberRows) ->
+                MemberActivity(
+                    views = memberRows.count { it.eventType == ContentEventType.VIEW && it in countedViews }.toLong(),
+                    viewed = memberRows.any { it.eventType == ContentEventType.VIEW },
+                    ctaClicked = memberRows.any { it.eventType == ContentEventType.CTA_CLICK },
                 )
             }
+    }
+
+    data class MemberActivity(val views: Long, val viewed: Boolean, val ctaClicked: Boolean)
 
     private fun countedViews(rows: List<ContentEventRow>): Set<ContentEventRow> {
         val lastViewAt = mutableMapOf<Triple<String, Any?, Long?>, LocalDateTime>()

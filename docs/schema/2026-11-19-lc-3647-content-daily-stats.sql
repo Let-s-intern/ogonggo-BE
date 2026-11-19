@@ -24,6 +24,7 @@ create table content_daily_stats (
     scroll_reach_75 bigint not null,
     scroll_reach_100 bigint not null,
     impressions bigint not null,
+    unique_impressions bigint not null,
     ad_clicks bigint not null,
     primary key (id),
     index idx_content_daily_stats_stat_date (stat_date),

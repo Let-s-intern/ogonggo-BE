@@ -29,6 +29,7 @@ class ContentDailyStatManager internal constructor(
         val detail = ContentMetricCalculator.measure(rows, from, ContentMetricCalculator::statKeyOf)
         val ads = ContentMetricCalculator.adMetricsByKey(
             contentDailyStatQueryRepository.countAdEvents(ContentMetricScope.All, from, toExclusive),
+            contentDailyStatQueryRepository.countUniqueImpressions(ContentMetricScope.All, from, toExclusive),
         )
         val stats = (detail.keys + ads.keys).map { key ->
             ContentDailyStat.of(statDate, key, (detail[key] ?: ContentMetricDto.ZERO) + (ads[key] ?: ContentMetricDto.ZERO))
