@@ -1,5 +1,6 @@
 package com.ogonggo.core.advertisementexposure.error
 
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.error.ErrorCode
 import org.springframework.http.HttpStatus
 
@@ -13,6 +14,11 @@ enum class AdvertisementExposureErrorCode(
     ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED(HttpStatus.BAD_REQUEST, "광고 공고는 띄울 공고만 있어야 합니다."),
     ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "이 자리에 띄울 수 없는 콘텐츠 종류입니다."),
     ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID(HttpStatus.BAD_REQUEST, "채용공고 목록 자리는 직군이 있어야 하고, 다른 자리는 직군을 둘 수 없습니다."),
+    ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID(
+        HttpStatus.BAD_REQUEST,
+        "오공고 PICK 자리는 추천 문구 제목(${AdvertisementExposure.MAX_RECOMMENDATION_TITLE_LENGTH}자 이하)과 " +
+            "설명(${AdvertisementExposure.MAX_RECOMMENDATION_DESCRIPTION_LENGTH}자 이하)이 있어야 하고, 다른 자리는 추천 문구를 둘 수 없습니다.",
+    ),
     ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED(HttpStatus.CONFLICT, "같은 자리에 이미 노출 중인 공고입니다."),
     ADVERTISEMENT_EXPOSURE_PERIOD_INVALID(HttpStatus.BAD_REQUEST, "노출 기간은 시작과 끝이 함께 있어야 하고 시작이 끝보다 앞서야 합니다."),
 }

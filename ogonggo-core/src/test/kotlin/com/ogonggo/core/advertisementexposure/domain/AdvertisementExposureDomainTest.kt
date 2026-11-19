@@ -81,6 +81,98 @@ class AdvertisementExposureDomainTest {
     }
 
     @Test
+    fun `오공고 PICK 자리의 광고 공고는 추천 문구 제목과 설명이 있어야 하고 문구를 저장한다`() {
+        // given
+        val product = product(AdvertisementProductPosition.JOB_PICK)
+
+        // when
+        val invalid = listOf(
+            JOB_CONTENT,
+            PICK_CONTENT.copy(recommendationTitle = null),
+            PICK_CONTENT.copy(recommendationDescription = " "),
+            PICK_CONTENT.copy(recommendationTitle = "가".repeat(AdvertisementExposure.MAX_RECOMMENDATION_TITLE_LENGTH + 1)),
+            PICK_CONTENT.copy(recommendationDescription = "가".repeat(AdvertisementExposure.MAX_RECOMMENDATION_DESCRIPTION_LENGTH + 1)),
+        ).map { content -> assertThrows(InvalidValueException::class.java) { exposure(product, content) } }
+        val exposure = exposure(
+            product,
+            PICK_CONTENT.copy(
+                recommendationTitle = "가".repeat(AdvertisementExposure.MAX_RECOMMENDATION_TITLE_LENGTH),
+                recommendationDescription = "나".repeat(AdvertisementExposure.MAX_RECOMMENDATION_DESCRIPTION_LENGTH),
+            ),
+        )
+
+        // then
+        invalid.forEach { assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, it.errorCode) }
+        assertEquals("가".repeat(30), exposure.recommendationTitle)
+        assertEquals("나".repeat(200), exposure.recommendationDescription)
+    }
+
+    @Test
+    fun `오공고 PICK이 아닌 광고 공고 자리와 배너는 추천 문구를 둘 수 없다`() {
+        // when, then
+        listOf(
+            AdvertisementProductPosition.JOB_DETAIL_SIDE,
+            AdvertisementProductPosition.CALENDAR_DAY,
+            AdvertisementProductPosition.MYPAGE_SCRAP,
+        ).forEach { position ->
+            val exception = assertThrows(InvalidValueException::class.java) {
+                exposure(product(position), JOB_CONTENT.copy(recommendationTitle = "추천"))
+            }
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, exception.errorCode)
+        }
+        val jobList = assertThrows(InvalidValueException::class.java) {
+            exposure(
+                product(AdvertisementProductPosition.JOB_LIST),
+                JOB_CONTENT.copy(jobField = JobField.IT_DEVELOPMENT, recommendationDescription = "설명"),
+            )
+        }
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, jobList.errorCode)
+        val banner = assertThrows(InvalidValueException::class.java) {
+            exposure(product(AdvertisementProductCategory.BANNER), BANNER_CONTENT.copy(recommendationTitle = "추천"))
+        }
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_BANNER_CONTENT_REQUIRED, banner.errorCode)
+    }
+
+    @Test
+    fun `오공고 PICK 노출을 고칠 때도 추천 문구가 있어야 하고 새 문구로 바꾼다`() {
+        // given
+        val product = product(AdvertisementProductPosition.JOB_PICK)
+        val exposure = exposure(product, PICK_CONTENT)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            exposure.update(product, null, JOB_CONTENT, adLabel = true, period = AdvertisementExposurePeriod.ALWAYS)
+        }
+        exposure.update(
+            product,
+            null,
+            PICK_CONTENT.copy(recommendationTitle = "새 제목", recommendationDescription = "새 설명"),
+            adLabel = true,
+            period = AdvertisementExposurePeriod.ALWAYS,
+        )
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, exception.errorCode)
+        assertEquals("새 제목", exposure.recommendationTitle)
+        assertEquals("새 설명", exposure.recommendationDescription)
+    }
+
+    @Test
+    fun `부트캠프 목록 자리는 부트캠프만 띄우고 채용공고는 띄우지 않는다`() {
+        // given
+        val product = product(AdvertisementProductPosition.BOOTCAMP_LIST)
+        val bootcampContent = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.BOOTCAMP, targetId = 20L)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) { exposure(product, JOB_CONTENT) }
+        val exposure = exposure(product, bootcampContent)
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, exception.errorCode)
+        assertEquals(AdvertisementExposureTargetType.BOOTCAMP, exposure.targetType)
+    }
+
+    @Test
     fun `인스타그램·카카오톡 상품은 오공고 화면에 노출하지 않는다`() {
         assertThrows(InvalidValueException::class.java) {
             exposure(product(AdvertisementProductCategory.INSTAGRAM_1), BANNER_CONTENT)
@@ -180,6 +272,7 @@ class AdvertisementExposureDomainTest {
     companion object {
         private val NOW = LocalDateTime.of(2026, 11, 7, 12, 0)
         private val JOB_CONTENT = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.JOB, targetId = 10L)
+        private val PICK_CONTENT = JOB_CONTENT.copy(recommendationTitle = "이번 주 추천", recommendationDescription = "신입도 지원할 수 있는 공고예요.")
         private val BANNER_CONTENT = AdvertisementExposureContent(
             name = "오늘의 공고 홍보",
             imageUrl = "https://example.com/banner.png",
