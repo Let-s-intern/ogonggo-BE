@@ -14,6 +14,8 @@ data class UpdateAdminAdvertisementExposureCommand(
     val targetType: AdvertisementExposureTargetType?,
     val targetId: Long?,
     val jobField: JobField?,
+    val recommendationTitle: String?,
+    val recommendationDescription: String?,
     val adLabel: Boolean,
     val startAt: LocalDateTime?,
     val endAt: LocalDateTime?,

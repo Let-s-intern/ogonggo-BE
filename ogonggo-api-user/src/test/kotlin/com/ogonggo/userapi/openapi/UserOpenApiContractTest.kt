@@ -152,10 +152,13 @@ class UserOpenApiContractTest @Autowired constructor(
         assertFalse(jobField.at("/required").asBoolean())
         assertTrue(jobField.at("/schema/enum").any { it.asText() == "IT_DEVELOPMENT" })
         assertTrue(position.at("/required").asBoolean())
-        assertEquals(setOf("JOB_PICK", "JOB_LIST", "JOB_DETAIL_SIDE", "CALENDAR_DAY", "MYPAGE_SCRAP"), position.at("/schema/enum").map { it.asText() }.toSet())
+        assertEquals(setOf("JOB_PICK", "JOB_LIST", "JOB_DETAIL_SIDE", "CALENDAR_DAY", "MYPAGE_SCRAP", "BOOTCAMP_LIST"), position.at("/schema/enum").map { it.asText() }.toSet())
         assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertEquals(
-            setOf("exposureId", "position", "jobField", "displayOrder", "adLabel", "targetType", "job", "bootcamp"),
+            setOf(
+                "exposureId", "position", "jobField", "recommendationTitle", "recommendationDescription", "startAt", "endAt",
+                "displayOrder", "adLabel", "targetType", "job", "bootcamp",
+            ),
             response.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertEquals(
@@ -163,6 +166,12 @@ class UserOpenApiContractTest @Autowired constructor(
             response.at("/required").map { it.asText() }.toSet(),
         )
         assertTrue(response.at("/properties/jobField/nullable").asBoolean())
+        assertTrue(response.at("/properties/recommendationTitle/nullable").asBoolean())
+        assertTrue(response.at("/properties/recommendationDescription/nullable").asBoolean())
+        listOf("startAt", "endAt").forEach { field ->
+            assertTrue(response.at("/properties/$field/nullable").asBoolean(), field)
+            assertEquals("date-time", response.at("/properties/$field/format").asText(), field)
+        }
         assertTrue(
             response.at("/properties/job/\$ref").asText().endsWith("UserJobSummaryResponse") ||
                 response.at("/properties/job/allOf/0/\$ref").asText().endsWith("UserJobSummaryResponse"),

@@ -510,6 +510,13 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(request.at("/properties/jobField/enum").any { it.asText() == "IT_DEVELOPMENT" })
         assertFalse(request.at("/required").any { it.asText() == "jobField" })
         assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID"))
+        assertEquals(30, request.at("/properties/recommendationTitle/maxLength").asInt())
+        assertEquals(200, request.at("/properties/recommendationDescription/maxLength").asInt())
+        listOf("recommendationTitle", "recommendationDescription").forEach { field ->
+            assertTrue(request.at("/properties/$field/nullable").asBoolean(), field)
+            assertFalse(request.at("/required").any { it.asText() == field }, field)
+        }
+        assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID"))
         listOf(
             "id", "productId", "contractId", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId", "adLabel",
             "startAt", "endAt", "exposed", "advertiserCompanyName", "displayOrder", "registeredAt", "updatedAt",
@@ -517,6 +524,7 @@ class AdminOpenApiContractTest @Autowired constructor(
         listOf(
             "contractId", "advertiserCompanyName", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId",
             "startAt", "endAt", "targetTitle", "targetCompanyName", "targetPublished", "jobField",
+            "recommendationTitle", "recommendationDescription",
         ).forEach { field -> assertTrue(response.at("/properties/$field/nullable").asBoolean(), field) }
         assertEquals("boolean", response.at("/properties/targetPublished/type").asText())
         assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH"))
@@ -589,6 +597,11 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertEquals("boolean", replaceRequest.at("/properties/adLabel/type").asText())
         assertTrue(replaceRequest.at("/properties/jobField/nullable").asBoolean())
         assertTrue(replace.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID"))
+        assertEquals(30, replaceRequest.at("/properties/recommendationTitle/maxLength").asInt())
+        assertEquals(200, replaceRequest.at("/properties/recommendationDescription/maxLength").asInt())
+        assertTrue(replaceRequest.at("/properties/recommendationTitle/nullable").asBoolean())
+        assertTrue(replaceRequest.at("/properties/recommendationDescription/nullable").asBoolean())
+        assertTrue(replace.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID"))
         assertEquals(setOf("exposed"), exposedRequest.at("/required").map { it.asText() }.toSet())
         assertEquals("boolean", exposedRequest.at("/properties/exposed/type").asText())
         assertEquals(setOf("direction"), moveRequest.at("/required").map { it.asText() }.toSet())

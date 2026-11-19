@@ -25,6 +25,10 @@ data class AdminAdvertisementExposureResponse(
     val targetId: Long?,
     @field:Schema(description = "채용공고 목록(JOB_LIST) 노출의 직군 탭. 다른 자리와 배너는 null입니다.", nullable = true)
     val jobField: JobField?,
+    @field:Schema(description = "오공고 PICK(JOB_PICK) 노출의 추천 문구 제목. 다른 자리와 배너는 null입니다.", nullable = true)
+    val recommendationTitle: String?,
+    @field:Schema(description = "오공고 PICK(JOB_PICK) 노출의 추천 문구 설명. 다른 자리와 배너는 null입니다.", nullable = true)
+    val recommendationDescription: String?,
     val adLabel: Boolean,
     @field:Schema(nullable = true)
     val startAt: LocalDateTime?,
@@ -58,6 +62,8 @@ data class AdminAdvertisementExposureResponse(
             targetType = result.targetType,
             targetId = result.targetId,
             jobField = result.jobField,
+            recommendationTitle = result.recommendationTitle,
+            recommendationDescription = result.recommendationDescription,
             adLabel = result.adLabel,
             startAt = result.startAt,
             endAt = result.endAt,

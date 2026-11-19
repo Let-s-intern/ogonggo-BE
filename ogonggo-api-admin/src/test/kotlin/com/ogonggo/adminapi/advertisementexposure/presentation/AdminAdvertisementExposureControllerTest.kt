@@ -181,6 +181,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                     targetType = null,
                     targetId = null,
                     jobField = null,
+                    recommendationTitle = null,
+                    recommendationDescription = null,
                     adLabel = true,
                     startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
                     endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -208,6 +210,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 targetType = null,
                 targetId = null,
                 jobField = null,
+                recommendationTitle = null,
+                recommendationDescription = null,
                 adLabel = true,
                 startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
                 endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -229,6 +233,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             targetType = AdvertisementExposureTargetType.JOB,
             targetId = 5501,
             jobField = JobField.IT_DEVELOPMENT,
+            recommendationTitle = null,
+            recommendationDescription = null,
             adLabel = true,
             startAt = null,
             endAt = null,
@@ -247,6 +253,79 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(status().isBadRequest)
 
         Mockito.verify(adminAdvertisementExposureService).createExposure(command, ADMIN_ID)
+    }
+
+    @Test
+    fun `오공고 PICK 광고 공고 등록은 추천 문구를 명령으로 전달하고 길이를 넘으면 400이다`() {
+        val command = CreateAdminAdvertisementExposureCommand(
+            productId = 13,
+            contractId = null,
+            name = null,
+            imageUrl = null,
+            mobileImageUrl = null,
+            linkUrl = null,
+            targetType = AdvertisementExposureTargetType.JOB,
+            targetId = 5501,
+            jobField = null,
+            recommendationTitle = "이번 주 추천",
+            recommendationDescription = "신입도 지원할 수 있는 공고예요.",
+            adLabel = true,
+            startAt = null,
+            endAt = null,
+            exposed = true,
+        )
+        Mockito.`when`(adminAdvertisementExposureService.createExposure(command, ADMIN_ID)).thenReturn(503L)
+
+        mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(JOB_PICK_REQUEST)))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(503))
+        listOf(
+            JOB_PICK_REQUEST.replace("이번 주 추천", "가".repeat(31)),
+            JOB_PICK_REQUEST.replace("신입도 지원할 수 있는 공고예요.", "가".repeat(201)),
+        ).forEach { body ->
+            mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(body)))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+
+        Mockito.verify(adminAdvertisementExposureService).createExposure(command, ADMIN_ID)
+        Mockito.verifyNoMoreInteractions(adminAdvertisementExposureService)
+    }
+
+    @Test
+    fun `오공고 PICK 광고 공고 노출 목록은 추천 문구를 함께 반환한다`() {
+        val pick = exposureResult().copy(
+            name = null,
+            imageUrl = null,
+            mobileImageUrl = null,
+            linkUrl = null,
+            targetType = AdvertisementExposureTargetType.JOB,
+            targetId = 5501,
+            recommendationTitle = "이번 주 추천",
+            recommendationDescription = "신입도 지원할 수 있는 공고예요.",
+        )
+        Mockito.`when`(adminAdvertisementExposureService.getExposures(13, null, 0, 10))
+            .thenReturn(AdminAdvertisementExposurePageResult(listOf(pick), 0, 10, 1, 1))
+
+        mockMvc.perform(admin(get(PATH).queryParam("productId", "13")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].recommendationTitle").value("이번 주 추천"))
+            .andExpect(jsonPath("$.data.items[0].recommendationDescription").value("신입도 지원할 수 있는 공고예요."))
+    }
+
+    @Test
+    fun `추천 문구 정책 오류를 400 응답으로 전달한다`() {
+        Mockito.`when`(
+            adminAdvertisementExposureService.createExposure(
+                Mockito.any(CreateAdminAdvertisementExposureCommand::class.java) ?: exposureCommand(),
+                Mockito.eq(ADMIN_ID),
+            ),
+        )
+            .thenThrow(InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID))
+
+        mockMvc.perform(admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(JOB_LIST_REQUEST)))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID"))
     }
 
     @Test
@@ -320,6 +399,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 targetType = null,
                 targetId = null,
                 jobField = null,
+                recommendationTitle = null,
+                recommendationDescription = null,
                 adLabel = true,
                 startAt = null,
                 endAt = null,
@@ -349,6 +430,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 targetType = null,
                 targetId = null,
                 jobField = null,
+                recommendationTitle = null,
+                recommendationDescription = null,
                 adLabel = true,
                 startAt = null,
                 endAt = null,
@@ -444,6 +527,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         targetType = null,
         targetId = null,
         jobField = null,
+        recommendationTitle = null,
+        recommendationDescription = null,
         adLabel = true,
         startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
         endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -468,6 +553,8 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         targetType = null,
         targetId = null,
         jobField = null,
+        recommendationTitle = null,
+        recommendationDescription = null,
         adLabel = true,
         startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
         endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -486,6 +573,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         const val ADMIN_ID = 7L
         const val BANNER_REQUEST = """{"productId":11,"contractId":1001,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":"2026-11-01T00:00:00","endAt":"2026-11-30T23:59:59","exposed":true}"""
         const val JOB_LIST_REQUEST = """{"productId":12,"targetType":"JOB","targetId":5501,"jobField":"IT_DEVELOPMENT","adLabel":true,"exposed":true}"""
+        const val JOB_PICK_REQUEST = """{"productId":13,"targetType":"JOB","targetId":5501,"recommendationTitle":"이번 주 추천","recommendationDescription":"신입도 지원할 수 있는 공고예요.","adLabel":true,"exposed":true}"""
         const val UPDATE_REQUEST = """{"contractId":null,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":null,"endAt":null}"""
     }
 }

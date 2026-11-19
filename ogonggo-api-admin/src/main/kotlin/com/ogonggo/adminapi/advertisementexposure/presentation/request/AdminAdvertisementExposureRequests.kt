@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.ogonggo.adminapi.advertisementexposure.business.UpdateAdminAdvertisementExposureCommand
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureMoveDirection
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.job.domain.JobField
 import io.swagger.v3.oas.annotations.media.Schema
@@ -47,6 +48,18 @@ data class UpdateAdminAdvertisementExposureRequest(
         nullable = true,
     )
     val jobField: JobField? = null,
+    @field:Size(max = AdvertisementExposure.MAX_RECOMMENDATION_TITLE_LENGTH)
+    @field:Schema(
+        description = "오공고 PICK(JOB_PICK) 광고 카드의 추천 문구 제목(운영자 PICK과 같은 30자 이하). JOB_PICK은 필수이고 공백일 수 없으며, 다른 자리와 배너는 null입니다.",
+        nullable = true,
+    )
+    val recommendationTitle: String? = null,
+    @field:Size(max = AdvertisementExposure.MAX_RECOMMENDATION_DESCRIPTION_LENGTH)
+    @field:Schema(
+        description = "오공고 PICK(JOB_PICK) 광고 카드의 추천 문구 설명(운영자 PICK과 같은 200자 이하). JOB_PICK은 필수이고 공백일 수 없으며, 다른 자리와 배너는 null입니다.",
+        nullable = true,
+    )
+    val recommendationDescription: String? = null,
     @field:JsonDeserialize(using = StrictExposureBooleanDeserializer::class)
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val adLabel: Boolean,
@@ -70,6 +83,8 @@ data class UpdateAdminAdvertisementExposureRequest(
         targetType = targetType,
         targetId = targetId,
         jobField = jobField,
+        recommendationTitle = recommendationTitle,
+        recommendationDescription = recommendationDescription,
         adLabel = adLabel,
         startAt = startAt,
         endAt = endAt,
