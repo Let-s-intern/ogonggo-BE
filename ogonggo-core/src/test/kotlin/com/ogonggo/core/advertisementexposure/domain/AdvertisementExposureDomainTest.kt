@@ -50,6 +50,7 @@ class AdvertisementExposureDomainTest {
         // when, then
         listOf(
             AdvertisementProductPosition.JOB_PICK,
+            AdvertisementProductPosition.JOB_DETAIL_SIDE,
             AdvertisementProductPosition.CALENDAR_DAY,
             AdvertisementProductPosition.MYPAGE_SCRAP,
         ).forEach { position ->

@@ -121,7 +121,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     fun `오공고 PICK 자리는 그 자리에 등록한 채용공고 요약만 준다`() {
         // given
         val pick = product(AdvertisementProductPosition.JOB_PICK)
-        val other = product(AdvertisementProductPosition.CALENDAR_DAY)
+        val other = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
         val picked = job("오공고 PICK 공고")
         val shown = exposure(pick, AdvertisementExposureTargetType.JOB, picked)
         exposure(other, AdvertisementExposureTargetType.JOB, job("다른 자리 공고"))

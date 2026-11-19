@@ -174,7 +174,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
 
     @Test
     fun `채용공고 자리에 부트캠프를 등록하지 않는다`() {
-        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
+        val productId = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
         val bootcampId = bootcamp()
 
         val exception = assertThrows(InvalidValueException::class.java) {
@@ -243,7 +243,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     fun `다른 자리에는 같은 공고를 등록할 수 있다`() {
         // given
         val list = product(AdvertisementProductPosition.JOB_PICK)
-        val side = product(AdvertisementProductPosition.MYPAGE_SCRAP)
+        val side = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
         val jobId = job()
         service.createExposure(command(list, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
 

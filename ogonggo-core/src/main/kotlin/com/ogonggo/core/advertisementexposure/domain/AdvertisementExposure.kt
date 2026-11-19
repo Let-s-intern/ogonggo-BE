@@ -212,6 +212,7 @@ class AdvertisementExposure internal constructor(
         /** 광고 공고 자리마다 띄울 수 있는 콘텐츠 종류다. 지금 광고 공고 자리는 모두 채용공고다. */
         private fun targetTypeOf(position: AdvertisementProductPosition): AdvertisementExposureTargetType? = when (position) {
             AdvertisementProductPosition.JOB_LIST,
+            AdvertisementProductPosition.JOB_DETAIL_SIDE,
             AdvertisementProductPosition.JOB_PICK,
             AdvertisementProductPosition.CALENDAR_DAY,
             AdvertisementProductPosition.MYPAGE_SCRAP,
