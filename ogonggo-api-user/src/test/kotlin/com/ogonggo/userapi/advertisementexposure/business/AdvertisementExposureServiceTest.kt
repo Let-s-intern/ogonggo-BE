@@ -4,6 +4,12 @@ import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.implement.AdvertisementExposureReader
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposurePageDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
+import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
+import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.job.implement.JobBookmarkReader
+import com.ogonggo.core.job.implement.JobMetricReader
+import com.ogonggo.core.job.implement.JobReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -28,7 +34,16 @@ class AdvertisementExposureServiceTest {
         Mockito.`when`(reader.readShownPage(POSITION, NOW, 0, 10)).thenReturn(
             AdvertisementExposurePageDto(listOf(exposure), page = 0, size = 10, totalElements = 1, totalPages = 1),
         )
-        val service = AdvertisementExposureService(reader, CLOCK)
+        val service = AdvertisementExposureService(
+            advertisementExposureReader = reader,
+            jobReader = Mockito.mock(JobReader::class.java),
+            jobBookmarkReader = Mockito.mock(JobBookmarkReader::class.java),
+            jobMetricReader = Mockito.mock(JobMetricReader::class.java),
+            bootcampReader = Mockito.mock(BootcampReader::class.java),
+            bootcampBookmarkReader = Mockito.mock(BootcampBookmarkReader::class.java),
+            bootcampMetricReader = Mockito.mock(BootcampMetricReader::class.java),
+            clock = CLOCK,
+        )
 
         // when
         val results = service.getShown(POSITION, 0, 10)

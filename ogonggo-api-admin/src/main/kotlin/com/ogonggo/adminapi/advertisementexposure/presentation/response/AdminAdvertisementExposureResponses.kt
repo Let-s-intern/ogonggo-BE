@@ -30,6 +30,15 @@ data class AdminAdvertisementExposureResponse(
     val exposed: Boolean,
     @field:Schema(nullable = true)
     val advertiserCompanyName: String?,
+    @field:Schema(description = "광고 공고 대상의 제목. 배너이거나 대상 행이 없으면 null입니다.", nullable = true)
+    val targetTitle: String?,
+    @field:Schema(description = "광고 공고 대상의 회사명. 배너이거나 대상 행이 없으면 null입니다.", nullable = true)
+    val targetCompanyName: String?,
+    @field:Schema(
+        description = "광고 공고 대상이 지금 게시 상태(PUBLISHED)이고 지워지지 않았는지. 모집 마감 여부는 보지 않습니다. 대상 행이 없으면 false, 배너는 null입니다.",
+        nullable = true,
+    )
+    val targetPublished: Boolean?,
     val displayOrder: Int,
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
@@ -50,6 +59,9 @@ data class AdminAdvertisementExposureResponse(
             endAt = result.endAt,
             exposed = result.exposed,
             advertiserCompanyName = result.advertiserCompanyName,
+            targetTitle = result.targetTitle,
+            targetCompanyName = result.targetCompanyName,
+            targetPublished = result.targetPublished,
             displayOrder = result.displayOrder,
             registeredAt = result.registeredAt,
             updatedAt = result.updatedAt,

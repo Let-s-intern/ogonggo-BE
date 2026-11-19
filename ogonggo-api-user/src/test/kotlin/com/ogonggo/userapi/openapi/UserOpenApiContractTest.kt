@@ -134,6 +134,42 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("공개 광고 공고 명세는 광고 공고 자리와 선택 인증 및 대상 요약 응답을 명시한다")
+    fun `공개 광고 공고 명세는 광고 공고 자리와 선택 인증 및 대상 요약 응답을 명시한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1advertisement-exposures~1postings/get")
+        val position = operation["parameters"].first { it.at("/name").asText() == "position" }
+        val response = document.at("/components/schemas/AdvertisementPostingResponse")
+
+        // then
+        assertEquals("listPublicAdvertisementPostings", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security/0/BearerAuth").isArray)
+        assertEquals(listOf("position"), operation["parameters"].map { it.at("/name").asText() })
+        assertTrue(position.at("/required").asBoolean())
+        assertEquals(setOf("JOB_LIST", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "JOB_PICK"), position.at("/schema/enum").map { it.asText() }.toSet())
+        assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertEquals(
+            setOf("exposureId", "position", "displayOrder", "adLabel", "targetType", "job", "bootcamp"),
+            response.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertEquals(
+            setOf("exposureId", "position", "displayOrder", "adLabel", "targetType"),
+            response.at("/required").map { it.asText() }.toSet(),
+        )
+        assertTrue(
+            response.at("/properties/job/\$ref").asText().endsWith("UserJobSummaryResponse") ||
+                response.at("/properties/job/allOf/0/\$ref").asText().endsWith("UserJobSummaryResponse"),
+        )
+        assertTrue(
+            response.at("/properties/bootcamp/\$ref").asText().endsWith("UserBootcampSummaryResponse") ||
+                response.at("/properties/bootcamp/allOf/0/\$ref").asText().endsWith("UserBootcampSummaryResponse"),
+        )
+    }
+
+    @Test
     @DisplayName("광고 신청은 선택 인증과 폼 검증 및 201 응답을 명시한다")
     fun `광고 신청은 선택 인증과 폼 검증 및 201 응답을 명시한다`() {
         // given

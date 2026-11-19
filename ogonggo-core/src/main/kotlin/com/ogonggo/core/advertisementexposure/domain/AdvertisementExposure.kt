@@ -3,6 +3,7 @@ package com.ogonggo.core.advertisementexposure.domain
 import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCode
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.BaseTimeEntity
 import jakarta.persistence.Column
@@ -46,7 +47,7 @@ class AdvertisementExposure internal constructor(
     init {
         product.checkNotDeleted()
         require(contractId == null || contractId > 0) { "계약 식별자는 양수여야 합니다." }
-        validateContent(product.category, content)
+        validateContent(product, content)
     }
 
     @Id
@@ -121,7 +122,7 @@ class AdvertisementExposure internal constructor(
         checkNotDeleted()
         require(product.id == productId) { "노출 자리의 상품이 아닙니다." }
         require(contractId == null || contractId > 0) { "계약 식별자는 양수여야 합니다." }
-        validateContent(product.category, content)
+        validateContent(product, content)
         this.contractId = contractId
         name = content.name
         imageUrl = content.imageUrl
@@ -162,8 +163,8 @@ class AdvertisementExposure internal constructor(
         const val MAX_NAME_LENGTH = 100
         const val MAX_URL_LENGTH = 2048
 
-        private fun validateContent(category: AdvertisementProductCategory, content: AdvertisementExposureContent) {
-            when (category) {
+        private fun validateContent(product: AdvertisementProduct, content: AdvertisementExposureContent) {
+            when (product.category) {
                 AdvertisementProductCategory.BANNER -> {
                     val valid = !content.name.isNullOrBlank() && !content.imageUrl.isNullOrBlank() && !content.linkUrl.isNullOrBlank() &&
                         (content.mobileImageUrl == null || content.mobileImageUrl.isNotBlank()) &&
@@ -186,10 +187,24 @@ class AdvertisementExposure internal constructor(
                     if (!valid) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED)
                     }
+                    val expectedTargetType = product.position?.let(::targetTypeOf)
+                    if (expectedTargetType != null && expectedTargetType != content.targetType) {
+                        throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH)
+                    }
                 }
 
                 else -> throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE)
             }
+        }
+
+        /** 광고 공고 자리마다 띄울 수 있는 콘텐츠 종류다. 부트캠프 목록은 부트캠프, 나머지는 채용공고다. */
+        private fun targetTypeOf(position: AdvertisementProductPosition): AdvertisementExposureTargetType? = when (position) {
+            AdvertisementProductPosition.JOB_LIST,
+            AdvertisementProductPosition.JOB_DETAIL_SIDE,
+            AdvertisementProductPosition.JOB_PICK,
+            -> AdvertisementExposureTargetType.JOB
+            AdvertisementProductPosition.BOOTCAMP_LIST -> AdvertisementExposureTargetType.BOOTCAMP
+            else -> null
         }
     }
 }

@@ -75,6 +75,25 @@ internal interface BootcampJpaRepository : JpaRepository<Bootcamp, Long> {
         @Param("now") now: LocalDateTime,
     ): Bootcamp?
 
+    @Query(
+        """
+        select bootcamp
+        from Bootcamp bootcamp
+        where bootcamp.id in :bootcampIds
+          and bootcamp.publicationStatus = :publicationStatus
+          and bootcamp.status in :statuses
+          and bootcamp.deletedAt is null
+          and (bootcamp.publicationStartAt is null or bootcamp.publicationStartAt <= :now)
+          and (bootcamp.publicationEndAt is null or bootcamp.publicationEndAt >= :now)
+        """,
+    )
+    fun findAllPublicByIds(
+        @Param("bootcampIds") bootcampIds: Collection<Long>,
+        @Param("statuses") statuses: Collection<BootcampRecruitmentStatus>,
+        @Param("publicationStatus") publicationStatus: BootcampPublicationStatus,
+        @Param("now") now: LocalDateTime,
+    ): List<Bootcamp>
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select bootcamp from Bootcamp bootcamp where bootcamp.id = :bootcampId and bootcamp.deletedAt is null")
     fun findByIdForUpdate(@Param("bootcampId") bootcampId: Long): Bootcamp?
