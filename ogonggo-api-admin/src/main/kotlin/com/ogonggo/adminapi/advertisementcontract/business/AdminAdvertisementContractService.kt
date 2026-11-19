@@ -1,10 +1,13 @@
 package com.ogonggo.adminapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSearchCondition
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractManager
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractTargetManager
+import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractTargetReader
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,6 +20,8 @@ class AdminAdvertisementContractService(
     private val advertisementContractReader: AdvertisementContractReader,
     private val advertisementContractManager: AdvertisementContractManager,
     private val advertisementProductReader: AdvertisementProductReader,
+    private val advertisementContractTargetReader: AdvertisementContractTargetReader,
+    private val advertisementContractTargetManager: AdvertisementContractTargetManager,
     private val clock: Clock,
 ) {
 
@@ -34,7 +39,8 @@ class AdminAdvertisementContractService(
     fun getContract(contractId: Long): AdminAdvertisementContractDetailResult {
         val contract = advertisementContractReader.read(contractId)
         val products = advertisementContractReader.readProducts(contractId)
-        return AdminAdvertisementContractDetailResult.from(contract, products)
+        val targets = advertisementContractTargetReader.readTargets(contract)
+        return AdminAdvertisementContractDetailResult.from(contract, products, targets)
     }
 
     @Transactional
@@ -61,5 +67,17 @@ class AdminAdvertisementContractService(
     fun removeProduct(contractId: Long, contractProductId: Long) {
         val contract = advertisementContractReader.readForUpdate(contractId)
         advertisementContractManager.removeProduct(contract, contractProductId, LocalDateTime.now(clock))
+    }
+
+    @Transactional
+    fun addTarget(contractId: Long, targetType: AdvertisementContractPromotionTarget, targetId: Long) {
+        val contract = advertisementContractReader.readForUpdate(contractId)
+        advertisementContractTargetManager.add(contract, targetType, targetId)
+    }
+
+    @Transactional
+    fun removeTarget(contractId: Long, targetType: AdvertisementContractPromotionTarget, targetId: Long) {
+        val contract = advertisementContractReader.readForUpdate(contractId)
+        advertisementContractTargetManager.remove(contract, targetType, targetId, LocalDateTime.now(clock))
     }
 }

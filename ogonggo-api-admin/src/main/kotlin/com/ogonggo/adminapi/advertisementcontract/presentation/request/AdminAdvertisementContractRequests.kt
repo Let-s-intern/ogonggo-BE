@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
@@ -34,6 +35,15 @@ data class AddAdminAdvertisementContractProductRequest(
     val startDate: LocalDate,
     @field:Schema(description = "게시 종료일(yyyy-MM-dd). 이 날까지 게시하며 시작일과 같아도 됩니다.", example = "2026-11-05", requiredMode = Schema.RequiredMode.REQUIRED)
     val endDate: LocalDate,
+)
+
+data class AddAdminAdvertisementContractTargetRequest(
+    @field:Schema(description = "대상 종류", requiredMode = Schema.RequiredMode.REQUIRED)
+    val targetType: AdvertisementContractPromotionTarget,
+    @field:Positive
+    @field:JsonDeserialize(using = StrictTargetIdDeserializer::class)
+    @field:Schema(description = "채용공고·부트캠프 식별자", requiredMode = Schema.RequiredMode.REQUIRED)
+    val targetId: Long,
 )
 
 internal class StrictAdvertisementContractStatusDeserializer : JsonDeserializer<AdvertisementContractStatus>() {
@@ -64,5 +74,14 @@ internal class StrictNullableIntDeserializer : JsonDeserializer<Int?>() {
             throw JsonMappingException.from(parser, "paymentAmount는 정수 또는 null이어야 합니다.")
         }
         return parser.intValue
+    }
+}
+
+internal class StrictTargetIdDeserializer : JsonDeserializer<Long>() {
+    override fun deserialize(parser: JsonParser, context: DeserializationContext): Long {
+        if (parser.currentToken != JsonToken.VALUE_NUMBER_INT) {
+            throw JsonMappingException.from(parser, "targetId는 정수여야 합니다.")
+        }
+        return parser.longValue
     }
 }

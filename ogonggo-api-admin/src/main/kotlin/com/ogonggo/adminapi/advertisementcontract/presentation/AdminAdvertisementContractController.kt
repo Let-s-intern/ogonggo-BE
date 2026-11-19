@@ -4,6 +4,7 @@ import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementCon
 import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountService
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminBusinessAccountIssueResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractProductRequest
+import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractTargetRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractPaymentAmountRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractStatusRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractDetailResponse
@@ -124,6 +125,25 @@ class AdminAdvertisementContractController(
         @PathVariable("contractProductId") contractProductId: Long,
     ): ResponseEntity<SuccessResponse<Unit>> {
         adminAdvertisementContractService.removeProduct(contractId, contractProductId)
+        return SuccessResponse.ok()
+    }
+
+    @PostMapping("/{contractId}/targets")
+    override fun addTarget(
+        @PathVariable("contractId") contractId: Long,
+        @RequestBody request: AddAdminAdvertisementContractTargetRequest,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminAdvertisementContractService.addTarget(contractId, request.targetType, request.targetId)
+        return SuccessResponse.created()
+    }
+
+    @DeleteMapping("/{contractId}/targets/{targetType}/{targetId}")
+    override fun removeTarget(
+        @PathVariable("contractId") contractId: Long,
+        @PathVariable("targetType") targetType: AdvertisementContractPromotionTarget,
+        @PathVariable("targetId") targetId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>> {
+        adminAdvertisementContractService.removeTarget(contractId, targetType, targetId)
         return SuccessResponse.ok()
     }
 

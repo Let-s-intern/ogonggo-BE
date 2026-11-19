@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreati
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureMoveDirection
@@ -189,6 +190,7 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementContractSource>(),
             enumOptionsOf<AdvertisementContractPromotionTarget>(),
             enumOptionsOf<AdvertisementContractPurpose>(),
+            enumOptionsOf<AdvertisementContractReportUnavailableReason>(),
             enumOptionsOf<AdvertisementContractInvoiceMethod>(),
             enumOptionsOf<AdvertisementContractCreativeMethod>(),
             enumOptionsOf<AdvertisementExposureTargetType>(),

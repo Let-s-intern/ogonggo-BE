@@ -3,12 +3,14 @@ package com.ogonggo.adminapi.advertisementcontract.presentation.response
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractDetailResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractProductResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractSummaryResult
+import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractTargetResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountIssueResult
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAnswer
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
@@ -88,6 +90,8 @@ data class AdminAdvertisementContractDetailResponse(
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val products: List<AdminAdvertisementContractProductResponse>,
+    @field:Schema(description = "리포트가 전체 숫자를 셀 대상 공고·부트캠프. 비즈니스 공고 계약의 공고가 맨 앞이고 뺄 수 없다. 없으면 빈 배열")
+    val targets: List<AdminAdvertisementContractTargetResponse>,
 ) {
     companion object {
         fun from(result: AdminAdvertisementContractDetailResult) = AdminAdvertisementContractDetailResponse(
@@ -118,6 +122,7 @@ data class AdminAdvertisementContractDetailResponse(
             registeredAt = result.registeredAt,
             updatedAt = result.updatedAt,
             products = result.products.map(AdminAdvertisementContractProductResponse::from),
+            targets = result.targets.map(AdminAdvertisementContractTargetResponse::from),
         )
     }
 }
@@ -147,6 +152,10 @@ data class AdminAdvertisementContractProductResponse(
     val startDate: LocalDate?,
     val endDate: LocalDate?,
     val addedAt: LocalDateTime,
+    @field:Schema(description = "성과 리포트를 열 수 있는 상품인지")
+    val reportAvailable: Boolean,
+    @field:Schema(description = "리포트를 열 수 없는 이유. 기간 없음(NO_PERIOD), 채널 상품(NOT_EXPOSABLE). 열 수 있으면 null", nullable = true)
+    val reportUnavailableReason: AdvertisementContractReportUnavailableReason?,
 ) {
     companion object {
         fun from(result: AdminAdvertisementContractProductResult) = AdminAdvertisementContractProductResponse(
@@ -158,6 +167,26 @@ data class AdminAdvertisementContractProductResponse(
             startDate = result.startDate,
             endDate = result.endDate,
             addedAt = result.addedAt,
+            reportAvailable = result.reportAvailable,
+            reportUnavailableReason = result.reportUnavailableReason,
+        )
+    }
+}
+
+data class AdminAdvertisementContractTargetResponse(
+    val targetType: AdvertisementContractPromotionTarget,
+    val targetId: Long,
+    @field:Schema(description = "조회 시점의 공고·부트캠프 제목")
+    val title: String,
+    @field:Schema(description = "조회 시점의 회사명")
+    val companyName: String,
+) {
+    companion object {
+        fun from(result: AdminAdvertisementContractTargetResult) = AdminAdvertisementContractTargetResponse(
+            targetType = result.targetType,
+            targetId = result.targetId,
+            title = result.title,
+            companyName = result.companyName,
         )
     }
 }
