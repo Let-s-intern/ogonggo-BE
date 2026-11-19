@@ -47,7 +47,7 @@ WITH source_events AS (
             ifNull(toString(properties.position), '')
         ) AS position,
         ifNull(toString(properties.audience_type), '') AS raw_audience_type,
-        ifNull(properties.job_role_codes, []) AS job_role_codes
+        JSONExtractArrayRaw(properties.job_role_codes ?? '[]') AS job_role_codes
     FROM events
     WHERE event IN (
         'banner_impression', 'banner_click',
@@ -146,14 +146,14 @@ daily_click_snapshots AS (
 summary_rows AS (
     SELECT
         'SUMMARY' AS record_type,
-        CAST(NULL, 'Nullable(Date)') AS event_date,
-        CAST(NULL, 'Nullable(String)') AS category,
-        CAST(NULL, 'Nullable(String)') AS position,
+        NULL AS event_date,
+        NULL AS category,
+        NULL AS position,
         requested.event_type AS event_type,
         countIf(report_events.event_type = requested.event_type) AS total,
         uniqExactIf(report_events.viewer_id, report_events.event_type = requested.event_type) AS unique_users,
-        CAST(NULL, 'Nullable(String)') AS job_role_code,
-        CAST(NULL, 'Nullable(UInt64)') AS unique_clickers
+        NULL AS job_role_code,
+        NULL AS unique_clickers
     FROM (SELECT arrayJoin(['IMPRESSION', 'CLICK']) AS event_type) AS requested
     LEFT JOIN report_events ON report_events.event_type = requested.event_type
     GROUP BY requested.event_type
@@ -167,22 +167,22 @@ daily_rows AS (
         event_type,
         count() AS total,
         uniqExact(viewer_id) AS unique_users,
-        CAST(NULL, 'Nullable(String)') AS job_role_code,
-        CAST(NULL, 'Nullable(UInt64)') AS unique_clickers
+        NULL AS job_role_code,
+        NULL AS unique_clickers
     FROM report_events
     GROUP BY event_date, category, position, event_type
 ),
 position_rows AS (
     SELECT
         'POSITION' AS record_type,
-        CAST(NULL, 'Nullable(Date)') AS event_date,
+        NULL AS event_date,
         category,
         position,
-        CAST(NULL, 'Nullable(String)') AS event_type,
+        NULL AS event_type,
         count() AS total,
         uniqExact(viewer_id) AS unique_users,
-        CAST(NULL, 'Nullable(String)') AS job_role_code,
-        CAST(NULL, 'Nullable(UInt64)') AS unique_clickers
+        NULL AS job_role_code,
+        NULL AS unique_clickers
     FROM report_events
     WHERE event_type = 'CLICK'
     GROUP BY category, position
@@ -190,28 +190,28 @@ position_rows AS (
 member_role_rows AS (
     SELECT
         'JOB_ROLE' AS record_type,
-        CAST(NULL, 'Nullable(Date)') AS event_date,
-        CAST(NULL, 'Nullable(String)') AS category,
-        CAST(NULL, 'Nullable(String)') AS position,
-        CAST(NULL, 'Nullable(String)') AS event_type,
-        CAST(NULL, 'Nullable(UInt64)') AS total,
-        CAST(NULL, 'Nullable(UInt64)') AS unique_users,
-        role_code AS job_role_code,
+        NULL AS event_date,
+        NULL AS category,
+        NULL AS position,
+        NULL AS event_type,
+        NULL AS total,
+        NULL AS unique_users,
+        JSONExtractString(role_code) AS job_role_code,
         uniqExact(viewer_id) AS unique_clickers
     FROM daily_click_snapshots
     ARRAY JOIN job_role_codes AS role_code
     WHERE audience_type = 'MEMBER'
-    GROUP BY role_code
+    GROUP BY JSONExtractString(role_code)
 ),
 audience_role_rows AS (
     SELECT
         'JOB_ROLE' AS record_type,
-        CAST(NULL, 'Nullable(Date)') AS event_date,
-        CAST(NULL, 'Nullable(String)') AS category,
-        CAST(NULL, 'Nullable(String)') AS position,
-        CAST(NULL, 'Nullable(String)') AS event_type,
-        CAST(NULL, 'Nullable(UInt64)') AS total,
-        CAST(NULL, 'Nullable(UInt64)') AS unique_users,
+        NULL AS event_date,
+        NULL AS category,
+        NULL AS position,
+        NULL AS event_type,
+        NULL AS total,
+        NULL AS unique_users,
         audience_role AS job_role_code,
         uniqExact(viewer_id) AS unique_clickers
     FROM (
@@ -223,9 +223,12 @@ audience_role_rows AS (
     )
     GROUP BY audience_role
 )
-SELECT * FROM summary_rows
-UNION ALL SELECT * FROM daily_rows
-UNION ALL SELECT * FROM position_rows
-UNION ALL SELECT * FROM member_role_rows
-UNION ALL SELECT * FROM audience_role_rows
+SELECT *
+FROM (
+    SELECT * FROM summary_rows
+    UNION ALL SELECT * FROM daily_rows
+    UNION ALL SELECT * FROM position_rows
+    UNION ALL SELECT * FROM member_role_rows
+    UNION ALL SELECT * FROM audience_role_rows
+) AS report_rows
 ORDER BY record_type, event_date, category, position, event_type, job_role_code
