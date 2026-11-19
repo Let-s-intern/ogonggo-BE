@@ -11,6 +11,7 @@ import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductAppen
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.JobAppender
@@ -89,10 +90,31 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertEquals(listOf(1, 7), postings.map { it.displayOrder })
         postings.forEach {
             assertEquals(AdvertisementProductPosition.MYPAGE_SCRAP, it.position)
+            assertNull(it.jobField)
             assertEquals(AdvertisementExposureTargetType.JOB, it.targetType)
             assertEquals(false, it.job?.bookmarked)
             assertNull(it.bootcamp)
         }
+    }
+
+    @Test
+    fun `채용공고 목록 자리는 요청한 직군 탭의 노출만 직군과 함께 준다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val development = exposure(productId, AdvertisementExposureTargetType.JOB, job("개발 공고"), jobField = JobField.IT_DEVELOPMENT)
+        exposure(productId, AdvertisementExposureTargetType.JOB, job("게임 공고"), jobField = JobField.GAME)
+
+        // when
+        val postings = service.getShownPostings(
+            userId = null,
+            position = AdvertisementProductPosition.JOB_LIST,
+            jobField = JobField.IT_DEVELOPMENT,
+        )
+
+        // then
+        assertEquals(listOf(development), postings.map { it.exposureId })
+        assertEquals(JobField.IT_DEVELOPMENT, postings.single().jobField)
+        assertEquals("개발 공고", postings.single().job?.title)
     }
 
     @Test
@@ -130,13 +152,14 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         targetId: Long,
         exposed: Boolean = true,
         period: AdvertisementExposurePeriod = AdvertisementExposurePeriod.ALWAYS,
+        jobField: JobField? = null,
     ): Long = checkNotNull(
         transaction.execute {
             exposureAppender.append(
                 AdvertisementExposureAppendDto(
                     productId = productId,
                     contractId = null,
-                    content = AdvertisementExposureContent(targetType = targetType, targetId = targetId),
+                    content = AdvertisementExposureContent(targetType = targetType, targetId = targetId, jobField = jobField),
                     adLabel = true,
                     period = period,
                     exposed = exposed,

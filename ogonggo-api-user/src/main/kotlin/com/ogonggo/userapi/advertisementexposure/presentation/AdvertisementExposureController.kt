@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisementexposure.presentation
 
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.userapi.advertisementexposure.business.AdvertisementExposureService
 import com.ogonggo.userapi.advertisementexposure.presentation.response.AdvertisementExposureResponse
 import com.ogonggo.userapi.advertisementexposure.presentation.response.AdvertisementPostingResponse
@@ -49,12 +50,17 @@ class AdvertisementExposureController(
     override fun getShownPostings(
         @AuthenticationPrincipal userId: Long?,
         @RequestParam("position") position: AdvertisementProductPosition,
+        @RequestParam(name = "jobField", required = false) jobField: JobField?,
     ): ResponseEntity<SuccessResponse<List<AdvertisementPostingResponse>>> {
         if (position.category != AdvertisementProductCategory.JOB_POSTING) {
             throw InvalidRequestParameterException("position", "광고 공고 자리만 조회할 수 있습니다.")
         }
+        // 채용공고 목록 광고는 직군 탭마다 따로 판다. 다른 자리의 노출은 직군이 없어 보내면 늘 빈 목록이다.
+        if ((position == AdvertisementProductPosition.JOB_LIST) != (jobField != null)) {
+            throw InvalidRequestParameterException("jobField", "채용공고 목록(JOB_LIST) 자리만 jobField를 보내야 하고, 이 자리에서는 필수입니다.")
+        }
         return SuccessResponse.ok(
-            advertisementExposureService.getShownPostings(userId, position).map(AdvertisementPostingResponse::from),
+            advertisementExposureService.getShownPostings(userId, position, jobField).map(AdvertisementPostingResponse::from),
         )
     }
 }

@@ -101,8 +101,11 @@ internal class AdvertisementExposureQueryRepository(
             .fetchFirst() != null
     }
 
-    /** 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다. */
-    fun findShown(productIds: Collection<Long>, now: LocalDateTime): List<AdvertisementExposure> {
+    /**
+     * 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다.
+     * 직군을 주면 그 직군 탭의 노출만 준다.
+     */
+    fun findShown(productIds: Collection<Long>, now: LocalDateTime, jobField: JobField? = null): List<AdvertisementExposure> {
         if (productIds.isEmpty()) {
             return emptyList()
         }
@@ -113,6 +116,7 @@ internal class AdvertisementExposureQueryRepository(
                 advertisementExposure.deletedAt.isNull,
                 advertisementExposure.startAt.isNull.or(advertisementExposure.startAt.loe(now)),
                 advertisementExposure.endAt.isNull.or(advertisementExposure.endAt.goe(now)),
+                jobField?.let { advertisementExposure.jobField.eq(it) },
             )
             .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
             .fetch()

@@ -7,6 +7,7 @@ import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampMetricReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.bootcamp.implement.dto.BootcampMetricDto
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobMetricReader
 import com.ogonggo.core.job.implement.JobReader
@@ -38,10 +39,15 @@ class AdvertisementExposureService(
      * 광고 공고 자리에 지금 보이는 카드를 자리 안 순서대로 준다. 자리마다 많아야 몇 건이라 페이지를 나누지 않는다.
      * 노출이 켜져 있고 기간 안이어도 대상 공고가 게시 중·모집 중이 아니면 뺀다.
      * 북마크 여부와 지표는 공개 목록과 같은 방식으로 채우고, 로그인하지 않았으면 북마크가 없는 것으로 본다.
+     * 채용공고 목록 자리는 [jobField] 직군 탭의 노출만 준다.
      */
-    fun getShownPostings(userId: Long?, position: AdvertisementProductPosition): List<AdvertisementPostingResult> {
+    fun getShownPostings(
+        userId: Long?,
+        position: AdvertisementProductPosition,
+        jobField: JobField? = null,
+    ): List<AdvertisementPostingResult> {
         val now = LocalDateTime.now(clock)
-        val exposures = advertisementExposureReader.readShown(position, now)
+        val exposures = advertisementExposureReader.readShown(position, now, jobField)
         fun idsOf(type: AdvertisementExposureTargetType) =
             exposures.filter { it.targetType == type }.mapNotNull { it.targetId }.distinct()
         val jobs = jobSummaries(userId, idsOf(AdvertisementExposureTargetType.JOB), now)
@@ -55,6 +61,7 @@ class AdvertisementExposureService(
             AdvertisementPostingResult(
                 exposureId = checkNotNull(exposure.id),
                 position = position,
+                jobField = exposure.jobField,
                 displayOrder = exposure.displayOrder,
                 adLabel = exposure.adLabel,
                 targetType = targetType,

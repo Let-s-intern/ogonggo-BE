@@ -2,6 +2,7 @@ package com.ogonggo.userapi.advertisementexposure.business
 
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
 import com.ogonggo.userapi.job.business.UserJobSummary
 
@@ -9,6 +10,7 @@ import com.ogonggo.userapi.job.business.UserJobSummary
 data class AdvertisementPostingResult(
     val exposureId: Long,
     val position: AdvertisementProductPosition,
+    val jobField: JobField?,
     val displayOrder: Int,
     val adLabel: Boolean,
     val targetType: AdvertisementExposureTargetType,

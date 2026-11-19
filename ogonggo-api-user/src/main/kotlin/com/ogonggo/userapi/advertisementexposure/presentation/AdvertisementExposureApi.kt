@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.advertisementexposure.presentation
 
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.userapi.advertisementexposure.presentation.response.AdvertisementExposureResponse
 import com.ogonggo.userapi.advertisementexposure.presentation.response.AdvertisementPostingResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
@@ -61,14 +62,14 @@ interface AdvertisementExposureApi {
     @Operation(
         operationId = "listPublicAdvertisementPostings",
         summary = "자리별 공개 광고 공고 조회",
-        description = "로그인 없이 호출할 수 있고, 토큰을 보내면 요약의 bookmarked가 채워집니다. 광고 공고 자리(JOB_PICK, JOB_LIST, CALENDAR_DAY, MYPAGE_SCRAP)만 받습니다. 켜져 있고 노출 기간 안인 노출 중 대상이 게시 중이고 모집 중인 것만 displayOrder와 노출 ID 순으로 모두 반환하며 페이지를 나누지 않습니다. targetType이 JOB이면 job에 공개 채용공고 목록 요약이, BOOTCAMP이면 bootcamp에 공개 부트캠프 목록 요약이 있고 나머지 하나는 null입니다. 광고주·상품·계약·기간은 반환하지 않습니다.",
+        description = "로그인 없이 호출할 수 있고, 토큰을 보내면 요약의 bookmarked가 채워집니다. 광고 공고 자리(JOB_PICK, JOB_LIST, CALENDAR_DAY, MYPAGE_SCRAP)만 받습니다. JOB_LIST는 채용공고 목록의 직군 탭마다 따로 팔므로 jobField(GET /api/v1/enums의 JobField 값)가 필수이고 그 직군의 노출만 주며, 다른 자리는 jobField를 보내지 않습니다. 항목의 jobField는 JOB_LIST 노출의 직군이고 다른 자리는 null입니다. 켜져 있고 노출 기간 안인 노출 중 대상이 게시 중이고 모집 중인 것만 displayOrder와 노출 ID 순으로 모두 반환하며 페이지를 나누지 않습니다. targetType이 JOB이면 job에 공개 채용공고 목록 요약이, BOOTCAMP이면 bootcamp에 공개 부트캠프 목록 요약이 있고 나머지 하나는 null입니다. 광고주·상품·계약·기간은 반환하지 않습니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "BAD_REQUEST: 필수 position이 없거나 광고 공고 자리가 아닙니다.",
+                description = "BAD_REQUEST: 필수 position이 없거나 광고 공고 자리가 아닙니다. JOB_LIST인데 jobField가 없거나, JOB_LIST가 아닌데 jobField를 보냈거나, jobField가 JobField 값이 아닙니다.",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
@@ -82,5 +83,7 @@ interface AdvertisementExposureApi {
             schema = Schema(type = "string", allowableValues = ["JOB_PICK", "JOB_LIST", "CALENDAR_DAY", "MYPAGE_SCRAP"]),
         )
         position: AdvertisementProductPosition,
+        @Parameter(description = "채용공고 목록(JOB_LIST) 자리의 직군 탭. JOB_LIST는 필수이고 다른 자리는 보내지 않습니다.")
+        jobField: JobField?,
     ): ResponseEntity<SuccessResponse<List<AdvertisementPostingResponse>>>
 }
