@@ -152,7 +152,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertFalse(jobField.at("/required").asBoolean())
         assertTrue(jobField.at("/schema/enum").any { it.asText() == "IT_DEVELOPMENT" })
         assertTrue(position.at("/required").asBoolean())
-        assertEquals(setOf("JOB_PICK", "JOB_LIST", "JOB_DETAIL_SIDE", "CALENDAR_DAY", "MYPAGE_SCRAP"), position.at("/schema/enum").map { it.asText() }.toSet())
+        assertEquals(setOf("JOB_PICK", "JOB_LIST", "JOB_DETAIL_SIDE", "CALENDAR_DAY", "MYPAGE_SCRAP", "BOOTCAMP_LIST"), position.at("/schema/enum").map { it.asText() }.toSet())
         assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertEquals(
             setOf(

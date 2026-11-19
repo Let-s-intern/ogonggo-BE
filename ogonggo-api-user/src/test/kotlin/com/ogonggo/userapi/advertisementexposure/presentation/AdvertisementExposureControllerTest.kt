@@ -136,11 +136,11 @@ class AdvertisementExposureControllerTest @Autowired constructor(
     @Test
     fun `비회원이 광고 공고 자리의 카드를 노출 ID·순서·대상 요약과 함께 조회한다`() {
         // given
-        Mockito.`when`(advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.CALENDAR_DAY)).thenReturn(
+        Mockito.`when`(advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.BOOTCAMP_LIST)).thenReturn(
             listOf(
                 AdvertisementPostingResult(
                     exposureId = EXPOSURE_ID,
-                    position = AdvertisementProductPosition.CALENDAR_DAY,
+                    position = AdvertisementProductPosition.BOOTCAMP_LIST,
                     jobField = null,
                     recommendationTitle = null,
                     recommendationDescription = null,
@@ -156,10 +156,10 @@ class AdvertisementExposureControllerTest @Autowired constructor(
         )
 
         // when, then
-        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "CALENDAR_DAY"))
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "BOOTCAMP_LIST"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data[0].exposureId").value(EXPOSURE_ID))
-            .andExpect(jsonPath("$.data[0].position").value("CALENDAR_DAY"))
+            .andExpect(jsonPath("$.data[0].position").value("BOOTCAMP_LIST"))
             .andExpect(jsonPath("$.data[0].jobField").value(null as Any?))
             .andExpect(jsonPath("$.data[0].recommendationTitle").value(null as Any?))
             .andExpect(jsonPath("$.data[0].recommendationDescription").value(null as Any?))

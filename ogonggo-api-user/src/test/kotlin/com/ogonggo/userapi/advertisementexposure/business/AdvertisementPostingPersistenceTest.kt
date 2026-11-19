@@ -9,6 +9,15 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductAppender
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
+import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
+import com.ogonggo.core.bootcamp.domain.BootcampOperationType
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
+import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
+import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
+import com.ogonggo.core.bootcamp.implement.BootcampAppender
+import com.ogonggo.core.bootcamp.implement.BootcampManager
+import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
 import com.ogonggo.core.job.domain.JobField
@@ -24,6 +33,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.support.TransactionTemplate
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
@@ -48,6 +58,9 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     private val jobAppender: JobAppender,
     private val jobReader: JobReader,
     private val jobManager: JobManager,
+    private val bootcampAppender: BootcampAppender,
+    private val bootcampReader: BootcampReader,
+    private val bootcampManager: BootcampManager,
     private val transaction: TransactionTemplate,
 ) {
 
@@ -149,6 +162,30 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertNull(postings.single().bootcamp)
     }
 
+    @Test
+    fun `부트캠프 목록 자리는 게시·모집 중인 부트캠프 요약만 주고 마감·숨김 부트캠프는 뺀다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
+        val recruiting = bootcamp("모집 중 부트캠프")
+        val closed = bootcamp("마감 부트캠프")
+        bootcampManager.close(bootcampReader.read(closed), LocalDateTime.now())
+        val hidden = bootcamp("숨긴 부트캠프", BootcampPublicationStatus.HIDDEN)
+        val shown = exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, recruiting)
+        exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, closed)
+        exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, hidden)
+
+        // when
+        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.BOOTCAMP_LIST)
+
+        // then
+        assertEquals(listOf(shown), postings.map { it.exposureId })
+        assertEquals(AdvertisementProductPosition.BOOTCAMP_LIST, postings.single().position)
+        assertEquals(AdvertisementExposureTargetType.BOOTCAMP, postings.single().targetType)
+        assertEquals(recruiting, postings.single().bootcamp?.id)
+        assertEquals("모집 중 부트캠프", postings.single().bootcamp?.title)
+        assertNull(postings.single().job)
+    }
+
     private fun product(position: AdvertisementProductPosition): Long = productAppender.append(
         AdvertisementProductSaveDto(
             category = AdvertisementProductCategory.JOB_POSTING,
@@ -200,4 +237,27 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
             ),
         ).id,
     )
+
+    private fun bootcamp(title: String, publicationStatus: BootcampPublicationStatus = BootcampPublicationStatus.PUBLISHED): Long {
+        val bootcamp = bootcampAppender.append(
+            BootcampAppendDto(
+                companyName = "오공고 교육사",
+                title = title,
+                programType = "개발",
+                operationType = BootcampOperationType.ONLINE,
+                recruitmentType = BootcampRecruitmentType.ALWAYS_OPEN,
+                programStartDate = LocalDate.of(2026, 9, 1),
+                programEndDate = LocalDate.of(2026, 12, 1),
+                tuitionType = BootcampTuitionType.FREE,
+                representativeImageUrl = null,
+                shortDescription = "백엔드 개발자로 성장하는 12주",
+                content = "부트캠프 상세 내용",
+                applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
+                applicationUrl = "https://example.com/apply",
+                publicationStatus = publicationStatus,
+            ),
+        )
+        bootcampManager.startRecruitment(bootcamp)
+        return checkNotNull(bootcamp.id)
+    }
 }

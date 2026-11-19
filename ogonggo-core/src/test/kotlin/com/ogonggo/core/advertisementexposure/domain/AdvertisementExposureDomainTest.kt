@@ -158,6 +158,21 @@ class AdvertisementExposureDomainTest {
     }
 
     @Test
+    fun `부트캠프 목록 자리는 부트캠프만 띄우고 채용공고는 띄우지 않는다`() {
+        // given
+        val product = product(AdvertisementProductPosition.BOOTCAMP_LIST)
+        val bootcampContent = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.BOOTCAMP, targetId = 20L)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) { exposure(product, JOB_CONTENT) }
+        val exposure = exposure(product, bootcampContent)
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, exception.errorCode)
+        assertEquals(AdvertisementExposureTargetType.BOOTCAMP, exposure.targetType)
+    }
+
+    @Test
     fun `인스타그램·카카오톡 상품은 오공고 화면에 노출하지 않는다`() {
         assertThrows(InvalidValueException::class.java) {
             exposure(product(AdvertisementProductCategory.INSTAGRAM_1), BANNER_CONTENT)

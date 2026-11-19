@@ -211,6 +211,58 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
+    fun `부트캠프 목록 자리에는 부트캠프를 등록한다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
+        val bootcampId = bootcamp()
+
+        // when
+        service.createExposure(command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcampId), ADMIN_ID)
+
+        // then
+        val saved = exposureReader.readByProduct(productId).single()
+        assertEquals(AdvertisementExposureTargetType.BOOTCAMP, saved.targetType)
+        assertEquals(bootcampId, saved.targetId)
+    }
+
+    @Test
+    fun `부트캠프 목록 자리에 채용공고를 등록하지 않는다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
+        val jobId = job()
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+        }
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, exception.errorCode)
+    }
+
+    @Test
+    fun `부트캠프 목록 자리는 직군이나 추천 문구와 함께 등록하지 않는다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
+        val bootcampId = bootcamp()
+
+        // when
+        val withJobField = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcampId, JobField.GAME), ADMIN_ID)
+        }
+        val withRecommendation = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(
+                command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcampId).copy(recommendationTitle = PICK_TITLE),
+                ADMIN_ID,
+            )
+        }
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, withJobField.errorCode)
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, withRecommendation.errorCode)
+    }
+
+    @Test
     fun `광고 공고 상품은 대상이 없으면 등록하지 않는다`() {
         val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
 
