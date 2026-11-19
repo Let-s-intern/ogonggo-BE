@@ -53,7 +53,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     fun `켜져 있고 기간 안인 노출 중 대상 공고가 게시·모집 중인 것만 순서대로 준다`() {
         // given
         val now = LocalDateTime.now()
-        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val productId = product(AdvertisementProductPosition.MYPAGE_SCRAP)
         val first = job("첫 광고 공고")
         val second = job("둘째 광고 공고")
         val firstExposure = exposure(productId, AdvertisementExposureTargetType.JOB, first)
@@ -80,7 +80,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         )
 
         // when
-        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.JOB_LIST)
+        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.MYPAGE_SCRAP)
 
         // then
         assertEquals(listOf(firstExposure, secondExposure), postings.map { it.exposureId })
@@ -88,7 +88,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertEquals(listOf("첫 광고 공고", "둘째 광고 공고"), postings.map { it.job?.title })
         assertEquals(listOf(1, 7), postings.map { it.displayOrder })
         postings.forEach {
-            assertEquals(AdvertisementProductPosition.JOB_LIST, it.position)
+            assertEquals(AdvertisementProductPosition.MYPAGE_SCRAP, it.position)
             assertEquals(AdvertisementExposureTargetType.JOB, it.targetType)
             assertEquals(false, it.job?.bookmarked)
             assertNull(it.bootcamp)

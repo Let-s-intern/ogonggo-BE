@@ -3,6 +3,7 @@ package com.ogonggo.core.advertisementexposure.persistence
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementexposure.domain.QAdvertisementExposure.advertisementExposure
+import com.ogonggo.core.job.domain.JobField
 import com.querydsl.core.BooleanBuilder
 import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.LockModeType
@@ -76,11 +77,12 @@ internal class AdvertisementExposureQueryRepository(
         return PageImpl(items, pageable, totalElements)
     }
 
-    /** 이 상품들 자리에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다. */
+    /** 이 상품들 자리(직군이 있으면 그 직군 탭)에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다. */
     fun existsTarget(
         productIds: Collection<Long>,
         targetType: AdvertisementExposureTargetType,
         targetId: Long,
+        jobField: JobField?,
         excludedExposureId: Long?,
     ): Boolean {
         if (productIds.isEmpty()) {
@@ -91,6 +93,7 @@ internal class AdvertisementExposureQueryRepository(
             .and(advertisementExposure.deletedAt.isNull)
             .and(advertisementExposure.targetType.eq(targetType))
             .and(advertisementExposure.targetId.eq(targetId))
+        jobField?.let { condition.and(advertisementExposure.jobField.eq(it)) }
         excludedExposureId?.let { condition.and(advertisementExposure.id.ne(it)) }
         return queryFactory.selectOne()
             .from(advertisementExposure)

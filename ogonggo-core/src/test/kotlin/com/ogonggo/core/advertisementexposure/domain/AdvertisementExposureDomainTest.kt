@@ -1,9 +1,11 @@
 package com.ogonggo.core.advertisementexposure.domain
 
+import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCode
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.job.domain.JobField
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -24,6 +26,57 @@ class AdvertisementExposureDomainTest {
         assertThrows(InvalidValueException::class.java) {
             exposure(product(AdvertisementProductCategory.JOB_POSTING), AdvertisementExposureContent())
         }
+    }
+
+    @Test
+    fun `채용공고 목록 자리의 광고 공고는 직군이 있어야 하고 직군을 저장한다`() {
+        // given
+        val product = product(AdvertisementProductPosition.JOB_LIST)
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) { exposure(product, JOB_CONTENT) }
+        val exposure = exposure(product, JOB_CONTENT.copy(jobField = JobField.IT_DEVELOPMENT))
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, exception.errorCode)
+        assertEquals(JobField.IT_DEVELOPMENT, exposure.jobField)
+    }
+
+    @Test
+    fun `채용공고 목록이 아닌 광고 공고 자리와 배너는 직군을 둘 수 없다`() {
+        // given
+        val withJobField = JOB_CONTENT.copy(jobField = JobField.IT_DEVELOPMENT)
+
+        // when, then
+        listOf(
+            AdvertisementProductPosition.JOB_PICK,
+            AdvertisementProductPosition.CALENDAR_DAY,
+            AdvertisementProductPosition.MYPAGE_SCRAP,
+        ).forEach { position ->
+            val exception = assertThrows(InvalidValueException::class.java) { exposure(product(position), withJobField) }
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, exception.errorCode)
+        }
+        val banner = assertThrows(InvalidValueException::class.java) {
+            exposure(product(AdvertisementProductCategory.BANNER), BANNER_CONTENT.copy(jobField = JobField.IT_DEVELOPMENT))
+        }
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_BANNER_CONTENT_REQUIRED, banner.errorCode)
+    }
+
+    @Test
+    fun `채용공고 목록 노출을 고칠 때도 직군이 있어야 한다`() {
+        // given
+        val product = product(AdvertisementProductPosition.JOB_LIST)
+        val exposure = exposure(product, JOB_CONTENT.copy(jobField = JobField.GAME))
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            exposure.update(product, null, JOB_CONTENT, adLabel = true, period = AdvertisementExposurePeriod.ALWAYS)
+        }
+        exposure.update(product, null, JOB_CONTENT.copy(jobField = JobField.SALES), adLabel = true, period = AdvertisementExposurePeriod.ALWAYS)
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, exception.errorCode)
+        assertEquals(JobField.SALES, exposure.jobField)
     }
 
     @Test
@@ -106,6 +159,9 @@ class AdvertisementExposureDomainTest {
         return AdvertisementProduct(category, position, "상품", null).also { ReflectionTestUtils.setField(it, "id", 1L) }
     }
 
+    private fun product(position: AdvertisementProductPosition): AdvertisementProduct =
+        AdvertisementProduct(position.category, position, "상품", null).also { ReflectionTestUtils.setField(it, "id", 1L) }
+
     private fun exposure(
         product: AdvertisementProduct,
         content: AdvertisementExposureContent,
@@ -122,6 +178,7 @@ class AdvertisementExposureDomainTest {
 
     companion object {
         private val NOW = LocalDateTime.of(2026, 11, 7, 12, 0)
+        private val JOB_CONTENT = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.JOB, targetId = 10L)
         private val BANNER_CONTENT = AdvertisementExposureContent(
             name = "오늘의 공고 홍보",
             imageUrl = "https://example.com/banner.png",

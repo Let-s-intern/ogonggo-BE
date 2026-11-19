@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.jpa.BaseTimeEntity
+import com.ogonggo.core.job.domain.JobField
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -22,7 +23,7 @@ import java.time.LocalDateTime
  *
  * 모든 노출 상품이 이 테이블 하나를 쓴다. 상품이 늘어도 행만 늘고, 다른 값이 필요한 노출 종류가 생길 때만 칼럼을 더한다.
  * - 배너: 이름, 이미지, 링크가 있다. 모바일 이미지는 선택이며, 없으면 모바일에서도 이미지를 쓴다.
- * - 광고 공고: 띄울 채용공고·부트캠프가 있다.
+ * - 광고 공고: 띄울 채용공고·부트캠프가 있다. 채용공고 목록 자리(JOB_LIST)는 어느 직군 탭에 띄울지([jobField])도 있다.
  *
  * 광고주 계약이 없는 우리 홍보도 둔다([contractId]가 없음). 기간이 없으면 상시다.
  * 노출 중·꺼짐 같은 상태는 켜짐 여부와 기간으로 계산하고 저장하지 않는다.
@@ -87,6 +88,11 @@ class AdvertisementExposure internal constructor(
     var targetId: Long? = content.targetId /* 광고 공고가 띄우는 채용공고·부트캠프 식별자 */
         protected set
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "job_field", length = 40)
+    var jobField: JobField? = content.jobField /* 채용공고 목록 자리에서 띄울 직군 탭. 다른 자리는 없다 */
+        protected set
+
     @Column(name = "ad_label", nullable = false)
     var adLabel: Boolean = adLabel /* "광고" 표시 여부 */
         protected set
@@ -130,6 +136,7 @@ class AdvertisementExposure internal constructor(
         linkUrl = content.linkUrl
         targetType = content.targetType
         targetId = content.targetId
+        jobField = content.jobField
         this.adLabel = adLabel
         startAt = period.startAt
         endAt = period.endAt
@@ -168,7 +175,7 @@ class AdvertisementExposure internal constructor(
                 AdvertisementProductCategory.BANNER -> {
                     val valid = !content.name.isNullOrBlank() && !content.imageUrl.isNullOrBlank() && !content.linkUrl.isNullOrBlank() &&
                         (content.mobileImageUrl == null || content.mobileImageUrl.isNotBlank()) &&
-                        content.targetType == null && content.targetId == null
+                        content.targetType == null && content.targetId == null && content.jobField == null
                     if (!valid) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_BANNER_CONTENT_REQUIRED)
                     }
@@ -191,6 +198,11 @@ class AdvertisementExposure internal constructor(
                     if (expectedTargetType != null && expectedTargetType != content.targetType) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH)
                     }
+                    // 채용공고 목록 광고는 직군 탭마다 따로 판다. 직군이 없는 자리에 직군을 두면 어디에도 안 보인다.
+                    val jobFieldRequired = product.position == AdvertisementProductPosition.JOB_LIST
+                    if (jobFieldRequired != (content.jobField != null)) {
+                        throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID)
+                    }
                 }
 
                 else -> throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE)
@@ -209,7 +221,7 @@ class AdvertisementExposure internal constructor(
     }
 }
 
-/** 노출할 내용이다. 배너는 이름·이미지·링크(모바일 이미지는 선택), 광고 공고는 대상 공고만 채운다. */
+/** 노출할 내용이다. 배너는 이름·이미지·링크(모바일 이미지는 선택), 광고 공고는 대상 공고(채용공고 목록 자리는 직군까지)만 채운다. */
 data class AdvertisementExposureContent(
     val name: String? = null,
     val imageUrl: String? = null,
@@ -217,6 +229,7 @@ data class AdvertisementExposureContent(
     val targetType: AdvertisementExposureTargetType? = null,
     val targetId: Long? = null,
     val mobileImageUrl: String? = null,
+    val jobField: JobField? = null,
 )
 
 /** 노출 기간이다. 둘 다 없으면 상시이고, 있으면 둘 다 있어야 한다. */
