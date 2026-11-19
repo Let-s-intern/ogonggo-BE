@@ -9,7 +9,8 @@ import com.ogonggo.core.enumeration.EnumField
  * 새 자리는 프론트가 그 자리를 그려야 생기므로 값을 더하는 배포와 함께 늘린다.
  * 광고 공고 자리는 판매 상품과 하나씩 맞춘다(2026-11-19, LC-3649): 홈 히어로 오공고 PICK, 채용공고 목록 직군 탭 맨 위,
  * 공고 상세 옆 추천, 공고 달력 날짜별 목록 맨 앞, 마이페이지 지원 관리 보드의 채용공고 스크랩 칸 맨 앞. 모두 채용공고를 띄운다.
- * 부트캠프 목록(8)은 LC-3649에서 뺐다가 판매 상품(부트캠프 목록 상단 고정)이 생겨 같은 코드 값으로 되살렸다(LC-3650). 이 자리만 부트캠프를 띄운다.
+ * 부트캠프 목록(8)은 LC-3649에서 뺐다가 판매 상품(부트캠프 목록 상단 고정)이 생겨 같은 코드 값으로 되살렸다(LC-3650).
+ * 부트캠프 상세 옆과 마이페이지 스크랩 부트캠프 칸은 채용공고의 두 자리를 본떠 더했다(LC-3652). 부트캠프 자리 셋은 부트캠프를 띄운다.
  */
 enum class AdvertisementProductPosition(
     override val code: Int,
@@ -28,5 +29,7 @@ enum class AdvertisementProductPosition(
     JOB_PICK(10, "오공고 PICK", AdvertisementProductCategory.JOB_POSTING),
     CALENDAR_DAY(11, "공고 달력 날짜별", AdvertisementProductCategory.JOB_POSTING),
     MYPAGE_SCRAP(12, "마이페이지 스크랩 칸", AdvertisementProductCategory.JOB_POSTING),
+    BOOTCAMP_DETAIL_SIDE(13, "부트캠프 상세 옆", AdvertisementProductCategory.JOB_POSTING),
+    BOOTCAMP_MYPAGE_SCRAP(14, "마이페이지 스크랩 부트캠프 칸", AdvertisementProductCategory.JOB_POSTING),
     ;
 }

@@ -257,6 +257,31 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
+    fun `부트캠프 상세 옆과 마이페이지 스크랩 부트캠프 칸에는 부트캠프를 등록하고 채용공고는 등록하지 않는다`() {
+        listOf(
+            AdvertisementProductPosition.BOOTCAMP_DETAIL_SIDE,
+            AdvertisementProductPosition.BOOTCAMP_MYPAGE_SCRAP,
+        ).forEach { position ->
+            // given
+            val productId = product(position)
+            val bootcampId = bootcamp()
+            val jobId = job()
+
+            // when
+            service.createExposure(command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcampId), ADMIN_ID)
+            val exception = assertThrows(InvalidValueException::class.java) {
+                service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+            }
+
+            // then
+            val saved = exposureReader.readByProduct(productId).single()
+            assertEquals(AdvertisementExposureTargetType.BOOTCAMP, saved.targetType)
+            assertEquals(bootcampId, saved.targetId)
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, exception.errorCode)
+        }
+    }
+
+    @Test
     fun `부트캠프 목록 자리는 직군이나 추천 문구와 함께 등록하지 않는다`() {
         // given
         val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)

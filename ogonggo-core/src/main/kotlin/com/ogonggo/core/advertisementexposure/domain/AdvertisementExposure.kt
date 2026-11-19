@@ -239,7 +239,7 @@ class AdvertisementExposure internal constructor(
         private fun isRecommendationText(text: String?, maxLength: Int): Boolean =
             !text.isNullOrBlank() && text.length <= maxLength
 
-        /** 광고 공고 자리마다 띄울 수 있는 콘텐츠 종류다. 부트캠프 목록은 부트캠프, 나머지는 채용공고다. */
+        /** 광고 공고 자리마다 띄울 수 있는 콘텐츠 종류다. 부트캠프 목록·상세 옆·마이페이지 스크랩 부트캠프 칸은 부트캠프, 나머지는 채용공고다. */
         private fun targetTypeOf(position: AdvertisementProductPosition): AdvertisementExposureTargetType? = when (position) {
             AdvertisementProductPosition.JOB_LIST,
             AdvertisementProductPosition.JOB_DETAIL_SIDE,
@@ -247,7 +247,10 @@ class AdvertisementExposure internal constructor(
             AdvertisementProductPosition.CALENDAR_DAY,
             AdvertisementProductPosition.MYPAGE_SCRAP,
             -> AdvertisementExposureTargetType.JOB
-            AdvertisementProductPosition.BOOTCAMP_LIST -> AdvertisementExposureTargetType.BOOTCAMP
+            AdvertisementProductPosition.BOOTCAMP_LIST,
+            AdvertisementProductPosition.BOOTCAMP_DETAIL_SIDE,
+            AdvertisementProductPosition.BOOTCAMP_MYPAGE_SCRAP,
+            -> AdvertisementExposureTargetType.BOOTCAMP
             else -> null
         }
     }

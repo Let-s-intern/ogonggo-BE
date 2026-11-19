@@ -202,6 +202,33 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertNull(postings.single().job)
     }
 
+    @Test
+    fun `부트캠프 상세 옆과 마이페이지 스크랩 부트캠프 칸은 게시·모집 중인 부트캠프 요약만 준다`() {
+        listOf(
+            AdvertisementProductPosition.BOOTCAMP_DETAIL_SIDE,
+            AdvertisementProductPosition.BOOTCAMP_MYPAGE_SCRAP,
+        ).forEach { position ->
+            // given
+            val productId = product(position)
+            val recruiting = bootcamp("모집 중 ${position.desc}")
+            val hidden = bootcamp("숨긴 ${position.desc}", BootcampPublicationStatus.HIDDEN)
+            val shown = exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, recruiting)
+            exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, hidden)
+
+            // when
+            val postings = service.getShownPostings(userId = null, position = position)
+
+            // then
+            assertEquals(listOf(shown), postings.map { it.exposureId })
+            assertEquals(position, postings.single().position)
+            assertEquals(AdvertisementExposureTargetType.BOOTCAMP, postings.single().targetType)
+            assertEquals(recruiting, postings.single().bootcamp?.id)
+            assertNull(postings.single().job)
+            assertNull(postings.single().jobField)
+            assertNull(postings.single().recommendationTitle)
+        }
+    }
+
     private fun product(position: AdvertisementProductPosition): Long = productAppender.append(
         AdvertisementProductSaveDto(
             category = AdvertisementProductCategory.JOB_POSTING,
