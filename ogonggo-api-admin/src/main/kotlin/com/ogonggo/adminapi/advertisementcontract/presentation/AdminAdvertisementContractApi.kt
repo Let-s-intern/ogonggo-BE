@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.advertisementcontract.presentation
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractProductRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractTargetRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractPaymentAmountRequest
+import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractProductEndDateRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractStatusRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractDetailResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractSummaryResponse
@@ -197,6 +198,38 @@ interface AdminAdvertisementContractApi {
     fun addProduct(
         @Positive contractId: Long,
         @Valid request: AddAdminAdvertisementContractProductRequest,
+    ): ResponseEntity<SuccessResponse<CreateAdminAdvertisementContractProductResponse>>
+
+    @Operation(
+        operationId = "updateAdvertisementContractProduct",
+        summary = "계약 상품의 게시 종료일 수정",
+        description = "계약 상품의 게시 종료일만 바꿉니다(계약 연장·단축). 시작일은 바꾸지 않습니다. " +
+            "게시 기간(startDate~endDate)은 데이터 집계 기간이며 리포트는 이 기간의 데이터만 보여 줍니다. " +
+            "노출 기간(광고 노출의 startAt~endAt)은 실제로 광고가 화면에 노출되는 기간이며 이 API는 바꾸지 않습니다. " +
+            "노출 기간도 맞추려면 광고 노출 API로 따로 바꿉니다. 응답 data.id는 바꾼 계약 상품 식별자(contractProductId)입니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "수정 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: contractId·contractProductId는 양수여야 하고 endDate가 필요합니다. " +
+                    "ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID: 기간이 없는 상품이거나 종료일이 시작일보다 앞입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "$CONTRACT_NOT_FOUND $CONTRACT_PRODUCT_NOT_FOUND",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun changeProductEndDate(
+        @Positive contractId: Long,
+        @Positive contractProductId: Long,
+        @Valid request: ChangeAdminAdvertisementContractProductEndDateRequest,
     ): ResponseEntity<SuccessResponse<CreateAdminAdvertisementContractProductResponse>>
 
     @Operation(

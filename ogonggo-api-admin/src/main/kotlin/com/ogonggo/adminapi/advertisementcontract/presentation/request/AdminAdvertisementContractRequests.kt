@@ -31,9 +31,28 @@ data class AddAdminAdvertisementContractProductRequest(
     @field:Positive
     @field:JsonDeserialize(using = StrictLongDeserializer::class)
     val productId: Long,
-    @field:Schema(description = "게시 시작일(yyyy-MM-dd).", example = "2026-11-02", requiredMode = Schema.RequiredMode.REQUIRED)
+    @field:Schema(
+        description = "게시 시작일(yyyy-MM-dd). 게시 기간은 데이터 집계 기간이며 리포트는 이 기간의 데이터만 보여 줍니다. " +
+            "실제로 광고가 화면에 노출되는 기간은 광고 노출의 노출 기간(startAt~endAt)입니다.",
+        example = "2026-11-02",
+        requiredMode = Schema.RequiredMode.REQUIRED,
+    )
     val startDate: LocalDate,
-    @field:Schema(description = "게시 종료일(yyyy-MM-dd). 이 날까지 게시하며 시작일과 같아도 됩니다.", example = "2026-11-05", requiredMode = Schema.RequiredMode.REQUIRED)
+    @field:Schema(
+        description = "게시 종료일(yyyy-MM-dd). 이 날까지 게시하며 시작일과 같아도 됩니다. 게시 기간은 데이터 집계 기간이며 리포트는 이 기간의 데이터만 보여 줍니다.",
+        example = "2026-11-05",
+        requiredMode = Schema.RequiredMode.REQUIRED,
+    )
+    val endDate: LocalDate,
+)
+
+data class ChangeAdminAdvertisementContractProductEndDateRequest(
+    @field:Schema(
+        description = "새 게시 종료일(yyyy-MM-dd). 이 날까지 게시하며 시작일과 같아도 됩니다. " +
+            "게시 기간은 데이터 집계 기간이며 리포트는 이 기간의 데이터만 보여 줍니다. 노출 기간은 바뀌지 않습니다.",
+        example = "2026-11-30",
+        requiredMode = Schema.RequiredMode.REQUIRED,
+    )
     val endDate: LocalDate,
 )
 

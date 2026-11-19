@@ -157,9 +157,9 @@ data class MyAdvertisementContractProductResponse(
     val position: AdvertisementProductPosition?,
     @field:Schema(description = "운영자가 상품을 지웠는지. 지운 상품도 계약에 붙어 있으면 이름과 함께 준다")
     val productDeleted: Boolean,
-    @field:Schema(description = "게시 시작일. 기간을 넣기 전에 붙인 상품은 null", nullable = true)
+    @field:Schema(description = "게시 시작일. 게시 기간은 데이터 집계 기간이며 리포트는 이 기간의 데이터만 보여 줍니다. 기간을 넣기 전에 붙인 상품은 null", nullable = true)
     val startDate: LocalDate?,
-    @field:Schema(description = "게시 종료일(이 날까지 게시). 기간을 넣기 전에 붙인 상품은 null", nullable = true)
+    @field:Schema(description = "게시 종료일(이 날까지 게시). 게시 기간은 데이터 집계 기간이며 리포트는 이 기간의 데이터만 보여 줍니다. 기간을 넣기 전에 붙인 상품은 null", nullable = true)
     val endDate: LocalDate?,
     @field:Schema(description = "성과 리포트를 열 수 있는 상품인지")
     val reportAvailable: Boolean,

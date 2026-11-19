@@ -402,12 +402,14 @@ class AdminOpenApiContractTest @Autowired constructor(
         val payment = document.at("$base~1payment-amount/patch")
         val addProduct = document.at("$base~1products/post")
         val removeProduct = document.at("$base~1products~1{contractProductId}/delete")
+        val changeProductEndDate = document.at("$base~1products~1{contractProductId}/patch")
 
         assertEquals("updateAdvertisementContractStatus", status.at("/operationId").asText())
         assertEquals("updateAdvertisementContractPaymentAmount", payment.at("/operationId").asText())
         assertEquals("createAdvertisementContractProduct", addProduct.at("/operationId").asText())
         assertEquals("deleteAdvertisementContractProduct", removeProduct.at("/operationId").asText())
-        listOf(status, payment, addProduct, removeProduct).forEach { operation ->
+        assertEquals("updateAdvertisementContractProduct", changeProductEndDate.at("/operationId").asText())
+        listOf(status, payment, addProduct, removeProduct, changeProductEndDate).forEach { operation ->
             assertTrue(operation.at("/security/0/BearerAuth").isArray)
             assertTrue(operation.at("/responses/400/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
             assertTrue(operation.at("/responses/401/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
@@ -419,6 +421,12 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(addProduct.at("/responses/201").isObject)
         assertTrue(addProduct.at("/responses/404/description").asText().contains("ADVERTISEMENT_PRODUCT_NOT_FOUND"))
         assertTrue(removeProduct.at("/responses/404/description").asText().contains("ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND"))
+        assertTrue(changeProductEndDate.at("/responses/200").isObject)
+        assertTrue(changeProductEndDate.at("/responses/400/description").asText().contains("ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID"))
+        assertTrue(changeProductEndDate.at("/responses/404/description").asText().contains("ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND"))
+        assertTrue(
+            document.at("/components/schemas/ChangeAdminAdvertisementContractProductEndDateRequest/required").any { it.asText() == "endDate" },
+        )
         assertEquals(
             listOf("contractId"),
             status.at("/parameters").map { it.at("/name").asText() },

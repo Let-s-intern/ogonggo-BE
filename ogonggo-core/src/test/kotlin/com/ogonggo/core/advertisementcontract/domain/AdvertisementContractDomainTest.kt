@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCo
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.error.ConflictException
+import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -11,6 +12,46 @@ import org.junit.jupiter.api.Test
 import java.time.LocalDate
 
 class AdvertisementContractDomainTest {
+
+    @Test
+    fun `계약 상품의 게시 종료일을 늘리면 시작일은 그대로 두고 종료일만 바꾼다`() {
+        // given
+        val product = contractProduct()
+
+        // when
+        product.changeEndDate(LocalDate.of(2026, 11, 30))
+
+        // then
+        assertEquals(LocalDate.of(2026, 11, 2), product.startDate)
+        assertEquals(LocalDate.of(2026, 11, 30), product.endDate)
+    }
+
+    @Test
+    fun `계약 상품의 게시 종료일을 시작일까지 줄일 수 있다`() {
+        // given
+        val product = contractProduct()
+
+        // when
+        product.changeEndDate(LocalDate.of(2026, 11, 2))
+
+        // then
+        assertEquals(LocalDate.of(2026, 11, 2), product.endDate)
+    }
+
+    @Test
+    fun `게시 종료일을 시작일보다 앞으로 바꿀 수 없다`() {
+        // given
+        val product = contractProduct()
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            product.changeEndDate(LocalDate.of(2026, 11, 1))
+        }
+
+        // then
+        assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID, exception.errorCode)
+        assertEquals(LocalDate.of(2026, 11, 5), product.endDate)
+    }
 
     @Test
     fun `비즈니스 공고 계약은 검수 대기면 신청, 승인이면 승인, 반려면 반려다`() {
@@ -237,4 +278,10 @@ class AdvertisementContractDomainTest {
             invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
             creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
         )
+
+    private fun contractProduct() = AdvertisementContractProduct(
+        contractId = 1L,
+        productId = 2L,
+        period = AdvertisementContractProductPeriod(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 5)),
+    )
 }
