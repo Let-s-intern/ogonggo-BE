@@ -479,6 +479,67 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `계약 상품의 게시 종료일을 바꾸면 200과 계약 상품 ID를 돌려준다`() {
+        // given
+        val endDate = LocalDate.parse("2026-11-30")
+        Mockito.`when`(adminAdvertisementContractService.changeProductEndDate(CONTRACT_ID, 3001, endDate)).thenReturn(3001)
+
+        // when, then
+        mockMvc.perform(
+            admin(
+                patch("$PATH/$CONTRACT_ID/products/3001")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"endDate":"2026-11-30"}"""),
+            ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data.id").value(3001))
+        Mockito.verify(adminAdvertisementContractService).changeProductEndDate(CONTRACT_ID, 3001, endDate)
+    }
+
+    @Test
+    fun `게시 종료일 수정은 종료일이 없거나 형식이 틀리거나 시작일보다 앞이면 400이다`() {
+        // given
+        val url = "$PATH/$CONTRACT_ID/products/3001"
+        val endDate = LocalDate.parse("2026-11-01")
+        Mockito.`when`(adminAdvertisementContractService.changeProductEndDate(CONTRACT_ID, 3001, endDate))
+            .thenThrow(InvalidValueException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID))
+
+        // when, then
+        listOf("{}", """{"endDate":null}""", """{"endDate":"2026/11/30"}""").forEach { body ->
+            mockMvc.perform(admin(patch(url).contentType(MediaType.APPLICATION_JSON).content(body)))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        }
+        mockMvc.perform(
+            admin(patch("$PATH/$CONTRACT_ID/products/0").contentType(MediaType.APPLICATION_JSON).content("""{"endDate":"2026-11-30"}""")),
+        ).andExpect(status().isBadRequest)
+        mockMvc.perform(admin(patch(url).contentType(MediaType.APPLICATION_JSON).content("""{"endDate":"2026-11-01"}""")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID"))
+    }
+
+    @Test
+    fun `계약에 없는 상품의 게시 종료일을 바꾸면 404다`() {
+        // given
+        val endDate = LocalDate.parse("2026-11-30")
+        Mockito.`when`(adminAdvertisementContractService.changeProductEndDate(CONTRACT_ID, 3002, endDate))
+            .thenThrow(EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND))
+
+        // when, then
+        mockMvc.perform(
+            admin(
+                patch("$PATH/$CONTRACT_ID/products/3002")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"endDate":"2026-11-30"}"""),
+            ),
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND"))
+    }
+
+    @Test
     fun `비즈니스 계정 발급은 관리자만 하고 발급 결과를 돌려준다`() {
         mockMvc.perform(post("$PATH/$CONTRACT_ID/business-account"))
             .andExpect(status().isUnauthorized)

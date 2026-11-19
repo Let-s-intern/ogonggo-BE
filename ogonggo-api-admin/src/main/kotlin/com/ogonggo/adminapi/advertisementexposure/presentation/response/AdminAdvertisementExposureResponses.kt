@@ -30,9 +30,9 @@ data class AdminAdvertisementExposureResponse(
     @field:Schema(description = "오공고 PICK(JOB_PICK) 노출의 추천 문구 설명. 다른 자리와 배너는 null입니다.", nullable = true)
     val recommendationDescription: String?,
     val adLabel: Boolean,
-    @field:Schema(nullable = true)
+    @field:Schema(description = "노출 시작 일시. 노출 기간은 실제로 광고가 화면에 노출되는 기간입니다. 없으면 상시", nullable = true)
     val startAt: LocalDateTime?,
-    @field:Schema(nullable = true)
+    @field:Schema(description = "노출 종료 일시. 노출 기간은 실제로 광고가 화면에 노출되는 기간입니다. 없으면 상시", nullable = true)
     val endAt: LocalDateTime?,
     val exposed: Boolean,
     @field:Schema(nullable = true)

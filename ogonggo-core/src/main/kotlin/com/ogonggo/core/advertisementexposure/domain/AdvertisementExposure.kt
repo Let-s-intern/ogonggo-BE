@@ -108,12 +108,14 @@ class AdvertisementExposure internal constructor(
     var adLabel: Boolean = adLabel /* "광고" 표시 여부 */
         protected set
 
+    /** 노출 시작 일시. 없으면 상시. 노출 기간은 실제로 광고가 화면에 노출되는 기간이다. 리포트의 집계 기간은 계약 상품의 게시 기간이다. */
     @Column(name = "start_at")
-    var startAt: LocalDateTime? = period.startAt /* 노출 시작 일시. 없으면 상시 */
+    var startAt: LocalDateTime? = period.startAt
         protected set
 
+    /** 노출 종료 일시. 없으면 상시. 노출 기간은 실제로 광고가 화면에 노출되는 기간이다. 리포트의 집계 기간은 계약 상품의 게시 기간이다. */
     @Column(name = "end_at")
-    var endAt: LocalDateTime? = period.endAt /* 노출 종료 일시. 없으면 상시 */
+    var endAt: LocalDateTime? = period.endAt
         protected set
 
     @Column(nullable = false)

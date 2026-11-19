@@ -64,6 +64,13 @@ class AdminAdvertisementContractService(
     }
 
     @Transactional
+    fun changeProductEndDate(contractId: Long, contractProductId: Long, endDate: LocalDate): Long {
+        val contract = advertisementContractReader.readForUpdate(contractId)
+        advertisementContractManager.changeProductEndDate(contract, contractProductId, endDate)
+        return contractProductId
+    }
+
+    @Transactional
     fun removeProduct(contractId: Long, contractProductId: Long) {
         val contract = advertisementContractReader.readForUpdate(contractId)
         advertisementContractManager.removeProduct(contract, contractProductId, LocalDateTime.now(clock))

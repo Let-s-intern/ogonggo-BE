@@ -452,6 +452,64 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `계약 상품의 게시 종료일을 바꾸면 저장하고 시작일은 그대로 둔다`() {
+        // given
+        val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
+        val contractProductId = manager.addProduct(contract, product, PERIOD)
+
+        // when
+        manager.changeProductEndDate(contract, contractProductId, LocalDate.of(2026, 11, 30))
+        repository.flush()
+        entityManager.clear()
+
+        // then
+        val saved = reader.readProducts(checkNotNull(contract.id)).single()
+        assertEquals(LocalDate.of(2026, 11, 2), saved.startDate)
+        assertEquals(LocalDate.of(2026, 11, 30), saved.endDate)
+    }
+
+    @Test
+    fun `게시 기간이 없는 계약 상품은 종료일을 바꿀 수 없다`() {
+        // given
+        val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
+        val contractProductId = manager.addProduct(contract, product, PERIOD)
+        repository.flush()
+        entityManager.createNativeQuery("update advertisement_contract_products set start_date = null, end_date = null where id = :id")
+            .setParameter("id", contractProductId)
+            .executeUpdate()
+        entityManager.clear()
+
+        // when
+        val exception = assertThrows(InvalidValueException::class.java) {
+            manager.changeProductEndDate(contract, contractProductId, LocalDate.of(2026, 11, 30))
+        }
+
+        // then
+        assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID, exception.errorCode)
+    }
+
+    @Test
+    fun `다른 계약에 붙였거나 뺀 상품은 게시 종료일을 바꿀 수 없다`() {
+        // given
+        val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val other = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
+        val product = productReader.read(productAppender.append(productDto("채용공고 홈 상단")))
+        val otherProductId = manager.addProduct(other, product, PERIOD)
+        val removedId = manager.addProduct(contract, product, PERIOD)
+        manager.removeProduct(contract, removedId, NOW)
+
+        // when, then
+        listOf(otherProductId, removedId).forEach { contractProductId ->
+            val exception = assertThrows(EntityNotFoundException::class.java) {
+                manager.changeProductEndDate(contract, contractProductId, LocalDate.of(2026, 11, 30))
+            }
+            assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND, exception.errorCode)
+        }
+    }
+
+    @Test
     fun `다른 계약에 붙인 상품은 뺄 수 없다`() {
         // given
         val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))

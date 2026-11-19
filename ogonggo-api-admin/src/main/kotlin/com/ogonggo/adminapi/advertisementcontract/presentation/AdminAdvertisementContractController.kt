@@ -6,6 +6,7 @@ import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminBus
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractProductRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractTargetRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractPaymentAmountRequest
+import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractProductEndDateRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractStatusRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractDetailResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractSummaryResponse
@@ -116,6 +117,18 @@ class AdminAdvertisementContractController(
         SuccessResponse.created(
             CreateAdminAdvertisementContractProductResponse(
                 adminAdvertisementContractService.addProduct(contractId, request.productId, request.startDate, request.endDate),
+            ),
+        )
+
+    @PatchMapping("/{contractId}/products/{contractProductId}")
+    override fun changeProductEndDate(
+        @PathVariable("contractId") contractId: Long,
+        @PathVariable("contractProductId") contractProductId: Long,
+        @RequestBody request: ChangeAdminAdvertisementContractProductEndDateRequest,
+    ): ResponseEntity<SuccessResponse<CreateAdminAdvertisementContractProductResponse>> =
+        SuccessResponse.ok(
+            CreateAdminAdvertisementContractProductResponse(
+                adminAdvertisementContractService.changeProductEndDate(contractId, contractProductId, request.endDate),
             ),
         )
 

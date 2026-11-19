@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-11-19
+- 최종 변경일: 2026-11-20
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -560,6 +560,18 @@ DELETE /api/v1/admin/advertisement-contracts/{contractId}/targets/{targetType}/{
 - 회원 경로는 기업 회원만 쓰며(아니면 403 `COMPANY_ROLE_REQUIRED`), 남의 계약은 있는 줄 모르게 404 `ADVERTISEMENT_CONTRACT_NOT_FOUND`다. 광고 신청 폼 계약과 비즈니스 공고 계약 모두 된다.
 - 대상 연결은 201 `data: null`, 해제는 200 `data: null`이다. 연결하지 않은 대상을 해제해도 200이다. 이미 연결한 대상은 409 `ADVERTISEMENT_CONTRACT_TARGET_DUPLICATED`, 비즈니스 공고 계약의 자동 대상을 해제하면 409 `ADVERTISEMENT_CONTRACT_TARGET_FIXED`다.
 - 지표 정의와 응답 칸은 각 API의 OpenAPI 설명에 있다. 집계 방식은 [스케줄 작업의 `contentDailyStatAggregation`](scheduling.md#2-작업-목록)을 따른다.
+
+### 계약 상품 게시 종료일 수정
+
+```text
+PATCH /api/v1/admin/advertisement-contracts/{contractId}/products/{contractProductId}
+```
+
+- 결정일: 2026-11-20 (LC-3653) / 리뷰 상태: 팀 리뷰 필요
+- 본문은 `{ "endDate": "YYYY-MM-DD" }`이고 게시 종료일만 바꾼다(계약 연장·단축). 시작일과 광고 노출의 노출 기간은 바꾸지 않는다. 노출 기간도 맞추려면 운영자가 광고 노출 API로 따로 바꾼다.
+- 게시 기간은 데이터 집계 기간이고 리포트는 이 기간의 데이터만 보여 준다. 노출 기간은 실제로 광고가 화면에 노출되는 기간이다.
+- 200과 함께 상품 추가(`POST .../products`)와 같은 본문 `data.id`(바꾼 계약 상품 식별자)를 돌려준다. 3절의 `data: null` 대신 상품 추가와 같은 모양을 맞춰 화면이 두 응답을 같게 다루도록 했다.
+- 기간이 없는 상품이거나 종료일이 시작일보다 앞이면 400 `ADVERTISEMENT_CONTRACT_PRODUCT_PERIOD_INVALID`, 계약에 없거나 뺀 상품이면 404 `ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND`다. 다른 계약 상품 쓰기와 같이 계약 행을 잠그고 바꾼다.
 
 ### 관리자 부트캠프 전체 수정
 

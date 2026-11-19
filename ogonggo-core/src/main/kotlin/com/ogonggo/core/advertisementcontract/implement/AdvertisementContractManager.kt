@@ -14,6 +14,7 @@ import com.ogonggo.core.contentreview.domain.ContentReviewStatus
 import com.ogonggo.core.error.EntityNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Component
@@ -61,13 +62,23 @@ class AdvertisementContractManager internal constructor(
     }
 
     fun removeProduct(contract: AdvertisementContract, contractProductId: Long, now: LocalDateTime) {
-        val contractProduct = advertisementContractProductRepository.findByIdAndContractIdAndDeletedAtIsNull(
-            contractProductId,
-            checkNotNull(contract.id) { "광고 계약 식별자가 없습니다." },
-        ) ?: throw EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND)
+        val contractProduct = readLiveProduct(contract, contractProductId)
         contractProduct.delete(now)
         advertisementContractProductRepository.save(contractProduct)
     }
+
+    /** 계약 상품의 게시 종료일만 바꾼다(계약 연장·단축). 광고 노출 기간은 바꾸지 않는다. */
+    fun changeProductEndDate(contract: AdvertisementContract, contractProductId: Long, endDate: LocalDate) {
+        val contractProduct = readLiveProduct(contract, contractProductId)
+        contractProduct.changeEndDate(endDate)
+        advertisementContractProductRepository.save(contractProduct)
+    }
+
+    private fun readLiveProduct(contract: AdvertisementContract, contractProductId: Long): AdvertisementContractProduct =
+        advertisementContractProductRepository.findByIdAndContractIdAndDeletedAtIsNull(
+            contractProductId,
+            checkNotNull(contract.id) { "광고 계약 식별자가 없습니다." },
+        ) ?: throw EntityNotFoundException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND)
 
     /**
      * 비즈니스 공고의 검수 상태가 바뀌면 그 공고의 계약 상태를 맞춘다. 검수 상태를 바꾸는 쪽이 같은 트랜잭션에서 부른다.
