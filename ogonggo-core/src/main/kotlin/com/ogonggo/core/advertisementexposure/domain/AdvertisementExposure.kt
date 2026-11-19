@@ -24,7 +24,8 @@ import java.time.LocalDateTime
  *
  * 모든 노출 상품이 이 테이블 하나를 쓴다. 상품이 늘어도 행만 늘고, 다른 값이 필요한 노출 종류가 생길 때만 칼럼을 더한다.
  * - 배너: 이름, 이미지, 링크가 있다. 모바일 이미지는 선택이며, 없으면 모바일에서도 이미지를 쓴다.
- * - 광고 공고: 띄울 채용공고·부트캠프가 있다. 채용공고 목록 자리(JOB_LIST)는 어느 직군 탭에 띄울지([jobField])도 있다.
+ * - 광고 공고: 띄울 채용공고·부트캠프가 있다. 채용공고 목록 자리(JOB_LIST)는 어느 직군 탭에 띄울지([jobField])도 있고,
+ *   비어 있으면 전체 탭에 띄운다.
  *   오공고 PICK 자리(JOB_PICK)는 운영자가 고른 오늘의 공고([TodayJob])처럼 카드에 보일 추천 문구도 있다.
  *
  * 광고주 계약이 없는 우리 홍보도 둔다([contractId]가 없음). 기간이 없으면 상시다.
@@ -92,7 +93,7 @@ class AdvertisementExposure internal constructor(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "job_field", length = 40)
-    var jobField: JobField? = content.jobField /* 채용공고 목록 자리에서 띄울 직군 탭. 다른 자리는 없다 */
+    var jobField: JobField? = content.jobField /* 채용공고 목록 자리에서 띄울 직군 탭. 없으면 전체 탭이고, 다른 자리는 늘 없다 */
         protected set
 
     @Column(name = "recommendation_title", length = MAX_RECOMMENDATION_TITLE_LENGTH)
@@ -215,9 +216,8 @@ class AdvertisementExposure internal constructor(
                     if (expectedTargetType != null && expectedTargetType != content.targetType) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH)
                     }
-                    // 채용공고 목록 광고는 직군 탭마다 따로 판다. 직군이 없는 자리에 직군을 두면 어디에도 안 보인다.
-                    val jobFieldRequired = product.position == AdvertisementProductPosition.JOB_LIST
-                    if (jobFieldRequired != (content.jobField != null)) {
+                    // 채용공고 목록 광고는 직군 탭(직군이 없으면 전체 탭)마다 따로 띄운다. 직군 탭이 없는 자리에 직군을 두면 어디에도 안 보인다.
+                    if (product.position != AdvertisementProductPosition.JOB_LIST && content.jobField != null) {
                         throw InvalidValueException(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID)
                     }
                     // 오공고 PICK 광고 카드는 운영자 PICK 카드와 같은 추천 문구 상자를 보인다. 다른 자리에는 문구를 보일 곳이 없다.
@@ -255,7 +255,7 @@ class AdvertisementExposure internal constructor(
 
 /**
  * 노출할 내용이다. 배너는 이름·이미지·링크(모바일 이미지는 선택), 광고 공고는 대상 공고만 채운다.
- * 광고 공고 중 채용공고 목록 자리는 직군을, 오공고 PICK 자리는 추천 문구 제목·설명을 더 채운다.
+ * 광고 공고 중 채용공고 목록 자리는 직군(비우면 전체 탭)을, 오공고 PICK 자리는 추천 문구 제목·설명을 더 채운다.
  */
 data class AdvertisementExposureContent(
     val name: String? = null,

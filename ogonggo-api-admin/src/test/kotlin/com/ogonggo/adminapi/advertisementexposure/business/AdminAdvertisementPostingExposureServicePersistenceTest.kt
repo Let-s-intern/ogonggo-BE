@@ -90,24 +90,40 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
-    fun `채용공고 목록 자리는 직군 없이, 다른 자리는 직군과 함께 등록하지 않는다`() {
+    fun `채용공고 목록 자리는 직군 없이 전체 탭으로 등록하고, 다른 자리는 직군과 함께 등록하지 않는다`() {
         // given
         val list = product(AdvertisementProductPosition.JOB_LIST)
         val calendar = product(AdvertisementProductPosition.CALENDAR_DAY)
         val jobId = job()
 
         // when
-        val withoutJobField = assertThrows(InvalidValueException::class.java) {
-            service.createExposure(command(list, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
-        }
+        service.createExposure(command(list, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
         val withJobField = assertThrows(InvalidValueException::class.java) {
             service.createExposure(command(calendar, AdvertisementExposureTargetType.JOB, jobId, JobField.GAME), ADMIN_ID)
         }
 
         // then
-        listOf<BusinessException>(withoutJobField, withJobField).forEach {
-            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, it.errorCode)
+        assertNull(exposureReader.readByProduct(list).single().jobField)
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, withJobField.errorCode)
+    }
+
+    @Test
+    fun `채용공고 목록 자리는 전체 탭끼리 같은 공고를 중복으로 보고 직군 탭과는 따로 본다`() {
+        // given
+        val first = product(AdvertisementProductPosition.JOB_LIST)
+        val second = product(AdvertisementProductPosition.JOB_LIST)
+        val jobId = job()
+        service.createExposure(command(first, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+
+        // when
+        service.createExposure(command(second, AdvertisementExposureTargetType.JOB, jobId, JobField.GAME), ADMIN_ID)
+        val exception = assertThrows(ConflictException::class.java) {
+            service.createExposure(command(second, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
         }
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED, exception.errorCode)
+        assertEquals(listOf(JobField.GAME), exposureReader.readByProduct(second).map { it.jobField })
     }
 
     @Test

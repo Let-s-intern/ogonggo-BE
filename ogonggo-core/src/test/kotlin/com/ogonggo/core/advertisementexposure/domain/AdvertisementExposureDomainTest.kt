@@ -29,16 +29,16 @@ class AdvertisementExposureDomainTest {
     }
 
     @Test
-    fun `채용공고 목록 자리의 광고 공고는 직군이 있어야 하고 직군을 저장한다`() {
+    fun `채용공고 목록 자리의 광고 공고는 직군을 저장하고 직군이 없으면 전체 탭 노출이다`() {
         // given
         val product = product(AdvertisementProductPosition.JOB_LIST)
 
         // when
-        val exception = assertThrows(InvalidValueException::class.java) { exposure(product, JOB_CONTENT) }
+        val allTab = exposure(product, JOB_CONTENT)
         val exposure = exposure(product, JOB_CONTENT.copy(jobField = JobField.IT_DEVELOPMENT))
 
         // then
-        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, exception.errorCode)
+        assertEquals(null, allTab.jobField)
         assertEquals(JobField.IT_DEVELOPMENT, exposure.jobField)
     }
 
@@ -64,19 +64,18 @@ class AdvertisementExposureDomainTest {
     }
 
     @Test
-    fun `채용공고 목록 노출을 고칠 때도 직군이 있어야 한다`() {
+    fun `채용공고 목록 노출을 고칠 때 직군 탭과 전체 탭을 서로 바꿀 수 있다`() {
         // given
         val product = product(AdvertisementProductPosition.JOB_LIST)
         val exposure = exposure(product, JOB_CONTENT.copy(jobField = JobField.GAME))
 
         // when
-        val exception = assertThrows(InvalidValueException::class.java) {
-            exposure.update(product, null, JOB_CONTENT, adLabel = true, period = AdvertisementExposurePeriod.ALWAYS)
-        }
+        exposure.update(product, null, JOB_CONTENT, adLabel = true, period = AdvertisementExposurePeriod.ALWAYS)
+        val allTab = exposure.jobField
         exposure.update(product, null, JOB_CONTENT.copy(jobField = JobField.SALES), adLabel = true, period = AdvertisementExposurePeriod.ALWAYS)
 
         // then
-        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, exception.errorCode)
+        assertEquals(null, allTab)
         assertEquals(JobField.SALES, exposure.jobField)
     }
 
