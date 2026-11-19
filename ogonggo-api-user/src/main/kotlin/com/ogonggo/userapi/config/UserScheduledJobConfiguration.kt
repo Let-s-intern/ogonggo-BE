@@ -2,6 +2,7 @@ package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
 import com.ogonggo.userapi.bootcamp.presentation.BootcampAutoCloseScheduler
+import com.ogonggo.userapi.contentdailystat.presentation.ContentDailyStatScheduler
 import com.ogonggo.userapi.recruitmentpost.presentation.RecruitmentPostAutoCloseScheduler
 import com.ogonggo.userapi.image.presentation.ImageAssetCleanupScheduler
 import com.ogonggo.userapi.job.presentation.JobAutoCloseScheduler
@@ -102,5 +103,13 @@ class UserScheduledJobConfiguration {
         defaultCron = "0 10 * * * *",
         description = "공고 상세 추천에 쓰는 렛츠커리어 프로그램·자료집·블로그 사본을 렛츠커리어 목록과 맞춤 (매시 10분)",
         action = scheduler::sync,
+    )
+
+    @Bean
+    fun contentDailyStatAggregationJob(scheduler: ContentDailyStatScheduler) = ScheduledJobDefinition(
+        name = ContentDailyStatScheduler.SCHEDULER_NAME,
+        defaultCron = "0 20 3 * * *",
+        description = "전날 콘텐츠 이벤트를 광고 성과 리포트용 일별 집계로 모으고 365일 지난 원본 정리 (매일 03:20)",
+        action = scheduler::aggregate,
     )
 }

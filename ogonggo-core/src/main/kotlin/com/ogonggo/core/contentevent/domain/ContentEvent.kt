@@ -9,12 +9,14 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
  * 브라우저에서 일어난 콘텐츠 이벤트 한 건이다. 광고 성과 리포트가 이 기록을 날짜별로 모아 센다.
  *
- * 일어난 사실의 기록이라 고치거나 지우지 않으며 소프트 삭제·수정 일시 칼럼을 두지 않는다.
+ * 일어난 사실의 기록이라 고치지 않으며 소프트 삭제·수정 일시 칼럼을 두지 않는다.
+ * 보관 기간([RETENTION_DAYS]일)이 지나면 물리 삭제하고 일별 집계(`content_daily_stats`)만 남긴다.
  * 같은 방문자가 30분 안에 다시 연 조회도 모두 저장하고, 한 번으로 세는 것은 집계가 한다.
  * [occurredAt]은 서버가 받은 시각(KST)이다. 브라우저 시각은 믿지 않는다.
  */
@@ -87,5 +89,11 @@ internal class ContentEvent(
     companion object {
         const val MAX_VISITOR_ID_LENGTH = 36
         const val MAX_SCROLL_PERCENT = 100
+
+        /** 원본 보관 기간(일)이다. 오늘에서 이 날수를 뺀 날의 0시 앞 이벤트를 지운다. */
+        const val RETENTION_DAYS = 365L
+
+        /** 원본이 모두 남아 있는 첫날이다. 이날부터는 기간 순 방문자를 원본에서 셀 수 있다. */
+        fun retainedSince(today: LocalDate): LocalDate = today.minusDays(RETENTION_DAYS)
     }
 }

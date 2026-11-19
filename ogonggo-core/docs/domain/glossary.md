@@ -156,7 +156,7 @@
 | 계약 상품 | `AdvertisementContractProduct` | 운영자가 계약 상세에서 붙인 광고 상품. 판매 기록입니다. |
 | 게시 기간 | `AdvertisementContractProductPeriod` (`startDate`, `endDate`) | 계약 상품을 게시하기로 한 기간. 하루 단위이며 종료일도 포함합니다. 기간 도입 전에 붙인 상품은 없습니다. |
 | 광고 노출 | `AdvertisementExposure` | 상품 자리에 띄울 배너·광고 공고의 설정. 운영자가 순서·켜짐·기간을 정하며, 노출 중·꺼짐은 켜짐과 기간으로 계산합니다. 광고주 계약이 없는 우리 홍보도 둡니다. 배너는 모바일 이미지(`mobileImageUrl`)를 선택으로 가지며, 없으면 모바일에서도 이미지(`imageUrl`)를 씁니다. |
-| 콘텐츠 이벤트 | `ContentEvent` | 방문자 브라우저가 보낸 공고 조회·CTA 클릭·스크롤과 광고 노출·클릭 한 건. 비회원도 남기며 익명 방문자 식별자(`visitorId`, 쿠키 `ogg_vid`)로 구분합니다. 시각(`occurredAt`)은 서버가 받은 시각입니다. 고치거나 지우지 않고, 같은 방문자의 30분 안 재조회도 모두 저장해 집계에서 한 번으로 셉니다. 광고 성과 리포트가 이것을 셉니다. 누적 조회 수(`JobMetric.viewCount`)와는 따로 셉니다. |
+| 콘텐츠 이벤트 | `ContentEvent` | 방문자 브라우저가 보낸 공고 조회·CTA 클릭·스크롤과 광고 노출·클릭 한 건. 비회원도 남기며 익명 방문자 식별자(`visitorId`, 쿠키 `ogg_vid`)로 구분합니다. 시각(`occurredAt`)은 서버가 받은 시각입니다. 고치지 않고 365일이 지나면 지웁니다(숫자는 일별 집계에 남습니다). 같은 방문자의 30분 안 재조회도 모두 저장해 집계에서 한 번으로 셉니다. 광고 성과 리포트가 이것을 셉니다. 누적 조회 수(`JobMetric.viewCount`)와는 따로 셉니다. |
 | 콘텐츠 이벤트 종류 | `ContentEventType` | 상세 조회(`VIEW`), CTA 클릭(`CTA_CLICK`, 지원하러 가기·신청하러 가기), 스크롤(`SCROLL`, 떠날 때 가장 깊이 내린 위치와 화면이 보인 시간), 광고 노출(`IMPRESSION`), 광고 클릭(`AD_CLICK`). 앞의 셋은 대상 공고가, 뒤의 둘은 광고 노출이 있어야 합니다. |
 | 콘텐츠 이벤트 유입 경로 | `ContentEventSource` | 광고 카드(`AD_CARD`), 배너(`BANNER`), 목록(`LIST`), 검색(`SEARCH`), 직접 방문(`DIRECT`), 외부 유입(`EXTERNAL`), 기타(`OTHER`). 브라우저가 보낸 값을 그대로 저장합니다. 광고 문의 유입 경로(`AdvertisementInquiryInflowChannel`)와 다릅니다. |
 | 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`). |
