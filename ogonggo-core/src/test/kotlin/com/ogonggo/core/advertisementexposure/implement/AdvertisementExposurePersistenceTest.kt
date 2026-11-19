@@ -27,6 +27,8 @@ import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductS
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
+import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,6 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.boot.test.mock.mockito.SpyBean
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
@@ -60,6 +63,7 @@ import java.util.concurrent.atomic.AtomicReference
     AdvertisementExposureManager::class,
     AdvertisementExposureReader::class,
     AdvertisementExposureQueryRepository::class,
+    AdvertisementExposureTargetValidator::class,
     AdvertisementProductAppender::class,
     AdvertisementProductManager::class,
     AdvertisementProductReader::class,
@@ -83,6 +87,13 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
 
     @SpyBean
     private lateinit var spiedProductReader: AdvertisementProductReader
+
+    // 대상 공고 확인은 이 테스트의 관심사가 아니다. 대상 확인 규칙은 관리자 API 노출 등록 테스트가 맡는다.
+    @MockBean
+    private lateinit var jobReader: JobReader
+
+    @MockBean
+    private lateinit var bootcampReader: BootcampReader
 
     @Test
     fun `사용자 화면은 켜져 있고 기간 안인 그 자리 노출만 순서대로 준다`() {

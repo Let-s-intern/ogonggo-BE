@@ -1,6 +1,7 @@
 package com.ogonggo.core.advertisementexposure.persistence
 
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementexposure.domain.QAdvertisementExposure.advertisementExposure
 import com.querydsl.core.BooleanBuilder
 import com.querydsl.jpa.impl.JPAQueryFactory
@@ -73,6 +74,28 @@ internal class AdvertisementExposureQueryRepository(
             .where(condition)
             .fetchOne() ?: 0L
         return PageImpl(items, pageable, totalElements)
+    }
+
+    /** 이 상품들 자리에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다. */
+    fun existsTarget(
+        productIds: Collection<Long>,
+        targetType: AdvertisementExposureTargetType,
+        targetId: Long,
+        excludedExposureId: Long?,
+    ): Boolean {
+        if (productIds.isEmpty()) {
+            return false
+        }
+        val condition = BooleanBuilder()
+            .and(advertisementExposure.productId.`in`(productIds))
+            .and(advertisementExposure.deletedAt.isNull)
+            .and(advertisementExposure.targetType.eq(targetType))
+            .and(advertisementExposure.targetId.eq(targetId))
+        excludedExposureId?.let { condition.and(advertisementExposure.id.ne(it)) }
+        return queryFactory.selectOne()
+            .from(advertisementExposure)
+            .where(condition)
+            .fetchFirst() != null
     }
 
     /** 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다. */

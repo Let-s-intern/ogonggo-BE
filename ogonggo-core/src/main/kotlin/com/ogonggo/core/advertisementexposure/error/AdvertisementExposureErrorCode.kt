@@ -11,5 +11,7 @@ enum class AdvertisementExposureErrorCode(
     ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE(HttpStatus.BAD_REQUEST, "오공고 화면에 노출하지 않는 광고 상품입니다."),
     ADVERTISEMENT_BANNER_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "배너는 이름, 이미지, 링크만 있어야 합니다."),
     ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED(HttpStatus.BAD_REQUEST, "광고 공고는 띄울 공고만 있어야 합니다."),
+    ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "이 자리에 띄울 수 없는 콘텐츠 종류입니다."),
+    ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED(HttpStatus.CONFLICT, "같은 자리에 이미 노출 중인 공고입니다."),
     ADVERTISEMENT_EXPOSURE_PERIOD_INVALID(HttpStatus.BAD_REQUEST, "노출 기간은 시작과 끝이 함께 있어야 하고 시작이 끝보다 앞서야 합니다."),
 }

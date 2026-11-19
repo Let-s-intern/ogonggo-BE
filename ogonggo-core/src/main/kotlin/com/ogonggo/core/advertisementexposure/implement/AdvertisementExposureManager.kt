@@ -14,12 +14,14 @@ class AdvertisementExposureManager internal constructor(
     private val advertisementExposureRepository: AdvertisementExposureJpaRepository,
     private val advertisementProductReader: AdvertisementProductReader,
     private val advertisementContractReader: AdvertisementContractReader,
+    private val advertisementExposureTargetValidator: AdvertisementExposureTargetValidator,
 ) {
 
     /** 지운 상품 자리의 노출은 고칠 수 없다(상품을 찾지 못해 404). */
     fun update(exposure: AdvertisementExposure, dto: AdvertisementExposureUpdateDto) {
         val product = advertisementProductReader.read(exposure.productId)
         dto.contractId?.let(advertisementContractReader::read)
+        advertisementExposureTargetValidator.validate(product, dto.content, exposure.id)
         exposure.update(
             product = product,
             contractId = dto.contractId,
