@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.advertisementcontract.presentation
 
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementReportService
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportResponse
+import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportTotalResponse
 import com.ogonggo.adminapi.response.SuccessResponse
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
@@ -28,6 +29,12 @@ class AdminAdvertisementReportController(
         @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate?,
     ): ResponseEntity<SuccessResponse<AdminAdvertisementReportResponse>> =
         SuccessResponse.ok(AdminAdvertisementReportResponse.from(adminAdvertisementReportService.getReport(contractId, contractProductId, from, to)))
+
+    @GetMapping("/report-summary")
+    override fun getReportSummary(
+        @PathVariable("contractId") contractId: Long,
+    ): ResponseEntity<SuccessResponse<AdminAdvertisementReportTotalResponse>> =
+        SuccessResponse.ok(AdminAdvertisementReportTotalResponse.from(adminAdvertisementReportService.getTotal(contractId)))
 
     @GetMapping("/products/{contractProductId}/report.csv", produces = ["text/csv;charset=UTF-8"])
     override fun getReportCsv(

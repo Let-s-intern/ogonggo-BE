@@ -112,6 +112,37 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         assertEquals(2L, stat.uniqueVisitors)
     }
 
+    @Test
+    fun `같은 방문자가 하루에 두 번 본 노출은 순 노출 1이고 다음 날 다시 보면 그날 1이다`() {
+        // given
+        save(ad(ContentEventType.IMPRESSION, at(9, 0)))
+        save(ad(ContentEventType.IMPRESSION, at(18, 0)))
+        save(ad(ContentEventType.IMPRESSION, at(18, 1)).copyAsVisitor("other"))
+        save(ad(ContentEventType.IMPRESSION, DAY.plusDays(1).atTime(9, 0)))
+
+        // when
+        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY.plusDays(1))
+
+        // then
+        val byDate = contentDailyStatRepository.findAll().associate { it.statDate to (it.impressions to it.uniqueImpressions) }
+        assertEquals(3L to 2L, byDate[DAY])
+        assertEquals(1L to 1L, byDate[DAY.plusDays(1)])
+    }
+
+    private fun ContentEvent.copyAsVisitor(visitor: String) = ContentEvent(
+        eventType = eventType,
+        targetType = targetType,
+        targetId = targetId,
+        exposureId = exposureId,
+        userId = userId,
+        visitorId = visitor,
+        source = source,
+        scrollPercent = scrollPercent,
+        durationMs = durationMs,
+        occurredAt = occurredAt,
+    )
+
     private fun snapshot() = contentDailyStatRepository.findAll().map { it.copyValues() }.sortedBy { it.toString() }
 
     private fun ContentDailyStat.copyValues() = listOf(statDate, targetType, targetId, exposureId, source) + toMetric().toString()

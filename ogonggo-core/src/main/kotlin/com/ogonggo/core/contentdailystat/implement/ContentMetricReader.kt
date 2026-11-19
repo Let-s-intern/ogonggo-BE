@@ -1,6 +1,7 @@
 package com.ogonggo.core.contentdailystat.implement
 
 import com.ogonggo.core.contentdailystat.domain.ContentStatKey
+import com.ogonggo.core.contentdailystat.implement.dto.ContentMemberActivityDto
 import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricCellDto
 import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricDto
 import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricScope
@@ -50,6 +51,36 @@ class ContentMetricReader internal constructor(
         val summed = cells.fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }
         val period = if (exactUniques) withUniques(summed, ContentMetricCalculator.measureAll(detailRows, from.atStartOfDay())) else summed
         return ContentMetricSheetDto(cells, period, uniqueCountsApproximate = !exactUniques)
+    }
+
+    /**
+     * [from]~[to] 동안 회원마다 한 활동이다. 회원 단위로 묶어야 해서 원본에서만 센다.
+     * 원본 보관 기간(365일)보다 앞인 날은 빠진다.
+     */
+    fun readMemberActivities(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate): List<ContentMemberActivityDto> {
+        val start = maxOf(from, ContentEvent.retainedSince(today))
+        if (scope.isEmpty || start.isAfter(to)) return emptyList()
+        val toExclusive = to.plusDays(1).atStartOfDay()
+        val rows = contentDailyStatQueryRepository.findDetailRows(
+            scope,
+            start.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW),
+            toExclusive,
+        )
+        val activities = ContentMetricCalculator.memberActivities(rows, start.atStartOfDay())
+        val adClickers = contentDailyStatQueryRepository.findAdClickMemberIds(scope, start.atStartOfDay(), toExclusive)
+        val userIds = activities.keys + adClickers
+        val wishJobs = contentDailyStatQueryRepository.findWishJobs(userIds)
+        return userIds.map { userId ->
+            val activity = activities[userId]
+            ContentMemberActivityDto(
+                userId = userId,
+                wishJob = wishJobs[userId],
+                views = activity?.views ?: 0L,
+                viewed = activity?.viewed ?: false,
+                ctaClicked = activity?.ctaClicked ?: false,
+                adClicked = userId in adClickers,
+            )
+        }
     }
 
     /** 이벤트를 모으기 시작한 날이다. 아직 없으면 [today]다. */

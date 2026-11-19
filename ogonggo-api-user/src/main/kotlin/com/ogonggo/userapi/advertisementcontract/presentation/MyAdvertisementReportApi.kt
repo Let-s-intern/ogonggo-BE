@@ -1,6 +1,8 @@
 package com.ogonggo.userapi.advertisementcontract.presentation
 
+import com.ogonggo.userapi.advertisementcontract.presentation.response.MyActiveAdvertisementReportResponse
 import com.ogonggo.userapi.advertisementcontract.presentation.response.MyAdvertisementReportResponse
+import com.ogonggo.userapi.advertisementcontract.presentation.response.MyAdvertisementReportTotalResponse
 import com.ogonggo.userapi.config.USER_BEARER_AUTH_SCHEME
 import com.ogonggo.userapi.response.ErrorResponse
 import com.ogonggo.userapi.response.SuccessResponse
@@ -50,6 +52,51 @@ interface MyAdvertisementReportApi {
         @Parameter(description = "조회 시작일(포함). 비우면 상품 시작일") from: LocalDate?,
         @Parameter(description = "조회 종료일(포함). 비우면 상품 종료일과 오늘 중 이른 날") to: LocalDate?,
     ): ResponseEntity<SuccessResponse<MyAdvertisementReportResponse>>
+
+    @Operation(
+        operationId = "getMyAdvertisementContractReportSummary",
+        summary = "내 광고 계약 전체 합계 조회",
+        description = """
+            계약에 붙은 상품 중 리포트를 열 수 있는 상품의 상품 몫을 더합니다. 각 상품은 상품 기간 전체(진행 중이면 오늘까지)이고,
+            아직 시작하지 않은 상품은 0입니다. 기간이 없거나 채널 상품은 products에 넣지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(responseCode = "400", description = "BAD_REQUEST: contractId는 양수여야 합니다.", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = FORBIDDEN, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(
+                responseCode = "404",
+                description = "ADVERTISEMENT_CONTRACT_NOT_FOUND: 내 계약이 아니거나 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun getReportSummary(
+        @Parameter(hidden = true) userId: Long,
+        @Positive contractId: Long,
+    ): ResponseEntity<SuccessResponse<MyAdvertisementReportTotalResponse>>
+
+    @Operation(
+        operationId = "listMyActiveAdvertisementReports",
+        summary = "진행 중 광고 요약 조회",
+        description = """
+            대시보드 카드용입니다. 내 모든 계약에서 오늘이 상품 기간 안이고 리포트를 열 수 있는 상품을 끝나는 날이 가까운 순으로 줍니다.
+            숫자는 상품 시작일부터 오늘까지의 상품 몫이며 상품 리포트의 summary와 같은 정의입니다. 없으면 빈 배열입니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = FORBIDDEN, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun getActiveReports(
+        @Parameter(hidden = true) userId: Long,
+    ): ResponseEntity<SuccessResponse<List<MyActiveAdvertisementReportResponse>>>
 
     @Operation(
         operationId = "downloadMyAdvertisementContractProductReportCsv",

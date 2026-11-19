@@ -3,7 +3,9 @@ package com.ogonggo.core.advertisementcontract.implement.dto
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.contentevent.domain.ContentEventSource
+import com.ogonggo.core.job.domain.JobField
 import java.time.LocalDate
 
 /**
@@ -23,6 +25,7 @@ data class AdvertisementContractReportDto(
     val daily: List<AdvertisementContractReportDailyDto>,
     val exposures: List<AdvertisementContractReportExposureDto>,
     val targets: List<AdvertisementContractReportTargetDto>,
+    val byJobField: List<AdvertisementContractReportJobFieldDto>,
     val csvRows: List<AdvertisementContractReportCsvRowDto>,
 )
 
@@ -39,6 +42,7 @@ data class AdvertisementContractReportProductDto(
 
 data class AdvertisementContractReportSummaryDto(
     val impressions: Long,
+    val uniqueImpressions: Long,
     val adClicks: Long,
     val adClickRate: Double?,
     val views: Long,
@@ -65,6 +69,7 @@ data class AdvertisementContractReportScrollStepDto(
 data class AdvertisementContractReportDailyDto(
     val date: LocalDate,
     val impressions: Long,
+    val uniqueImpressions: Long,
     val adClicks: Long,
     val views: Long,
     val uniqueVisitors: Long,
@@ -78,7 +83,6 @@ data class AdvertisementContractReportDailyDto(
 data class AdvertisementContractReportExposureDto(
     val exposureId: Long,
     val name: String,
-    val imageUrl: String?,
     val impressions: Long,
     val adClicks: Long,
     val adClickRate: Double?,
@@ -122,4 +126,83 @@ data class AdvertisementContractReportCsvRowDto(
     val ctaUniqueVisitors: Long,
     val avgScrollPercent: Double?,
     val avgDurationSeconds: Double?,
+)
+
+/**
+ * 상품 몫의 로그인 회원을 희망 직군으로 나눈 한 칸이다. 희망 직무가 여러 직군에 걸친 회원은 각 직군에 한 번씩 센다.
+ * 희망 직무가 없거나 오공고 직군으로 옮길 수 없으면 [jobField]가 null이다.
+ */
+data class AdvertisementContractReportJobFieldDto(
+    val jobField: JobField?,
+    val label: String,
+    val memberUniqueVisitors: Long,
+    val memberViews: Long,
+    val ctaUniqueMembers: Long,
+    val adClickMembers: Long,
+)
+
+/** 대시보드에 보이는 진행 중 광고 상품 하나다. 숫자는 상품 시작일부터 오늘까지의 상품 몫이다. */
+data class AdvertisementContractActiveReportDto(
+    val contractId: Long,
+    val contractProductId: Long,
+    val category: AdvertisementProductCategory,
+    val position: AdvertisementProductPosition?,
+    val name: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val daysLeft: Long,
+    val impressions: Long,
+    val adClicks: Long,
+    val adClickRate: Double?,
+    val views: Long,
+    val ctaClicks: Long,
+    val scroll50Rate: Double?,
+    val target: AdvertisementContractReportPostingDto?,
+    val daily: List<AdvertisementContractActiveDailyDto>,
+)
+
+/** 광고 공고 상품의 노출이 띄우는 공고·부트캠프다. */
+data class AdvertisementContractReportPostingDto(
+    val targetType: AdvertisementExposureTargetType,
+    val targetId: Long,
+    val title: String,
+    val companyName: String,
+    val thumbnailUrl: String?,
+    val logoUrl: String?,
+)
+
+data class AdvertisementContractActiveDailyDto(
+    val date: LocalDate,
+    val impressions: Long,
+    val adClicks: Long,
+    val views: Long,
+)
+
+/** 계약 전체 합계다. 리포트를 열 수 있는 상품만 각 상품 기간 전체(진행 중이면 오늘까지)로 더한다. */
+data class AdvertisementContractReportTotalDto(
+    val total: AdvertisementContractReportTotalSumDto,
+    val products: List<AdvertisementContractReportProductSumDto>,
+)
+
+data class AdvertisementContractReportTotalSumDto(
+    val impressions: Long,
+    val uniqueImpressions: Long,
+    val adClicks: Long,
+    val adClickRate: Double?,
+    val views: Long,
+    val ctaClicks: Long,
+)
+
+data class AdvertisementContractReportProductSumDto(
+    val contractProductId: Long,
+    val category: AdvertisementProductCategory,
+    val position: AdvertisementProductPosition?,
+    val name: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val impressions: Long,
+    val uniqueImpressions: Long,
+    val adClicks: Long,
+    val views: Long,
+    val ctaClicks: Long,
 )

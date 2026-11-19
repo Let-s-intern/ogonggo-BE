@@ -2,7 +2,9 @@ package com.ogonggo.userapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReportReader
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractActiveReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
 import com.ogonggo.core.error.ForbiddenException
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.error.UserErrorCode
@@ -28,6 +30,18 @@ class MyAdvertisementReportService(
         verifyCompany(userId)
         val contract = advertisementContractReader.readOwnedBy(userId, contractId)
         return advertisementContractReportReader.read(contract, contractProductId, from, to, LocalDate.now(clock))
+    }
+
+    /** 내 계약 중 오늘이 기간 안이고 리포트를 열 수 있는 상품을 끝나는 날이 가까운 순으로 준다. */
+    fun getActive(userId: Long): List<AdvertisementContractActiveReportDto> {
+        verifyCompany(userId)
+        return advertisementContractReportReader.readActive(advertisementContractReader.readAllOwnedBy(userId), LocalDate.now(clock))
+    }
+
+    fun getTotal(userId: Long, contractId: Long): AdvertisementContractReportTotalDto {
+        verifyCompany(userId)
+        val contract = advertisementContractReader.readOwnedBy(userId, contractId)
+        return advertisementContractReportReader.readTotal(contract, LocalDate.now(clock))
     }
 
     private fun verifyCompany(userId: Long) {

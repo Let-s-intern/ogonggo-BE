@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.advertisementcontract.business
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReportReader
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.LocalDate
@@ -19,4 +20,7 @@ class AdminAdvertisementReportService(
         val contract = advertisementContractReader.read(contractId)
         return advertisementContractReportReader.read(contract, contractProductId, from, to, LocalDate.now(clock))
     }
+
+    fun getTotal(contractId: Long): AdvertisementContractReportTotalDto =
+        advertisementContractReportReader.readTotal(advertisementContractReader.read(contractId), LocalDate.now(clock))
 }

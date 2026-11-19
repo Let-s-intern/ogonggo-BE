@@ -34,7 +34,10 @@ import com.ogonggo.core.contentevent.persistence.ContentEventJpaRepository
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.job.domain.Job
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.user.domain.UserProfile
+import com.ogonggo.core.user.persistence.UserProfileJpaRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
@@ -69,6 +72,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     private val productRepository: AdvertisementProductJpaRepository,
     private val exposureRepository: AdvertisementExposureJpaRepository,
     private val eventRepository: ContentEventJpaRepository,
+    private val userProfileRepository: UserProfileJpaRepository,
 ) {
 
     @MockBean
@@ -214,6 +218,83 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         assertEquals(AdvertisementContractErrorCode.REPORT_NOT_AVAILABLE, channel.errorCode)
     }
 
+    @Test
+    fun `희망 직무별 나눔은 로그인 회원만 직군마다 세고 두 직군 회원은 양쪽에, 직무 없는 회원은 null 칸에 센다`() {
+        // given
+        profile(1L, "백엔드/서버 개발, 마케터")
+        profile(2L, null)
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.VIEW, START.atTime(10, 10), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.CTA_CLICK, START.atTime(10, 11), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.AD_CLICK, START.atTime(9, 59), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD, userId = 2L)
+        event(ContentEventType.VIEW, START.atTime(12, 0), "guest", cardExposureId, ContentEventSource.AD_CARD)
+
+        // when
+        val byJobField = reportReader.read(contract, cardProductId, null, null, TODAY).byJobField
+
+        // then
+        assertEquals(
+            setOf(JobField.IT_DEVELOPMENT, JobField.MARKETING_ADVERTISING, null),
+            byJobField.map { it.jobField }.toSet(),
+        )
+        byJobField.filter { it.jobField != null }.forEach {
+            assertEquals(listOf(1L, 1L, 1L, 1L), listOf(it.memberUniqueVisitors, it.memberViews, it.ctaUniqueMembers, it.adClickMembers))
+        }
+        val none = byJobField.single { it.jobField == null }
+        assertEquals("직무 미설정", none.label)
+        assertEquals(listOf(1L, 1L, 0L, 0L), listOf(none.memberUniqueVisitors, none.memberViews, none.ctaUniqueMembers, none.adClickMembers))
+    }
+
+    @Test
+    fun `계약 합계는 리포트를 열 수 있는 상품의 상품 몫을 더한 값이다`() {
+        // given
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 0), "a", bannerExposureId, ContentEventSource.BANNER, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 1), "a", bannerExposureId, ContentEventSource.BANNER, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 2), "b", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD)
+        val kakao = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.KAKAO_1, null, "카카오 톡방", null))
+        addProduct(kakao, START, END)
+
+        // when
+        val total = reportReader.readTotal(contract, TODAY)
+        val banner = reportReader.read(contract, bannerProductId, null, null, TODAY).summary
+        val card = reportReader.read(contract, cardProductId, null, null, TODAY).summary
+
+        // then
+        assertEquals(listOf(bannerProductId, cardProductId), total.products.map { it.contractProductId })
+        assertEquals(banner.impressions + card.impressions, total.total.impressions)
+        assertEquals(banner.uniqueImpressions + card.uniqueImpressions, total.total.uniqueImpressions)
+        assertEquals(banner.views + card.views, total.total.views)
+        assertEquals(3L to 2L, total.total.impressions to total.total.uniqueImpressions)
+    }
+
+    @Test
+    fun `진행 중 광고는 오늘이 기간 안인 상품만 끝나는 날이 가까운 순으로 준다`() {
+        // given
+        val banner2 = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_BOTTOM_BANNER, "홈 하단 배너", null))
+        val endingSoon = addProduct(banner2, START, TODAY.plusDays(2))
+        addProduct(banner2, TODAY.plusDays(1), END)
+        addProduct(banner2, START, TODAY.minusDays(1))
+
+        // when
+        val active = reportReader.readActive(listOf(contract), TODAY)
+
+        // then
+        assertEquals(listOf(endingSoon, bannerProductId, cardProductId), active.map { it.contractProductId })
+        assertEquals(2L, active.first().daysLeft)
+        assertEquals("백엔드 개발자", active.single { it.contractProductId == cardProductId }.target?.title)
+        assertNull(active.single { it.contractProductId == bannerProductId }.scroll50Rate)
+        assertEquals(START.datesUntil(TODAY.plusDays(1)).toList(), active.first().daily.map { it.date })
+    }
+
+    private fun profile(userId: Long, wishJob: String?) {
+        val profile = UserProfile(userId = userId, lastSyncedAt = NOW)
+        profile.replaceJobInfo(null, null, null, null, wishJob, null, null, null, null)
+        userProfileRepository.save(profile)
+    }
+
     private fun addProduct(product: AdvertisementProduct, start: LocalDate, end: LocalDate): Long = checkNotNull(
         contractProductRepository.save(
             AdvertisementContractProduct(checkNotNull(contract.id), checkNotNull(product.id), AdvertisementContractProductPeriod(start, end)),
@@ -228,6 +309,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         source: ContentEventSource,
         scroll: Int? = null,
         target: Boolean = true,
+        userId: Long? = null,
     ) {
         eventRepository.save(
             ContentEvent(
@@ -235,7 +317,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
                 targetType = if (target) ContentEventTargetType.JOB else null,
                 targetId = if (target) JOB_ID else null,
                 exposureId = exposureId,
-                userId = null,
+                userId = userId,
                 visitorId = visitor,
                 source = source,
                 scrollPercent = scroll,
@@ -269,5 +351,6 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         val START: LocalDate = LocalDate.of(2026, 11, 10)
         val END: LocalDate = LocalDate.of(2026, 11, 30)
         val TODAY: LocalDate = LocalDate.of(2026, 11, 19)
+        val NOW: LocalDateTime = LocalDateTime.of(2026, 11, 19, 9, 0)
     }
 }

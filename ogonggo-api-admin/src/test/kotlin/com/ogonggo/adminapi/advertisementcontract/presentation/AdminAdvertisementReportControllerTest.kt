@@ -11,6 +11,9 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportExposureDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportSummaryDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
@@ -79,6 +82,27 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
         mockMvc.perform(get(PATH)).andExpect(status().isUnauthorized)
     }
 
+    @Test
+    fun `관리자는 계약 전체 합계를 받는다`() {
+        // given
+        Mockito.`when`(adminAdvertisementReportService.getTotal(1L)).thenReturn(
+            AdvertisementContractReportTotalDto(
+                total = AdvertisementContractReportTotalSumDto(100, 80, 2, 0.02, 1, 0),
+                products = listOf(
+                    AdvertisementContractReportProductSumDto(
+                        7L, AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_TOP_BANNER, "홈 상단 배너", FROM, FROM, 100, 80, 2, 1, 0,
+                    ),
+                ),
+            ),
+        )
+
+        // then
+        mockMvc.perform(admin(get("/api/v1/admin/advertisement-contracts/1/report-summary")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.total.impressions").value(100))
+            .andExpect(jsonPath("$.data.products[0].position").value("JOB_HOME_TOP_BANNER"))
+    }
+
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
         request.with(user("admin").authorities(SimpleGrantedAuthority(ADMIN_AUTHORITY)))
 
@@ -94,10 +118,11 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             to = FROM,
             collectedSince = FROM,
             uniqueCountsApproximate = false,
-            summary = AdvertisementContractReportSummaryDto(100, 2, 0.02, 1, 1, 0, 0, 0, 0, 0, 0.0, null, null, null),
-            daily = listOf(AdvertisementContractReportDailyDto(FROM, 100, 2, 1, 1, 0, 0, 0, null, null)),
-            exposures = listOf(AdvertisementContractReportExposureDto(12L, "11월 홈 상단", "https://cdn.example.com/a.png", 100, 2, 0.02)),
+            summary = AdvertisementContractReportSummaryDto(100, 80, 2, 0.02, 1, 1, 0, 0, 0, 0, 0, 0.0, null, null, null),
+            daily = listOf(AdvertisementContractReportDailyDto(FROM, 100, 80, 2, 1, 1, 0, 0, 0, null, null)),
+            exposures = listOf(AdvertisementContractReportExposureDto(12L, "11월 홈 상단", 100, 2, 0.02)),
             targets = emptyList(),
+            byJobField = emptyList(),
             csvRows = listOf(AdvertisementContractReportCsvRowDto(FROM, 12L, "11월 홈 상단", 100, 2, 1, 1, 0, 0, 0, null, null)),
         )
     }

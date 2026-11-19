@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.advertisementcontract.presentation
 
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportResponse
+import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportTotalResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
 import com.ogonggo.adminapi.response.ErrorResponse
 import com.ogonggo.adminapi.response.SuccessResponse
@@ -50,6 +51,29 @@ interface AdminAdvertisementReportApi {
         @Parameter(description = "조회 시작일(포함). 비우면 상품 시작일") from: LocalDate?,
         @Parameter(description = "조회 종료일(포함). 비우면 상품 종료일과 오늘 중 이른 날") to: LocalDate?,
     ): ResponseEntity<SuccessResponse<AdminAdvertisementReportResponse>>
+
+    @Operation(
+        operationId = "getAdvertisementContractReportSummary",
+        summary = "광고 계약 전체 합계 조회",
+        description = """
+            계약에 붙은 상품 중 리포트를 열 수 있는 상품의 상품 몫을 더합니다. 각 상품은 상품 기간 전체(진행 중이면 오늘까지)이고,
+            아직 시작하지 않은 상품은 0입니다. 기간이 없거나 채널 상품은 products에 넣지 않습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            ApiResponse(responseCode = "400", description = "BAD_REQUEST: contractId는 양수여야 합니다.", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(
+                responseCode = "404",
+                description = "ADVERTISEMENT_CONTRACT_NOT_FOUND: 광고 계약을 찾을 수 없습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun getReportSummary(@Positive contractId: Long): ResponseEntity<SuccessResponse<AdminAdvertisementReportTotalResponse>>
 
     @Operation(
         operationId = "downloadAdvertisementContractProductReportCsv",

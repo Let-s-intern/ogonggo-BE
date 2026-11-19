@@ -4,15 +4,20 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDailyDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportExposureDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportJobFieldDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportScrollStepDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportSourceDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportSummaryDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetTotalDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalSumDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.contentevent.domain.ContentEventSource
+import com.ogonggo.core.job.domain.JobField
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
@@ -35,6 +40,10 @@ data class AdminAdvertisementReportResponse(
     val exposures: List<AdminAdvertisementReportExposureResponse>,
     @field:Schema(description = "계약 대상 공고·부트캠프의 전체 숫자(유입 경로 무관)와 경로별 나눔. 대상이 없으면 빈 배열")
     val targets: List<AdminAdvertisementReportTargetResponse>,
+    @field:Schema(
+        description = "상품 몫의 로그인 회원을 희망 직군으로 나눈 것. 여러 직군을 고른 회원은 각 직군에 한 번씩, 직무가 없으면 jobField null. 비회원은 넣지 않는다. 순 회원 수가 큰 순",
+    )
+    val byJobField: List<AdminAdvertisementReportJobFieldResponse>,
 ) {
     companion object {
         fun from(report: AdvertisementContractReportDto) = AdminAdvertisementReportResponse(
@@ -47,6 +56,7 @@ data class AdminAdvertisementReportResponse(
             daily = report.daily.map(AdminAdvertisementReportDailyResponse::from),
             exposures = report.exposures.map(AdminAdvertisementReportExposureResponse::from),
             targets = report.targets.map(AdminAdvertisementReportTargetResponse::from),
+            byJobField = report.byJobField.map(AdminAdvertisementReportJobFieldResponse::from),
         )
     }
 }
@@ -78,6 +88,8 @@ data class AdminAdvertisementReportProductResponse(
 data class AdminAdvertisementReportSummaryResponse(
     @field:Schema(description = "광고 노출수. 보일 때마다 센다")
     val impressions: Long,
+    @field:Schema(description = "순 노출수. 같은 방문자가 같은 소재를 하루(KST)에 여러 번 봐도 한 번으로 센다")
+    val uniqueImpressions: Long,
     @field:Schema(description = "광고 소재 클릭수")
     val adClicks: Long,
     @field:Schema(description = "소재 클릭률(adClicks / impressions, 0~1). 노출이 없으면 null", nullable = true)
@@ -108,6 +120,7 @@ data class AdminAdvertisementReportSummaryResponse(
     companion object {
         fun from(summary: AdvertisementContractReportSummaryDto) = AdminAdvertisementReportSummaryResponse(
             impressions = summary.impressions,
+            uniqueImpressions = summary.uniqueImpressions,
             adClicks = summary.adClicks,
             adClickRate = summary.adClickRate,
             views = summary.views,
@@ -140,6 +153,8 @@ data class AdminAdvertisementReportScrollStepResponse(
 data class AdminAdvertisementReportDailyResponse(
     val date: LocalDate,
     val impressions: Long,
+    @field:Schema(description = "그날 순 노출수(같은 방문자·소재는 한 번)")
+    val uniqueImpressions: Long,
     val adClicks: Long,
     val views: Long,
     val uniqueVisitors: Long,
@@ -155,6 +170,7 @@ data class AdminAdvertisementReportDailyResponse(
         fun from(daily: AdvertisementContractReportDailyDto) = AdminAdvertisementReportDailyResponse(
             date = daily.date,
             impressions = daily.impressions,
+            uniqueImpressions = daily.uniqueImpressions,
             adClicks = daily.adClicks,
             views = daily.views,
             uniqueVisitors = daily.uniqueVisitors,
@@ -238,5 +254,96 @@ data class AdminAdvertisementReportSourceResponse(
 ) {
     companion object {
         fun from(source: AdvertisementContractReportSourceDto) = AdminAdvertisementReportSourceResponse(source.source, source.views, source.ctaClicks)
+    }
+}
+
+data class AdminAdvertisementReportJobFieldResponse(
+    @field:Schema(description = "희망 직군. 회원의 렛츠커리어 희망 직무를 오공고 직무로 옮긴 직군이며 옮길 수 없으면 null", nullable = true)
+    val jobField: JobField?,
+    @field:Schema(description = "직군 이름. null 칸은 \"직무 미설정\"")
+    val label: String,
+    @field:Schema(description = "상세를 연 순 회원 수")
+    val memberUniqueVisitors: Long,
+    @field:Schema(description = "회원 상세 조회수(30분 안 재조회는 한 번)")
+    val memberViews: Long,
+    @field:Schema(description = "CTA를 누른 순 회원 수")
+    val ctaUniqueMembers: Long,
+    @field:Schema(description = "광고 소재를 누른 순 회원 수")
+    val adClickMembers: Long,
+) {
+    companion object {
+        fun from(row: AdvertisementContractReportJobFieldDto) = AdminAdvertisementReportJobFieldResponse(
+            jobField = row.jobField,
+            label = row.label,
+            memberUniqueVisitors = row.memberUniqueVisitors,
+            memberViews = row.memberViews,
+            ctaUniqueMembers = row.ctaUniqueMembers,
+            adClickMembers = row.adClickMembers,
+        )
+    }
+}
+
+data class AdminAdvertisementReportTotalResponse(
+    val total: AdminAdvertisementReportTotalSumResponse,
+    @field:Schema(description = "리포트를 열 수 있는 상품마다의 상품 몫. 계약에 붙인 순서")
+    val products: List<AdminAdvertisementReportProductSumResponse>,
+) {
+    companion object {
+        fun from(total: AdvertisementContractReportTotalDto) = AdminAdvertisementReportTotalResponse(
+            total = AdminAdvertisementReportTotalSumResponse.from(total.total),
+            products = total.products.map(AdminAdvertisementReportProductSumResponse::from),
+        )
+    }
+}
+
+data class AdminAdvertisementReportTotalSumResponse(
+    val impressions: Long,
+    val uniqueImpressions: Long,
+    val adClicks: Long,
+    @field:Schema(description = "소재 클릭률(0~1). 노출이 없으면 null", nullable = true)
+    val adClickRate: Double?,
+    val views: Long,
+    val ctaClicks: Long,
+) {
+    companion object {
+        fun from(sum: AdvertisementContractReportTotalSumDto) = AdminAdvertisementReportTotalSumResponse(
+            impressions = sum.impressions,
+            uniqueImpressions = sum.uniqueImpressions,
+            adClicks = sum.adClicks,
+            adClickRate = sum.adClickRate,
+            views = sum.views,
+            ctaClicks = sum.ctaClicks,
+        )
+    }
+}
+
+data class AdminAdvertisementReportProductSumResponse(
+    val contractProductId: Long,
+    val category: AdvertisementProductCategory,
+    @field:Schema(description = "노출 자리. 자리가 없는 상품은 null", nullable = true)
+    val position: AdvertisementProductPosition?,
+    val name: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val impressions: Long,
+    val uniqueImpressions: Long,
+    val adClicks: Long,
+    val views: Long,
+    val ctaClicks: Long,
+) {
+    companion object {
+        fun from(product: AdvertisementContractReportProductSumDto) = AdminAdvertisementReportProductSumResponse(
+            contractProductId = product.contractProductId,
+            category = product.category,
+            position = product.position,
+            name = product.name,
+            startDate = product.startDate,
+            endDate = product.endDate,
+            impressions = product.impressions,
+            uniqueImpressions = product.uniqueImpressions,
+            adClicks = product.adClicks,
+            views = product.views,
+            ctaClicks = product.ctaClicks,
+        )
     }
 }
