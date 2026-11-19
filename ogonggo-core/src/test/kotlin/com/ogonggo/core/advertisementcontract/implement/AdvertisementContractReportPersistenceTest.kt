@@ -1,0 +1,356 @@
+package com.ogonggo.core.advertisementcontract.implement
+
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
+import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractExposureQueryRepository
+import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractJpaRepository
+import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractProductJpaRepository
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureContent
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposurePeriod
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
+import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureJpaRepository
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
+import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductJpaRepository
+import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
+import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.contentdailystat.implement.ContentDailyStatManager
+import com.ogonggo.core.contentdailystat.implement.ContentMetricReader
+import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatQueryRepository
+import com.ogonggo.core.contentevent.domain.ContentEvent
+import com.ogonggo.core.contentevent.domain.ContentEventSource
+import com.ogonggo.core.contentevent.domain.ContentEventTargetType
+import com.ogonggo.core.contentevent.domain.ContentEventType
+import com.ogonggo.core.contentevent.persistence.ContentEventJpaRepository
+import com.ogonggo.core.error.BusinessException
+import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.user.domain.UserProfile
+import com.ogonggo.core.user.persistence.UserProfileJpaRepository
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
+import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.ContextConfiguration
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+@DataJpaTest(showSql = false)
+@ContextConfiguration(classes = [CoreJpaConfiguration::class])
+@Import(
+    AdvertisementContractReportReader::class,
+    AdvertisementContractExposureQueryRepository::class,
+    AdvertisementContractTargetReader::class,
+    AdvertisementProductReader::class,
+    AdvertisementProductQueryRepository::class,
+    ContentMetricReader::class,
+    ContentDailyStatManager::class,
+    ContentDailyStatQueryRepository::class,
+)
+internal class AdvertisementContractReportPersistenceTest @Autowired constructor(
+    private val reportReader: AdvertisementContractReportReader,
+    private val dailyStatManager: ContentDailyStatManager,
+    private val contractRepository: AdvertisementContractJpaRepository,
+    private val contractProductRepository: AdvertisementContractProductJpaRepository,
+    private val productRepository: AdvertisementProductJpaRepository,
+    private val exposureRepository: AdvertisementExposureJpaRepository,
+    private val eventRepository: ContentEventJpaRepository,
+    private val userProfileRepository: UserProfileJpaRepository,
+) {
+
+    @MockBean
+    private lateinit var jobReader: JobReader
+
+    @MockBean
+    private lateinit var bootcampReader: BootcampReader
+
+    private lateinit var contract: AdvertisementContract
+    private var bannerExposureId = 0L
+    private var cardExposureId = 0L
+    private var bannerProductId = 0L
+    private var cardProductId = 0L
+
+    @BeforeEach
+    fun setUp() {
+        val job = Mockito.mock(Job::class.java)
+        Mockito.`when`(job.title).thenReturn("백엔드 개발자")
+        Mockito.`when`(job.companyName).thenReturn("뱅크")
+        Mockito.`when`(jobReader.readIncludingDeleted(JOB_ID)).thenReturn(job)
+
+        contract = contractRepository.save(form())
+        val banner = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_TOP_BANNER, "홈 상단 배너", null))
+        val card = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.JOB_POSTING, null, "목록 광고 공고", null))
+        bannerProductId = addProduct(banner, START, END)
+        cardProductId = addProduct(card, START, END)
+        bannerExposureId = checkNotNull(
+            exposureRepository.save(
+                AdvertisementExposure(
+                    product = banner,
+                    contractId = contract.id,
+                    content = AdvertisementExposureContent(name = "11월 홈 상단", imageUrl = "https://cdn.example.com/a.png", linkUrl = "https://example.com"),
+                    adLabel = true,
+                    period = AdvertisementExposurePeriod.ALWAYS,
+                    exposed = true,
+                    displayOrder = 1,
+                ),
+            ).id,
+        )
+        cardExposureId = checkNotNull(
+            exposureRepository.save(
+                AdvertisementExposure(
+                    product = card,
+                    contractId = contract.id,
+                    content = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.JOB, targetId = JOB_ID),
+                    adLabel = true,
+                    period = AdvertisementExposurePeriod.ALWAYS,
+                    exposed = true,
+                    displayOrder = 1,
+                ),
+            ).id,
+        )
+    }
+
+    @Test
+    fun `기간이 겹치는 배너와 광고 공고 상품은 같은 공고 조회를 들어온 노출의 상품에만 센다`() {
+        // given
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
+        event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(12, 0), "c", null, ContentEventSource.LIST)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 0), "a", bannerExposureId, ContentEventSource.BANNER, target = false)
+
+        // when
+        val bannerReport = reportReader.read(contract, bannerProductId, null, null, TODAY)
+        val cardReport = reportReader.read(contract, cardProductId, null, null, TODAY)
+
+        // then
+        assertEquals(1L, bannerReport.summary.views)
+        assertEquals(1L, bannerReport.summary.impressions)
+        assertEquals(1L, cardReport.summary.views)
+        assertEquals(0L, cardReport.summary.impressions)
+        assertEquals(listOf("11월 홈 상단"), bannerReport.exposures.map { it.name })
+        assertEquals(listOf("백엔드 개발자 · 뱅크"), cardReport.exposures.map { it.name })
+    }
+
+    @Test
+    fun `배너 상품은 스크롤 깊이와 체류 시간을 null로 주고 광고 공고 상품은 방문자별 최대 깊이로 깔때기를 센다`() {
+        // given
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.SCROLL, START.atTime(10, 1), "a", cardExposureId, ContentEventSource.AD_CARD, scroll = 30)
+        event(ContentEventType.SCROLL, START.atTime(10, 2), "a", cardExposureId, ContentEventSource.AD_CARD, scroll = 80)
+        event(ContentEventType.VIEW, START.plusDays(1).atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.SCROLL, START.atTime(11, 1), "b", cardExposureId, ContentEventSource.AD_CARD, scroll = 50)
+        event(ContentEventType.VIEW, START.atTime(12, 0), "c", bannerExposureId, ContentEventSource.BANNER)
+        event(ContentEventType.SCROLL, START.atTime(12, 1), "c", bannerExposureId, ContentEventSource.BANNER, scroll = 100)
+        dailyStatManager.rebuild(START)
+        dailyStatManager.rebuild(START.plusDays(1))
+
+        // when
+        val card = reportReader.read(contract, cardProductId, null, null, TODAY).summary
+        val banner = reportReader.read(contract, bannerProductId, null, null, TODAY).summary
+
+        // then
+        assertEquals(2L, card.uniqueVisitors)
+        assertEquals(listOf(2L, 2L, 2L, 1L, 0L), card.scrollFunnel!!.map { it.visitors })
+        assertEquals(listOf(1.0, 1.0, 1.0, 0.5, 0.0), card.scrollFunnel!!.map { it.rate })
+        assertNull(banner.scrollFunnel)
+        assertNull(banner.avgScrollPercent)
+        assertNull(banner.avgDurationSeconds)
+    }
+
+    @Test
+    fun `전날까지는 일별 집계를, 오늘은 원본을 읽어 기간의 모든 날을 준다`() {
+        // given
+        event(ContentEventType.VIEW, TODAY.minusDays(1).atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
+        dailyStatManager.rebuild(TODAY.minusDays(1))
+        event(ContentEventType.VIEW, TODAY.atTime(9, 0), "b", bannerExposureId, ContentEventSource.BANNER)
+        event(ContentEventType.VIEW, TODAY.atTime(9, 10), "b", bannerExposureId, ContentEventSource.BANNER)
+
+        // when
+        val report = reportReader.read(contract, bannerProductId, null, null, TODAY)
+
+        // then
+        assertEquals(START, report.from)
+        assertEquals(TODAY, report.to)
+        assertEquals(START.datesUntil(TODAY.plusDays(1)).toList(), report.daily.map { it.date })
+        assertEquals(1L, report.daily.single { it.date == TODAY.minusDays(1) }.views)
+        assertEquals(1L, report.daily.single { it.date == TODAY }.views)
+        assertEquals(2L, report.summary.views)
+        assertEquals(2L, report.summary.uniqueVisitors)
+        assertEquals(report.daily.size, report.csvRows.size)
+    }
+
+    @Test
+    fun `조회 기간은 상품 기간 안으로 자르고 비면 400, 기간 없는 상품과 채널 상품은 409다`() {
+        // given
+        val kakao = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.KAKAO_1, null, "카카오 톡방", null))
+        val channelProductId = addProduct(kakao, START, END)
+
+        // when
+        val clipped = reportReader.read(contract, bannerProductId, START.minusDays(10), END.plusDays(10), END.plusDays(30))
+        val narrowed = reportReader.read(contract, bannerProductId, START.plusDays(2), START.plusDays(3), TODAY)
+        val outside = assertThrows<BusinessException> { reportReader.read(contract, bannerProductId, END.plusDays(1), END.plusDays(2), END.plusDays(30)) }
+        val reversed = assertThrows<BusinessException> { reportReader.read(contract, bannerProductId, START.plusDays(3), START.plusDays(2), TODAY) }
+        val channel = assertThrows<BusinessException> { reportReader.read(contract, channelProductId, null, null, TODAY) }
+
+        // then
+        assertEquals(START to END, clipped.from to clipped.to)
+        assertEquals(START.plusDays(2) to START.plusDays(3), narrowed.from to narrowed.to)
+        assertEquals(AdvertisementContractErrorCode.REPORT_PERIOD_INVALID, outside.errorCode)
+        assertEquals(AdvertisementContractErrorCode.REPORT_PERIOD_INVALID, reversed.errorCode)
+        assertEquals(AdvertisementContractErrorCode.REPORT_NOT_AVAILABLE, channel.errorCode)
+    }
+
+    @Test
+    fun `희망 직무별 나눔은 로그인 회원만 직군마다 세고 두 직군 회원은 양쪽에, 직무 없는 회원은 null 칸에 센다`() {
+        // given
+        profile(1L, "백엔드/서버 개발, 마케터")
+        profile(2L, null)
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.VIEW, START.atTime(10, 10), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.CTA_CLICK, START.atTime(10, 11), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.AD_CLICK, START.atTime(9, 59), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD, userId = 2L)
+        event(ContentEventType.VIEW, START.atTime(12, 0), "guest", cardExposureId, ContentEventSource.AD_CARD)
+
+        // when
+        val byJobField = reportReader.read(contract, cardProductId, null, null, TODAY).byJobField
+
+        // then
+        assertEquals(
+            setOf(JobField.IT_DEVELOPMENT, JobField.MARKETING_ADVERTISING, null),
+            byJobField.map { it.jobField }.toSet(),
+        )
+        byJobField.filter { it.jobField != null }.forEach {
+            assertEquals(listOf(1L, 1L, 1L, 1L), listOf(it.memberUniqueVisitors, it.memberViews, it.ctaUniqueMembers, it.adClickMembers))
+        }
+        val none = byJobField.single { it.jobField == null }
+        assertEquals("직무 미설정", none.label)
+        assertEquals(listOf(1L, 1L, 0L, 0L), listOf(none.memberUniqueVisitors, none.memberViews, none.ctaUniqueMembers, none.adClickMembers))
+    }
+
+    @Test
+    fun `계약 합계는 리포트를 열 수 있는 상품의 상품 몫을 더한 값이다`() {
+        // given
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 0), "a", bannerExposureId, ContentEventSource.BANNER, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 1), "a", bannerExposureId, ContentEventSource.BANNER, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 2), "b", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD)
+        val kakao = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.KAKAO_1, null, "카카오 톡방", null))
+        addProduct(kakao, START, END)
+
+        // when
+        val total = reportReader.readTotal(contract, TODAY)
+        val banner = reportReader.read(contract, bannerProductId, null, null, TODAY).summary
+        val card = reportReader.read(contract, cardProductId, null, null, TODAY).summary
+
+        // then
+        assertEquals(listOf(bannerProductId, cardProductId), total.products.map { it.contractProductId })
+        assertEquals(banner.impressions + card.impressions, total.total.impressions)
+        assertEquals(banner.uniqueImpressions + card.uniqueImpressions, total.total.uniqueImpressions)
+        assertEquals(banner.views + card.views, total.total.views)
+        assertEquals(3L to 2L, total.total.impressions to total.total.uniqueImpressions)
+    }
+
+    @Test
+    fun `진행 중 광고는 오늘이 기간 안인 상품만 끝나는 날이 가까운 순으로 준다`() {
+        // given
+        val banner2 = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_BOTTOM_BANNER, "홈 하단 배너", null))
+        val endingSoon = addProduct(banner2, START, TODAY.plusDays(2))
+        addProduct(banner2, TODAY.plusDays(1), END)
+        addProduct(banner2, START, TODAY.minusDays(1))
+
+        // when
+        val active = reportReader.readActive(listOf(contract), TODAY)
+
+        // then
+        assertEquals(listOf(endingSoon, bannerProductId, cardProductId), active.map { it.contractProductId })
+        assertEquals(2L, active.first().daysLeft)
+        assertEquals("백엔드 개발자", active.single { it.contractProductId == cardProductId }.target?.title)
+        assertNull(active.single { it.contractProductId == bannerProductId }.scroll50Rate)
+        assertEquals(START.datesUntil(TODAY.plusDays(1)).toList(), active.first().daily.map { it.date })
+    }
+
+    private fun profile(userId: Long, wishJob: String?) {
+        val profile = UserProfile(userId = userId, lastSyncedAt = NOW)
+        profile.replaceJobInfo(null, null, null, null, wishJob, null, null, null, null)
+        userProfileRepository.save(profile)
+    }
+
+    private fun addProduct(product: AdvertisementProduct, start: LocalDate, end: LocalDate): Long = checkNotNull(
+        contractProductRepository.save(
+            AdvertisementContractProduct(checkNotNull(contract.id), checkNotNull(product.id), AdvertisementContractProductPeriod(start, end)),
+        ).id,
+    )
+
+    private fun event(
+        type: ContentEventType,
+        occurredAt: LocalDateTime,
+        visitor: String,
+        exposureId: Long?,
+        source: ContentEventSource,
+        scroll: Int? = null,
+        target: Boolean = true,
+        userId: Long? = null,
+    ) {
+        eventRepository.save(
+            ContentEvent(
+                eventType = type,
+                targetType = if (target) ContentEventTargetType.JOB else null,
+                targetId = if (target) JOB_ID else null,
+                exposureId = exposureId,
+                userId = userId,
+                visitorId = visitor,
+                source = source,
+                scrollPercent = scroll,
+                durationMs = scroll?.let { 10_000L },
+                occurredAt = occurredAt,
+            ),
+        )
+    }
+
+    private fun form() = AdvertisementContract.requestByForm(
+        userId = 7L,
+        promotionTarget = AdvertisementContractPromotionTarget.JOB,
+        companyName = "뱅크",
+        recruitmentTitle = "백엔드 개발자",
+        recruitmentUrl = "https://example.com/recruit",
+        recruitmentDeadline = LocalDate.of(2026, 12, 20),
+        purpose = AdvertisementContractPurpose.FAST_APPLICANTS,
+        budgetAmount = null,
+        categories = setOf(AdvertisementProductCategory.BANNER),
+        scheduleRequest = null,
+        advertisementRequest = null,
+        managerName = "김담당",
+        email = "marketing@example.com",
+        phoneNumber = "010-1234-5678",
+        invoiceMethod = AdvertisementContractInvoiceMethod.TAX_INVOICE,
+        creativeMethod = AdvertisementContractCreativeMethod.REQUEST_PRODUCTION,
+    )
+
+    private companion object {
+        const val JOB_ID = 15818L
+        val START: LocalDate = LocalDate.of(2026, 11, 10)
+        val END: LocalDate = LocalDate.of(2026, 11, 30)
+        val TODAY: LocalDate = LocalDate.of(2026, 11, 19)
+        val NOW: LocalDateTime = LocalDateTime.of(2026, 11, 19, 9, 0)
+    }
+}

@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAn
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
@@ -75,7 +76,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].paymentAmount").isEmpty)
             .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-11-08T10:00:00"))
             .andExpect(jsonPath("$.data.items[0].userId").doesNotExist())
-            .andExpect(jsonPath("$.data.items[0].source").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].source").value("APPLICATION_FORM"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(6))
     }
@@ -150,7 +151,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.products[0].startDate").value("2026-11-02"))
             .andExpect(jsonPath("$.data.products[0].endDate").value("2026-11-05"))
             .andExpect(jsonPath("$.data.userId").doesNotExist())
-            .andExpect(jsonPath("$.data.source").doesNotExist())
+            .andExpect(jsonPath("$.data.source").value("APPLICATION_FORM"))
             .andExpect(jsonPath("$.data.targetId").doesNotExist())
     }
 
@@ -197,6 +198,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
         const val CONTRACT_ID = 1001L
         val REGISTERED_AT: LocalDateTime = LocalDateTime.of(2026, 11, 8, 10, 0)
         val SUMMARY = MyAdvertisementContractSummaryResult(
+            source = AdvertisementContractSource.APPLICATION_FORM,
             id = CONTRACT_ID,
             status = AdvertisementContractStatus.REQUESTED,
             promotionTarget = AdvertisementContractPromotionTarget.JOB,
@@ -208,6 +210,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             registeredAt = REGISTERED_AT,
         )
         val DETAIL = MyAdvertisementContractDetailResult(
+            source = AdvertisementContractSource.APPLICATION_FORM,
             id = CONTRACT_ID,
             status = AdvertisementContractStatus.NEGOTIATING,
             promotionTarget = AdvertisementContractPromotionTarget.JOB,
@@ -242,6 +245,8 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
                     productDeleted = false,
                     startDate = LocalDate.parse("2026-11-02"),
                     endDate = LocalDate.parse("2026-11-05"),
+                    reportAvailable = true,
+                    reportUnavailableReason = null,
                 ),
             ),
         )

@@ -127,6 +127,10 @@ class UserSecurityConfiguration {
                     HttpMethod.GET,
                     "/api/v1/users/me/advertisement-contracts",
                     "/api/v1/users/me/advertisement-contracts/*",
+                    "/api/v1/users/me/advertisement-contracts/*/products/*/report",
+                    "/api/v1/users/me/advertisement-contracts/*/products/*/report.csv",
+                    "/api/v1/users/me/advertisement-contracts/*/report-summary",
+                    "/api/v1/users/me/advertisement-reports/active",
                 ).authenticated()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/images", "/api/v1/images/**").authenticated()
                 // 비슷한 공고는 내 희망 직무·산업으로 고르는 사용자별 결과라 채용공고 조회 중 유일하게 로그인을 요구한다.

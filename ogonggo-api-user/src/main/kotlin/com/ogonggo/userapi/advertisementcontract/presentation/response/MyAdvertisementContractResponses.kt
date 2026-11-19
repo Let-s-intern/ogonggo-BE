@@ -5,6 +5,8 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAn
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
@@ -19,21 +21,26 @@ import java.time.LocalDateTime
 
 data class MyAdvertisementContractSummaryResponse(
     val id: Long,
+    @field:Schema(description = "계약이 생긴 경로. 광고 신청 폼(APPLICATION_FORM) 또는 비즈니스 공고 등록(COMPANY_POSTING)")
+    val source: AdvertisementContractSource,
     val status: AdvertisementContractStatus,
     val promotionTarget: AdvertisementContractPromotionTarget,
     val companyName: String,
+    @field:Schema(description = "공고명. 비즈니스 공고 계약은 공고를 등록할 때의 제목")
     val recruitmentTitle: String,
-    val recruitmentDeadline: LocalDate,
-    @field:Schema(description = "신청 때 고른 광고 카테고리")
+    @field:Schema(description = "모집 마감일. 비즈니스 상시 공고는 null", nullable = true)
+    val recruitmentDeadline: LocalDate?,
+    @field:Schema(description = "신청 때 고른 광고 카테고리. 비즈니스 공고 계약은 빈 배열")
     val categories: List<AdvertisementProductCategory>,
     @field:Schema(description = "협의로 정한 결제 금액(원). 아직 정하지 않았으면 null", nullable = true)
     val paymentAmount: Int?,
-    @field:Schema(description = "신청 일시")
+    @field:Schema(description = "신청 일시. 비즈니스 공고 계약은 공고 등록 일시")
     val registeredAt: LocalDateTime,
 ) {
     companion object {
         fun from(result: MyAdvertisementContractSummaryResult) = MyAdvertisementContractSummaryResponse(
             id = result.id,
+            source = result.source,
             status = result.status,
             promotionTarget = result.promotionTarget,
             companyName = result.companyName,
@@ -48,13 +55,19 @@ data class MyAdvertisementContractSummaryResponse(
 
 data class MyAdvertisementContractDetailResponse(
     val id: Long,
+    @field:Schema(description = "계약이 생긴 경로. 광고 신청 폼(APPLICATION_FORM) 또는 비즈니스 공고 등록(COMPANY_POSTING)")
+    val source: AdvertisementContractSource,
     val status: AdvertisementContractStatus,
     val promotionTarget: AdvertisementContractPromotionTarget,
     val companyName: String,
+    @field:Schema(description = "공고명. 비즈니스 공고 계약은 공고를 등록할 때의 제목")
     val recruitmentTitle: String,
-    val recruitmentUrl: String,
-    val recruitmentDeadline: LocalDate,
-    val purpose: AdvertisementContractPurpose,
+    @field:Schema(description = "공고·지원 링크. 비즈니스 공고 계약은 null", nullable = true)
+    val recruitmentUrl: String?,
+    @field:Schema(description = "모집 마감일. 비즈니스 상시 공고는 null", nullable = true)
+    val recruitmentDeadline: LocalDate?,
+    @field:Schema(description = "광고 목적. 비즈니스 공고 계약은 null", nullable = true)
+    val purpose: AdvertisementContractPurpose?,
     @field:Schema(description = "예정 예산(원). 적지 않았으면 null", nullable = true)
     val budgetAmount: Int?,
     @field:Schema(description = "신청 때 고른 광고 카테고리")
@@ -63,15 +76,20 @@ data class MyAdvertisementContractDetailResponse(
     val scheduleRequest: String?,
     @field:Schema(description = "광고 요청사항. 비워 보냈으면 null", nullable = true)
     val advertisementRequest: String?,
-    val managerName: String,
-    val email: String,
-    val phoneNumber: String,
+    @field:Schema(description = "담당자 이름. 비즈니스 공고 계약은 null(회원의 기업 정보를 본다)", nullable = true)
+    val managerName: String?,
+    @field:Schema(description = "담당자 이메일. 비즈니스 공고 계약은 null", nullable = true)
+    val email: String?,
+    @field:Schema(description = "담당자 연락처. 비즈니스 공고 계약은 null", nullable = true)
+    val phoneNumber: String?,
     @field:Schema(description = "사업자 번호 종류. 보내지 않았으면 null", nullable = true)
     val businessNumberType: CompanyBusinessNumberType?,
     @field:Schema(description = "사업자 번호(숫자만). 보내지 않았거나 해외 기업이면 null", nullable = true)
     val businessNumber: String?,
-    val invoiceMethod: AdvertisementContractInvoiceMethod,
-    val creativeMethod: AdvertisementContractCreativeMethod,
+    @field:Schema(description = "계산서 발행 방식. 비즈니스 공고 계약은 null", nullable = true)
+    val invoiceMethod: AdvertisementContractInvoiceMethod?,
+    @field:Schema(description = "소재 준비 방식. 비즈니스 공고 계약은 null", nullable = true)
+    val creativeMethod: AdvertisementContractCreativeMethod?,
     @field:ArraySchema(
         arraySchema = Schema(description = "칸이 따로 없는 폼 문항의 답. 보낸 순서대로. 답 없이 낸 신청과 이 값이 생기기 전 신청은 null", nullable = true),
     )
@@ -86,6 +104,7 @@ data class MyAdvertisementContractDetailResponse(
     companion object {
         fun from(result: MyAdvertisementContractDetailResult) = MyAdvertisementContractDetailResponse(
             id = result.id,
+            source = result.source,
             status = result.status,
             promotionTarget = result.promotionTarget,
             companyName = result.companyName,
@@ -142,6 +161,10 @@ data class MyAdvertisementContractProductResponse(
     val startDate: LocalDate?,
     @field:Schema(description = "게시 종료일(이 날까지 게시). 기간을 넣기 전에 붙인 상품은 null", nullable = true)
     val endDate: LocalDate?,
+    @field:Schema(description = "성과 리포트를 열 수 있는 상품인지")
+    val reportAvailable: Boolean,
+    @field:Schema(description = "리포트를 열 수 없는 이유. 기간 없음(NO_PERIOD), 채널 상품(NOT_EXPOSABLE). 열 수 있으면 null", nullable = true)
+    val reportUnavailableReason: AdvertisementContractReportUnavailableReason?,
 ) {
     companion object {
         fun from(result: MyAdvertisementContractProductResult) = MyAdvertisementContractProductResponse(
@@ -152,6 +175,8 @@ data class MyAdvertisementContractProductResponse(
             productDeleted = result.productDeleted,
             startDate = result.startDate,
             endDate = result.endDate,
+            reportAvailable = result.reportAvailable,
+            reportUnavailableReason = result.reportUnavailableReason,
         )
     }
 }

@@ -1,6 +1,7 @@
 package com.ogonggo.userapi.config
 
 import com.ogonggo.core.schedule.implement.dto.ScheduledJobDefinition
+import com.ogonggo.userapi.contentdailystat.presentation.ContentDailyStatScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationCleanupScheduler
 import com.ogonggo.userapi.notification.delivery.implement.NotificationDispatcher
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
@@ -51,6 +52,22 @@ class UserScheduledJobConfigurationTest {
         // then
         assertEquals("notificationCleanup", definition.name)
         assertEquals("0 30 3 * * *", definition.defaultCron)
+        assertNotNull(lock)
+        assertEquals(definition.name, lock.name)
+    }
+
+    @Test
+    fun `콘텐츠 일별 집계는 매일 새벽 한 번 등록하고 ShedLock을 사용한다`() {
+        // given
+        val scheduler = Mockito.mock(ContentDailyStatScheduler::class.java)
+
+        // when
+        val definition = UserScheduledJobConfiguration().contentDailyStatAggregationJob(scheduler)
+        val lock = ContentDailyStatScheduler::class.java.getMethod("aggregate").getAnnotation(SchedulerLock::class.java)
+
+        // then
+        assertEquals("contentDailyStatAggregation", definition.name)
+        assertEquals("0 20 3 * * *", definition.defaultCron)
         assertNotNull(lock)
         assertEquals(definition.name, lock.name)
     }

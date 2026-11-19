@@ -317,25 +317,31 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(detail.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
         assertEquals(
             setOf(
-                "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentDeadline",
+                "id", "source", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentDeadline",
                 "categories", "paymentAmount", "registeredAt",
             ),
             summary.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertEquals(
             setOf(
-                "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
+                "id", "source", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
                 "recruitmentDeadline", "purpose", "budgetAmount", "categories", "scheduleRequest", "advertisementRequest",
                 "managerName", "email", "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "formAnswers",
                 "paymentAmount", "registeredAt", "products",
             ),
             detailResponse.at("/properties").fieldNames().asSequence().toSet(),
         )
-        listOf("budgetAmount", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "formAnswers", "paymentAmount").forEach { field ->
+        listOf(
+            "budgetAmount", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "formAnswers", "paymentAmount",
+            "recruitmentUrl", "recruitmentDeadline", "purpose", "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod",
+        ).forEach { field ->
             assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
         }
         assertEquals(
-            setOf("contractProductId", "productName", "category", "position", "productDeleted", "startDate", "endDate"),
+            setOf(
+                "contractProductId", "productName", "category", "position", "productDeleted", "startDate", "endDate",
+                "reportAvailable", "reportUnavailableReason",
+            ),
             product.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertTrue(product.at("/properties/position/nullable").asBoolean())
@@ -343,6 +349,45 @@ class UserOpenApiContractTest @Autowired constructor(
             setOf("key", "label", "value"),
             document.at("/components/schemas/MyAdvertisementContractFormAnswerResponse/properties").fieldNames().asSequence().toSet(),
         )
+    }
+
+    @Test
+    @DisplayName("광고 성과 리포트는 로그인 필수이며 CSV와 계약 합계와 진행 중 요약 및 403·404·409 오류를 명시한다")
+    fun `광고 성과 리포트는 로그인 필수이며 CSV와 계약 합계와 진행 중 요약 및 403·404·409 오류를 명시한다`() {
+        // given
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1users~1me~1advertisement-contracts~1{contractId}"
+
+        // when
+        val report = document.at("$base~1products~1{contractProductId}~1report/get")
+        val csv = document.at("$base~1products~1{contractProductId}~1report.csv/get")
+        val summary = document.at("$base~1report-summary/get")
+        val active = document.at("/paths/~1api~1v1~1users~1me~1advertisement-reports~1active/get")
+        val reportSchema = document.at("/components/schemas/MyAdvertisementReportResponse")
+
+        // then
+        assertEquals("getMyAdvertisementContractProductReport", report.at("/operationId").asText())
+        assertEquals("downloadMyAdvertisementContractProductReportCsv", csv.at("/operationId").asText())
+        assertEquals("getMyAdvertisementContractReportSummary", summary.at("/operationId").asText())
+        assertEquals("listMyActiveAdvertisementReports", active.at("/operationId").asText())
+        listOf(report, csv, summary, active).forEach { operation ->
+            assertTrue(operation.at("/security/0/BearerAuth").isArray)
+            assertTrue(operation.at("/responses/403/description").asText().startsWith("COMPANY_ROLE_REQUIRED"))
+        }
+        assertTrue(csv.at("/responses/200/content/text~1csv").isObject)
+        listOf(report, csv).forEach { operation ->
+            assertTrue(operation.at("/responses/409/description").asText().startsWith("REPORT_NOT_AVAILABLE"))
+            assertTrue(operation.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+            assertEquals("date", operation.parameter("from").at("/schema/format").asText())
+        }
+        assertEquals(
+            setOf(
+                "product", "from", "to", "collectedSince", "uniqueCountsApproximate", "summary", "daily", "exposures", "targets", "byJobField",
+            ),
+            reportSchema.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertTrue(document.at("/components/schemas/MyAdvertisementReportSummaryResponse/properties/scrollFunnel/nullable").asBoolean())
+        assertTrue(document.at("/components/schemas/MyAdvertisementReportJobFieldResponse/properties/jobField/nullable").asBoolean())
     }
 
     @Test

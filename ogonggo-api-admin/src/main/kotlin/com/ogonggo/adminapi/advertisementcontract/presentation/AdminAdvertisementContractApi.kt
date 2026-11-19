@@ -1,6 +1,7 @@
 package com.ogonggo.adminapi.advertisementcontract.presentation
 
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractProductRequest
+import com.ogonggo.adminapi.advertisementcontract.presentation.request.AddAdminAdvertisementContractTargetRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractPaymentAmountRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.request.ChangeAdminAdvertisementContractStatusRequest
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementContractDetailResponse
@@ -39,6 +40,8 @@ private const val BUSINESS_ACCOUNT_NOT_ISSUABLE =
 private const val BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE =
     "BUSINESS_ACCOUNT_MEMBER_NOT_ACTIVE: 신청 이메일로 가입한 비즈니스 회원이 정지·탈퇴 상태라 연결할 수 없습니다."
 private const val EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS: 같은 이메일로 동시에 가입했습니다. 다시 요청하면 그 회원에 연결합니다."
+private const val CONTRACT_TARGET_DUPLICATED = "ADVERTISEMENT_CONTRACT_TARGET_DUPLICATED: 이미 이 계약에 연결한 대상입니다."
+private const val CONTRACT_TARGET_FIXED = "ADVERTISEMENT_CONTRACT_TARGET_FIXED: 비즈니스 공고 계약의 공고는 대상에서 뺄 수 없습니다."
 private const val PRODUCT_NOT_FOUND = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
 
 @Tag(name = "관리자 광고 계약")
@@ -86,7 +89,7 @@ interface AdminAdvertisementContractApi {
     @Operation(
         operationId = "getAdvertisementContract",
         summary = "광고 계약 상세 조회",
-        description = "계약 신청 원문, 희망 카테고리와 제거되지 않은 연결 상품을 반환합니다. 상품명과 category는 조회 시점의 현재 상품 값이며 판매 당시 스냅샷이 아닙니다. 삭제된 상품도 연결과 현재 상품명, 삭제 여부를 표시합니다.",
+        description = "계약 신청 원문, 희망 카테고리와 제거되지 않은 연결 상품, 리포트 대상 공고(targets)를 반환합니다. 상품명과 category는 조회 시점의 현재 상품 값이며 판매 당시 스냅샷이 아닙니다. 삭제된 상품도 연결과 현재 상품명, 삭제 여부를 표시합니다.",
     )
     @ApiResponses(
         value = [
@@ -221,6 +224,60 @@ interface AdminAdvertisementContractApi {
     fun removeProduct(
         @Positive contractId: Long,
         @Positive contractProductId: Long,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "createAdvertisementContractTarget",
+        summary = "계약에 리포트 대상 공고 연결",
+        description = "광고 성과 리포트가 전체 숫자를 셀 채용공고·부트캠프를 계약에 연결합니다. 지워지지 않은 공고만 연결합니다. " +
+            "이미 연결한 대상이나 비즈니스 공고 계약의 공고(자동 대상)는 409입니다. 연결을 풀었던 대상은 다시 연결할 수 있습니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "201", description = "연결 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: contractId·targetId는 양수여야 하고 targetType은 JOB·BOOTCAMP 중 하나입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "$CONTRACT_NOT_FOUND JOB_NOT_FOUND·BOOTCAMP_NOT_FOUND: 연결할 공고가 없거나 지워졌습니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(responseCode = "409", description = CONTRACT_TARGET_DUPLICATED, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun addTarget(
+        @Positive contractId: Long,
+        @Valid request: AddAdminAdvertisementContractTargetRequest,
+    ): ResponseEntity<SuccessResponse<Unit>>
+
+    @Operation(
+        operationId = "deleteAdvertisementContractTarget",
+        summary = "계약의 리포트 대상 연결 해제",
+        description = "연결한 대상을 소프트 삭제합니다. 연결하지 않은 대상이어도 200입니다. 비즈니스 공고 계약의 공고는 뺄 수 없어 409입니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "해제 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: contractId·targetId는 양수여야 하고 targetType은 JOB·BOOTCAMP 중 하나입니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(responseCode = "404", description = CONTRACT_NOT_FOUND, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "409", description = CONTRACT_TARGET_FIXED, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun removeTarget(
+        @Positive contractId: Long,
+        targetType: AdvertisementContractPromotionTarget,
+        @Positive targetId: Long,
     ): ResponseEntity<SuccessResponse<Unit>>
 
     @Operation(

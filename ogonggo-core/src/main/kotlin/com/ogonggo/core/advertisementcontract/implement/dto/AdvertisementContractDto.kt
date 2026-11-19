@@ -7,6 +7,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoic
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
@@ -66,7 +67,13 @@ data class AdvertisementContractProductDto(
     val startDate: LocalDate?,
     val endDate: LocalDate?,
     val addedAt: LocalDateTime,
+    val reportUnavailableReason: AdvertisementContractReportUnavailableReason? =
+        AdvertisementContractReportUnavailableReason.of(category, startDate, endDate),
 ) {
+    /** 성과 리포트를 열 수 있는 상품인지다. */
+    val reportAvailable: Boolean
+        get() = reportUnavailableReason == null
+
     companion object {
         fun of(contractProduct: AdvertisementContractProduct, product: AdvertisementProduct) = AdvertisementContractProductDto(
             contractProductId = checkNotNull(contractProduct.id),
@@ -81,3 +88,17 @@ data class AdvertisementContractProductDto(
         )
     }
 }
+
+/**
+ * 리포트 대상 공고·부트캠프다. 비즈니스 공고 계약의 공고는 자동으로 맨 앞에 오고 뺄 수 없다([fixed]).
+ * 제목·회사명·이미지는 조회 시점의 공고 값이며, 지운 공고도 연결이 남아 있으면 보인다.
+ */
+data class AdvertisementContractTargetDto(
+    val targetType: AdvertisementContractPromotionTarget,
+    val targetId: Long,
+    val title: String,
+    val companyName: String,
+    val thumbnailUrl: String?,
+    val logoUrl: String?,
+    val fixed: Boolean,
+)

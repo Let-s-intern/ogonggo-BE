@@ -326,6 +326,10 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 제출한 의견은 고치거나 지우는 기능이 없어 소프트 삭제 칼럼을 두지 않습니다.
 - 관리자 목록 `GET /api/v1/admin/service-feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `userName`, `userNickname`, `userEmail`, `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름·닉네임·이메일은 사용자 프로필(`UserProfile`)에서 가져오며, 비로그인 작성이거나 프로필이 없으면 `null`입니다.
 
+### 광고 성과 리포트 CSV
+
+`.../products/{contractProductId}/report.csv`(사용자·관리자)는 성공 응답 봉투 없이 `text/csv; charset=UTF-8` 본문을 돌려줍니다. 엑셀이 UTF-8로 열도록 맨 앞에 BOM을 붙이고 `Content-Disposition: attachment`로 내려받게 합니다. 파일 다운로드라 JSON으로 감싸면 브라우저가 그대로 저장할 수 없기 때문입니다. 오류는 다른 API와 같은 JSON 오류 응답입니다(결정일: 2026-11-19, LC-3647 / 리뷰 상태: 팀 리뷰 필요). 경로와 상태 코드는 [REST API 설계의 광고 성과 리포트](rest-api-design.md#광고-성과-리포트)에 있습니다.
+
 ### 관리자 콘솔 목록
 
 관리자 콘솔(`/api/v1/admin/**`) 목록도 같은 `PageResponse` 모양이지만 기본값과 정렬 이름이 다릅니다. 콘솔 화면이 목 핸들러로 먼저 만들어져 그 계약을 따릅니다.

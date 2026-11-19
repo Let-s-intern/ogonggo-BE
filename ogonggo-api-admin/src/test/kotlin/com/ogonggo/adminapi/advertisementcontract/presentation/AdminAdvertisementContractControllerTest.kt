@@ -5,6 +5,7 @@ import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementCon
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractProductResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractService
 import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractSummaryResult
+import com.ogonggo.adminapi.advertisementcontract.business.AdminAdvertisementContractTargetResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountIssueResult
 import com.ogonggo.adminapi.advertisementcontract.business.AdminBusinessAccountService
 import com.ogonggo.adminapi.auth.business.AdminAuthService
@@ -25,6 +26,7 @@ import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
 import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -223,6 +225,16 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
                     startDate = START_DATE,
                     endDate = END_DATE,
                     addedAt = REGISTERED_AT.plusHours(1),
+                    reportAvailable = true,
+                    reportUnavailableReason = null,
+                ),
+            ),
+            targets = listOf(
+                AdminAdvertisementContractTargetResult(
+                    targetType = AdvertisementContractPromotionTarget.JOB,
+                    targetId = 15818,
+                    title = "백엔드 개발자",
+                    companyName = "샘플기업",
                 ),
             ),
         )
@@ -244,6 +256,12 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.products[0].productDeleted").value(true))
             .andExpect(jsonPath("$.data.products[0].startDate").value("2026-11-02"))
             .andExpect(jsonPath("$.data.products[0].endDate").value("2026-11-05"))
+            .andExpect(jsonPath("$.data.products[0].reportAvailable").value(true))
+            .andExpect(jsonPath("$.data.products[0].reportUnavailableReason").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.targets[0].targetType").value("JOB"))
+            .andExpect(jsonPath("$.data.targets[0].targetId").value(15818))
+            .andExpect(jsonPath("$.data.targets[0].title").value("백엔드 개발자"))
+            .andExpect(jsonPath("$.data.targets[0].companyName").value("샘플기업"))
 
         Mockito.verify(adminAdvertisementContractService).getContract(CONTRACT_ID)
     }
@@ -497,6 +515,53 @@ class AdminAdvertisementContractControllerTest @Autowired constructor(
         mockMvc.perform(admin(post("$PATH/$CONTRACT_ID/business-account")))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("BUSINESS_ACCOUNT_NOT_ISSUABLE"))
+    }
+
+    @Test
+    fun `리포트 대상 공고를 연결하면 201이고 해제하면 200이다`() {
+        mockMvc.perform(
+            admin(post("$PATH/$CONTRACT_ID/targets"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"targetType":"JOB","targetId":15818}"""),
+        ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.status").value(201))
+            .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()))
+        mockMvc.perform(admin(delete("$PATH/$CONTRACT_ID/targets/BOOTCAMP/501")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()))
+
+        Mockito.verify(adminAdvertisementContractService).addTarget(CONTRACT_ID, AdvertisementContractPromotionTarget.JOB, 15818)
+        Mockito.verify(adminAdvertisementContractService).removeTarget(CONTRACT_ID, AdvertisementContractPromotionTarget.BOOTCAMP, 501)
+    }
+
+    @Test
+    fun `없는 공고 연결은 404, 이미 연결한 대상은 409, 잘못된 대상 종류는 400이다`() {
+        Mockito.doThrow(EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND))
+            .`when`(adminAdvertisementContractService).addTarget(CONTRACT_ID, AdvertisementContractPromotionTarget.JOB, 404)
+        Mockito.doThrow(ConflictException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_TARGET_DUPLICATED))
+            .`when`(adminAdvertisementContractService).addTarget(CONTRACT_ID, AdvertisementContractPromotionTarget.JOB, 15818)
+        Mockito.doThrow(ConflictException(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_TARGET_FIXED))
+            .`when`(adminAdvertisementContractService).removeTarget(CONTRACT_ID, AdvertisementContractPromotionTarget.JOB, 777)
+
+        mockMvc.perform(
+            admin(post("$PATH/$CONTRACT_ID/targets")).contentType(MediaType.APPLICATION_JSON)
+                .content("""{"targetType":"JOB","targetId":404}"""),
+        ).andExpect(status().isNotFound).andExpect(jsonPath("$.code").value("JOB_NOT_FOUND"))
+        mockMvc.perform(
+            admin(post("$PATH/$CONTRACT_ID/targets")).contentType(MediaType.APPLICATION_JSON)
+                .content("""{"targetType":"JOB","targetId":15818}"""),
+        ).andExpect(status().isConflict).andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_TARGET_DUPLICATED"))
+        mockMvc.perform(admin(delete("$PATH/$CONTRACT_ID/targets/JOB/777")))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("ADVERTISEMENT_CONTRACT_TARGET_FIXED"))
+        mockMvc.perform(
+            admin(post("$PATH/$CONTRACT_ID/targets")).contentType(MediaType.APPLICATION_JSON)
+                .content("""{"targetType":"CHANNEL","targetId":1}"""),
+        ).andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        mockMvc.perform(
+            admin(post("$PATH/$CONTRACT_ID/targets")).contentType(MediaType.APPLICATION_JSON)
+                .content("""{"targetType":"JOB","targetId":0}"""),
+        ).andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("BAD_REQUEST"))
     }
 
     private fun admin(request: MockHttpServletRequestBuilder): MockHttpServletRequestBuilder =
