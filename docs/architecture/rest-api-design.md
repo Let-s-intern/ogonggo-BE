@@ -526,6 +526,27 @@ POST /api/v1/admin/advertisement-contracts/{contractId}/business-account
 - 같은 계약에 다시 요청하면 이미 회원이 붙은 신청이라 409 `BUSINESS_ACCOUNT_NOT_ISSUABLE`이다. 계정이 두 번 생기거나 메일이 두 번 가지 않는다.
 - 자세한 요청·응답은 [광고 API 명세 A-17](../prd/2026-11-07-advertisement-api-spec.md#a-17-비즈니스-계정-발급)을 따른다.
 
+### 광고 성과 리포트
+
+```text
+GET    /api/v1/users/me/advertisement-contracts/{contractId}/products/{contractProductId}/report?from=&to=
+GET    /api/v1/users/me/advertisement-contracts/{contractId}/products/{contractProductId}/report.csv?from=&to=
+GET    /api/v1/users/me/advertisement-contracts/{contractId}/report-summary
+GET    /api/v1/users/me/advertisement-reports/active
+GET    /api/v1/admin/advertisement-contracts/{contractId}/products/{contractProductId}/report?from=&to=
+GET    /api/v1/admin/advertisement-contracts/{contractId}/products/{contractProductId}/report.csv?from=&to=
+GET    /api/v1/admin/advertisement-contracts/{contractId}/report-summary
+POST   /api/v1/admin/advertisement-contracts/{contractId}/targets
+DELETE /api/v1/admin/advertisement-contracts/{contractId}/targets/{targetType}/{targetId}
+```
+
+- 결정일: 2026-11-19 (LC-3647) / 리뷰 상태: 팀 리뷰 필요
+- 리포트는 계약 상품 하나를 단위로 계산하는 읽기 전용 리소스라 계약 상품 아래 `report`로 둔다. CSV는 같은 리소스의 다른 표현이라 `report.csv`로 두며 `text/csv; charset=UTF-8`(BOM 포함) 본문을 그대로 돌려준다. 성공 응답 봉투를 쓰지 않는 예외이고, 오류는 다른 API와 같은 JSON 오류 응답이다.
+- `from`·`to`는 상품 기간 안으로 자른다. 비우면 상품 기간 전체이고 진행 중이면 오늘까지다. 자른 기간이 비거나 `from`이 `to`보다 늦으면 400 `REPORT_PERIOD_INVALID`, 기간이 없거나 채널 상품이면 409 `REPORT_NOT_AVAILABLE`이다.
+- 회원 경로는 기업 회원만 쓰며(아니면 403 `COMPANY_ROLE_REQUIRED`), 남의 계약은 있는 줄 모르게 404 `ADVERTISEMENT_CONTRACT_NOT_FOUND`다. 광고 신청 폼 계약과 비즈니스 공고 계약 모두 된다.
+- 대상 연결은 201 `data: null`, 해제는 200 `data: null`이다. 연결하지 않은 대상을 해제해도 200이다. 이미 연결한 대상은 409 `ADVERTISEMENT_CONTRACT_TARGET_DUPLICATED`, 비즈니스 공고 계약의 자동 대상을 해제하면 409 `ADVERTISEMENT_CONTRACT_TARGET_FIXED`다.
+- 지표 정의와 응답 칸은 각 API의 OpenAPI 설명에 있다. 집계 방식은 [스케줄 작업의 `contentDailyStatAggregation`](scheduling.md#2-작업-목록)을 따른다.
+
 ### 관리자 부트캠프 전체 수정
 
 ```text

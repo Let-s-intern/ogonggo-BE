@@ -600,6 +600,34 @@ class AdminOpenApiContractTest @Autowired constructor(
         ).forEach { field -> assertTrue(properties.has(field), field) }
     }
 
+    @Test
+    fun `광고 상품 리포트와 CSV와 계약 합계는 관리자 인증과 404·409 오류를 명시한다`() {
+        // given
+        val document = openApiDocument()
+        val base = "/paths/~1api~1v1~1admin~1advertisement-contracts~1{contractId}"
+
+        // when
+        val report = document.at("$base~1products~1{contractProductId}~1report/get")
+        val csv = document.at("$base~1products~1{contractProductId}~1report.csv/get")
+        val summary = document.at("$base~1report-summary/get")
+        val targets = document.at("$base~1targets/post")
+        val removeTarget = document.at("$base~1targets~1{targetType}~1{targetId}/delete")
+
+        // then
+        assertEquals("getAdvertisementContractProductReport", report.at("/operationId").asText())
+        assertEquals("downloadAdvertisementContractProductReportCsv", csv.at("/operationId").asText())
+        assertEquals("getAdvertisementContractReportSummary", summary.at("/operationId").asText())
+        assertEquals("createAdvertisementContractTarget", targets.at("/operationId").asText())
+        assertEquals("deleteAdvertisementContractTarget", removeTarget.at("/operationId").asText())
+        listOf(report, csv, summary, targets, removeTarget).forEach { assertTrue(it.at("/security/0/BearerAuth").isArray) }
+        assertTrue(csv.at("/responses/200/content/text~1csv").isObject)
+        assertTrue(report.at("/responses/409/description").asText().startsWith("REPORT_NOT_AVAILABLE"))
+        assertTrue(targets.at("/responses/409/description").asText().startsWith("ADVERTISEMENT_CONTRACT_TARGET_DUPLICATED"))
+        assertTrue(removeTarget.at("/responses/409/description").asText().startsWith("ADVERTISEMENT_CONTRACT_TARGET_FIXED"))
+        assertTrue(document.at("/components/schemas/AdminAdvertisementContractDetailResponse/properties/targets").isObject)
+        assertTrue(document.at("/components/schemas/AdminAdvertisementContractProductResponse/properties/reportAvailable").isObject)
+    }
+
     private fun openApiDocument() = objectMapper.readTree(
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk)
