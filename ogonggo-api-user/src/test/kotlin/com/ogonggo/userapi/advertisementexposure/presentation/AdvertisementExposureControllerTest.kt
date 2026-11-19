@@ -6,6 +6,7 @@ import com.ogonggo.core.bootcamp.domain.BootcampOperationType
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentStatus
 import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
 import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.userapi.advertisementexposure.business.AdvertisementExposureResult
 import com.ogonggo.userapi.advertisementexposure.business.AdvertisementPostingResult
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
@@ -134,11 +135,12 @@ class AdvertisementExposureControllerTest @Autowired constructor(
     @Test
     fun `비회원이 광고 공고 자리의 카드를 노출 ID·순서·대상 요약과 함께 조회한다`() {
         // given
-        Mockito.`when`(advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.BOOTCAMP_LIST)).thenReturn(
+        Mockito.`when`(advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.CALENDAR_DAY)).thenReturn(
             listOf(
                 AdvertisementPostingResult(
                     exposureId = EXPOSURE_ID,
-                    position = AdvertisementProductPosition.BOOTCAMP_LIST,
+                    position = AdvertisementProductPosition.CALENDAR_DAY,
+                    jobField = null,
                     displayOrder = 1,
                     adLabel = true,
                     targetType = AdvertisementExposureTargetType.BOOTCAMP,
@@ -149,10 +151,11 @@ class AdvertisementExposureControllerTest @Autowired constructor(
         )
 
         // when, then
-        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "BOOTCAMP_LIST"))
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "CALENDAR_DAY"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data[0].exposureId").value(EXPOSURE_ID))
-            .andExpect(jsonPath("$.data[0].position").value("BOOTCAMP_LIST"))
+            .andExpect(jsonPath("$.data[0].position").value("CALENDAR_DAY"))
+            .andExpect(jsonPath("$.data[0].jobField").value(null as Any?))
             .andExpect(jsonPath("$.data[0].displayOrder").value(1))
             .andExpect(jsonPath("$.data[0].adLabel").value(true))
             .andExpect(jsonPath("$.data[0].targetType").value("BOOTCAMP"))
@@ -162,6 +165,47 @@ class AdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].bootcamp.bookmarked").value(false))
             .andExpect(jsonPath("$.data[0].contractId").doesNotExist())
             .andExpect(jsonPath("$.data[0].productId").doesNotExist())
+    }
+
+    @Test
+    fun `채용공고 목록 자리는 직군 탭의 광고 공고를 직군과 함께 조회한다`() {
+        // given
+        Mockito.`when`(
+            advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.JOB_LIST, JobField.IT_DEVELOPMENT),
+        ).thenReturn(
+            listOf(
+                AdvertisementPostingResult(
+                    exposureId = EXPOSURE_ID,
+                    position = AdvertisementProductPosition.JOB_LIST,
+                    jobField = JobField.IT_DEVELOPMENT,
+                    displayOrder = 1,
+                    adLabel = true,
+                    targetType = AdvertisementExposureTargetType.BOOTCAMP,
+                    job = null,
+                    bootcamp = BOOTCAMP_SUMMARY,
+                ),
+            ),
+        )
+
+        // when, then
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "JOB_LIST").queryParam("jobField", "IT_DEVELOPMENT"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].position").value("JOB_LIST"))
+            .andExpect(jsonPath("$.data[0].jobField").value("IT_DEVELOPMENT"))
+    }
+
+    @Test
+    fun `채용공고 목록 자리에 직군이 없거나 다른 자리에 직군을 보내면 BAD_REQUEST를 반환한다`() {
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "JOB_LIST"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "CALENDAR_DAY").queryParam("jobField", "IT_DEVELOPMENT"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "JOB_LIST").queryParam("jobField", "NOT_A_FIELD"))
+            .andExpect(status().isBadRequest)
+
+        Mockito.verifyNoInteractions(advertisementExposureService)
     }
 
     @Test

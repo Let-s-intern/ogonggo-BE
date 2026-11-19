@@ -9,17 +9,9 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductAppender
 import com.ogonggo.core.advertisementproduct.implement.dto.AdvertisementProductSaveDto
-import com.ogonggo.core.bootcamp.domain.BootcampApplicationMethod
-import com.ogonggo.core.bootcamp.domain.BootcampOperationType
-import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
-import com.ogonggo.core.bootcamp.domain.BootcampRecruitmentType
-import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
-import com.ogonggo.core.bootcamp.implement.BootcampAppender
-import com.ogonggo.core.bootcamp.implement.BootcampManager
-import com.ogonggo.core.bootcamp.implement.BootcampReader
-import com.ogonggo.core.bootcamp.implement.dto.BootcampAppendDto
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.implement.JobAppender
@@ -32,7 +24,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.support.TransactionTemplate
-import java.time.LocalDate
 import java.time.LocalDateTime
 
 /** 공개 광고 공고는 노출 조건(켜짐·기간)과 대상 조건(게시·모집 중)을 둘 다 DB 조회로 거르므로 실제 저장소로 확인한다. */
@@ -56,9 +47,6 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     private val jobAppender: JobAppender,
     private val jobReader: JobReader,
     private val jobManager: JobManager,
-    private val bootcampAppender: BootcampAppender,
-    private val bootcampReader: BootcampReader,
-    private val bootcampManager: BootcampManager,
     private val transaction: TransactionTemplate,
 ) {
 
@@ -66,7 +54,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     fun `켜져 있고 기간 안인 노출 중 대상 공고가 게시·모집 중인 것만 순서대로 준다`() {
         // given
         val now = LocalDateTime.now()
-        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val productId = product(AdvertisementProductPosition.MYPAGE_SCRAP)
         val first = job("첫 광고 공고")
         val second = job("둘째 광고 공고")
         val firstExposure = exposure(productId, AdvertisementExposureTargetType.JOB, first)
@@ -93,7 +81,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         )
 
         // when
-        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.JOB_LIST)
+        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.MYPAGE_SCRAP)
 
         // then
         assertEquals(listOf(firstExposure, secondExposure), postings.map { it.exposureId })
@@ -101,7 +89,8 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertEquals(listOf("첫 광고 공고", "둘째 광고 공고"), postings.map { it.job?.title })
         assertEquals(listOf(1, 7), postings.map { it.displayOrder })
         postings.forEach {
-            assertEquals(AdvertisementProductPosition.JOB_LIST, it.position)
+            assertEquals(AdvertisementProductPosition.MYPAGE_SCRAP, it.position)
+            assertNull(it.jobField)
             assertEquals(AdvertisementExposureTargetType.JOB, it.targetType)
             assertEquals(false, it.job?.bookmarked)
             assertNull(it.bootcamp)
@@ -109,23 +98,23 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `부트캠프 목록 자리는 모집 중인 부트캠프 요약을 주고 마감된 부트캠프는 뺀다`() {
+    fun `채용공고 목록 자리는 요청한 직군 탭의 노출만 직군과 함께 준다`() {
         // given
-        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
-        val recruiting = bootcamp("모집 중 부트캠프")
-        val closed = bootcamp("마감 부트캠프")
-        bootcampManager.close(bootcampReader.read(closed), LocalDateTime.now())
-        val shown = exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, recruiting)
-        exposure(productId, AdvertisementExposureTargetType.BOOTCAMP, closed)
+        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val development = exposure(productId, AdvertisementExposureTargetType.JOB, job("개발 공고"), jobField = JobField.IT_DEVELOPMENT)
+        exposure(productId, AdvertisementExposureTargetType.JOB, job("게임 공고"), jobField = JobField.GAME)
 
         // when
-        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.BOOTCAMP_LIST)
+        val postings = service.getShownPostings(
+            userId = null,
+            position = AdvertisementProductPosition.JOB_LIST,
+            jobField = JobField.IT_DEVELOPMENT,
+        )
 
         // then
-        assertEquals(listOf(shown), postings.map { it.exposureId })
-        assertEquals(recruiting, postings.single().bootcamp?.id)
-        assertEquals("모집 중 부트캠프", postings.single().bootcamp?.title)
-        assertNull(postings.single().job)
+        assertEquals(listOf(development), postings.map { it.exposureId })
+        assertEquals(JobField.IT_DEVELOPMENT, postings.single().jobField)
+        assertEquals("개발 공고", postings.single().job?.title)
     }
 
     @Test
@@ -163,13 +152,14 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         targetId: Long,
         exposed: Boolean = true,
         period: AdvertisementExposurePeriod = AdvertisementExposurePeriod.ALWAYS,
+        jobField: JobField? = null,
     ): Long = checkNotNull(
         transaction.execute {
             exposureAppender.append(
                 AdvertisementExposureAppendDto(
                     productId = productId,
                     contractId = null,
-                    content = AdvertisementExposureContent(targetType = targetType, targetId = targetId),
+                    content = AdvertisementExposureContent(targetType = targetType, targetId = targetId, jobField = jobField),
                     adLabel = true,
                     period = period,
                     exposed = exposed,
@@ -191,27 +181,4 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
             ),
         ).id,
     )
-
-    private fun bootcamp(title: String): Long {
-        val bootcamp = bootcampAppender.append(
-            BootcampAppendDto(
-                companyName = "오공고 교육사",
-                title = title,
-                programType = "개발",
-                operationType = BootcampOperationType.ONLINE,
-                recruitmentType = BootcampRecruitmentType.ALWAYS_OPEN,
-                programStartDate = LocalDate.of(2026, 9, 1),
-                programEndDate = LocalDate.of(2026, 12, 1),
-                tuitionType = BootcampTuitionType.FREE,
-                representativeImageUrl = null,
-                shortDescription = "백엔드 개발자로 성장하는 12주",
-                content = "부트캠프 상세 내용",
-                applicationMethod = BootcampApplicationMethod.EXTERNAL_PAGE,
-                applicationUrl = "https://example.com/apply",
-                publicationStatus = BootcampPublicationStatus.PUBLISHED,
-            ),
-        )
-        bootcampManager.startRecruitment(bootcamp)
-        return checkNotNull(bootcamp.id)
-    }
 }

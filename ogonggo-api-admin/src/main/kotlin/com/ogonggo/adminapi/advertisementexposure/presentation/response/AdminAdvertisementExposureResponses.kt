@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.advertisementexposure.presentation.response
 
 import com.ogonggo.adminapi.advertisementexposure.business.AdminAdvertisementExposureResult
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
+import com.ogonggo.core.job.domain.JobField
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -22,6 +23,8 @@ data class AdminAdvertisementExposureResponse(
     val targetType: AdvertisementExposureTargetType?,
     @field:Schema(nullable = true)
     val targetId: Long?,
+    @field:Schema(description = "채용공고 목록(JOB_LIST) 노출의 직군 탭. 다른 자리와 배너는 null입니다.", nullable = true)
+    val jobField: JobField?,
     val adLabel: Boolean,
     @field:Schema(nullable = true)
     val startAt: LocalDateTime?,
@@ -54,6 +57,7 @@ data class AdminAdvertisementExposureResponse(
             linkUrl = result.linkUrl,
             targetType = result.targetType,
             targetId = result.targetId,
+            jobField = result.jobField,
             adLabel = result.adLabel,
             startAt = result.startAt,
             endAt = result.endAt,

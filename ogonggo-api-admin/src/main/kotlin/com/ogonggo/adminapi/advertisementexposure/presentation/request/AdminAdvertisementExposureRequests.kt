@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.ogonggo.adminapi.advertisementexposure.business.UpdateAdminAdvertisementExposureCommand
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureMoveDirection
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
+import com.ogonggo.core.job.domain.JobField
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
@@ -41,6 +42,11 @@ data class UpdateAdminAdvertisementExposureRequest(
     @field:JsonDeserialize(using = StrictNullableExposureLongDeserializer::class)
     @field:Schema(nullable = true)
     val targetId: Long? = null,
+    @field:Schema(
+        description = "광고 공고가 채용공고 목록(JOB_LIST) 자리면 띄울 직군 탭. GET /api/v1/enums의 JobField 값이며 JOB_LIST는 필수, 다른 자리와 배너는 null입니다.",
+        nullable = true,
+    )
+    val jobField: JobField? = null,
     @field:JsonDeserialize(using = StrictExposureBooleanDeserializer::class)
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val adLabel: Boolean,
@@ -63,6 +69,7 @@ data class UpdateAdminAdvertisementExposureRequest(
         linkUrl = linkUrl,
         targetType = targetType,
         targetId = targetId,
+        jobField = jobField,
         adLabel = adLabel,
         startAt = startAt,
         endAt = endAt,

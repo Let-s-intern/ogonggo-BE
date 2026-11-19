@@ -3,6 +3,7 @@ package com.ogonggo.adminapi.advertisementexposure.business
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposurePageDto
+import com.ogonggo.core.job.domain.JobField
 import java.time.LocalDateTime
 
 data class AdminAdvertisementExposureResult(
@@ -15,6 +16,7 @@ data class AdminAdvertisementExposureResult(
     val linkUrl: String?,
     val targetType: AdvertisementExposureTargetType?,
     val targetId: Long?,
+    val jobField: JobField?,
     val adLabel: Boolean,
     val startAt: LocalDateTime?,
     val endAt: LocalDateTime?,
@@ -42,6 +44,7 @@ data class AdminAdvertisementExposureResult(
             linkUrl = exposure.linkUrl,
             targetType = exposure.targetType,
             targetId = exposure.targetId,
+            jobField = exposure.jobField,
             adLabel = exposure.adLabel,
             startAt = exposure.startAt,
             endAt = exposure.endAt,

@@ -3,6 +3,7 @@ package com.ogonggo.core.advertisementexposure.persistence
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementexposure.domain.QAdvertisementExposure.advertisementExposure
+import com.ogonggo.core.job.domain.JobField
 import com.querydsl.core.BooleanBuilder
 import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.LockModeType
@@ -76,11 +77,12 @@ internal class AdvertisementExposureQueryRepository(
         return PageImpl(items, pageable, totalElements)
     }
 
-    /** 이 상품들 자리에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다. */
+    /** 이 상품들 자리(직군이 있으면 그 직군 탭)에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다. */
     fun existsTarget(
         productIds: Collection<Long>,
         targetType: AdvertisementExposureTargetType,
         targetId: Long,
+        jobField: JobField?,
         excludedExposureId: Long?,
     ): Boolean {
         if (productIds.isEmpty()) {
@@ -91,6 +93,7 @@ internal class AdvertisementExposureQueryRepository(
             .and(advertisementExposure.deletedAt.isNull)
             .and(advertisementExposure.targetType.eq(targetType))
             .and(advertisementExposure.targetId.eq(targetId))
+        jobField?.let { condition.and(advertisementExposure.jobField.eq(it)) }
         excludedExposureId?.let { condition.and(advertisementExposure.id.ne(it)) }
         return queryFactory.selectOne()
             .from(advertisementExposure)
@@ -98,8 +101,11 @@ internal class AdvertisementExposureQueryRepository(
             .fetchFirst() != null
     }
 
-    /** 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다. */
-    fun findShown(productIds: Collection<Long>, now: LocalDateTime): List<AdvertisementExposure> {
+    /**
+     * 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다.
+     * 직군을 주면 그 직군 탭의 노출만 준다.
+     */
+    fun findShown(productIds: Collection<Long>, now: LocalDateTime, jobField: JobField? = null): List<AdvertisementExposure> {
         if (productIds.isEmpty()) {
             return emptyList()
         }
@@ -110,6 +116,7 @@ internal class AdvertisementExposureQueryRepository(
                 advertisementExposure.deletedAt.isNull,
                 advertisementExposure.startAt.isNull.or(advertisementExposure.startAt.loe(now)),
                 advertisementExposure.endAt.isNull.or(advertisementExposure.endAt.goe(now)),
+                jobField?.let { advertisementExposure.jobField.eq(it) },
             )
             .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
             .fetch()
