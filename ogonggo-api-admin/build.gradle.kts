@@ -53,3 +53,8 @@ tasks.withType<KotlinCompile>().configureEach {
 tasks.bootJar {
     archiveFileName.set("ogonggo-api-admin.jar")
 }
+
+tasks.test {
+    // 서로 다른 Spring 테스트 컨텍스트를 한꺼번에 보관하지 않도록 캐시 크기를 제한한다(ogonggo-core와 같은 이유).
+    systemProperty("spring.test.context.cache.maxSize", "8")
+}
