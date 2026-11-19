@@ -32,8 +32,6 @@ internal interface AdvertisementContractJpaRepository : JpaRepository<Advertisem
 
     fun findAllBySourceAndEmailAndUserIdIsNull(source: AdvertisementContractSource, email: String): List<AdvertisementContract>
 
-    fun findByIdAndUserIdAndSource(id: Long, userId: Long, source: AdvertisementContractSource): AdvertisementContract?
-
     fun findByIdAndUserId(id: Long, userId: Long): AdvertisementContract?
 
     fun findAllByUserId(userId: Long): List<AdvertisementContract>

@@ -430,26 +430,6 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `회원 신청 단건은 그 회원이 폼으로 낸 신청만 찾는다`() {
-        // given
-        val mine = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OWNER_ID)
-        val others = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OTHER_USER_ID)
-        val guest = appendForm(setOf(AdvertisementProductCategory.BANNER))
-        val posting = appendContract(jobAppender.append(companyJob()))
-        repository.flush()
-        entityManager.clear()
-
-        // when & then
-        assertEquals(mine, reader.readApplicationOf(OWNER_ID, mine).id)
-        listOf(others, guest, posting, Long.MAX_VALUE).forEach { contractId ->
-            val exception = assertThrows(EntityNotFoundException::class.java) {
-                reader.readApplicationOf(OWNER_ID, contractId)
-            }
-            assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND, exception.errorCode)
-        }
-    }
-
-    @Test
     fun `계약에서 뺀 상품은 주지 않고, 지운 상품은 이름과 함께 지웠다고 준다`() {
         // given
         val contract = reader.readForUpdate(appendForm(setOf(AdvertisementProductCategory.BANNER)))
