@@ -64,6 +64,8 @@ class AdvertisementExposureService(
                 jobField = exposure.jobField,
                 recommendationTitle = exposure.recommendationTitle,
                 recommendationDescription = exposure.recommendationDescription,
+                startAt = exposure.startAt,
+                endAt = exposure.endAt,
                 displayOrder = exposure.displayOrder,
                 adLabel = exposure.adLabel,
                 targetType = targetType,

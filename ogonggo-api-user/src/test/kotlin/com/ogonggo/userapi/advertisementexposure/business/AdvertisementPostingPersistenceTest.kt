@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 /** 공개 광고 공고는 노출 조건(켜짐·기간)과 대상 조건(게시·모집 중)을 둘 다 DB 조회로 거르므로 실제 저장소로 확인한다. */
 @SpringBootTest(
@@ -53,7 +54,7 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     @Test
     fun `켜져 있고 기간 안인 노출 중 대상 공고가 게시·모집 중인 것만 순서대로 준다`() {
         // given
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
         val productId = product(AdvertisementProductPosition.MYPAGE_SCRAP)
         val first = job("첫 광고 공고")
         val second = job("둘째 광고 공고")
@@ -88,6 +89,8 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertEquals(listOf(first, second), postings.map { it.job?.id })
         assertEquals(listOf("첫 광고 공고", "둘째 광고 공고"), postings.map { it.job?.title })
         assertEquals(listOf(1, 7), postings.map { it.displayOrder })
+        assertEquals(listOf(null, now.minusDays(1)), postings.map { it.startAt })
+        assertEquals(listOf(null, now.plusDays(1)), postings.map { it.endAt })
         postings.forEach {
             assertEquals(AdvertisementProductPosition.MYPAGE_SCRAP, it.position)
             assertNull(it.jobField)

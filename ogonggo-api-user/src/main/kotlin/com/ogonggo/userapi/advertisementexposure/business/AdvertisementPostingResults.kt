@@ -5,6 +5,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.userapi.bootcamp.business.UserBootcampSummary
 import com.ogonggo.userapi.job.business.UserJobSummary
+import java.time.LocalDateTime
 
 /** 광고 공고 자리의 카드 하나다. [targetType]에 맞춰 [job]과 [bootcamp] 중 하나만 있다. */
 data class AdvertisementPostingResult(
@@ -13,6 +14,8 @@ data class AdvertisementPostingResult(
     val jobField: JobField?,
     val recommendationTitle: String?,
     val recommendationDescription: String?,
+    val startAt: LocalDateTime?,
+    val endAt: LocalDateTime?,
     val displayOrder: Int,
     val adLabel: Boolean,
     val targetType: AdvertisementExposureTargetType,

@@ -156,8 +156,8 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertEquals(
             setOf(
-                "exposureId", "position", "jobField", "recommendationTitle", "recommendationDescription", "displayOrder", "adLabel",
-                "targetType", "job", "bootcamp",
+                "exposureId", "position", "jobField", "recommendationTitle", "recommendationDescription", "startAt", "endAt",
+                "displayOrder", "adLabel", "targetType", "job", "bootcamp",
             ),
             response.at("/properties").fieldNames().asSequence().toSet(),
         )
@@ -168,6 +168,10 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(response.at("/properties/jobField/nullable").asBoolean())
         assertTrue(response.at("/properties/recommendationTitle/nullable").asBoolean())
         assertTrue(response.at("/properties/recommendationDescription/nullable").asBoolean())
+        listOf("startAt", "endAt").forEach { field ->
+            assertTrue(response.at("/properties/$field/nullable").asBoolean(), field)
+            assertEquals("date-time", response.at("/properties/$field/format").asText(), field)
+        }
         assertTrue(
             response.at("/properties/job/\$ref").asText().endsWith("UserJobSummaryResponse") ||
                 response.at("/properties/job/allOf/0/\$ref").asText().endsWith("UserJobSummaryResponse"),
