@@ -258,6 +258,7 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
         linkUrl = "/jobs/5502",
         targetType = null,
         targetId = null,
+        jobField = null,
         adLabel = true,
         startAt = null,
         endAt = null,

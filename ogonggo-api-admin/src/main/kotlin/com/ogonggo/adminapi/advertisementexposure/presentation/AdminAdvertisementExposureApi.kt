@@ -29,7 +29,7 @@ private const val EXPOSURE_NOT_FOUND = "ADVERTISEMENT_EXPOSURE_NOT_FOUND: 광고
 private const val PRODUCT_NOT_FOUND = "ADVERTISEMENT_PRODUCT_NOT_FOUND: 광고 상품을 찾을 수 없습니다."
 private const val CONTRACT_NOT_FOUND = "ADVERTISEMENT_CONTRACT_NOT_FOUND: 광고 계약을 찾을 수 없습니다."
 private const val TARGET_NOT_FOUND = "JOB_NOT_FOUND, BOOTCAMP_NOT_FOUND: 광고 공고 대상이 없거나 지워졌습니다."
-private const val TARGET_DUPLICATED = "ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED: 같은 자리에 같은 대상의 노출이 이미 있습니다."
+private const val TARGET_DUPLICATED = "ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED: 같은 자리(채용공고 목록은 같은 직군 안)에 같은 대상의 노출이 이미 있습니다."
 
 @Tag(name = "관리자 광고 노출")
 @SecurityRequirement(name = ADMIN_BEARER_AUTH_SCHEME)
@@ -38,7 +38,7 @@ interface AdminAdvertisementExposureApi {
     @Operation(
         operationId = "listAdvertisementExposures",
         summary = "상품 자리의 광고 노출 목록 조회",
-        description = "미삭제 노출을 displayOrder와 ID 오름차순으로 페이지 조회합니다. page는 1부터 시작하고 size는 1~100이며 기본값은 1과 10입니다. 꺼짐·기간 전·기간 종료 항목과 삭제된 상품 자리의 항목도 포함합니다. contractId를 생략하면 자체 홍보를 포함한 전체 노출을 반환합니다. advertiserCompanyName은 현재 계약의 companyName이며 자체 홍보는 null입니다. 광고 공고는 대상의 지금 제목·회사명(targetTitle, targetCompanyName)과 게시 여부(targetPublished)를 함께 주며, 배너는 셋 다 null입니다.",
+        description = "미삭제 노출을 displayOrder와 ID 오름차순으로 페이지 조회합니다. page는 1부터 시작하고 size는 1~100이며 기본값은 1과 10입니다. 꺼짐·기간 전·기간 종료 항목과 삭제된 상품 자리의 항목도 포함합니다. contractId를 생략하면 자체 홍보를 포함한 전체 노출을 반환합니다. advertiserCompanyName은 현재 계약의 companyName이며 자체 홍보는 null입니다. 광고 공고는 대상의 지금 제목·회사명(targetTitle, targetCompanyName)과 게시 여부(targetPublished)를 함께 주며, 배너는 셋 다 null입니다. jobField는 채용공고 목록(JOB_LIST) 노출의 직군 탭이고 나머지는 null입니다.",
     )
     @ApiResponses(
         value = [
@@ -71,14 +71,14 @@ interface AdminAdvertisementExposureApi {
     @Operation(
         operationId = "createAdvertisementExposure",
         summary = "광고 노출 등록",
-        description = "상품 category에 따라 BANNER 콘텐츠 또는 JOB_POSTING 대상을 등록합니다. category, displayOrder와 슬롯은 요청에 포함하지 않습니다. contractId는 선택이며 존재만 확인합니다. JOB_POSTING은 targetType·targetId가 필수이고 name·imageUrl·linkUrl은 null이어야 합니다. 대상은 지워지지 않은 채용공고·부트캠프여야 하며(게시·모집 상태는 보지 않음) 자리와 종류가 맞아야 합니다(JOB_PICK·JOB_LIST·CALENDAR_DAY·MYPAGE_SCRAP은 JOB). 같은 자리에 지우지 않은 같은 대상의 노출이 있으면 409입니다. BANNER의 mobileImageUrl은 선택이며 null이면 모바일에서도 imageUrl을 씁니다. JOB_POSTING은 mobileImageUrl을 보내지 않습니다. 오공고에 올린 imageUrl·mobileImageUrl 이미지는 첨부해 정리 작업이 지우지 않게 하고, 이미 지워진 이미지면 IMAGE_ASSET_NOT_AVAILABLE로 막습니다.",
+        description = "상품 category에 따라 BANNER 콘텐츠 또는 JOB_POSTING 대상을 등록합니다. category, displayOrder와 슬롯은 요청에 포함하지 않습니다. contractId는 선택이며 존재만 확인합니다. JOB_POSTING은 targetType·targetId가 필수이고 name·imageUrl·linkUrl은 null이어야 합니다. 대상은 지워지지 않은 채용공고·부트캠프여야 하며(게시·모집 상태는 보지 않음) 자리와 종류가 맞아야 합니다(JOB_PICK·JOB_LIST·CALENDAR_DAY·MYPAGE_SCRAP은 JOB). jobField는 채용공고 목록(JOB_LIST) 자리에서 필수인 직군 탭(JobField)이고, 다른 자리와 BANNER는 null이어야 합니다(어기면 ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID). 같은 자리(JOB_LIST는 같은 직군 안)에 지우지 않은 같은 대상의 노출이 있으면 409입니다. BANNER의 mobileImageUrl은 선택이며 null이면 모바일에서도 imageUrl을 씁니다. JOB_POSTING은 mobileImageUrl을 보내지 않습니다. 오공고에 올린 imageUrl·mobileImageUrl 이미지는 첨부해 정리 작업이 지우지 않게 하고, 이미 지워진 이미지면 IMAGE_ASSET_NOT_AVAILABLE로 막습니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "노출 생성", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = EXPOSURE_BAD_REQUEST + " ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE, ADVERTISEMENT_BANNER_CONTENT_REQUIRED, ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED, ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, ADVERTISEMENT_EXPOSURE_PERIOD_INVALID, IMAGE_ASSET_NOT_AVAILABLE",
+                description = EXPOSURE_BAD_REQUEST + " ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE, ADVERTISEMENT_BANNER_CONTENT_REQUIRED, ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED, ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, ADVERTISEMENT_EXPOSURE_PERIOD_INVALID, IMAGE_ASSET_NOT_AVAILABLE",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
@@ -99,14 +99,14 @@ interface AdminAdvertisementExposureApi {
     @Operation(
         operationId = "replaceAdvertisementExposure",
         summary = "광고 노출 내용·계약·기간 교체",
-        description = "미삭제 노출의 계약, 카테고리별 콘텐츠, 광고 표시와 기간을 전체 교체합니다. contractId·mobileImageUrl·targetType·targetId·기간은 생략하거나 null로 보내면 null이며, BANNER의 name·imageUrl·linkUrl은 필수입니다. JOB_POSTING 대상 규칙은 등록과 같고, 같은 자리 중복 검사에서 이 노출 자신은 뺍니다. productId, exposed와 displayOrder는 변경하지 않습니다. 오공고에 올린 imageUrl·mobileImageUrl 이미지는 첨부하고, 이미 지워진 이미지면 IMAGE_ASSET_NOT_AVAILABLE로 막습니다.",
+        description = "미삭제 노출의 계약, 카테고리별 콘텐츠, 광고 표시와 기간을 전체 교체합니다. contractId·mobileImageUrl·targetType·targetId·jobField·기간은 생략하거나 null로 보내면 null이며, BANNER의 name·imageUrl·linkUrl은 필수입니다. JOB_POSTING 대상 규칙은 등록과 같고, 같은 자리 중복 검사에서 이 노출 자신은 뺍니다. productId, exposed와 displayOrder는 변경하지 않습니다. 오공고에 올린 imageUrl·mobileImageUrl 이미지는 첨부하고, 이미 지워진 이미지면 IMAGE_ASSET_NOT_AVAILABLE로 막습니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "노출 수정", useReturnTypeSchema = true),
             ApiResponse(
                 responseCode = "400",
-                description = "$EXPOSURE_BAD_REQUEST ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE, ADVERTISEMENT_BANNER_CONTENT_REQUIRED, ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED, ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, ADVERTISEMENT_EXPOSURE_PERIOD_INVALID, IMAGE_ASSET_NOT_AVAILABLE",
+                description = "$EXPOSURE_BAD_REQUEST ADVERTISEMENT_PRODUCT_NOT_EXPOSABLE, ADVERTISEMENT_BANNER_CONTENT_REQUIRED, ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED, ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, ADVERTISEMENT_EXPOSURE_PERIOD_INVALID, IMAGE_ASSET_NOT_AVAILABLE",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(

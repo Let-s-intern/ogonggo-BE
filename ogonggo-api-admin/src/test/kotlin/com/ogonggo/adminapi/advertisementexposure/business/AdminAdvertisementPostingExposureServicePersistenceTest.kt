@@ -19,6 +19,7 @@ import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.job.domain.JobEmploymentType
 import com.ogonggo.core.job.domain.JobExperienceType
+import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.domain.JobPublicationStatus
@@ -27,6 +28,7 @@ import com.ogonggo.core.job.implement.JobManager
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -67,6 +69,84 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
         assertEquals(exposureId, saved.id)
         assertEquals(AdvertisementExposureTargetType.JOB, saved.targetType)
         assertEquals(jobId, saved.targetId)
+        assertNull(saved.jobField)
+    }
+
+    @Test
+    fun `채용공고 목록 자리는 직군과 함께 등록하고 목록에 직군을 준다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val jobId = job()
+
+        // when
+        service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId, JobField.IT_DEVELOPMENT), ADMIN_ID)
+
+        // then
+        assertEquals(JobField.IT_DEVELOPMENT, exposureReader.readByProduct(productId).single().jobField)
+        assertEquals(
+            listOf(JobField.IT_DEVELOPMENT),
+            service.getExposures(productId, contractId = null, page = 0, size = 10).items.map { it.jobField },
+        )
+    }
+
+    @Test
+    fun `채용공고 목록 자리는 직군 없이, 다른 자리는 직군과 함께 등록하지 않는다`() {
+        // given
+        val list = product(AdvertisementProductPosition.JOB_LIST)
+        val calendar = product(AdvertisementProductPosition.CALENDAR_DAY)
+        val jobId = job()
+
+        // when
+        val withoutJobField = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(command(list, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+        }
+        val withJobField = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(command(calendar, AdvertisementExposureTargetType.JOB, jobId, JobField.GAME), ADMIN_ID)
+        }
+
+        // then
+        listOf<BusinessException>(withoutJobField, withJobField).forEach {
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, it.errorCode)
+        }
+    }
+
+    @Test
+    fun `채용공고 목록 자리는 같은 직군 안에서만 같은 공고를 중복으로 본다`() {
+        // given
+        val first = product(AdvertisementProductPosition.JOB_LIST)
+        val second = product(AdvertisementProductPosition.JOB_LIST)
+        val jobId = job()
+        service.createExposure(command(first, AdvertisementExposureTargetType.JOB, jobId, JobField.IT_DEVELOPMENT), ADMIN_ID)
+
+        // when
+        service.createExposure(command(second, AdvertisementExposureTargetType.JOB, jobId, JobField.GAME), ADMIN_ID)
+        val exception = assertThrows(ConflictException::class.java) {
+            service.createExposure(command(second, AdvertisementExposureTargetType.JOB, jobId, JobField.IT_DEVELOPMENT), ADMIN_ID)
+        }
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED, exception.errorCode)
+        assertEquals(listOf(JobField.GAME), exposureReader.readByProduct(second).map { it.jobField })
+    }
+
+    @Test
+    fun `채용공고 목록 노출의 직군을 고칠 때 그 직군에 같은 공고가 있으면 바꾸지 않는다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val jobId = job()
+        val itDevelopment = service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId, JobField.IT_DEVELOPMENT), ADMIN_ID)
+        val game = service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId, JobField.GAME), ADMIN_ID)
+
+        // when
+        service.updateExposure(updateCommand(game, jobId, JobField.SALES), ADMIN_ID)
+        val exception = assertThrows(ConflictException::class.java) {
+            service.updateExposure(updateCommand(game, jobId, JobField.IT_DEVELOPMENT), ADMIN_ID)
+        }
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED, exception.errorCode)
+        val saved = exposureReader.readByProduct(productId).associate { exposure -> exposure.id to exposure.jobField }
+        assertEquals(mapOf(itDevelopment to JobField.IT_DEVELOPMENT, game to JobField.SALES), saved)
     }
 
     @Test
@@ -278,7 +358,12 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
         ).id,
     )
 
-    private fun command(productId: Long, targetType: AdvertisementExposureTargetType?, targetId: Long?) =
+    private fun command(
+        productId: Long,
+        targetType: AdvertisementExposureTargetType?,
+        targetId: Long?,
+        jobField: JobField? = null,
+    ) =
         CreateAdminAdvertisementExposureCommand(
             productId = productId,
             contractId = null,
@@ -288,13 +373,14 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
             linkUrl = null,
             targetType = targetType,
             targetId = targetId,
+            jobField = jobField,
             adLabel = true,
             startAt = null,
             endAt = null,
             exposed = true,
         )
 
-    private fun updateCommand(exposureId: Long, jobId: Long) = UpdateAdminAdvertisementExposureCommand(
+    private fun updateCommand(exposureId: Long, jobId: Long, jobField: JobField? = null) = UpdateAdminAdvertisementExposureCommand(
         exposureId = exposureId,
         contractId = null,
         name = null,
@@ -303,6 +389,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
         linkUrl = null,
         targetType = AdvertisementExposureTargetType.JOB,
         targetId = jobId,
+        jobField = jobField,
         adLabel = true,
         startAt = null,
         endAt = null,
