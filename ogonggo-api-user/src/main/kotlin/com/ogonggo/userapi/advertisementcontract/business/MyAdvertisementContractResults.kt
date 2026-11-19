@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAn
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractPageDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractProductDto
@@ -130,6 +131,8 @@ data class MyAdvertisementContractProductResult(
     val productDeleted: Boolean,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
+    val reportAvailable: Boolean,
+    val reportUnavailableReason: AdvertisementContractReportUnavailableReason?,
 ) {
     companion object {
         internal fun from(product: AdvertisementContractProductDto): MyAdvertisementContractProductResult =
@@ -141,6 +144,8 @@ data class MyAdvertisementContractProductResult(
                 productDeleted = product.productDeleted,
                 startDate = product.startDate,
                 endDate = product.endDate,
+                reportAvailable = product.reportAvailable,
+                reportUnavailableReason = product.reportUnavailableReason,
             )
     }
 }

@@ -249,7 +249,10 @@ class UserOpenApiContractTest @Autowired constructor(
             assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
         }
         assertEquals(
-            setOf("contractProductId", "productName", "category", "position", "productDeleted", "startDate", "endDate"),
+            setOf(
+                "contractProductId", "productName", "category", "position", "productDeleted", "startDate", "endDate",
+                "reportAvailable", "reportUnavailableReason",
+            ),
             product.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertTrue(product.at("/properties/position/nullable").asBoolean())

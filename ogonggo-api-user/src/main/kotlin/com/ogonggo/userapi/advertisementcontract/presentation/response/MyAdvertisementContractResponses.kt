@@ -5,6 +5,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractFormAn
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
@@ -142,6 +143,10 @@ data class MyAdvertisementContractProductResponse(
     val startDate: LocalDate?,
     @field:Schema(description = "게시 종료일(이 날까지 게시). 기간을 넣기 전에 붙인 상품은 null", nullable = true)
     val endDate: LocalDate?,
+    @field:Schema(description = "성과 리포트를 열 수 있는 상품인지")
+    val reportAvailable: Boolean,
+    @field:Schema(description = "리포트를 열 수 없는 이유. 기간 없음(NO_PERIOD), 채널 상품(NOT_EXPOSABLE). 열 수 있으면 null", nullable = true)
+    val reportUnavailableReason: AdvertisementContractReportUnavailableReason?,
 ) {
     companion object {
         fun from(result: MyAdvertisementContractProductResult) = MyAdvertisementContractProductResponse(
@@ -152,6 +157,8 @@ data class MyAdvertisementContractProductResponse(
             productDeleted = result.productDeleted,
             startDate = result.startDate,
             endDate = result.endDate,
+            reportAvailable = result.reportAvailable,
+            reportUnavailableReason = result.reportUnavailableReason,
         )
     }
 }

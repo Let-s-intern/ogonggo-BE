@@ -242,6 +242,8 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
                     productDeleted = false,
                     startDate = LocalDate.parse("2026-11-02"),
                     endDate = LocalDate.parse("2026-11-05"),
+                    reportAvailable = true,
+                    reportUnavailableReason = null,
                 ),
             ),
         )
