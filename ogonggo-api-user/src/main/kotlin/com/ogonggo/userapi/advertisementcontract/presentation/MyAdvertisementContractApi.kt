@@ -26,10 +26,10 @@ interface MyAdvertisementContractApi {
 
     @Operation(
         operationId = "listMyAdvertisementContracts",
-        summary = "내 광고 신청 목록 조회",
+        summary = "내 광고 계약 목록 조회",
         description = """
-            로그인한 회원이 광고 신청 폼으로 낸 신청을 최근 신청부터 조회합니다. 로그인 없이 낸 신청과
-            비즈니스 공고 등록으로 생긴 계약은 넣지 않습니다. status를 여러 번 보내면 그중 하나인 신청을 찾습니다.
+            로그인한 회원의 광고 계약을 최근 것부터 조회합니다. 광고 신청 폼으로 낸 신청과 비즈니스 공고 등록으로 생긴 계약을
+            모두 주며 source로 가릅니다. 로그인 없이 낸 신청은 넣지 않습니다. status를 여러 번 보내면 그중 하나인 계약을 찾습니다.
             page는 1부터 시작하고 기본 1, size 기본 10·최대 100입니다.
         """,
     )
@@ -54,11 +54,12 @@ interface MyAdvertisementContractApi {
 
     @Operation(
         operationId = "getMyAdvertisementContract",
-        summary = "내 광고 신청 상세 조회",
+        summary = "내 광고 계약 상세 조회",
         description = """
-            내가 낸 신청의 폼 입력값, 상태, 협의 금액과 운영자가 계약에 붙인 광고 상품을 조회합니다.
+            내 계약의 폼 입력값, 상태, 협의 금액과 운영자가 계약에 붙인 광고 상품을 조회합니다. 비즈니스 공고 계약은 폼에서만 받는 값이 null입니다.
             상품 이름·카테고리·자리는 조회 시점의 상품 값이며, 운영자가 지운 상품도 productDeleted=true로 보입니다.
-            다른 회원의 신청, 로그인 없이 낸 신청, 비즈니스 공고 계약은 없는 신청과 같이 404입니다.
+            products[]의 reportAvailable·reportUnavailableReason이 성과 리포트를 열 수 있는지 알려 줍니다.
+            다른 회원의 계약과 로그인 없이 낸 신청은 없는 계약과 같이 404입니다.
         """,
     )
     @ApiResponses(

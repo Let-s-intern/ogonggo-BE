@@ -231,21 +231,24 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(detail.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
         assertEquals(
             setOf(
-                "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentDeadline",
+                "id", "source", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentDeadline",
                 "categories", "paymentAmount", "registeredAt",
             ),
             summary.at("/properties").fieldNames().asSequence().toSet(),
         )
         assertEquals(
             setOf(
-                "id", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
+                "id", "source", "status", "promotionTarget", "companyName", "recruitmentTitle", "recruitmentUrl",
                 "recruitmentDeadline", "purpose", "budgetAmount", "categories", "scheduleRequest", "advertisementRequest",
                 "managerName", "email", "phoneNumber", "businessNumberType", "businessNumber", "invoiceMethod", "creativeMethod", "formAnswers",
                 "paymentAmount", "registeredAt", "products",
             ),
             detailResponse.at("/properties").fieldNames().asSequence().toSet(),
         )
-        listOf("budgetAmount", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "formAnswers", "paymentAmount").forEach { field ->
+        listOf(
+            "budgetAmount", "scheduleRequest", "advertisementRequest", "businessNumberType", "businessNumber", "formAnswers", "paymentAmount",
+            "recruitmentUrl", "recruitmentDeadline", "purpose", "managerName", "email", "phoneNumber", "invoiceMethod", "creativeMethod",
+        ).forEach { field ->
             assertTrue(detailResponse.at("/properties/$field/nullable").asBoolean(), field)
         }
         assertEquals(

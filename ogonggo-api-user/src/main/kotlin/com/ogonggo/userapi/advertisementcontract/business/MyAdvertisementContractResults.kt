@@ -7,6 +7,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoic
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractPageDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractProductDto
@@ -37,11 +38,12 @@ data class MyAdvertisementContractPageResult(
 
 data class MyAdvertisementContractSummaryResult(
     val id: Long,
+    val source: AdvertisementContractSource,
     val status: AdvertisementContractStatus,
     val promotionTarget: AdvertisementContractPromotionTarget,
     val companyName: String,
     val recruitmentTitle: String,
-    val recruitmentDeadline: LocalDate,
+    val recruitmentDeadline: LocalDate?,
     val categories: List<AdvertisementProductCategory>,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
@@ -50,11 +52,12 @@ data class MyAdvertisementContractSummaryResult(
         internal fun from(contract: AdvertisementContract): MyAdvertisementContractSummaryResult =
             MyAdvertisementContractSummaryResult(
                 id = checkNotNull(contract.id) { "광고 계약 식별자가 없습니다." },
+                source = contract.source,
                 status = contract.status,
                 promotionTarget = contract.promotionTarget,
                 companyName = contract.companyName,
                 recruitmentTitle = contract.recruitmentTitle,
-                recruitmentDeadline = checkNotNull(contract.recruitmentDeadline) { "신청 폼 계약은 recruitmentDeadline 값이 있습니다." },
+                recruitmentDeadline = contract.recruitmentDeadline,
                 categories = contract.categories.sorted(),
                 paymentAmount = contract.paymentAmount,
                 registeredAt = contract.createdAt,
@@ -64,28 +67,29 @@ data class MyAdvertisementContractSummaryResult(
 
 /**
  * 신청자가 낸 값과 운영자가 정한 상태·결제 금액·상품이다. 회원 식별자처럼 신청자에게 필요 없는 값은 싣지 않는다.
- * 신청 폼 계약은 폼의 필수 값을 반드시 가지므로([AdvertisementContract] 생성 규칙) 그 값은 null이 아니다.
+ * 신청 폼에서만 받는 값(공고 링크, 광고 목적, 담당자 등)은 비즈니스 공고 계약이면 null이다.
  */
 data class MyAdvertisementContractDetailResult(
     val id: Long,
+    val source: AdvertisementContractSource,
     val status: AdvertisementContractStatus,
     val promotionTarget: AdvertisementContractPromotionTarget,
     val companyName: String,
     val recruitmentTitle: String,
-    val recruitmentUrl: String,
-    val recruitmentDeadline: LocalDate,
-    val purpose: AdvertisementContractPurpose,
+    val recruitmentUrl: String?,
+    val recruitmentDeadline: LocalDate?,
+    val purpose: AdvertisementContractPurpose?,
     val budgetAmount: Int?,
     val categories: List<AdvertisementProductCategory>,
     val scheduleRequest: String?,
     val advertisementRequest: String?,
-    val managerName: String,
-    val email: String,
-    val phoneNumber: String,
+    val managerName: String?,
+    val email: String?,
+    val phoneNumber: String?,
     val businessNumberType: CompanyBusinessNumberType?,
     val businessNumber: String?,
-    val invoiceMethod: AdvertisementContractInvoiceMethod,
-    val creativeMethod: AdvertisementContractCreativeMethod,
+    val invoiceMethod: AdvertisementContractInvoiceMethod?,
+    val creativeMethod: AdvertisementContractCreativeMethod?,
     val formAnswers: List<AdvertisementContractFormAnswer>?,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
@@ -97,24 +101,25 @@ data class MyAdvertisementContractDetailResult(
             products: List<AdvertisementContractProductDto>,
         ): MyAdvertisementContractDetailResult = MyAdvertisementContractDetailResult(
             id = checkNotNull(contract.id) { "광고 계약 식별자가 없습니다." },
+            source = contract.source,
             status = contract.status,
             promotionTarget = contract.promotionTarget,
             companyName = contract.companyName,
             recruitmentTitle = contract.recruitmentTitle,
-            recruitmentUrl = checkNotNull(contract.recruitmentUrl) { "신청 폼 계약은 recruitmentUrl 값이 있습니다." },
-            recruitmentDeadline = checkNotNull(contract.recruitmentDeadline) { "신청 폼 계약은 recruitmentDeadline 값이 있습니다." },
-            purpose = checkNotNull(contract.purpose) { "신청 폼 계약은 purpose 값이 있습니다." },
+            recruitmentUrl = contract.recruitmentUrl,
+            recruitmentDeadline = contract.recruitmentDeadline,
+            purpose = contract.purpose,
             budgetAmount = contract.budgetAmount,
             categories = contract.categories.sorted(),
             scheduleRequest = contract.scheduleRequest,
             advertisementRequest = contract.advertisementRequest,
-            managerName = checkNotNull(contract.managerName) { "신청 폼 계약은 managerName 값이 있습니다." },
-            email = checkNotNull(contract.email) { "신청 폼 계약은 email 값이 있습니다." },
-            phoneNumber = checkNotNull(contract.phoneNumber) { "신청 폼 계약은 phoneNumber 값이 있습니다." },
+            managerName = contract.managerName,
+            email = contract.email,
+            phoneNumber = contract.phoneNumber,
             businessNumberType = contract.businessNumberType,
             businessNumber = contract.businessNumber,
-            invoiceMethod = checkNotNull(contract.invoiceMethod) { "신청 폼 계약은 invoiceMethod 값이 있습니다." },
-            creativeMethod = checkNotNull(contract.creativeMethod) { "신청 폼 계약은 creativeMethod 값이 있습니다." },
+            invoiceMethod = contract.invoiceMethod,
+            creativeMethod = contract.creativeMethod,
             formAnswers = contract.formAnswers,
             paymentAmount = contract.paymentAmount,
             registeredAt = contract.createdAt,

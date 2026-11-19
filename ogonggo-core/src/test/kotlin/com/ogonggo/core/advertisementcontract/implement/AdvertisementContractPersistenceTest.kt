@@ -505,6 +505,24 @@ internal class AdvertisementContractPersistenceTest @Autowired constructor(
         assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND, exception.errorCode)
     }
 
+    @Test
+    fun `회원의 계약 목록은 신청 폼 계약과 비즈니스 공고 계약을 모두 주고 남의 계약은 주지 않는다`() {
+        // given
+        val posting = appendContract(jobAppender.append(companyJob()))
+        val form = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OWNER_ID)
+        val others = appendForm(setOf(AdvertisementProductCategory.BANNER), userId = OWNER_ID + 1)
+
+        // when
+        val page = reader.readPage(AdvertisementContractSearchCondition(userId = OWNER_ID), 0, 10)
+        val ownedPosting = reader.readOwnedBy(OWNER_ID, posting)
+        val othersRead = assertThrows(EntityNotFoundException::class.java) { reader.readOwnedBy(OWNER_ID, others) }
+
+        // then
+        assertEquals(listOf(form, posting), page.advertisementContracts.map { it.id })
+        assertEquals(AdvertisementContractSource.COMPANY_POSTING, ownedPosting.source)
+        assertEquals(AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_NOT_FOUND, othersRead.errorCode)
+    }
+
     private fun appendForm(
         categories: Set<AdvertisementProductCategory>,
         companyName: String = "렛츠커리어",
