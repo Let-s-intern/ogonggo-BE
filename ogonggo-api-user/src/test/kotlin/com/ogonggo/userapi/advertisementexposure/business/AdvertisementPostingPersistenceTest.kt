@@ -91,6 +91,8 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         postings.forEach {
             assertEquals(AdvertisementProductPosition.MYPAGE_SCRAP, it.position)
             assertNull(it.jobField)
+            assertNull(it.recommendationTitle)
+            assertNull(it.recommendationDescription)
             assertEquals(AdvertisementExposureTargetType.JOB, it.targetType)
             assertEquals(false, it.job?.bookmarked)
             assertNull(it.bootcamp)
@@ -118,12 +120,17 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `오공고 PICK 자리는 그 자리에 등록한 채용공고 요약만 준다`() {
+    fun `오공고 PICK 자리는 그 자리에 등록한 채용공고 요약을 추천 문구와 함께 준다`() {
         // given
         val pick = product(AdvertisementProductPosition.JOB_PICK)
         val other = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
         val picked = job("오공고 PICK 공고")
-        val shown = exposure(pick, AdvertisementExposureTargetType.JOB, picked)
+        val shown = exposure(
+            pick,
+            AdvertisementExposureTargetType.JOB,
+            picked,
+            recommendation = "이번 주 추천" to "신입도 지원할 수 있는 공고예요.",
+        )
         exposure(other, AdvertisementExposureTargetType.JOB, job("다른 자리 공고"))
 
         // when
@@ -134,6 +141,8 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertEquals(AdvertisementProductPosition.JOB_PICK, postings.single().position)
         assertEquals(picked, postings.single().job?.id)
         assertEquals(true, postings.single().adLabel)
+        assertEquals("이번 주 추천", postings.single().recommendationTitle)
+        assertEquals("신입도 지원할 수 있는 공고예요.", postings.single().recommendationDescription)
         assertNull(postings.single().bootcamp)
     }
 
@@ -153,13 +162,20 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         exposed: Boolean = true,
         period: AdvertisementExposurePeriod = AdvertisementExposurePeriod.ALWAYS,
         jobField: JobField? = null,
+        recommendation: Pair<String, String>? = null,
     ): Long = checkNotNull(
         transaction.execute {
             exposureAppender.append(
                 AdvertisementExposureAppendDto(
                     productId = productId,
                     contractId = null,
-                    content = AdvertisementExposureContent(targetType = targetType, targetId = targetId, jobField = jobField),
+                    content = AdvertisementExposureContent(
+                        targetType = targetType,
+                        targetId = targetId,
+                        jobField = jobField,
+                        recommendationTitle = recommendation?.first,
+                        recommendationDescription = recommendation?.second,
+                    ),
                     adLabel = true,
                     period = period,
                     exposed = exposed,

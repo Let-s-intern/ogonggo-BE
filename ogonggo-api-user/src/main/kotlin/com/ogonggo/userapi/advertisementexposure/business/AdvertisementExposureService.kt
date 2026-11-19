@@ -62,6 +62,8 @@ class AdvertisementExposureService(
                 exposureId = checkNotNull(exposure.id),
                 position = position,
                 jobField = exposure.jobField,
+                recommendationTitle = exposure.recommendationTitle,
+                recommendationDescription = exposure.recommendationDescription,
                 displayOrder = exposure.displayOrder,
                 adLabel = exposure.adLabel,
                 targetType = targetType,

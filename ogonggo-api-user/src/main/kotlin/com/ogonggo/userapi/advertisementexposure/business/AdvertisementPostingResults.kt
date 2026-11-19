@@ -11,6 +11,8 @@ data class AdvertisementPostingResult(
     val exposureId: Long,
     val position: AdvertisementProductPosition,
     val jobField: JobField?,
+    val recommendationTitle: String?,
+    val recommendationDescription: String?,
     val displayOrder: Int,
     val adLabel: Boolean,
     val targetType: AdvertisementExposureTargetType,

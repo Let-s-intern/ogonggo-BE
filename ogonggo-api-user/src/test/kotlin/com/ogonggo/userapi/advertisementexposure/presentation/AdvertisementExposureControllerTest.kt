@@ -141,6 +141,8 @@ class AdvertisementExposureControllerTest @Autowired constructor(
                     exposureId = EXPOSURE_ID,
                     position = AdvertisementProductPosition.CALENDAR_DAY,
                     jobField = null,
+                    recommendationTitle = null,
+                    recommendationDescription = null,
                     displayOrder = 1,
                     adLabel = true,
                     targetType = AdvertisementExposureTargetType.BOOTCAMP,
@@ -156,6 +158,8 @@ class AdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data[0].exposureId").value(EXPOSURE_ID))
             .andExpect(jsonPath("$.data[0].position").value("CALENDAR_DAY"))
             .andExpect(jsonPath("$.data[0].jobField").value(null as Any?))
+            .andExpect(jsonPath("$.data[0].recommendationTitle").value(null as Any?))
+            .andExpect(jsonPath("$.data[0].recommendationDescription").value(null as Any?))
             .andExpect(jsonPath("$.data[0].displayOrder").value(1))
             .andExpect(jsonPath("$.data[0].adLabel").value(true))
             .andExpect(jsonPath("$.data[0].targetType").value("BOOTCAMP"))
@@ -178,6 +182,8 @@ class AdvertisementExposureControllerTest @Autowired constructor(
                     exposureId = EXPOSURE_ID,
                     position = AdvertisementProductPosition.JOB_LIST,
                     jobField = JobField.IT_DEVELOPMENT,
+                    recommendationTitle = null,
+                    recommendationDescription = null,
                     displayOrder = 1,
                     adLabel = true,
                     targetType = AdvertisementExposureTargetType.BOOTCAMP,
@@ -192,6 +198,34 @@ class AdvertisementExposureControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data[0].position").value("JOB_LIST"))
             .andExpect(jsonPath("$.data[0].jobField").value("IT_DEVELOPMENT"))
+    }
+
+    @Test
+    fun `오공고 PICK 자리는 광고 공고를 추천 문구와 함께 조회한다`() {
+        // given
+        Mockito.`when`(advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.JOB_PICK)).thenReturn(
+            listOf(
+                AdvertisementPostingResult(
+                    exposureId = EXPOSURE_ID,
+                    position = AdvertisementProductPosition.JOB_PICK,
+                    jobField = null,
+                    recommendationTitle = "이번 주 추천",
+                    recommendationDescription = "신입도 지원할 수 있는 공고예요.",
+                    displayOrder = 1,
+                    adLabel = true,
+                    targetType = AdvertisementExposureTargetType.BOOTCAMP,
+                    job = null,
+                    bootcamp = BOOTCAMP_SUMMARY,
+                ),
+            ),
+        )
+
+        // when, then
+        mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "JOB_PICK"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].position").value("JOB_PICK"))
+            .andExpect(jsonPath("$.data[0].recommendationTitle").value("이번 주 추천"))
+            .andExpect(jsonPath("$.data[0].recommendationDescription").value("신입도 지원할 수 있는 공고예요."))
     }
 
     @Test
