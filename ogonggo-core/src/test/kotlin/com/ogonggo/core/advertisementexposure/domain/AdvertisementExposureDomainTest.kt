@@ -172,6 +172,35 @@ class AdvertisementExposureDomainTest {
     }
 
     @Test
+    fun `부트캠프 상세 옆과 마이페이지 스크랩 부트캠프 칸은 부트캠프만 띄우고 직군과 추천 문구를 두지 않는다`() {
+        val bootcampContent = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.BOOTCAMP, targetId = 20L)
+        listOf(
+            AdvertisementProductPosition.BOOTCAMP_DETAIL_SIDE,
+            AdvertisementProductPosition.BOOTCAMP_MYPAGE_SCRAP,
+        ).forEach { position ->
+            // given
+            val product = product(position)
+
+            // when
+            val jobTarget = assertThrows(InvalidValueException::class.java) { exposure(product, JOB_CONTENT) }
+            val withJobField = assertThrows(InvalidValueException::class.java) {
+                exposure(product, bootcampContent.copy(jobField = JobField.IT_DEVELOPMENT))
+            }
+            val withRecommendation = assertThrows(InvalidValueException::class.java) {
+                exposure(product, bootcampContent.copy(recommendationTitle = "추천"))
+            }
+            val exposure = exposure(product, bootcampContent)
+
+            // then
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, jobTarget.errorCode)
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID, withJobField.errorCode)
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, withRecommendation.errorCode)
+            assertEquals(AdvertisementExposureTargetType.BOOTCAMP, exposure.targetType)
+            assertEquals(AdvertisementProductCategory.JOB_POSTING, position.category)
+        }
+    }
+
+    @Test
     fun `인스타그램·카카오톡 상품은 오공고 화면에 노출하지 않는다`() {
         assertThrows(InvalidValueException::class.java) {
             exposure(product(AdvertisementProductCategory.INSTAGRAM_1), BANNER_CONTENT)
