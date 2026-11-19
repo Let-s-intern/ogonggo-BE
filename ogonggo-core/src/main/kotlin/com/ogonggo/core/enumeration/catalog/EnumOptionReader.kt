@@ -30,6 +30,9 @@ import com.ogonggo.core.bootcamp.domain.BootcampTuitionType
 import com.ogonggo.core.concern.domain.ConcernCategory
 import com.ogonggo.core.concern.domain.ConcernPopularSortType
 import com.ogonggo.core.concern.domain.ConcernSortType
+import com.ogonggo.core.contentevent.domain.ContentEventSource
+import com.ogonggo.core.contentevent.domain.ContentEventTargetType
+import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.enumeration.EnumOption
 import com.ogonggo.core.enumeration.enumOptionMapOf
 import com.ogonggo.core.enumeration.enumOptionsOf
@@ -190,6 +193,10 @@ class EnumOptionReader {
             enumOptionsOf<AdvertisementContractCreativeMethod>(),
             enumOptionsOf<AdvertisementExposureTargetType>(),
             enumOptionsOf<AdvertisementExposureMoveDirection>(),
+            // 광고 성과 리포트의 콘텐츠 이벤트
+            enumOptionsOf<ContentEventType>(),
+            enumOptionsOf<ContentEventTargetType>(),
+            enumOptionsOf<ContentEventSource>(),
         )
     }
 }
