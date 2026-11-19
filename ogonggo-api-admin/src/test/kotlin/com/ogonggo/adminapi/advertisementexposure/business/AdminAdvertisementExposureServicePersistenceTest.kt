@@ -259,6 +259,8 @@ class AdminAdvertisementExposureServicePersistenceTest @Autowired constructor(
         targetType = null,
         targetId = null,
         jobField = null,
+        recommendationTitle = null,
+        recommendationDescription = null,
         adLabel = true,
         startAt = null,
         endAt = null,

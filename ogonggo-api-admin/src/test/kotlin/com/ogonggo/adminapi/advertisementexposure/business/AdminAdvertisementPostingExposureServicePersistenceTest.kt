@@ -58,7 +58,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     @Test
     fun `광고 공고 자리에 있는 채용공고를 등록하면 대상 종류와 식별자를 저장한다`() {
         // given
-        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
         val jobId = job()
 
         // when
@@ -150,8 +150,69 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
-    fun `광고 공고 상품은 대상이 없으면 등록하지 않는다`() {
+    fun `오공고 PICK 자리는 추천 문구와 함께 등록하고 목록에 추천 문구를 준다`() {
+        // given
         val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val jobId = job()
+
+        // when
+        service.createExposure(pickCommand(productId, jobId), ADMIN_ID)
+
+        // then
+        val saved = exposureReader.readByProduct(productId).single()
+        assertEquals(PICK_TITLE, saved.recommendationTitle)
+        assertEquals(PICK_DESCRIPTION, saved.recommendationDescription)
+        val item = service.getExposures(productId, contractId = null, page = 0, size = 10).items.single()
+        assertEquals(PICK_TITLE, item.recommendationTitle)
+        assertEquals(PICK_DESCRIPTION, item.recommendationDescription)
+    }
+
+    @Test
+    fun `오공고 PICK 자리는 추천 문구 없이, 다른 자리는 추천 문구와 함께 등록하지 않는다`() {
+        // given
+        val pick = product(AdvertisementProductPosition.JOB_PICK)
+        val calendar = product(AdvertisementProductPosition.CALENDAR_DAY)
+        val jobId = job()
+
+        // when
+        val withoutRecommendation = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(command(pick, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+        }
+        val blankTitle = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(pickCommand(pick, jobId).copy(recommendationTitle = " "), ADMIN_ID)
+        }
+        val withRecommendation = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(pickCommand(calendar, jobId), ADMIN_ID)
+        }
+
+        // then
+        listOf<BusinessException>(withoutRecommendation, blankTitle, withRecommendation).forEach {
+            assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID, it.errorCode)
+        }
+    }
+
+    @Test
+    fun `오공고 PICK 노출을 고치면 추천 문구도 바꾼다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val jobId = job()
+        val exposureId = service.createExposure(pickCommand(productId, jobId), ADMIN_ID)
+
+        // when
+        service.updateExposure(
+            updateCommand(exposureId, jobId).copy(recommendationTitle = "새 제목", recommendationDescription = "새 설명"),
+            ADMIN_ID,
+        )
+
+        // then
+        val saved = exposureReader.readByProduct(productId).single()
+        assertEquals("새 제목", saved.recommendationTitle)
+        assertEquals("새 설명", saved.recommendationDescription)
+    }
+
+    @Test
+    fun `광고 공고 상품은 대상이 없으면 등록하지 않는다`() {
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
 
         val exception = assertThrows(InvalidValueException::class.java) {
             service.createExposure(command(productId, targetType = null, targetId = null), ADMIN_ID)
@@ -162,7 +223,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
 
     @Test
     fun `없는 공고를 대상으로 등록하지 않는다`() {
-        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
 
         val exception = assertThrows(EntityNotFoundException::class.java) {
             service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, 987_654_321L), ADMIN_ID)
@@ -191,9 +252,9 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
         val jobId = job()
 
         // when
-        service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+        service.createExposure(pickCommand(productId, jobId), ADMIN_ID)
         val exception = assertThrows(InvalidValueException::class.java) {
-            service.createExposure(command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcamp()), ADMIN_ID)
+            service.createExposure(pickCommand(productId, bootcamp()).copy(targetType = AdvertisementExposureTargetType.BOOTCAMP), ADMIN_ID)
         }
 
         // then
@@ -203,7 +264,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
 
     @Test
     fun `광고 공고에 배너 이미지와 링크를 함께 보내면 등록하지 않는다`() {
-        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
         val jobId = job()
 
         val exception = assertThrows(InvalidValueException::class.java) {
@@ -220,8 +281,8 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     @Test
     fun `같은 자리에 같은 공고를 두 번 등록하지 않는다`() {
         // given
-        val first = product(AdvertisementProductPosition.JOB_PICK)
-        val second = product(AdvertisementProductPosition.JOB_PICK)
+        val first = product(AdvertisementProductPosition.CALENDAR_DAY)
+        val second = product(AdvertisementProductPosition.CALENDAR_DAY)
         val jobId = job()
         service.createExposure(command(first, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
 
@@ -242,7 +303,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     @Test
     fun `다른 자리에는 같은 공고를 등록할 수 있다`() {
         // given
-        val list = product(AdvertisementProductPosition.JOB_PICK)
+        val list = product(AdvertisementProductPosition.CALENDAR_DAY)
         val side = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
         val jobId = job()
         service.createExposure(command(list, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
@@ -257,7 +318,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     @Test
     fun `지운 노출의 공고는 같은 자리에 다시 등록할 수 있다`() {
         // given
-        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
         val jobId = job()
         val deleted = service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
         service.deleteExposure(deleted)
@@ -272,7 +333,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     @Test
     fun `노출을 고칠 때 자기 자신은 중복으로 보지 않고 다른 노출의 공고로는 바꾸지 않는다`() {
         // given
-        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
         val firstJob = job()
         val secondJob = job()
         val first = service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, firstJob), ADMIN_ID)
@@ -292,7 +353,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     @Test
     fun `노출 목록은 대상의 제목·회사명과 게시 여부를 채우고 지운 대상은 게시 중이 아닌 것으로 본다`() {
         // given
-        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
         val published = job(title = "게시 공고")
         val draft = job(title = "초안 공고", publicationStatus = JobPublicationStatus.DRAFT)
         val deleted = job(title = "지운 공고")
@@ -374,11 +435,16 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
             targetType = targetType,
             targetId = targetId,
             jobField = jobField,
+            recommendationTitle = null,
+            recommendationDescription = null,
             adLabel = true,
             startAt = null,
             endAt = null,
             exposed = true,
         )
+
+    private fun pickCommand(productId: Long, jobId: Long) = command(productId, AdvertisementExposureTargetType.JOB, jobId)
+        .copy(recommendationTitle = PICK_TITLE, recommendationDescription = PICK_DESCRIPTION)
 
     private fun updateCommand(exposureId: Long, jobId: Long, jobField: JobField? = null) = UpdateAdminAdvertisementExposureCommand(
         exposureId = exposureId,
@@ -390,6 +456,8 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
         targetType = AdvertisementExposureTargetType.JOB,
         targetId = jobId,
         jobField = jobField,
+        recommendationTitle = null,
+        recommendationDescription = null,
         adLabel = true,
         startAt = null,
         endAt = null,
@@ -397,5 +465,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
 
     private companion object {
         const val ADMIN_ID = 7L
+        const val PICK_TITLE = "이번 주 추천"
+        const val PICK_DESCRIPTION = "신입도 지원할 수 있는 공고예요."
     }
 }
