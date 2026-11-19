@@ -2,6 +2,7 @@ package com.ogonggo.adminapi.advertisementexposure.presentation.response
 
 import com.ogonggo.adminapi.advertisementexposure.business.AdminAdvertisementExposureResult
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
+import com.ogonggo.core.job.domain.JobField
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -22,6 +23,8 @@ data class AdminAdvertisementExposureResponse(
     val targetType: AdvertisementExposureTargetType?,
     @field:Schema(nullable = true)
     val targetId: Long?,
+    @field:Schema(description = "채용공고 목록(JOB_LIST) 노출의 직군 탭. 다른 자리와 배너는 null입니다.", nullable = true)
+    val jobField: JobField?,
     val adLabel: Boolean,
     @field:Schema(nullable = true)
     val startAt: LocalDateTime?,
@@ -30,6 +33,15 @@ data class AdminAdvertisementExposureResponse(
     val exposed: Boolean,
     @field:Schema(nullable = true)
     val advertiserCompanyName: String?,
+    @field:Schema(description = "광고 공고 대상의 제목. 배너이거나 대상 행이 없으면 null입니다.", nullable = true)
+    val targetTitle: String?,
+    @field:Schema(description = "광고 공고 대상의 회사명. 배너이거나 대상 행이 없으면 null입니다.", nullable = true)
+    val targetCompanyName: String?,
+    @field:Schema(
+        description = "광고 공고 대상이 지금 게시 상태(PUBLISHED)이고 지워지지 않았는지. 모집 마감 여부는 보지 않습니다. 대상 행이 없으면 false, 배너는 null입니다.",
+        nullable = true,
+    )
+    val targetPublished: Boolean?,
     val displayOrder: Int,
     val registeredAt: LocalDateTime,
     val updatedAt: LocalDateTime,
@@ -45,11 +57,15 @@ data class AdminAdvertisementExposureResponse(
             linkUrl = result.linkUrl,
             targetType = result.targetType,
             targetId = result.targetId,
+            jobField = result.jobField,
             adLabel = result.adLabel,
             startAt = result.startAt,
             endAt = result.endAt,
             exposed = result.exposed,
             advertiserCompanyName = result.advertiserCompanyName,
+            targetTitle = result.targetTitle,
+            targetCompanyName = result.targetCompanyName,
+            targetPublished = result.targetPublished,
             displayOrder = result.displayOrder,
             registeredAt = result.registeredAt,
             updatedAt = result.updatedAt,

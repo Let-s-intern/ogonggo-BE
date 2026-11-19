@@ -145,6 +145,23 @@ class BootcampReader internal constructor(
         bootcampRepository.findOwnedByIdForDelete(ownerUserId, bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)
 
+    /** 광고 공고 카드처럼 고른 부트캠프 중 공개 기간 안이고 모집 중인 것만 읽는다. 순서는 정하지 않는다. */
+    fun readPublicRecruiting(bootcampIds: Collection<Long>, now: LocalDateTime): List<Bootcamp> =
+        if (bootcampIds.isEmpty()) {
+            emptyList()
+        } else {
+            bootcampRepository.findAllPublicByIds(
+                bootcampIds = bootcampIds.toSet(),
+                statuses = listOf(BootcampRecruitmentStatus.RECRUITING),
+                publicationStatus = BootcampPublicationStatus.PUBLISHED,
+                now = now,
+            )
+        }
+
+    /** 광고 노출 관리처럼 여러 부트캠프를 삭제 여부와 관계없이 한 번에 읽는다. 없는 식별자는 결과에서 빠진다. */
+    fun readAllIncludingDeleted(bootcampIds: Collection<Long>): List<Bootcamp> =
+        if (bootcampIds.isEmpty()) emptyList() else bootcampRepository.findAllById(bootcampIds.toSet())
+
     fun readForUpdate(bootcampId: Long): Bootcamp =
         bootcampRepository.findByIdForUpdate(bootcampId)
             ?: throw EntityNotFoundException(BootcampErrorCode.BOOTCAMP_NOT_FOUND)

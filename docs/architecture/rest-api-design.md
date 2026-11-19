@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-11-09
+- 최종 변경일: 2026-11-19
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin`
 - 예상 독자: 사용자·관리자 API를 개발하거나 연동하는 팀원
 - 리뷰 상태: 팀 리뷰 필요
@@ -272,6 +272,20 @@ PATCH /api/v1/admin/advertisement-inquiries/{inquiryId}/memo   메모 저장
 - 두 PATCH는 콘솔의 부분 수정처럼 바뀐 문의 전체를 `data`로 돌려줍니다. 없는 문의는 404 `ADVERTISEMENT_INQUIRY_NOT_FOUND`입니다. 상태와 메모를 동시에 바꿔도 서로 덮지 않도록 행을 잠가 읽습니다.
 - 수정·삭제 경로는 두지 않습니다. 문의 내용은 남긴 그대로 둡니다.
 - 응답 계약은 [API 성공 응답의 B2B 광고 문의](api-response.md#b2b-광고-문의)를 따릅니다.
+
+### 콘텐츠 이벤트 수집
+
+```text
+POST /api/v1/events    사용자 API, 로그인 선택
+```
+
+- 결정일: 2026-11-19 (LC-3646) / 리뷰 상태: 팀 리뷰 필요
+- 공고·부트캠프 상세의 조회·CTA 클릭·스크롤과 광고 노출·클릭을 `{ visitorId, events: [...] }`로 1~20건 묶어 받습니다. 광고 성과 리포트가 셉니다. 저장은 `content_events`이고 경로는 FE와 먼저 맞춘 계약이라 테이블 이름과 다릅니다.
+- 성공은 **본문 없는 202**입니다. 3절의 201·`SuccessResponse` 규칙의 예외입니다. 브라우저가 페이지를 떠날 때 `navigator.sendBeacon`으로 보내 응답을 읽지 않고, 저장할 수 없는 건을 버려 몇 행이 생겼는지 돌려줄 값도 없기 때문입니다.
+- `Content-Type`은 `application/json`과 `text/plain`(같은 JSON)을 받습니다. `sendBeacon`이 다른 오리진에 preflight 없이 보낼 수 있는 타입이 `text/plain`이라서입니다. 이 요청 타입만 읽는 변환기(`ContentEventTextPlainConfiguration`)로 열어 다른 API는 `text/plain` JSON을 받지 않습니다.
+- 걸린 건은 오류 없이 그 건만 버립니다: 종류에 필요한 대상·노출이 없음, 대상이 없거나 게시 중이 아님, 노출이 없거나 지워짐, 광고 공고 노출과 대상이 다름(`ContentEventValidator`). 요청 형식이 틀리거나 21건 이상이면 묶음 전체가 400입니다.
+- 봇 User-Agent, User-Agent 없음, 방문자 분당 60회·IP 분당 600회 초과(`ContentEventRequestGuard`)는 아무것도 저장하지 않고 똑같이 202입니다. 카운터는 인스턴스 메모리라 여러 대면 대마다 따로 셉니다. IP는 `X-Forwarded-For` 첫 주소이며 운영 앞단이 이 헤더를 어떻게 채우는지는 **확인 필요**입니다.
+- 시각은 서버가 받은 시각(KST)입니다. 같은 방문자의 30분 안 재조회도 모두 저장하고, 한 번으로 세는 것은 집계가 합니다.
 
 ### 회사명 검색
 

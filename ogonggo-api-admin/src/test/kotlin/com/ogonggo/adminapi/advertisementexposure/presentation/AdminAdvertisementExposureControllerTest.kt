@@ -15,6 +15,7 @@ import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCo
 import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
+import com.ogonggo.core.job.domain.JobField
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -115,6 +116,33 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `광고 공고 노출 목록은 대상 제목·회사명·게시 여부를 함께 반환한다`() {
+        val posting = exposureResult().copy(
+            name = null,
+            imageUrl = null,
+            mobileImageUrl = null,
+            linkUrl = null,
+            targetType = AdvertisementExposureTargetType.JOB,
+            targetId = 5501,
+            jobField = JobField.IT_DEVELOPMENT,
+            targetTitle = "백엔드 개발자",
+            targetCompanyName = "샘플기업",
+            targetPublished = true,
+        )
+        Mockito.`when`(adminAdvertisementExposureService.getExposures(12, null, 0, 10))
+            .thenReturn(AdminAdvertisementExposurePageResult(listOf(posting), 0, 10, 1, 1))
+
+        mockMvc.perform(admin(get(PATH).queryParam("productId", "12")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].targetType").value("JOB"))
+            .andExpect(jsonPath("$.data.items[0].targetId").value(5501))
+            .andExpect(jsonPath("$.data.items[0].jobField").value("IT_DEVELOPMENT"))
+            .andExpect(jsonPath("$.data.items[0].targetTitle").value("백엔드 개발자"))
+            .andExpect(jsonPath("$.data.items[0].targetCompanyName").value("샘플기업"))
+            .andExpect(jsonPath("$.data.items[0].targetPublished").value(true))
+    }
+
+    @Test
     fun `알 수 없는 상품 필터는 빈 배열을 반환하고 양수 ID를 요구한다`() {
         Mockito.`when`(adminAdvertisementExposureService.getExposures(999, null, 0, 10))
             .thenReturn(AdminAdvertisementExposurePageResult(emptyList(), 0, 10, 0, 0))
@@ -152,6 +180,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                     linkUrl = "/jobs/5501",
                     targetType = null,
                     targetId = null,
+                    jobField = null,
                     adLabel = true,
                     startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
                     endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -178,6 +207,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 linkUrl = "/jobs/5501",
                 targetType = null,
                 targetId = null,
+                jobField = null,
                 adLabel = true,
                 startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
                 endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -185,6 +215,38 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
             ),
             ADMIN_ID,
         )
+    }
+
+    @Test
+    fun `채용공고 목록 광고 공고 등록은 직군을 명령으로 전달한다`() {
+        val command = CreateAdminAdvertisementExposureCommand(
+            productId = 12,
+            contractId = null,
+            name = null,
+            imageUrl = null,
+            mobileImageUrl = null,
+            linkUrl = null,
+            targetType = AdvertisementExposureTargetType.JOB,
+            targetId = 5501,
+            jobField = JobField.IT_DEVELOPMENT,
+            adLabel = true,
+            startAt = null,
+            endAt = null,
+            exposed = true,
+        )
+        Mockito.`when`(adminAdvertisementExposureService.createExposure(command, ADMIN_ID)).thenReturn(502L)
+
+        mockMvc.perform(
+            admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(JOB_LIST_REQUEST)),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.data.id").value(502))
+        mockMvc.perform(
+            admin(post(PATH).contentType(MediaType.APPLICATION_JSON).content(JOB_LIST_REQUEST.replace("IT_DEVELOPMENT", "NOT_A_FIELD"))),
+        )
+            .andExpect(status().isBadRequest)
+
+        Mockito.verify(adminAdvertisementExposureService).createExposure(command, ADMIN_ID)
     }
 
     @Test
@@ -257,6 +319,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 linkUrl = "/jobs/5501",
                 targetType = null,
                 targetId = null,
+                jobField = null,
                 adLabel = true,
                 startAt = null,
                 endAt = null,
@@ -285,6 +348,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
                 linkUrl = "/jobs/5501",
                 targetType = null,
                 targetId = null,
+                jobField = null,
                 adLabel = true,
                 startAt = null,
                 endAt = null,
@@ -379,6 +443,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         linkUrl = "/jobs/5501",
         targetType = null,
         targetId = null,
+        jobField = null,
         adLabel = true,
         startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
         endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
@@ -402,11 +467,15 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         linkUrl = "/jobs/5501",
         targetType = null,
         targetId = null,
+        jobField = null,
         adLabel = true,
         startAt = LocalDateTime.parse("2026-11-01T00:00:00"),
         endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
         exposed = false,
         advertiserCompanyName = "샘플기업",
+        targetTitle = null,
+        targetCompanyName = null,
+        targetPublished = null,
         displayOrder = 1,
         registeredAt = LocalDateTime.parse("2026-11-07T18:10:00"),
         updatedAt = LocalDateTime.parse("2026-11-07T18:10:00"),
@@ -416,6 +485,7 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         const val PATH = "/api/v1/admin/advertisement-exposures"
         const val ADMIN_ID = 7L
         const val BANNER_REQUEST = """{"productId":11,"contractId":1001,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":"2026-11-01T00:00:00","endAt":"2026-11-30T23:59:59","exposed":true}"""
+        const val JOB_LIST_REQUEST = """{"productId":12,"targetType":"JOB","targetId":5501,"jobField":"IT_DEVELOPMENT","adLabel":true,"exposed":true}"""
         const val UPDATE_REQUEST = """{"contractId":null,"name":"샘플기업 인턴 채용","imageUrl":"https://example.com/assets/banner.png","mobileImageUrl":"https://example.com/assets/banner-mobile.png","linkUrl":"/jobs/5501","targetType":null,"targetId":null,"adLabel":true,"startAt":null,"endAt":null}"""
     }
 }

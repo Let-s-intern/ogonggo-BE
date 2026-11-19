@@ -1,9 +1,11 @@
 package com.ogonggo.adminapi.advertisementexposure.business
 
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureContent
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureMoveDirection
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposurePeriod
+import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.advertisementexposure.error.AdvertisementExposureErrorCode
 import com.ogonggo.core.advertisementexposure.implement.AdvertisementExposureAppender
 import com.ogonggo.core.advertisementexposure.implement.AdvertisementExposureManager
@@ -12,9 +14,13 @@ import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposur
 import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposureUpdateDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
+import com.ogonggo.core.bootcamp.domain.BootcampPublicationStatus
+import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.image.domain.ImageAssetUsage
 import com.ogonggo.core.image.implement.ImageAssetManager
+import com.ogonggo.core.job.domain.JobPublicationStatus
+import com.ogonggo.core.job.implement.JobReader
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -28,6 +34,8 @@ class AdminAdvertisementExposureService(
     private val advertisementProductReader: AdvertisementProductReader,
     private val advertisementContractReader: AdvertisementContractReader,
     private val imageAssetManager: ImageAssetManager,
+    private val jobReader: JobReader,
+    private val bootcampReader: BootcampReader,
     private val clock: Clock,
 ) {
 
@@ -37,7 +45,30 @@ class AdminAdvertisementExposureService(
         return AdminAdvertisementExposurePageResult.from(
             result,
             contracts.mapValues { it.value.companyName },
+            readTargets(result.items),
         )
+    }
+
+    private fun readTargets(
+        exposures: List<AdvertisementExposure>,
+    ): Map<Pair<AdvertisementExposureTargetType, Long>, AdminAdvertisementExposureTarget> {
+        fun idsOf(type: AdvertisementExposureTargetType) =
+            exposures.filter { it.targetType == type }.mapNotNull { it.targetId }
+        val jobs = jobReader.readAllIncludingDeleted(idsOf(AdvertisementExposureTargetType.JOB)).associate { job ->
+            (AdvertisementExposureTargetType.JOB to checkNotNull(job.id)) to AdminAdvertisementExposureTarget(
+                title = job.title,
+                companyName = job.companyName,
+                published = job.deletedAt == null && job.publicationStatus == JobPublicationStatus.PUBLISHED,
+            )
+        }
+        val bootcamps = bootcampReader.readAllIncludingDeleted(idsOf(AdvertisementExposureTargetType.BOOTCAMP)).associate { bootcamp ->
+            (AdvertisementExposureTargetType.BOOTCAMP to checkNotNull(bootcamp.id)) to AdminAdvertisementExposureTarget(
+                title = bootcamp.title,
+                companyName = bootcamp.companyName,
+                published = bootcamp.deletedAt == null && bootcamp.publicationStatus == BootcampPublicationStatus.PUBLISHED,
+            )
+        }
+        return jobs + bootcamps
     }
 
     @Transactional
@@ -59,6 +90,7 @@ class AdminAdvertisementExposureService(
                     linkUrl = command.linkUrl,
                     targetType = command.targetType,
                     targetId = command.targetId,
+                    jobField = command.jobField,
                 ),
                 adLabel = command.adLabel,
                 period = AdvertisementExposurePeriod(command.startAt, command.endAt),
@@ -90,6 +122,7 @@ class AdminAdvertisementExposureService(
                     linkUrl = command.linkUrl,
                     targetType = command.targetType,
                     targetId = command.targetId,
+                    jobField = command.jobField,
                 ),
                 adLabel = command.adLabel,
                 period = AdvertisementExposurePeriod(command.startAt, command.endAt),

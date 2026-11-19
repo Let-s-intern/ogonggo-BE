@@ -134,6 +134,46 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("공개 광고 공고 명세는 광고 공고 자리와 선택 인증 및 대상 요약 응답을 명시한다")
+    fun `공개 광고 공고 명세는 광고 공고 자리와 선택 인증 및 대상 요약 응답을 명시한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1advertisement-exposures~1postings/get")
+        val position = operation["parameters"].first { it.at("/name").asText() == "position" }
+        val response = document.at("/components/schemas/AdvertisementPostingResponse")
+
+        // then
+        assertEquals("listPublicAdvertisementPostings", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security/0/BearerAuth").isArray)
+        assertEquals(listOf("position", "jobField"), operation["parameters"].map { it.at("/name").asText() })
+        val jobField = operation["parameters"].first { it.at("/name").asText() == "jobField" }
+        assertFalse(jobField.at("/required").asBoolean())
+        assertTrue(jobField.at("/schema/enum").any { it.asText() == "IT_DEVELOPMENT" })
+        assertTrue(position.at("/required").asBoolean())
+        assertEquals(setOf("JOB_PICK", "JOB_LIST", "JOB_DETAIL_SIDE", "CALENDAR_DAY", "MYPAGE_SCRAP"), position.at("/schema/enum").map { it.asText() }.toSet())
+        assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertEquals(
+            setOf("exposureId", "position", "jobField", "displayOrder", "adLabel", "targetType", "job", "bootcamp"),
+            response.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertEquals(
+            setOf("exposureId", "position", "displayOrder", "adLabel", "targetType"),
+            response.at("/required").map { it.asText() }.toSet(),
+        )
+        assertTrue(response.at("/properties/jobField/nullable").asBoolean())
+        assertTrue(
+            response.at("/properties/job/\$ref").asText().endsWith("UserJobSummaryResponse") ||
+                response.at("/properties/job/allOf/0/\$ref").asText().endsWith("UserJobSummaryResponse"),
+        )
+        assertTrue(
+            response.at("/properties/bootcamp/\$ref").asText().endsWith("UserBootcampSummaryResponse") ||
+                response.at("/properties/bootcamp/allOf/0/\$ref").asText().endsWith("UserBootcampSummaryResponse"),
+        )
+    }
+
+    @Test
     @DisplayName("광고 신청은 선택 인증과 폼 검증 및 201 응답을 명시한다")
     fun `광고 신청은 선택 인증과 폼 검증 및 201 응답을 명시한다`() {
         // given
@@ -199,6 +239,43 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(listOf("id"), response.at("/required").map { it.asText() })
         assertEquals("integer", response.at("/properties/id/type").asText())
         assertEquals("int64", response.at("/properties/id/format").asText())
+    }
+
+    @Test
+    @DisplayName("콘텐츠 이벤트 수집은 선택 인증, JSON과 text plain 본문, 본문 없는 202를 명시한다")
+    fun `콘텐츠 이벤트 수집은 선택 인증, JSON과 text plain 본문, 본문 없는 202를 명시한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1events/post")
+        val request = document.at("/components/schemas/CreateContentEventsRequest")
+        val event = document.at("/components/schemas/ContentEventRequest")
+
+        // then
+        assertEquals("createContentEvents", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security/0/BearerAuth").isArray)
+        assertTrue(operation.at("/description").asText().contains("로그인 없이"))
+        val ref = "#/components/schemas/CreateContentEventsRequest"
+        assertEquals(ref, operation.at("/requestBody/content/application~1json/schema/\$ref").asText())
+        assertEquals(ref, operation.at("/requestBody/content/text~1plain/schema/\$ref").asText())
+        assertTrue(operation.at("/responses/202").isObject)
+        assertTrue(operation.at("/responses/202/content").isMissingNode)
+        assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertEquals(36, request.at("/properties/visitorId/maxLength").asInt())
+        assertEquals(1, request.at("/properties/events/minItems").asInt())
+        assertEquals(20, request.at("/properties/events/maxItems").asInt())
+        assertEquals(
+            setOf("VIEW", "CTA_CLICK", "SCROLL", "IMPRESSION", "AD_CLICK"),
+            event.at("/properties/type/enum").map { it.asText() }.toSet(),
+        )
+        assertEquals(
+            setOf("AD_CARD", "BANNER", "LIST", "SEARCH", "DIRECT", "EXTERNAL", "OTHER"),
+            event.at("/properties/source/enum").map { it.asText() }.toSet(),
+        )
+        assertEquals(setOf("type", "source"), event.at("/required").map { it.asText() }.toSet())
+        assertEquals(0, event.at("/properties/scrollPercent/minimum").asInt())
+        assertEquals(100, event.at("/properties/scrollPercent/maximum").asInt())
     }
 
     @Test

@@ -506,14 +506,23 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertEquals(setOf("JOB", "BOOTCAMP"), request.at("/properties/targetType/enum").map { it.asText() }.toSet())
         assertEquals("boolean", request.at("/properties/adLabel/type").asText())
         assertEquals("boolean", request.at("/properties/exposed/type").asText())
+        assertTrue(request.at("/properties/jobField/nullable").asBoolean())
+        assertTrue(request.at("/properties/jobField/enum").any { it.asText() == "IT_DEVELOPMENT" })
+        assertFalse(request.at("/required").any { it.asText() == "jobField" })
+        assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID"))
         listOf(
             "id", "productId", "contractId", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId", "adLabel",
             "startAt", "endAt", "exposed", "advertiserCompanyName", "displayOrder", "registeredAt", "updatedAt",
         ).forEach { field -> assertTrue(response.at("/properties/$field").isObject, field) }
         listOf(
             "contractId", "advertiserCompanyName", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId",
-            "startAt", "endAt",
+            "startAt", "endAt", "targetTitle", "targetCompanyName", "targetPublished", "jobField",
         ).forEach { field -> assertTrue(response.at("/properties/$field/nullable").asBoolean(), field) }
+        assertEquals("boolean", response.at("/properties/targetPublished/type").asText())
+        assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH"))
+        assertTrue(create.at("/responses/404/description").asText().contains("JOB_NOT_FOUND"))
+        assertTrue(create.at("/responses/409/description").asText().startsWith("ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED"))
+        assertTrue(create.at("/responses/409/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
     }
 
     @Test
@@ -578,6 +587,8 @@ class AdminOpenApiContractTest @Autowired constructor(
         assertTrue(replaceRequest.at("/properties/contractId/nullable").asBoolean())
         assertEquals(setOf("JOB", "BOOTCAMP"), replaceRequest.at("/properties/targetType/enum").map { it.asText() }.toSet())
         assertEquals("boolean", replaceRequest.at("/properties/adLabel/type").asText())
+        assertTrue(replaceRequest.at("/properties/jobField/nullable").asBoolean())
+        assertTrue(replace.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID"))
         assertEquals(setOf("exposed"), exposedRequest.at("/required").map { it.asText() }.toSet())
         assertEquals("boolean", exposedRequest.at("/properties/exposed/type").asText())
         assertEquals(setOf("direction"), moveRequest.at("/required").map { it.asText() }.toSet())

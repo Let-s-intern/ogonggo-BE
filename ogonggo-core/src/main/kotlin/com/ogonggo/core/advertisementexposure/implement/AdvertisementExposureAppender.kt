@@ -12,6 +12,7 @@ class AdvertisementExposureAppender internal constructor(
     private val advertisementExposureRepository: AdvertisementExposureJpaRepository,
     private val advertisementProductReader: AdvertisementProductReader,
     private val advertisementContractReader: AdvertisementContractReader,
+    private val advertisementExposureTargetValidator: AdvertisementExposureTargetValidator,
 ) {
 
     /** 그 자리의 맨 뒤에 둔다. 상품별 순서 잠금을 쓰므로 호출자가 DB 트랜잭션을 열어야 한다. */
@@ -23,6 +24,7 @@ class AdvertisementExposureAppender internal constructor(
             .findAllForOrderUpdate(dto.productId)
             .maxOfOrNull { it.displayOrder } ?: 0
         dto.contractId?.let(advertisementContractReader::read)
+        advertisementExposureTargetValidator.validate(product, dto.content)
         val saved = advertisementExposureRepository.save(
             AdvertisementExposure(
                 product = product,
