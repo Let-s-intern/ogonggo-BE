@@ -166,6 +166,10 @@ class JobReader internal constructor(
         return jobRepository.findSourceCheckTargets(afterId, PageRequest.of(0, size))
     }
 
+    /** 광고 공고 카드처럼 고른 공고 중 사용자에게 보여 줄 수 있는(게시 중이고 마감 전인) 것만 읽는다. 마감 여부는 [now] 기준이다. */
+    fun readPublishedRecruiting(jobIds: Collection<Long>, now: LocalDateTime): List<Job> =
+        if (jobIds.isEmpty()) emptyList() else jobQueryRepository.findPublishedRecruitingByIds(jobIds.toSet(), now)
+
     /** 광고 노출 관리처럼 여러 공고를 삭제 여부와 관계없이 한 번에 읽는다. 없는 식별자는 결과에서 빠진다. */
     fun readAllIncludingDeleted(jobIds: Collection<Long>): List<Job> =
         if (jobIds.isEmpty()) emptyList() else jobRepository.findAllById(jobIds.toSet())

@@ -139,6 +139,19 @@ internal class JobQueryRepository(
     }
 
     /**
+     * 이 식별자들 중 게시 중이고 마감되지 않은 공고다. 순서는 정하지 않는다.
+     * 자동 마감 작업 사이에 종료 일시가 지난 공고도 바로 빼도록 종료 일시를 함께 본다.
+     */
+    fun findPublishedRecruitingByIds(jobIds: Collection<Long>, now: LocalDateTime): List<Job> =
+        queryFactory.selectFrom(job)
+            .where(
+                *recruitingPredicates(),
+                job.id.`in`(jobIds),
+                job.recruitmentEndAt.isNull.or(job.recruitmentEndAt.goe(now)),
+            )
+            .fetch()
+
+    /**
      * 모집 기간이 조회 범위와 겹치는 게시 공고를 종료 일시순으로 읽는다. 기간이 없는 공고는 달력에 놓을 수 없어 뺀다.
      * 마감일 기준이면 겹치는 공고가 아니라 모집 종료 일시가 범위 안에 있는 공고만 읽는다.
      * 선택 필터와 검색어는 공개 목록과 같다.

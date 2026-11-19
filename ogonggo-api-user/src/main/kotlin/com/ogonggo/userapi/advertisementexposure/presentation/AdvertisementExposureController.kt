@@ -4,10 +4,12 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.userapi.advertisementexposure.business.AdvertisementExposureService
 import com.ogonggo.userapi.advertisementexposure.presentation.response.AdvertisementExposureResponse
+import com.ogonggo.userapi.advertisementexposure.presentation.response.AdvertisementPostingResponse
 import com.ogonggo.userapi.error.InvalidRequestParameterException
 import com.ogonggo.userapi.response.SuccessResponse
 import com.ogonggo.userapi.response.PageResponse
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -40,6 +42,19 @@ class AdvertisementExposureController(
                 totalElements = result.totalElements,
                 totalPages = result.totalPages,
             ),
+        )
+    }
+
+    @GetMapping("/postings")
+    override fun getShownPostings(
+        @AuthenticationPrincipal userId: Long?,
+        @RequestParam("position") position: AdvertisementProductPosition,
+    ): ResponseEntity<SuccessResponse<List<AdvertisementPostingResponse>>> {
+        if (position.category != AdvertisementProductCategory.JOB_POSTING) {
+            throw InvalidRequestParameterException("position", "광고 공고 자리만 조회할 수 있습니다.")
+        }
+        return SuccessResponse.ok(
+            advertisementExposureService.getShownPostings(userId, position).map(AdvertisementPostingResponse::from),
         )
     }
 }

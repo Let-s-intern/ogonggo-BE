@@ -84,6 +84,8 @@ class UserSecurityConfiguration {
                 it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-products").permitAll()
                 // 화면 자리별 광고 배너는 비회원도 조회한다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-exposures").permitAll()
+                // 광고 공고 카드도 비회원이 조회한다. 토큰을 보내면 북마크 여부가 채워진다.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/advertisement-exposures/postings").permitAll()
                 // 광고 문의 폼의 회사명 검색도 비회원이 쓰므로 로그인 없이 연다.
                 it.requestMatchers(HttpMethod.GET, "/api/v1/company-names").permitAll()
                 // 개선 의견은 로그인 없이도 남긴다. 토큰이 있으면 작성자를 함께 기록한다.
