@@ -199,7 +199,10 @@ class AdvertisementExposure internal constructor(
 
         /** 광고 공고 자리마다 띄울 수 있는 콘텐츠 종류다. 부트캠프 목록은 부트캠프, 나머지는 채용공고다. */
         private fun targetTypeOf(position: AdvertisementProductPosition): AdvertisementExposureTargetType? = when (position) {
-            AdvertisementProductPosition.JOB_LIST, AdvertisementProductPosition.JOB_DETAIL_SIDE -> AdvertisementExposureTargetType.JOB
+            AdvertisementProductPosition.JOB_LIST,
+            AdvertisementProductPosition.JOB_DETAIL_SIDE,
+            AdvertisementProductPosition.JOB_PICK,
+            -> AdvertisementExposureTargetType.JOB
             AdvertisementProductPosition.BOOTCAMP_LIST -> AdvertisementExposureTargetType.BOOTCAMP
             else -> null
         }

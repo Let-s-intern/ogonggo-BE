@@ -128,6 +128,26 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
         assertNull(postings.single().job)
     }
 
+    @Test
+    fun `오공고 PICK 자리는 그 자리에 등록한 채용공고 요약만 준다`() {
+        // given
+        val pick = product(AdvertisementProductPosition.JOB_PICK)
+        val other = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
+        val picked = job("오공고 PICK 공고")
+        val shown = exposure(pick, AdvertisementExposureTargetType.JOB, picked)
+        exposure(other, AdvertisementExposureTargetType.JOB, job("다른 자리 공고"))
+
+        // when
+        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.JOB_PICK)
+
+        // then
+        assertEquals(listOf(shown), postings.map { it.exposureId })
+        assertEquals(AdvertisementProductPosition.JOB_PICK, postings.single().position)
+        assertEquals(picked, postings.single().job?.id)
+        assertEquals(true, postings.single().adLabel)
+        assertNull(postings.single().bootcamp)
+    }
+
     private fun product(position: AdvertisementProductPosition): Long = productAppender.append(
         AdvertisementProductSaveDto(
             category = AdvertisementProductCategory.JOB_POSTING,

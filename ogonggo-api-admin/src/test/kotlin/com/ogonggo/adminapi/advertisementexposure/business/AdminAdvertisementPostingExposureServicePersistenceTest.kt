@@ -130,6 +130,23 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
+    fun `오공고 PICK 자리는 채용공고만 등록하고 부트캠프는 등록하지 않는다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_PICK)
+        val jobId = job()
+
+        // when
+        service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
+        val exception = assertThrows(InvalidValueException::class.java) {
+            service.createExposure(command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcamp()), ADMIN_ID)
+        }
+
+        // then
+        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, exception.errorCode)
+        assertEquals(listOf(jobId), exposureReader.readByProduct(productId).map { it.targetId })
+    }
+
+    @Test
     fun `광고 공고에 배너 이미지와 링크를 함께 보내면 등록하지 않는다`() {
         val productId = product(AdvertisementProductPosition.JOB_LIST)
         val jobId = job()
