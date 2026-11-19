@@ -38,7 +38,7 @@ interface AdminAdvertisementExposureApi {
     @Operation(
         operationId = "listAdvertisementExposures",
         summary = "상품 자리의 광고 노출 목록 조회",
-        description = "미삭제 노출을 displayOrder와 ID 오름차순으로 페이지 조회합니다. page는 1부터 시작하고 size는 1~100이며 기본값은 1과 10입니다. 꺼짐·기간 전·기간 종료 항목과 삭제된 상품 자리의 항목도 포함합니다. contractId를 생략하면 자체 홍보를 포함한 전체 노출을 반환합니다. advertiserCompanyName은 현재 계약의 companyName이며 자체 홍보는 null입니다.",
+        description = "미삭제 노출을 displayOrder와 ID 오름차순으로 페이지 조회합니다. page는 1부터 시작하고 size는 1~100이며 기본값은 1과 10입니다. 꺼짐·기간 전·기간 종료 항목과 삭제된 상품 자리의 항목도 포함합니다. contractId를 생략하면 자체 홍보를 포함한 전체 노출을 반환합니다. advertiserCompanyName은 현재 계약의 companyName이며 자체 홍보는 null입니다. 광고 공고는 대상의 지금 제목·회사명(targetTitle, targetCompanyName)과 게시 여부(targetPublished)를 함께 주며, 배너는 셋 다 null입니다.",
     )
     @ApiResponses(
         value = [

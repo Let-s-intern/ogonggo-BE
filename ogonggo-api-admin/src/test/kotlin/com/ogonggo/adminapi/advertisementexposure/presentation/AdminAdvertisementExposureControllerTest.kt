@@ -115,6 +115,31 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `광고 공고 노출 목록은 대상 제목·회사명·게시 여부를 함께 반환한다`() {
+        val posting = exposureResult().copy(
+            name = null,
+            imageUrl = null,
+            mobileImageUrl = null,
+            linkUrl = null,
+            targetType = AdvertisementExposureTargetType.JOB,
+            targetId = 5501,
+            targetTitle = "백엔드 개발자",
+            targetCompanyName = "샘플기업",
+            targetPublished = true,
+        )
+        Mockito.`when`(adminAdvertisementExposureService.getExposures(12, null, 0, 10))
+            .thenReturn(AdminAdvertisementExposurePageResult(listOf(posting), 0, 10, 1, 1))
+
+        mockMvc.perform(admin(get(PATH).queryParam("productId", "12")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].targetType").value("JOB"))
+            .andExpect(jsonPath("$.data.items[0].targetId").value(5501))
+            .andExpect(jsonPath("$.data.items[0].targetTitle").value("백엔드 개발자"))
+            .andExpect(jsonPath("$.data.items[0].targetCompanyName").value("샘플기업"))
+            .andExpect(jsonPath("$.data.items[0].targetPublished").value(true))
+    }
+
+    @Test
     fun `알 수 없는 상품 필터는 빈 배열을 반환하고 양수 ID를 요구한다`() {
         Mockito.`when`(adminAdvertisementExposureService.getExposures(999, null, 0, 10))
             .thenReturn(AdminAdvertisementExposurePageResult(emptyList(), 0, 10, 0, 0))
@@ -407,6 +432,9 @@ class AdminAdvertisementExposureControllerTest @Autowired constructor(
         endAt = LocalDateTime.parse("2026-11-30T23:59:59"),
         exposed = false,
         advertiserCompanyName = "샘플기업",
+        targetTitle = null,
+        targetCompanyName = null,
+        targetPublished = null,
         displayOrder = 1,
         registeredAt = LocalDateTime.parse("2026-11-07T18:10:00"),
         updatedAt = LocalDateTime.parse("2026-11-07T18:10:00"),

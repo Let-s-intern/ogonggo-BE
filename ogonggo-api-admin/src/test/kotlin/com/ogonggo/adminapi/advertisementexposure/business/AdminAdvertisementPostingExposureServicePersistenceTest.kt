@@ -23,6 +23,8 @@ import com.ogonggo.core.job.domain.JobRecruitmentType
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.domain.JobPublicationStatus
 import com.ogonggo.core.job.implement.JobAppender
+import com.ogonggo.core.job.implement.JobManager
+import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.implement.dto.JobAppendDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -46,6 +48,8 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     private val productAppender: AdvertisementProductAppender,
     private val exposureReader: AdvertisementExposureReader,
     private val jobAppender: JobAppender,
+    private val jobReader: JobReader,
+    private val jobManager: JobManager,
     private val bootcampAppender: BootcampAppender,
 ) {
 
@@ -211,6 +215,27 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
         // then
         assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED, exception.errorCode)
         assertEquals(firstJob, exposureReader.readByProduct(productId).first { it.id == first }.targetId)
+    }
+
+    @Test
+    fun `노출 목록은 대상의 제목·회사명과 게시 여부를 채우고 지운 대상은 게시 중이 아닌 것으로 본다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val published = job(title = "게시 공고")
+        val draft = job(title = "초안 공고", publicationStatus = JobPublicationStatus.DRAFT)
+        val deleted = job(title = "지운 공고")
+        listOf(published, draft, deleted).forEach {
+            service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, it), ADMIN_ID)
+        }
+        jobManager.delete(jobReader.read(deleted), LocalDateTime.now())
+
+        // when
+        val items = service.getExposures(productId, contractId = null, page = 0, size = 10).items
+
+        // then
+        assertEquals(listOf("게시 공고", "초안 공고", "지운 공고"), items.map { it.targetTitle })
+        assertEquals(listOf("오공고", "오공고", "오공고"), items.map { it.targetCompanyName })
+        assertEquals(listOf(true, false, false), items.map { it.targetPublished })
     }
 
     private fun product(position: AdvertisementProductPosition): Long = productAppender.append(

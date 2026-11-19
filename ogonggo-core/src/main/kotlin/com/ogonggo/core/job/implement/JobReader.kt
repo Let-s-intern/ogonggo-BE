@@ -166,6 +166,10 @@ class JobReader internal constructor(
         return jobRepository.findSourceCheckTargets(afterId, PageRequest.of(0, size))
     }
 
+    /** 광고 노출 관리처럼 여러 공고를 삭제 여부와 관계없이 한 번에 읽는다. 없는 식별자는 결과에서 빠진다. */
+    fun readAllIncludingDeleted(jobIds: Collection<Long>): List<Job> =
+        if (jobIds.isEmpty()) emptyList() else jobRepository.findAllById(jobIds.toSet())
+
     fun readForUpdate(jobId: Long): Job =
         jobRepository.findByIdForUpdate(jobId)
             ?: throw EntityNotFoundException(JobErrorCode.JOB_NOT_FOUND)

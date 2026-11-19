@@ -167,6 +167,8 @@ class AdminAdvertisementExposureServiceTest {
         productReader,
         Mockito.mock(com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader::class.java),
         imageAssetManager,
+        Mockito.mock(com.ogonggo.core.job.implement.JobReader::class.java),
+        Mockito.mock(com.ogonggo.core.bootcamp.implement.BootcampReader::class.java),
         Clock.fixed(Instant.parse("2026-11-08T00:00:00Z"), ZoneId.of("Asia/Seoul")),
     )
 
