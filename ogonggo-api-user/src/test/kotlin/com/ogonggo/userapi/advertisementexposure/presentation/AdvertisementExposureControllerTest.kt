@@ -105,6 +105,15 @@ class AdvertisementExposureControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `광고 공고 자리는 배너 조회에서 BAD_REQUEST를 반환한다`() {
+        mockMvc.perform(get(PATH).queryParam("position", AdvertisementProductPosition.JOB_LIST.name))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+
+        Mockito.verifyNoInteractions(advertisementExposureService)
+    }
+
+    @Test
     fun `페이지 범위가 잘못되면 BAD_REQUEST를 반환한다`() {
         // given / when / then
         mockMvc.perform(get(PATH).queryParam("position", POSITION.name).queryParam("page", "0"))
