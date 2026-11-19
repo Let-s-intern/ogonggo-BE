@@ -512,8 +512,13 @@ class AdminOpenApiContractTest @Autowired constructor(
         ).forEach { field -> assertTrue(response.at("/properties/$field").isObject, field) }
         listOf(
             "contractId", "advertiserCompanyName", "name", "imageUrl", "mobileImageUrl", "linkUrl", "targetType", "targetId",
-            "startAt", "endAt",
+            "startAt", "endAt", "targetTitle", "targetCompanyName", "targetPublished",
         ).forEach { field -> assertTrue(response.at("/properties/$field/nullable").asBoolean(), field) }
+        assertEquals("boolean", response.at("/properties/targetPublished/type").asText())
+        assertTrue(create.at("/responses/400/description").asText().contains("ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH"))
+        assertTrue(create.at("/responses/404/description").asText().contains("JOB_NOT_FOUND"))
+        assertTrue(create.at("/responses/409/description").asText().startsWith("ADVERTISEMENT_EXPOSURE_TARGET_DUPLICATED"))
+        assertTrue(create.at("/responses/409/content/application~1json/schema/\$ref").asText().endsWith("ErrorResponse"))
     }
 
     @Test
