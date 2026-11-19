@@ -149,7 +149,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertTrue(operation.at("/security/0/BearerAuth").isArray)
         assertEquals(listOf("position"), operation["parameters"].map { it.at("/name").asText() })
         assertTrue(position.at("/required").asBoolean())
-        assertEquals(setOf("JOB_LIST", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "JOB_PICK"), position.at("/schema/enum").map { it.asText() }.toSet())
+        assertEquals(setOf("JOB_PICK", "JOB_LIST", "CALENDAR_DAY", "MYPAGE_SCRAP"), position.at("/schema/enum").map { it.asText() }.toSet())
         assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
         assertEquals(
             setOf("exposureId", "position", "displayOrder", "adLabel", "targetType", "job", "bootcamp"),

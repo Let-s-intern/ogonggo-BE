@@ -61,7 +61,7 @@ interface AdvertisementExposureApi {
     @Operation(
         operationId = "listPublicAdvertisementPostings",
         summary = "자리별 공개 광고 공고 조회",
-        description = "로그인 없이 호출할 수 있고, 토큰을 보내면 요약의 bookmarked가 채워집니다. 광고 공고 자리(JOB_LIST, BOOTCAMP_LIST, JOB_DETAIL_SIDE, JOB_PICK)만 받습니다. 켜져 있고 노출 기간 안인 노출 중 대상이 게시 중이고 모집 중인 것만 displayOrder와 노출 ID 순으로 모두 반환하며 페이지를 나누지 않습니다. targetType이 JOB이면 job에 공개 채용공고 목록 요약이, BOOTCAMP이면 bootcamp에 공개 부트캠프 목록 요약이 있고 나머지 하나는 null입니다. 광고주·상품·계약·기간은 반환하지 않습니다.",
+        description = "로그인 없이 호출할 수 있고, 토큰을 보내면 요약의 bookmarked가 채워집니다. 광고 공고 자리(JOB_PICK, JOB_LIST, CALENDAR_DAY, MYPAGE_SCRAP)만 받습니다. 켜져 있고 노출 기간 안인 노출 중 대상이 게시 중이고 모집 중인 것만 displayOrder와 노출 ID 순으로 모두 반환하며 페이지를 나누지 않습니다. targetType이 JOB이면 job에 공개 채용공고 목록 요약이, BOOTCAMP이면 bootcamp에 공개 부트캠프 목록 요약이 있고 나머지 하나는 null입니다. 광고주·상품·계약·기간은 반환하지 않습니다.",
     )
     @ApiResponses(
         value = [
@@ -79,7 +79,7 @@ interface AdvertisementExposureApi {
         @Parameter(
             description = "고정된 광고 공고 자리 이름",
             required = true,
-            schema = Schema(type = "string", allowableValues = ["JOB_LIST", "BOOTCAMP_LIST", "JOB_DETAIL_SIDE", "JOB_PICK"]),
+            schema = Schema(type = "string", allowableValues = ["JOB_PICK", "JOB_LIST", "CALENDAR_DAY", "MYPAGE_SCRAP"]),
         )
         position: AdvertisementProductPosition,
     ): ResponseEntity<SuccessResponse<List<AdvertisementPostingResponse>>>

@@ -71,7 +71,7 @@ interface AdminAdvertisementExposureApi {
     @Operation(
         operationId = "createAdvertisementExposure",
         summary = "광고 노출 등록",
-        description = "상품 category에 따라 BANNER 콘텐츠 또는 JOB_POSTING 대상을 등록합니다. category, displayOrder와 슬롯은 요청에 포함하지 않습니다. contractId는 선택이며 존재만 확인합니다. JOB_POSTING은 targetType·targetId가 필수이고 name·imageUrl·linkUrl은 null이어야 합니다. 대상은 지워지지 않은 채용공고·부트캠프여야 하며(게시·모집 상태는 보지 않음) 자리와 종류가 맞아야 합니다(BOOTCAMP_LIST는 BOOTCAMP, JOB_LIST·JOB_DETAIL_SIDE·JOB_PICK은 JOB). 같은 자리에 지우지 않은 같은 대상의 노출이 있으면 409입니다. BANNER의 mobileImageUrl은 선택이며 null이면 모바일에서도 imageUrl을 씁니다. JOB_POSTING은 mobileImageUrl을 보내지 않습니다. 오공고에 올린 imageUrl·mobileImageUrl 이미지는 첨부해 정리 작업이 지우지 않게 하고, 이미 지워진 이미지면 IMAGE_ASSET_NOT_AVAILABLE로 막습니다.",
+        description = "상품 category에 따라 BANNER 콘텐츠 또는 JOB_POSTING 대상을 등록합니다. category, displayOrder와 슬롯은 요청에 포함하지 않습니다. contractId는 선택이며 존재만 확인합니다. JOB_POSTING은 targetType·targetId가 필수이고 name·imageUrl·linkUrl은 null이어야 합니다. 대상은 지워지지 않은 채용공고·부트캠프여야 하며(게시·모집 상태는 보지 않음) 자리와 종류가 맞아야 합니다(JOB_PICK·JOB_LIST·CALENDAR_DAY·MYPAGE_SCRAP은 JOB). 같은 자리에 지우지 않은 같은 대상의 노출이 있으면 409입니다. BANNER의 mobileImageUrl은 선택이며 null이면 모바일에서도 imageUrl을 씁니다. JOB_POSTING은 mobileImageUrl을 보내지 않습니다. 오공고에 올린 imageUrl·mobileImageUrl 이미지는 첨부해 정리 작업이 지우지 않게 하고, 이미 지워진 이미지면 IMAGE_ASSET_NOT_AVAILABLE로 막습니다.",
     )
     @ApiResponses(
         value = [

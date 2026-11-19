@@ -70,19 +70,6 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
-    fun `부트캠프 목록 자리에는 부트캠프를 등록한다`() {
-        // given
-        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
-        val bootcampId = bootcamp()
-
-        // when
-        service.createExposure(command(productId, AdvertisementExposureTargetType.BOOTCAMP, bootcampId), ADMIN_ID)
-
-        // then
-        assertEquals(bootcampId, exposureReader.readByProduct(productId).single().targetId)
-    }
-
-    @Test
     fun `광고 공고 상품은 대상이 없으면 등록하지 않는다`() {
         val productId = product(AdvertisementProductPosition.JOB_LIST)
 
@@ -106,20 +93,8 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     }
 
     @Test
-    fun `부트캠프 목록 자리에 채용공고를 등록하지 않는다`() {
-        val productId = product(AdvertisementProductPosition.BOOTCAMP_LIST)
-        val jobId = job()
-
-        val exception = assertThrows(InvalidValueException::class.java) {
-            service.createExposure(command(productId, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
-        }
-
-        assertEquals(AdvertisementExposureErrorCode.ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH, exception.errorCode)
-    }
-
-    @Test
     fun `채용공고 자리에 부트캠프를 등록하지 않는다`() {
-        val productId = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
+        val productId = product(AdvertisementProductPosition.CALENDAR_DAY)
         val bootcampId = bootcamp()
 
         val exception = assertThrows(InvalidValueException::class.java) {
@@ -188,7 +163,7 @@ class AdminAdvertisementPostingExposureServicePersistenceTest @Autowired constru
     fun `다른 자리에는 같은 공고를 등록할 수 있다`() {
         // given
         val list = product(AdvertisementProductPosition.JOB_LIST)
-        val side = product(AdvertisementProductPosition.JOB_DETAIL_SIDE)
+        val side = product(AdvertisementProductPosition.MYPAGE_SCRAP)
         val jobId = job()
         service.createExposure(command(list, AdvertisementExposureTargetType.JOB, jobId), ADMIN_ID)
 
