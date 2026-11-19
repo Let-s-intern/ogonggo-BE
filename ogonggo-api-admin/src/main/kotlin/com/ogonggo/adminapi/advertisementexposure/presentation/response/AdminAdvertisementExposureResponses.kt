@@ -23,7 +23,7 @@ data class AdminAdvertisementExposureResponse(
     val targetType: AdvertisementExposureTargetType?,
     @field:Schema(nullable = true)
     val targetId: Long?,
-    @field:Schema(description = "채용공고 목록(JOB_LIST) 노출의 직군 탭. 다른 자리와 배너는 null입니다.", nullable = true)
+    @field:Schema(description = "채용공고 목록(JOB_LIST) 노출의 직군 탭. JOB_LIST의 null은 전체 탭이고, 다른 자리와 배너는 늘 null입니다.", nullable = true)
     val jobField: JobField?,
     @field:Schema(description = "오공고 PICK(JOB_PICK) 노출의 추천 문구 제목. 다른 자리와 배너는 null입니다.", nullable = true)
     val recommendationTitle: String?,

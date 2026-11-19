@@ -67,7 +67,7 @@ class AdvertisementExposureReader internal constructor(
     /**
      * 사용자 화면의 한 자리에서 지금 보이는 노출을 순서대로 준다. 지운 상품의 노출은 주지 않는다.
      * 광고 공고 노출이 가리키는 공고가 지워졌거나 게시 중이 아닌지는 공고를 붙이는 쪽이 거른다.
-     * 채용공고 목록 자리는 직군 탭마다 다르므로 [jobField]로 그 탭의 노출만 받는다.
+     * 채용공고 목록 자리는 직군 탭마다 다르므로 [jobField]로 그 탭의 노출만 받는다. [jobField]가 없으면 직군이 없는 노출(전체 탭)만 준다.
      */
     fun readShown(position: AdvertisementProductPosition, now: LocalDateTime, jobField: JobField? = null): List<AdvertisementExposure> {
         val productIds = advertisementProductReader.readByPosition(position).map { checkNotNull(it.id) }

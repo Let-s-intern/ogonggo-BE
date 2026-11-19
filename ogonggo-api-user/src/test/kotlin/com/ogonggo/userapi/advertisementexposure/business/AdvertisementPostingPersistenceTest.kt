@@ -136,6 +136,22 @@ class AdvertisementPostingPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `채용공고 목록 자리에 직군 없이 조회하면 전체 탭 노출만 준다`() {
+        // given
+        val productId = product(AdvertisementProductPosition.JOB_LIST)
+        val allTab = exposure(productId, AdvertisementExposureTargetType.JOB, job("전체 탭 공고"))
+        exposure(productId, AdvertisementExposureTargetType.JOB, job("게임 탭 공고"), jobField = JobField.GAME)
+
+        // when
+        val postings = service.getShownPostings(userId = null, position = AdvertisementProductPosition.JOB_LIST)
+
+        // then
+        assertEquals(listOf(allTab), postings.map { it.exposureId })
+        assertNull(postings.single().jobField)
+        assertEquals("전체 탭 공고", postings.single().job?.title)
+    }
+
+    @Test
     fun `오공고 PICK 자리는 그 자리에 등록한 채용공고 요약을 추천 문구와 함께 준다`() {
         // given
         val pick = product(AdvertisementProductPosition.JOB_PICK)

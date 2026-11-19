@@ -51,7 +51,7 @@ data class CreateAdminAdvertisementExposureRequest(
     @field:Schema(nullable = true)
     val targetId: Long? = null,
     @field:Schema(
-        description = "광고 공고가 채용공고 목록(JOB_LIST) 자리면 띄울 직군 탭. GET /api/v1/enums의 JobField 값이며 JOB_LIST는 필수, 다른 자리와 배너는 null입니다.",
+        description = "광고 공고가 채용공고 목록(JOB_LIST) 자리면 띄울 직군 탭. GET /api/v1/enums의 JobField 값이며 JOB_LIST에서 null이면 전체 탭에 띄웁니다. 다른 자리와 배너는 null입니다.",
         nullable = true,
     )
     val jobField: JobField? = null,

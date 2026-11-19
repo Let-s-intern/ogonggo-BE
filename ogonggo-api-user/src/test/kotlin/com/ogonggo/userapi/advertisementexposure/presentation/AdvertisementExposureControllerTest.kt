@@ -240,10 +240,36 @@ class AdvertisementExposureControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `채용공고 목록 자리에 직군이 없거나 다른 자리에 직군을 보내면 BAD_REQUEST를 반환한다`() {
+    fun `채용공고 목록 자리에 직군을 보내지 않으면 전체 탭의 광고 공고를 조회한다`() {
+        // given
+        Mockito.`when`(advertisementExposureService.getShownPostings(null, AdvertisementProductPosition.JOB_LIST, null)).thenReturn(
+            listOf(
+                AdvertisementPostingResult(
+                    exposureId = EXPOSURE_ID,
+                    position = AdvertisementProductPosition.JOB_LIST,
+                    jobField = null,
+                    recommendationTitle = null,
+                    recommendationDescription = null,
+                    startAt = null,
+                    endAt = null,
+                    displayOrder = 1,
+                    adLabel = true,
+                    targetType = AdvertisementExposureTargetType.BOOTCAMP,
+                    job = null,
+                    bootcamp = BOOTCAMP_SUMMARY,
+                ),
+            ),
+        )
+
+        // when, then
         mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "JOB_LIST"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].position").value("JOB_LIST"))
+            .andExpect(jsonPath("$.data[0].jobField").value(null as Any?))
+    }
+
+    @Test
+    fun `채용공고 목록이 아닌 자리에 직군을 보내거나 직군 값이 틀리면 BAD_REQUEST를 반환한다`() {
         mockMvc.perform(get(POSTINGS_PATH).queryParam("position", "CALENDAR_DAY").queryParam("jobField", "IT_DEVELOPMENT"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))

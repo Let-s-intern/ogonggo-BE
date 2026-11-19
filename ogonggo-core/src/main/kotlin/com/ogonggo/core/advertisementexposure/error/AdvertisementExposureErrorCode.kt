@@ -13,7 +13,7 @@ enum class AdvertisementExposureErrorCode(
     ADVERTISEMENT_BANNER_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "배너는 이름, 이미지, 링크만 있어야 합니다."),
     ADVERTISEMENT_JOB_POSTING_TARGET_REQUIRED(HttpStatus.BAD_REQUEST, "광고 공고는 띄울 공고만 있어야 합니다."),
     ADVERTISEMENT_EXPOSURE_TARGET_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "이 자리에 띄울 수 없는 콘텐츠 종류입니다."),
-    ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID(HttpStatus.BAD_REQUEST, "채용공고 목록 자리는 직군이 있어야 하고, 다른 자리는 직군을 둘 수 없습니다."),
+    ADVERTISEMENT_EXPOSURE_JOB_FIELD_INVALID(HttpStatus.BAD_REQUEST, "채용공고 목록 자리만 직군을 둘 수 있습니다."),
     ADVERTISEMENT_EXPOSURE_RECOMMENDATION_INVALID(
         HttpStatus.BAD_REQUEST,
         "오공고 PICK 자리는 추천 문구 제목(${AdvertisementExposure.MAX_RECOMMENDATION_TITLE_LENGTH}자 이하)과 " +

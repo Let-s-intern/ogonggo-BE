@@ -77,7 +77,10 @@ internal class AdvertisementExposureQueryRepository(
         return PageImpl(items, pageable, totalElements)
     }
 
-    /** 이 상품들 자리(직군이 있으면 그 직군 탭)에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다. */
+    /**
+     * 이 상품들 자리의 같은 직군 탭에 같은 공고를 띄우는 미삭제 노출이 있는지 본다. 고치는 중인 노출 자신은 뺀다.
+     * 직군이 없으면 직군이 없는 노출(채용공고 목록의 전체 탭, 직군이 없는 다른 자리)끼리 같다고 본다.
+     */
     fun existsTarget(
         productIds: Collection<Long>,
         targetType: AdvertisementExposureTargetType,
@@ -93,7 +96,7 @@ internal class AdvertisementExposureQueryRepository(
             .and(advertisementExposure.deletedAt.isNull)
             .and(advertisementExposure.targetType.eq(targetType))
             .and(advertisementExposure.targetId.eq(targetId))
-        jobField?.let { condition.and(advertisementExposure.jobField.eq(it)) }
+        condition.and(jobFieldEq(jobField))
         excludedExposureId?.let { condition.and(advertisementExposure.id.ne(it)) }
         return queryFactory.selectOne()
             .from(advertisementExposure)
@@ -103,7 +106,7 @@ internal class AdvertisementExposureQueryRepository(
 
     /**
      * 이 상품들 자리에서 지금 보이는 노출이다. 켜져 있고 기간 안([AdvertisementExposure.isShownAt])인 것을 순서대로 준다.
-     * 직군을 주면 그 직군 탭의 노출만 준다.
+     * 직군을 주면 그 직군 탭의 노출만, 주지 않으면 직군이 없는 노출(채용공고 목록은 전체 탭)만 준다.
      */
     fun findShown(productIds: Collection<Long>, now: LocalDateTime, jobField: JobField? = null): List<AdvertisementExposure> {
         if (productIds.isEmpty()) {
@@ -116,7 +119,7 @@ internal class AdvertisementExposureQueryRepository(
                 advertisementExposure.deletedAt.isNull,
                 advertisementExposure.startAt.isNull.or(advertisementExposure.startAt.loe(now)),
                 advertisementExposure.endAt.isNull.or(advertisementExposure.endAt.goe(now)),
-                jobField?.let { advertisementExposure.jobField.eq(it) },
+                jobFieldEq(jobField),
             )
             .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
             .fetch()
@@ -142,4 +145,8 @@ internal class AdvertisementExposureQueryRepository(
             .fetchOne() ?: 0L
         return PageImpl(items, pageable, totalElements)
     }
+
+    /** SQL `=`은 NULL끼리 같다고 보지 않으므로, 직군이 없으면 `IS NULL`로 비교한다. */
+    private fun jobFieldEq(jobField: JobField?) =
+        jobField?.let { advertisementExposure.jobField.eq(it) } ?: advertisementExposure.jobField.isNull
 }
