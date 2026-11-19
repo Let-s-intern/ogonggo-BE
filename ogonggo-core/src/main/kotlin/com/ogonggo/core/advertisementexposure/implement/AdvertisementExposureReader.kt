@@ -8,6 +8,7 @@ import com.ogonggo.core.advertisementexposure.implement.dto.AdvertisementExposur
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureJpaRepository
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureQueryRepository
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.domain.JobField
@@ -77,6 +78,10 @@ class AdvertisementExposureReader internal constructor(
     fun readByProduct(productId: Long, contractId: Long? = null): List<AdvertisementExposure> =
         advertisementExposureQueryRepository.findByProduct(productId, contractId)
 
+    /** 계약 리포트의 PostHog 필터에 쓸 서버 소유 노출 ID allowlist다. 삭제된 노출의 과거 기록도 포함한다. */
+    fun readIdsByContractId(contractId: Long): List<Long> =
+        advertisementExposureQueryRepository.findIdsByContractId(contractId)
+
     fun readByProductPage(productId: Long, contractId: Long?, page: Int, size: Int): AdvertisementExposurePageDto {
         validatePageRequest(page, size)
         return AdvertisementExposurePageDto.from(
@@ -102,6 +107,20 @@ class AdvertisementExposureReader internal constructor(
     ): AdvertisementExposurePageDto {
         validatePageRequest(page, size)
         val productIds = advertisementProductReader.readByPosition(position).map { checkNotNull(it.id) }
+        return AdvertisementExposurePageDto.from(
+            advertisementExposureQueryRepository.findShownPage(productIds, now, PageRequest.of(page, size)),
+        )
+    }
+
+    /** 자리 enum이 없는 JOB_POSTING 상품의 공개 피드다. 배너의 position 조회 동작은 그대로 둔다. */
+    fun readShownByCategoryPage(
+        category: AdvertisementProductCategory,
+        now: LocalDateTime,
+        page: Int,
+        size: Int,
+    ): AdvertisementExposurePageDto {
+        validatePageRequest(page, size)
+        val productIds = advertisementProductReader.readByCategory(category).map { checkNotNull(it.id) }
         return AdvertisementExposurePageDto.from(
             advertisementExposureQueryRepository.findShownPage(productIds, now, PageRequest.of(page, size)),
         )

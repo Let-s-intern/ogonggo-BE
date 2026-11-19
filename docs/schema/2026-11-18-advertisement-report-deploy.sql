@@ -31,6 +31,7 @@ CREATE TABLE advertisement_events
     anonymous_id VARCHAR(128) NOT NULL,
     viewer_key VARCHAR(140) NOT NULL,
     deduplication_key VARCHAR(140) NULL,
+    idempotency_key VARCHAR(36) NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
@@ -41,6 +42,7 @@ CREATE TABLE advertisement_events
         event_type,
         deduplication_key
     ),
+    UNIQUE KEY uk_advertisement_event_idempotency_key (idempotency_key),
     KEY idx_advertisement_event_contract_date (contract_id, event_date),
     KEY idx_advertisement_event_exposure_date (exposure_id, event_date),
     KEY idx_advertisement_event_event_date (event_date)
@@ -109,7 +111,8 @@ CREATE TABLE advertisement_event_daily_viewers
 -- ============================================================================
 
 ALTER TABLE advertisement_events
-    ADD COLUMN contract_key BIGINT NULL AFTER contract_id;
+    ADD COLUMN contract_key BIGINT NULL AFTER contract_id,
+    ADD COLUMN idempotency_key VARCHAR(36) NULL AFTER deduplication_key;
 
 UPDATE advertisement_events
 SET contract_key = COALESCE(contract_id, 0);
@@ -124,6 +127,7 @@ ALTER TABLE advertisement_events
         event_type,
         deduplication_key
     ),
+    ADD UNIQUE KEY uk_advertisement_event_idempotency_key (idempotency_key),
     ADD KEY idx_advertisement_event_event_date (event_date);
 
 ALTER TABLE advertisement_daily_metrics

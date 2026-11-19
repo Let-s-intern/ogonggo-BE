@@ -7,6 +7,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoic
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
@@ -75,7 +76,7 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items[0].paymentAmount").isEmpty)
             .andExpect(jsonPath("$.data.items[0].registeredAt").value("2026-11-08T10:00:00"))
             .andExpect(jsonPath("$.data.items[0].userId").doesNotExist())
-            .andExpect(jsonPath("$.data.items[0].source").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].source").value("APPLICATION_FORM"))
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(2))
             .andExpect(jsonPath("$.data.pageInfo.totalElements").value(6))
     }
@@ -94,6 +95,25 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.items").isEmpty)
             .andExpect(jsonPath("$.data.pageInfo.pageNum").value(1))
             .andExpect(jsonPath("$.data.pageInfo.pageSize").value(10))
+    }
+
+    @Test
+    fun `회사 공고 계약도 광고 리포트 목록에 포함한다`() {
+        Mockito.`when`(myAdvertisementContractService.getContracts(USER_ID, setOf(AdvertisementContractStatus.APPROVED), 0, 5)).thenReturn(
+            MyAdvertisementContractPageResult(
+                items = listOf(COMPANY_POSTING_SUMMARY),
+                page = 0,
+                size = 5,
+                totalElements = 1,
+                totalPages = 1,
+            ),
+        )
+
+        mockMvc.perform(get(PATH).param("status", "APPROVED").param("size", "5").with(authenticatedUser()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].source").value("COMPANY_POSTING"))
+            .andExpect(jsonPath("$.data.items[0].recruitmentDeadline").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].categories").isEmpty)
     }
 
     @Test
@@ -198,12 +218,25 @@ class MyAdvertisementContractControllerTest @Autowired constructor(
         val REGISTERED_AT: LocalDateTime = LocalDateTime.of(2026, 11, 8, 10, 0)
         val SUMMARY = MyAdvertisementContractSummaryResult(
             id = CONTRACT_ID,
+            source = AdvertisementContractSource.APPLICATION_FORM,
             status = AdvertisementContractStatus.REQUESTED,
             promotionTarget = AdvertisementContractPromotionTarget.JOB,
             companyName = "샘플기업",
             recruitmentTitle = "백엔드 인턴 채용",
             recruitmentDeadline = LocalDate.of(2026, 12, 31),
             categories = listOf(AdvertisementProductCategory.BANNER),
+            paymentAmount = null,
+            registeredAt = REGISTERED_AT,
+        )
+        val COMPANY_POSTING_SUMMARY = MyAdvertisementContractSummaryResult(
+            id = CONTRACT_ID + 1,
+            source = AdvertisementContractSource.COMPANY_POSTING,
+            status = AdvertisementContractStatus.APPROVED,
+            promotionTarget = AdvertisementContractPromotionTarget.JOB,
+            companyName = "샘플기업",
+            recruitmentTitle = "회사 등록 공고",
+            recruitmentDeadline = null,
+            categories = emptyList(),
             paymentAmount = null,
             registeredAt = REGISTERED_AT,
         )

@@ -30,6 +30,7 @@ interface AdvertisementContractReportApi {
             ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
             ApiResponse(responseCode = "403", description = "ADVERTISEMENT_REPORT_FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
             ApiResponse(responseCode = "404", description = "ADVERTISEMENT_CONTRACT_NOT_FOUND", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "503", description = "ADVERTISEMENT_REPORT_SOURCE_UNAVAILABLE", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ],
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)

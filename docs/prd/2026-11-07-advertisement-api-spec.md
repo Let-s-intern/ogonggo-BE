@@ -37,7 +37,7 @@ UI에서만 관찰된 주차 예약·쿠폰·가입 동시 처리 등의 필드�
 | U-01 | `POST /api/v1/advertisement-contracts` | 중간 | 높음 | 입력 필드는 core 신청 DTO와 대응한다. HTTP(S) URL·이메일 검증과 선택 인증을 구현했고 생성 ID는 core Appender가 반환한다. |
 | U-02 | `GET /api/v1/advertisement-products` | 높음 | 높음 | 기본 `page=1`, `size=10`으로 미삭제 상품을 페이지 조회하고 공통 `PageResponse`를 반환한다. |
 | U-03 | `GET /api/v1/advertisement-exposures?position=...&page=1&size=10` | 높음 | 높음 | position enum과 페이지 응답, 다섯 공개 필드가 구현·계약 검증에 반영됐다. 공개 링크는 A-12 입력 정책을 그대로 따른다. |
-| U-04 | `GET /api/v1/users/me/advertisement-contracts?page=1&size=10` | 높음 | 높음 | 회원 식별자·APPLICATION_FORM 조건을 core 목록 조회에 더했고 페이지 형식은 기존 PageResponse를 따른다(LC-3590). |
+| U-04 | `GET /api/v1/users/me/advertisement-contracts?page=1&size=10` | 높음 | 높음 | 현재 회원 소유의 `APPLICATION_FORM`·`COMPANY_POSTING` 계약 요약을 최신순으로 준다. 선택 status filter를 적용하고 `source`와 nullable deadline을 포함한다(LC-3584, 2026-11-19). |
 | U-05 | `GET /api/v1/users/me/advertisement-contracts/{contractId}` | 높음 | 높음 | 신청 폼 필드와 A-06의 계약 상품 표현을 재사용하고 운영자 전용 필드를 뺐다(LC-3590). |
 | A-01 | `GET /api/v1/admin/advertisement-products` | 높음 | 높음 | 기본 `page=1`, `size=10`으로 상품을 페이지 조회하고 공통 `PageResponse`를 반환한다. |
 | A-02 | `POST /api/v1/admin/advertisement-products` | 높음 | 높음 | 생성 입력 필드·domain 제약과 생성 ID가 core에 대응한다. |
@@ -66,7 +66,7 @@ HTTP API 22개 중 Request는 높음 20개·중간 2개, Response는 높음 21�
 | U-01 | POST | `/api/v1/advertisement-contracts` | 중간 | 폼 입력·상태는 core DTO를 따른다. HTTP 검증·선택 인증은 P-02에서 정해 구현했고 접수 알림은 P-07에서 응답 변경 없이 연결했다. |
 | U-02 | GET | `/api/v1/advertisement-products` | 높음 | 삭제 제외·정렬·출력 원본이 상품 reader와 DB에서 바로 정해진다. |
 | U-03 | GET | `/api/v1/advertisement-exposures` | 높음 | 필수 position, 여섯 BANNER 자리, 다섯 공개 필드와 페이지 응답, 빈 결과와 BAD_REQUEST 동작을 구현·계약 검증했다. 링크는 A-12 정책을 따른다. |
-| U-04 | GET | `/api/v1/users/me/advertisement-contracts` | 높음 | 로그인 회원의 APPLICATION_FORM 신청만 최신순 페이지로 준다. 반복 `status` 필터를 둔다. |
+| U-04 | GET | `/api/v1/users/me/advertisement-contracts` | 높음 | 로그인 회원이 소유한 `APPLICATION_FORM`·`COMPANY_POSTING` 계약을 최신순 페이지로 준다. 반복 `status` 필터를 둔다. |
 | U-05 | GET | `/api/v1/users/me/advertisement-contracts/{contractId}` | 높음 | 내 신청이 아니면 없는 계약과 같이 404다. 연결 상품은 A-06과 같이 지운 상품도 표시한다. |
 | A-01 | GET | `/api/v1/admin/advertisement-products` | 높음 | 상품 reader에 조회·정렬 규칙이 있고 목록 목적이 명확하다. |
 | A-02 | POST | `/api/v1/admin/advertisement-products` | 높음 | 저장 DTO가 4개 필드를 그대로 정의하고 domain 검증이 존재한다. |
@@ -406,10 +406,10 @@ GET /api/v1/advertisement-exposures?position=JOB_HOME_TOP_BANNER&page=1&size=10
 
 P-05에서 U-03 응답·인증·검증·링크 처리 선택은 확정했다. U-03에 남은 별도 선택은 없다. JOB_POSTING 대상의 실재·게시·마감/노출 적격성을 A-12 등록 시 확인할지는 별도 미정 정책이며, 목록·홈의 공개 조합 규칙은 F-01 범위다. 현재 여섯 배너 position 조회에는 JOB_POSTING이 포함되지 않는다. 클릭 집계와 로테이션은 별도 API 작업이다.
 
-### U-04. 내 광고 신청 목록 조회
+### U-04. 내 광고 계약 목록 조회
 
 ```http
-GET /api/v1/users/me/advertisement-contracts?status=REQUESTED&status=NEGOTIATING&page=1&size=10
+GET /api/v1/users/me/advertisement-contracts?status=APPROVED&page=1&size=10
 ```
 
 확정 가능성: 높음. 비즈니스 앱의 광고 신청 내역 화면이 쓴다(LC-3590).
@@ -434,7 +434,8 @@ GET /api/v1/users/me/advertisement-contracts?status=REQUESTED&status=NEGOTIATING
     "items": [
       {
         "id": 1001,
-        "status": "REQUESTED",
+        "source": "APPLICATION_FORM",
+        "status": "APPROVED",
         "promotionTarget": "JOB",
         "companyName": "샘플기업",
         "recruitmentTitle": "백엔드 인턴 채용",
@@ -442,6 +443,18 @@ GET /api/v1/users/me/advertisement-contracts?status=REQUESTED&status=NEGOTIATING
         "categories": ["BANNER", "INSTAGRAM_1"],
         "paymentAmount": null,
         "registeredAt": "2026-11-08T10:00:00"
+      },
+      {
+        "id": 1002,
+        "source": "COMPANY_POSTING",
+        "status": "APPROVED",
+        "promotionTarget": "JOB",
+        "companyName": "샘플기업",
+        "recruitmentTitle": "백엔드 엔지니어 채용",
+        "recruitmentDeadline": null,
+        "categories": [],
+        "paymentAmount": null,
+        "registeredAt": "2026-11-09T10:00:00"
       }
     ],
     "pageInfo": { "pageNum": 1, "pageSize": 10, "totalElements": 1, "totalPages": 1 }
@@ -454,21 +467,22 @@ GET /api/v1/users/me/advertisement-contracts?status=REQUESTED&status=NEGOTIATING
 | JSON 경로 | 타입 | nullable | 설명 |
 | --- | --- | --- | --- |
 | data.items[].id | int64 | 아니오 | 계약 ID. U-01이 돌려준 `data.id`와 같다 |
+| data.items[].source | string(enum) | 아니오 | 계약 생성 경로: `APPLICATION_FORM`, `COMPANY_POSTING` |
 | data.items[].status | string(enum) | 아니오 | 계약 상태 |
 | data.items[].promotionTarget | string(enum) | 아니오 | 홍보 대상 유형 |
 | data.items[].companyName | string | 아니오 | 신청 때 적은 기업명 |
 | data.items[].recruitmentTitle | string | 아니오 | 신청 때 적은 공고명 |
-| data.items[].recruitmentDeadline | string(date) | 아니오 | 신청 때 적은 모집 마감일 |
-| data.items[].categories[] | string(enum)[] | 아니오 | 신청 때 고른 카테고리, enum 이름순 |
+| data.items[].recruitmentDeadline | string(date) | 예 | 신청 때 적은 모집 마감일. `COMPANY_POSTING`에 마감일이 없으면 null |
+| data.items[].categories[] | string(enum)[] | 아니오 | 신청 때 고른 카테고리, enum 이름순. `COMPANY_POSTING`은 빈 배열 |
 | data.items[].paymentAmount | int32 | 예 | 운영자가 정한 협의 금액. 정하기 전이면 null |
 | data.items[].registeredAt | string(date-time) | 아니오 | 신청 일시(KST) |
 | data.pageInfo | object | 아니오 | U-03과 같은 페이지 정보 |
 
 동작과 경계:
 
-- 로그인한 회원 ID로 저장된 `APPLICATION_FORM` 계약만 준다. 로그인 없이 낸 신청은 회원 ID가 없어 나오지 않는다. 비즈니스 공고 등록으로 생긴 `COMPANY_POSTING` 계약은 같은 회원 ID를 가져도 넣지 않는다.
+- 로그인한 회원 ID와 연결된 `APPLICATION_FORM` 및 `COMPANY_POSTING` 계약 요약을 준다. 로그인 없이 낸 신청은 회원 ID가 없어 나오지 않는다. `status` 필터는 두 source에 함께 적용한다.
 - 최근 신청부터(`id DESC`) 준다. 정렬은 고를 수 없다.
-- 운영자 전용 값(source, targetId, userId, updatedAt)은 싣지 않는다.
+- `source`는 고객의 계약 종류 표시를 위해 포함한다. 운영자 전용 값(`targetId`, `userId`, `updatedAt`)은 싣지 않는다.
 
 #### 예외
 

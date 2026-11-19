@@ -2,7 +2,8 @@ package com.ogonggo.adminapi.advertisementreport.business
 
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader
 import com.ogonggo.core.advertisementevent.error.AdvertisementEventErrorCode
-import com.ogonggo.core.advertisementevent.implement.AdvertisementEventReportReader
+import com.ogonggo.core.advertisementevent.implement.AdvertisementContractReportProvider
+import com.ogonggo.core.advertisementexposure.implement.AdvertisementExposureReader
 import com.ogonggo.core.advertisementevent.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.error.InvalidValueException
 import org.springframework.stereotype.Service
@@ -14,14 +15,16 @@ import java.time.temporal.ChronoUnit
 @Service
 class AdminAdvertisementContractReportService(
     private val advertisementContractReader: AdvertisementContractReader,
-    private val advertisementEventReportReader: AdvertisementEventReportReader,
+    private val advertisementExposureReader: AdvertisementExposureReader,
+    private val advertisementContractReportProvider: AdvertisementContractReportProvider,
     private val clock: Clock,
 ) {
 
     fun getReport(contractId: Long, from: LocalDate, to: LocalDate): AdvertisementContractReportDto {
         advertisementContractReader.read(contractId)
         validatePeriod(from, to)
-        return advertisementEventReportReader.read(contractId, from, to)
+        val exposureIds = advertisementExposureReader.readIdsByContractId(contractId)
+        return advertisementContractReportProvider.read(contractId, from, to, exposureIds)
     }
 
     private fun validatePeriod(from: LocalDate, to: LocalDate) {

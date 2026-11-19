@@ -45,6 +45,15 @@ internal class AdvertisementExposureQueryRepository(
     private val queryFactory: JPAQueryFactory,
 ) {
 
+    /** 계약에 속한 노출 ID를 삭제 여부와 무관하게 돌려준다. 계약 리포트의 테넌트 필터를 만든다. */
+    fun findIdsByContractId(contractId: Long): List<Long> =
+        queryFactory.select(advertisementExposure.id)
+            .from(advertisementExposure)
+            .where(advertisementExposure.contractId.eq(contractId))
+            .orderBy(advertisementExposure.id.asc())
+            .fetch()
+            .mapNotNull { it }
+
     /** 상품 자리의 미삭제 노출을 순서대로 준다. 계약 ID는 지정된 경우에만 DB 조건으로 적용한다. */
     fun findByProduct(productId: Long, contractId: Long?): List<AdvertisementExposure> {
         val condition = BooleanBuilder()

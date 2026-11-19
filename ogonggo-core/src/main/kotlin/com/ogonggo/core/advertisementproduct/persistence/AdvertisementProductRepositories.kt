@@ -31,6 +31,8 @@ internal interface AdvertisementProductJpaRepository : JpaRepository<Advertiseme
     fun findAllByIdIn(ids: Collection<Long>): List<AdvertisementProduct>
 
     fun findAllByPositionAndDeletedAtIsNull(position: AdvertisementProductPosition): List<AdvertisementProduct>
+
+    fun findAllByCategoryAndDeletedAtIsNull(category: AdvertisementProductCategory): List<AdvertisementProduct>
 }
 
 @org.springframework.stereotype.Repository

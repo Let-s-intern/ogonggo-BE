@@ -28,8 +28,8 @@ interface MyAdvertisementContractApi {
         operationId = "listMyAdvertisementContracts",
         summary = "내 광고 신청 목록 조회",
         description = """
-            로그인한 회원이 광고 신청 폼으로 낸 신청을 최근 신청부터 조회합니다. 로그인 없이 낸 신청과
-            비즈니스 공고 등록으로 생긴 계약은 넣지 않습니다. status를 여러 번 보내면 그중 하나인 신청을 찾습니다.
+            로그인한 회원이 소유한 광고 신청 폼 계약과 비즈니스 공고 등록 계약을 최근 등록부터 조회합니다.
+            로그인 없이 낸 신청은 포함하지 않습니다. status를 여러 번 보내면 그중 하나인 계약을 찾습니다.
             page는 1부터 시작하고 기본 1, size 기본 10·최대 100입니다.
         """,
     )

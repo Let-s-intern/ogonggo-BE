@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 
 @Validated
@@ -19,6 +21,7 @@ import java.time.LocalDate
 @RequestMapping("/api/v1/advertisement-contracts")
 class AdvertisementContractReportController(
     private val advertisementContractReportService: AdvertisementContractReportService,
+    private val clock: Clock,
 ) : AdvertisementContractReportApi {
 
     @GetMapping("/{contractId}/report")
@@ -31,6 +34,7 @@ class AdvertisementContractReportController(
         SuccessResponse.ok(
             AdvertisementContractReportResponse.from(
                 advertisementContractReportService.getForCompanyMember(userId, contractId, from, to),
+                Instant.now(clock),
             ),
         )
 }

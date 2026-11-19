@@ -22,7 +22,7 @@ import java.time.LocalDate
     uniqueConstraints = [
         UniqueConstraint(
             name = "uk_advertisement_daily_metric_exposure_type",
-            columnNames = ["event_date", "exposure_id", "event_type"],
+            columnNames = ["event_date", "exposure_id", "contract_key", "event_type"],
         ),
     ],
     indexes = [Index(name = "idx_advertisement_daily_metric_contract_date", columnList = "contract_id, event_date")],
@@ -55,6 +55,9 @@ class AdvertisementDailyMetric internal constructor(
 
     @Column(name = "contract_id")
     val contractId: Long? = contractId
+
+    @Column(name = "contract_key", nullable = false)
+    val contractKey: Long = contractId ?: 0L
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

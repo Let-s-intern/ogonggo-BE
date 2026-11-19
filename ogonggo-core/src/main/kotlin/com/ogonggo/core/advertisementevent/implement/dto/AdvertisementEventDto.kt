@@ -23,6 +23,7 @@ data class AdvertisementEventAppendDto(
     val memberId: Long?,
     val anonymousId: String,
     val viewerKey: String,
+    val idempotencyKey: String,
     val audienceType: AdvertisementEventAudienceType,
     val jobRoles: Set<JobRole>,
 )

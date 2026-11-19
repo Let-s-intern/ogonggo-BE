@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoic
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.user.domain.CompanyBusinessNumberType
@@ -19,11 +20,14 @@ import java.time.LocalDateTime
 
 data class MyAdvertisementContractSummaryResponse(
     val id: Long,
+    @field:Schema(description = "계약이 생긴 경로: 광고 신청 폼 또는 기업 공고 등록")
+    val source: AdvertisementContractSource,
     val status: AdvertisementContractStatus,
     val promotionTarget: AdvertisementContractPromotionTarget,
     val companyName: String,
     val recruitmentTitle: String,
-    val recruitmentDeadline: LocalDate,
+    @field:Schema(description = "공고 모집 마감일. 회사 공고의 마감일이 정해지지 않았으면 null", nullable = true)
+    val recruitmentDeadline: LocalDate?,
     @field:Schema(description = "신청 때 고른 광고 카테고리")
     val categories: List<AdvertisementProductCategory>,
     @field:Schema(description = "협의로 정한 결제 금액(원). 아직 정하지 않았으면 null", nullable = true)
@@ -34,6 +38,7 @@ data class MyAdvertisementContractSummaryResponse(
     companion object {
         fun from(result: MyAdvertisementContractSummaryResult) = MyAdvertisementContractSummaryResponse(
             id = result.id,
+            source = result.source,
             status = result.status,
             promotionTarget = result.promotionTarget,
             companyName = result.companyName,

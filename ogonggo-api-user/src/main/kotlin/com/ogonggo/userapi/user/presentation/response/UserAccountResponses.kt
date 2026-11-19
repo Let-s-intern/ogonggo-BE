@@ -5,9 +5,11 @@ import com.ogonggo.core.user.domain.CompanyEmployeeCountRange
 import com.ogonggo.core.user.domain.CompanyManagerDuty
 import com.ogonggo.core.user.domain.CompanyType
 import com.ogonggo.core.user.domain.LetsCareerAuthProvider
+import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserRole
 import com.ogonggo.core.user.domain.UserStatus
+import com.ogonggo.core.job.domain.JobRole
 import com.ogonggo.userapi.user.business.MyAccountResult
 import com.ogonggo.userapi.user.business.MyCompanyProfileResult
 import com.ogonggo.userapi.user.business.MyProfileResult
@@ -66,6 +68,8 @@ data class MyProfileResponse(
     val grade: UserGrade?,
     val wishField: String?,
     val wishJob: String?,
+    @Schema(description = "희망 직무를 오공고 JobRole enum으로 정규화한 코드 목록. 원문 희망 직무와 다르게 분석 이벤트용이다.")
+    val wishJobRoleCodes: List<JobRole>,
     val wishIndustry: String?,
     val wishEmploymentType: String?,
     val wishCompany: String?,
@@ -83,6 +87,7 @@ data class MyProfileResponse(
             grade = result.grade,
             wishField = result.wishField,
             wishJob = result.wishJob,
+            wishJobRoleCodes = LetsCareerWishJobCatalog.jobRolesOf(result.wishJob).sortedBy(JobRole::ordinal),
             wishIndustry = result.wishIndustry,
             wishEmploymentType = result.wishEmploymentType,
             wishCompany = result.wishCompany,

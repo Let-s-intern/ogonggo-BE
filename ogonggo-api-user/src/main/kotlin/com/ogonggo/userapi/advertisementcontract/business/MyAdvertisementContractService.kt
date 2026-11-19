@@ -1,15 +1,13 @@
 package com.ogonggo.userapi.advertisementcontract.business
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSearchCondition
-import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
 import com.ogonggo.core.advertisementcontract.implement.AdvertisementContractReader
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * 로그인한 회원이 자기가 낸 광고 신청을 본다. 광고 신청 폼으로 낸 신청만 보이고,
- * 비즈니스 공고 등록으로 생긴 계약은 공고 관리에서 다루므로 넣지 않는다.
+ * 로그인한 회원이 소유한 광고 계약을 본다. 신청 폼 계약과 비즈니스 공고 등록 계약을 함께 조회한다.
  */
 @Service
 class MyAdvertisementContractService(
@@ -26,7 +24,6 @@ class MyAdvertisementContractService(
     ): MyAdvertisementContractPageResult {
         val result = advertisementContractReader.readPage(
             AdvertisementContractSearchCondition(
-                source = AdvertisementContractSource.APPLICATION_FORM,
                 userId = userId,
                 statuses = statuses,
             ),

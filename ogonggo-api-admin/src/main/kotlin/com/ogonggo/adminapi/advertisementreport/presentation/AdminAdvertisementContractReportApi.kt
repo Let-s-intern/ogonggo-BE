@@ -30,6 +30,7 @@ interface AdminAdvertisementContractReportApi {
             ApiResponse(responseCode = "400", description = "BAD_REQUEST: 리포트 기간이 올바르지 않습니다.", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
             ApiResponse(responseCode = "403", description = "FORBIDDEN: 활성 관리자 권한이 없습니다.", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
             ApiResponse(responseCode = "404", description = "ADVERTISEMENT_CONTRACT_NOT_FOUND", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "503", description = "ADVERTISEMENT_REPORT_SOURCE_UNAVAILABLE", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ],
     )
     fun getReport(
@@ -49,6 +50,7 @@ interface AdminAdvertisementContractReportApi {
             ApiResponse(responseCode = "400", description = "BAD_REQUEST: 리포트 기간이 올바르지 않습니다.", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
             ApiResponse(responseCode = "403", description = "FORBIDDEN: 활성 관리자 권한이 없습니다.", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
             ApiResponse(responseCode = "404", description = "ADVERTISEMENT_CONTRACT_NOT_FOUND", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "503", description = "ADVERTISEMENT_REPORT_SOURCE_UNAVAILABLE", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
         ],
     )
     fun exportReportCsv(

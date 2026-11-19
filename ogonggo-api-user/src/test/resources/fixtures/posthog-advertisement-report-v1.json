@@ -1,0 +1,15 @@
+{
+  "results": [
+    ["SUMMARY", null, null, null, "IMPRESSION", 20, 10, null, null],
+    ["SUMMARY", null, null, null, "CLICK", 6, 3, null, null],
+    ["DAILY", "2026-11-18", "BANNER", "JOB_HOME_TOP_BANNER", "IMPRESSION", 20, 10, null, null],
+    ["DAILY", "2026-11-18", "BANNER", "JOB_HOME_TOP_BANNER", "CLICK", 6, 3, null, null],
+    ["POSITION", null, "BANNER", "JOB_HOME_TOP_BANNER", null, 6, 3, null, null],
+    ["JOB_ROLE", null, null, null, null, null, null, "IT_BACKEND", 2],
+    ["JOB_ROLE", null, null, null, null, null, null, "NON_MEMBER", 1]
+  ],
+  "columns": [
+    "record_type", "event_date", "category", "position", "event_type", "total", "unique_users", "job_role_code", "unique_clickers"
+  ],
+  "execution_id": "mock-v1-advertisement-report"
+}

@@ -8,22 +8,25 @@ import com.ogonggo.core.advertisementevent.implement.dto.AdvertisementReportPosi
 import com.ogonggo.core.advertisementevent.implement.dto.AdvertisementReportSummaryDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import java.time.Instant
 import java.time.LocalDate
 
 data class AdvertisementContractReportResponse(
     val contractId: Long,
     val from: LocalDate,
     val to: LocalDate,
+    val generatedAt: Instant,
     val summary: AdvertisementReportSummaryResponse,
     val daily: List<AdvertisementReportDailyResponse>,
     val positions: List<AdvertisementReportPositionResponse>,
     val jobRoleDistribution: List<AdvertisementReportJobRoleResponse>,
 ) {
     companion object {
-        fun from(result: AdvertisementContractReportDto) = AdvertisementContractReportResponse(
+        fun from(result: AdvertisementContractReportDto, generatedAt: Instant) = AdvertisementContractReportResponse(
             contractId = result.contractId,
             from = result.from,
             to = result.to,
+            generatedAt = generatedAt,
             summary = AdvertisementReportSummaryResponse.from(result.summary),
             daily = result.daily.map(AdvertisementReportDailyResponse::from),
             positions = result.positions.map(AdvertisementReportPositionResponse::from),

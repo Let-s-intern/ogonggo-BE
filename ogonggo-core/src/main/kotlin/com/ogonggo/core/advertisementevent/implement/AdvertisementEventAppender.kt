@@ -38,6 +38,7 @@ class AdvertisementEventAppender internal constructor(
             dto.anonymousId,
             dto.viewerKey,
             deduplicationKey,
+            dto.idempotencyKey,
             now,
             now,
         )
@@ -91,8 +92,8 @@ class AdvertisementEventAppender internal constructor(
         private const val INSERT_EVENT_SQL = """
             INSERT IGNORE INTO advertisement_events (
                 event_date, exposure_id, product_id, contract_id, contract_key, category, position, target_type, target_id,
-                event_type, event_at, member_id, anonymous_id, viewer_key, deduplication_key, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                event_type, event_at, member_id, anonymous_id, viewer_key, deduplication_key, idempotency_key, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         private const val INSERT_DAILY_VIEWER_SQL = """

@@ -24,12 +24,14 @@ import java.time.LocalDateTime
     uniqueConstraints = [
         UniqueConstraint(
             name = "uk_advertisement_event_daily_impression",
-            columnNames = ["exposure_id", "event_date", "event_type", "deduplication_key"],
+            columnNames = ["exposure_id", "event_date", "contract_key", "event_type", "deduplication_key"],
         ),
+        UniqueConstraint(name = "uk_advertisement_event_idempotency_key", columnNames = ["idempotency_key"]),
     ],
     indexes = [
         Index(name = "idx_advertisement_event_contract_date", columnList = "contract_id, event_date"),
         Index(name = "idx_advertisement_event_exposure_date", columnList = "exposure_id, event_date"),
+        Index(name = "idx_advertisement_event_event_date", columnList = "event_date"),
     ],
 )
 class AdvertisementEvent internal constructor(
@@ -47,6 +49,7 @@ class AdvertisementEvent internal constructor(
     anonymousId: String,
     viewerKey: String,
     deduplicationKey: String?,
+    idempotencyKey: String,
 ) : BaseTimeEntity() {
 
     @Id
@@ -65,6 +68,9 @@ class AdvertisementEvent internal constructor(
 
     @Column(name = "contract_id")
     val contractId: Long? = contractId
+
+    @Column(name = "contract_key", nullable = false)
+    val contractKey: Long = contractId ?: 0L
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -101,12 +107,16 @@ class AdvertisementEvent internal constructor(
     @Column(name = "deduplication_key", length = MAX_VIEWER_KEY_LENGTH)
     val deduplicationKey: String? = deduplicationKey
 
+    @Column(name = "idempotency_key", length = MAX_IDEMPOTENCY_KEY_LENGTH)
+    val idempotencyKey: String? = idempotencyKey
+
     init {
         require(exposureId > 0 && productId > 0) { "광고 노출과 상품 식별자는 양수여야 합니다." }
         require(contractId == null || contractId > 0) { "광고 계약 식별자는 양수여야 합니다." }
         require(memberId == null || memberId > 0) { "회원 식별자는 양수여야 합니다." }
         require(anonymousId.isNotBlank() && anonymousId.length <= MAX_ANONYMOUS_ID_LENGTH) { "익명 식별자는 1~${MAX_ANONYMOUS_ID_LENGTH}자여야 합니다." }
         require(viewerKey.isNotBlank() && viewerKey.length <= MAX_VIEWER_KEY_LENGTH) { "사용자 식별 키가 올바르지 않습니다." }
+        require(idempotencyKey.isNotBlank() && idempotencyKey.length <= MAX_IDEMPOTENCY_KEY_LENGTH) { "멱등 키는 1~${MAX_IDEMPOTENCY_KEY_LENGTH}자여야 합니다." }
         require((eventType == AdvertisementEventType.IMPRESSION) == (deduplicationKey != null)) {
             "노출만 중복 제거 키를 가져야 합니다."
         }
@@ -115,5 +125,6 @@ class AdvertisementEvent internal constructor(
     companion object {
         const val MAX_ANONYMOUS_ID_LENGTH = 128
         const val MAX_VIEWER_KEY_LENGTH = 140
+        const val MAX_IDEMPOTENCY_KEY_LENGTH = 36
     }
 }

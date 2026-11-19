@@ -2,6 +2,7 @@ package com.ogonggo.core.advertisementproduct.implement
 
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
+import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.error.AdvertisementProductErrorCode
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductJpaRepository
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
@@ -58,4 +59,8 @@ class AdvertisementProductReader internal constructor(
     /** 노출 자리의 지우지 않은 상품이다. 보통 하나지만 막지 않는다. */
     fun readByPosition(position: AdvertisementProductPosition): List<AdvertisementProduct> =
         advertisementProductRepository.findAllByPositionAndDeletedAtIsNull(position)
+
+    /** 미삭제 상품 중 공개 피드가 읽을 카테고리다. */
+    fun readByCategory(category: AdvertisementProductCategory): List<AdvertisementProduct> =
+        advertisementProductRepository.findAllByCategoryAndDeletedAtIsNull(category).sortedBy { it.id }
 }

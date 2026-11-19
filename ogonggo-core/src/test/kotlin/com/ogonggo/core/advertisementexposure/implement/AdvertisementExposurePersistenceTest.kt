@@ -118,6 +118,26 @@ internal class AdvertisementExposurePersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `계약 리포트 allowlist는 계약 소유 노출만 삭제 여부와 무관하게 포함한다`() {
+        // given
+        val productId = appendProduct(AdvertisementProductPosition.JOB_HOME_TOP_BANNER)
+        val contractId = appendContract()
+        val otherContractId = appendContract()
+        val active = append(productId, contractId = contractId)
+        val deleted = append(productId, contractId = contractId)
+        append(productId, contractId = otherContractId)
+        append(productId)
+        manager.delete(reader.readForUpdate(deleted), NOW)
+        flushAndClear()
+
+        // when
+        val exposureIds = reader.readIdsByContractId(contractId)
+
+        // then
+        assertEquals(listOf(active, deleted), exposureIds)
+    }
+
+    @Test
     fun `지운 상품 자리의 노출은 사용자 화면에 보이지 않는다`() {
         // given
         val top = appendProduct(AdvertisementProductPosition.JOB_HOME_TOP_BANNER)

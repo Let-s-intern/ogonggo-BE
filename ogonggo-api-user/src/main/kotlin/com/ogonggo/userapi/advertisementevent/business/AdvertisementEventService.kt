@@ -11,22 +11,27 @@ import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
 import com.ogonggo.core.user.implement.UserProfileReader
 import com.ogonggo.userapi.advertisementevent.presentation.request.CreateAdvertisementEventRequest
+import com.ogonggo.userapi.advertisementevent.implement.AdvertisementEventIdempotencyStore
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Clock
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.UUID
 
 @Service
 class AdvertisementEventService(
     private val advertisementExposureReader: AdvertisementExposureReader,
     private val advertisementEventAppender: AdvertisementEventAppender,
+    private val advertisementEventIdempotencyStore: AdvertisementEventIdempotencyStore,
     private val userProfileReader: UserProfileReader,
     private val clock: Clock,
 ) {
 
     @Transactional
-    fun record(userId: Long?, request: CreateAdvertisementEventRequest) {
+    fun record(userId: Long?, request: CreateAdvertisementEventRequest, idempotencyKey: UUID) {
         val eventAt = LocalDateTime.now(clock.withZone(SEOUL))
         val target = advertisementExposureReader.readEventTarget(request.exposureId)
         if (!target.category.exposable) {
@@ -34,6 +39,14 @@ class AdvertisementEventService(
         }
         if (!target.isShownAt(eventAt)) {
             throw InvalidValueException(AdvertisementEventErrorCode.ADVERTISEMENT_EVENT_EXPOSURE_NOT_SHOWN)
+        }
+
+        val eventDate = eventAt.toLocalDate()
+        val viewerKey = userId?.let { "M:$it" } ?: "A:${request.anonymousId}"
+        if (request.eventType == AdvertisementEventType.IMPRESSION &&
+            advertisementEventIdempotencyStore.isDailyImpressionRecorded(target.exposureId, eventDate, viewerKey)
+        ) {
+            return
         }
 
         val jobRoles = if (request.eventType == AdvertisementEventType.CLICK && userId != null) {
@@ -46,11 +59,9 @@ class AdvertisementEventService(
             jobRoles.isEmpty() -> AdvertisementEventAudienceType.UNSPECIFIED
             else -> AdvertisementEventAudienceType.MEMBER
         }
-        val viewerKey = userId?.let { "M:$it" } ?: "A:${request.anonymousId}"
-
         advertisementEventAppender.append(
             AdvertisementEventAppendDto(
-                eventDate = eventAt.toLocalDate(),
+                eventDate = eventDate,
                 eventAt = eventAt,
                 exposureId = target.exposureId,
                 productId = target.productId,
@@ -63,10 +74,30 @@ class AdvertisementEventService(
                 memberId = userId,
                 anonymousId = request.anonymousId,
                 viewerKey = viewerKey,
+                idempotencyKey = idempotencyKey.toString(),
                 audienceType = audienceType,
                 jobRoles = jobRoles,
             ),
         )
+
+        if (request.eventType == AdvertisementEventType.IMPRESSION) {
+            val cacheAfterCommit = {
+                advertisementEventIdempotencyStore.markDailyImpressionRecorded(
+                    target.exposureId,
+                    eventDate,
+                    viewerKey,
+                )
+            }
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(
+                    object : TransactionSynchronization {
+                        override fun afterCommit() = cacheAfterCommit()
+                    },
+                )
+            } else {
+                cacheAfterCommit()
+            }
+        }
     }
 
     companion object {

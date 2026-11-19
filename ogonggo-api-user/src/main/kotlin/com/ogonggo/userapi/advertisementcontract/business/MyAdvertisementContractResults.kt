@@ -7,6 +7,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoic
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractStatus
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractPageDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractProductDto
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
@@ -36,11 +37,12 @@ data class MyAdvertisementContractPageResult(
 
 data class MyAdvertisementContractSummaryResult(
     val id: Long,
+    val source: AdvertisementContractSource,
     val status: AdvertisementContractStatus,
     val promotionTarget: AdvertisementContractPromotionTarget,
     val companyName: String,
     val recruitmentTitle: String,
-    val recruitmentDeadline: LocalDate,
+    val recruitmentDeadline: LocalDate?,
     val categories: List<AdvertisementProductCategory>,
     val paymentAmount: Int?,
     val registeredAt: LocalDateTime,
@@ -49,11 +51,12 @@ data class MyAdvertisementContractSummaryResult(
         internal fun from(contract: AdvertisementContract): MyAdvertisementContractSummaryResult =
             MyAdvertisementContractSummaryResult(
                 id = checkNotNull(contract.id) { "광고 계약 식별자가 없습니다." },
+                source = contract.source,
                 status = contract.status,
                 promotionTarget = contract.promotionTarget,
                 companyName = contract.companyName,
                 recruitmentTitle = contract.recruitmentTitle,
-                recruitmentDeadline = checkNotNull(contract.recruitmentDeadline) { "신청 폼 계약은 recruitmentDeadline 값이 있습니다." },
+                recruitmentDeadline = contract.recruitmentDeadline,
                 categories = contract.categories.sorted(),
                 paymentAmount = contract.paymentAmount,
                 registeredAt = contract.createdAt,
