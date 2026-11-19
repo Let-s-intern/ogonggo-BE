@@ -202,6 +202,43 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("콘텐츠 이벤트 수집은 선택 인증, JSON과 text plain 본문, 본문 없는 202를 명시한다")
+    fun `콘텐츠 이벤트 수집은 선택 인증, JSON과 text plain 본문, 본문 없는 202를 명시한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1events/post")
+        val request = document.at("/components/schemas/CreateContentEventsRequest")
+        val event = document.at("/components/schemas/ContentEventRequest")
+
+        // then
+        assertEquals("createContentEvents", operation.at("/operationId").asText())
+        assertTrue(operation.at("/security/0/BearerAuth").isArray)
+        assertTrue(operation.at("/description").asText().contains("로그인 없이"))
+        val ref = "#/components/schemas/CreateContentEventsRequest"
+        assertEquals(ref, operation.at("/requestBody/content/application~1json/schema/\$ref").asText())
+        assertEquals(ref, operation.at("/requestBody/content/text~1plain/schema/\$ref").asText())
+        assertTrue(operation.at("/responses/202").isObject)
+        assertTrue(operation.at("/responses/202/content").isMissingNode)
+        assertTrue(operation.at("/responses/400/description").asText().startsWith("BAD_REQUEST"))
+        assertEquals(36, request.at("/properties/visitorId/maxLength").asInt())
+        assertEquals(1, request.at("/properties/events/minItems").asInt())
+        assertEquals(20, request.at("/properties/events/maxItems").asInt())
+        assertEquals(
+            setOf("VIEW", "CTA_CLICK", "SCROLL", "IMPRESSION", "AD_CLICK"),
+            event.at("/properties/type/enum").map { it.asText() }.toSet(),
+        )
+        assertEquals(
+            setOf("AD_CARD", "BANNER", "LIST", "SEARCH", "DIRECT", "EXTERNAL", "OTHER"),
+            event.at("/properties/source/enum").map { it.asText() }.toSet(),
+        )
+        assertEquals(setOf("type", "source"), event.at("/required").map { it.asText() }.toSet())
+        assertEquals(0, event.at("/properties/scrollPercent/minimum").asInt())
+        assertEquals(100, event.at("/properties/scrollPercent/maximum").asInt())
+    }
+
+    @Test
     @DisplayName("내 광고 신청 내역은 로그인 필수이며 페이지와 404와 신청자 필드만 명시한다")
     fun `내 광고 신청 내역은 로그인 필수이며 페이지와 404와 신청자 필드만 명시한다`() {
         // given
