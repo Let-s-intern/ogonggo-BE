@@ -36,6 +36,13 @@ internal interface JobJpaRepository : JpaRepository<Job, Long> {
     /** 삭제된 공고도 센다. 운영자가 지운 수집 공고가 다음 수집에서 되살아나지 않게 하기 위해서다. */
     fun existsBySourceAndExternalId(source: ContentSource, externalId: String): Boolean
 
+    fun findAllBySourceAndCompanyNameAndTitleAndRecruitmentStatusAndDeletedAtIsNull(
+        source: ContentSource,
+        companyName: String,
+        title: String,
+        recruitmentStatus: JobRecruitmentStatus,
+    ): List<Job>
+
     /** 원문 URL은 등록 시점에만 중복을 막고 DB 제약이 없으므로, 겹친 행이 있어도 가장 먼저 등록된 행을 고른다. */
     fun findFirstBySourceUrlAndSourceAndDeletedAtIsNullOrderByIdAsc(sourceUrl: String, source: ContentSource): Job?
 
