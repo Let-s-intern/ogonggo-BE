@@ -6,7 +6,9 @@ import com.ogonggo.adminapi.auth.presentation.AdminAuthenticationFilter.Companio
 import com.ogonggo.adminapi.config.AdminSecurityConfiguration
 import com.ogonggo.adminapi.error.AdminApiExceptionHandler
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportAudienceDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportCsvRowDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDailyDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportExposureDto
@@ -60,6 +62,8 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.product.category").value("BANNER"))
             .andExpect(jsonPath("$.data.summary.scrollFunnel").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.daily[0].avgScrollPercent").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.audience.reach").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.audience.targetMatch.members").value(0))
         val csv = mockMvc.perform(admin(get("$PATH.csv"))).andExpect(status().isOk).andReturn().response
         val lines = String(csv.contentAsByteArray, StandardCharsets.UTF_8).removePrefix("﻿").trimEnd('\n').split("\n")
         assertEquals(1 + REPORT.csvRows.size, lines.size)
@@ -123,6 +127,14 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             exposures = listOf(AdvertisementContractReportExposureDto(12L, "11월 홈 상단", 100, 2, 0.02)),
             targets = emptyList(),
             byJobField = emptyList(),
+            audience = AdvertisementContractReportAudienceDto(
+                reach = null,
+                avgFrequency = null,
+                adClickVisitors = null,
+                targetJobFields = emptyList(),
+                targetMatch = AdvertisementContractReportTargetMatchDto(matchedMembers = 0, members = 0, rate = null),
+                byGrade = emptyList(),
+            ),
             csvRows = listOf(AdvertisementContractReportCsvRowDto(FROM, 12L, "11월 홈 상단", 100, 2, 1, 1, 0, 0, 0, null, null)),
         )
     }

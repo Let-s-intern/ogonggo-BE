@@ -22,7 +22,7 @@ interface UserContentEventApi {
         operationId = "createContentEvents",
         summary = "콘텐츠 이벤트 수집",
         description = """
-            공고·부트캠프 상세의 조회(VIEW)·CTA 클릭(CTA_CLICK)·스크롤(SCROLL)과 광고의 노출(IMPRESSION)·클릭(AD_CLICK)을
+            공고·부트캠프 상세의 조회(VIEW)·CTA 클릭(CTA_CLICK)·스크롤(SCROLL)·공유(SHARE)와 광고의 노출(IMPRESSION)·클릭(AD_CLICK)을
             한 번에 1~20건 묶어 보냅니다. 광고 성과 리포트가 이것을 셉니다.
 
             로그인 없이 보낼 수 있습니다. 액세스 토큰을 보내면 회원을 함께 기록합니다.

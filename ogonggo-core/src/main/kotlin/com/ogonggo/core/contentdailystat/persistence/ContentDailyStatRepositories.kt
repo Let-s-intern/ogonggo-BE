@@ -8,6 +8,7 @@ import com.ogonggo.core.contentevent.domain.ContentEventTargetType
 import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentevent.domain.QContentEvent.contentEvent
 import com.ogonggo.core.user.domain.QUserProfile.userProfile
+import com.ogonggo.core.user.domain.UserGrade
 import com.querydsl.core.types.Projections
 import com.querydsl.core.types.dsl.CaseBuilder
 import com.querydsl.core.types.dsl.BooleanExpression
@@ -45,6 +46,12 @@ internal data class ContentEventRow(
     val scrollPercent: Int?,
     val occurredAt: LocalDateTime,
     val durationMs: Long?,
+)
+
+/** 회원 프로필에서 리포트가 쓰는 값이다. */
+internal data class ContentMemberProfileRow(
+    val wishJob: String?,
+    val grade: UserGrade?,
 )
 
 /** 광고 노출·클릭을 집계 행 단위로 센 수다. */
@@ -169,14 +176,47 @@ internal class ContentDailyStatQueryRepository(
             .toSet()
     }
 
-    /** 회원의 희망 직무 원문(렛츠커리어 선택지를 `, `로 이은 값)이다. 프로필이 없거나 비어 있으면 넣지 않는다. */
-    fun findWishJobs(userIds: Collection<Long>): Map<Long, String> {
+    /**
+     * 회원의 희망 직무 원문(렛츠커리어 선택지를 `, `로 이은 값)과 학년이다. 프로필이 없으면 넣지 않고,
+     * 희망 직무나 학년이 비어 있으면 그 값만 null이다.
+     */
+    fun findProfiles(userIds: Collection<Long>): Map<Long, ContentMemberProfileRow> {
         if (userIds.isEmpty()) return emptyMap()
-        return queryFactory.select(userProfile.userId, userProfile.wishJob)
+        return queryFactory.select(userProfile.userId, userProfile.wishJob, userProfile.grade)
             .from(userProfile)
-            .where(userProfile.userId.`in`(userIds), userProfile.wishJob.isNotNull)
+            .where(userProfile.userId.`in`(userIds))
             .fetch()
-            .associate { checkNotNull(it.get(userProfile.userId)) to checkNotNull(it.get(userProfile.wishJob)) }
+            .associate {
+                checkNotNull(it.get(userProfile.userId)) to ContentMemberProfileRow(it.get(userProfile.wishJob), it.get(userProfile.grade))
+            }
+    }
+
+    /** [type] 이벤트 수다. 상세 집계에 넣지 않는 이벤트(공유)를 기간으로 센다. */
+    fun countEvents(scope: ContentMetricScope, type: ContentEventType, from: LocalDateTime, toExclusive: LocalDateTime): Long {
+        if (scope.isEmpty) return 0L
+        return queryFactory.select(contentEvent.id.count())
+            .from(contentEvent)
+            .where(
+                eventScope(scope),
+                contentEvent.eventType.eq(type),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .fetchOne() ?: 0L
+    }
+
+    /** [type] 이벤트를 낸 서로 다른 방문자 수다. 회원이면 회원 식별자, 아니면 익명 방문자 식별자로 센다. */
+    fun countDistinctVisitors(scope: ContentMetricScope, type: ContentEventType, from: LocalDateTime, toExclusive: LocalDateTime): Long {
+        if (scope.isEmpty) return 0L
+        return queryFactory.select(visitorKey.countDistinct())
+            .from(contentEvent)
+            .where(
+                eventScope(scope),
+                contentEvent.eventType.eq(type),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .fetchOne() ?: 0L
     }
 
     fun findFirstOccurredAt(): LocalDateTime? =

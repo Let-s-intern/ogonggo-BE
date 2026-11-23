@@ -4,6 +4,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreativeMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -11,6 +12,7 @@ import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCo
 import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractExposureQueryRepository
 import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractJpaRepository
 import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractProductJpaRepository
+import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractTargetJpaRepository
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureContent
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposurePeriod
@@ -22,6 +24,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductJpaRepository
 import com.ogonggo.core.advertisementproduct.persistence.AdvertisementProductQueryRepository
+import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.contentdailystat.implement.ContentDailyStatManager
 import com.ogonggo.core.contentdailystat.implement.ContentMetricReader
@@ -33,9 +36,11 @@ import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentevent.persistence.ContentEventJpaRepository
 import com.ogonggo.core.error.BusinessException
 import com.ogonggo.core.job.domain.Job
+import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.job.domain.JobField
 import com.ogonggo.core.jpa.CoreJpaConfiguration
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.user.domain.UserProfile
 import com.ogonggo.core.user.persistence.UserProfileJpaRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -73,6 +78,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     private val exposureRepository: AdvertisementExposureJpaRepository,
     private val eventRepository: ContentEventJpaRepository,
     private val userProfileRepository: UserProfileJpaRepository,
+    private val contractTargetRepository: AdvertisementContractTargetJpaRepository,
 ) {
 
     @MockBean
@@ -80,6 +86,12 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
 
     @MockBean
     private lateinit var bootcampReader: BootcampReader
+
+    @MockBean
+    private lateinit var jobBookmarkReader: JobBookmarkReader
+
+    @MockBean
+    private lateinit var bootcampBookmarkReader: BootcampBookmarkReader
 
     private lateinit var contract: AdvertisementContract
     private var bannerExposureId = 0L
@@ -92,6 +104,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         val job = Mockito.mock(Job::class.java)
         Mockito.`when`(job.title).thenReturn("백엔드 개발자")
         Mockito.`when`(job.companyName).thenReturn("뱅크")
+        Mockito.`when`(job.jobField).thenReturn(JobField.IT_DEVELOPMENT)
         Mockito.`when`(jobReader.readIncludingDeleted(JOB_ID)).thenReturn(job)
 
         contract = contractRepository.save(form())
@@ -247,6 +260,105 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     }
 
     @Test
+    fun `도달은 기간 동안 광고를 본 서로 다른 사람이고 평균 빈도는 노출수를 도달로 나눈 값이다`() {
+        // given
+        event(ContentEventType.IMPRESSION, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.plusDays(1).atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(11, 0), "ignored", cardExposureId, ContentEventSource.AD_CARD, target = false, userId = 5L)
+        event(ContentEventType.IMPRESSION, START.plusDays(1).atTime(11, 0), "other-device", cardExposureId, ContentEventSource.AD_CARD, target = false, userId = 5L)
+        event(ContentEventType.AD_CLICK, START.atTime(10, 1), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.AD_CLICK, START.atTime(10, 2), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+
+        // when
+        val audience = reportReader.read(contract, cardProductId, null, null, TODAY).audience
+
+        // then
+        assertEquals(3L, audience.reach)
+        assertEquals(1.7, audience.avgFrequency)
+        assertEquals(1L, audience.adClickVisitors)
+    }
+
+    @Test
+    fun `원본 보관 기간보다 앞날이 걸린 기간은 도달과 평균 빈도를 null로 준다`() {
+        // given
+        val old = TODAY.minusDays(400)
+        val oldContract = contractRepository.save(form())
+        val card = productRepository.findAll().first { it.category == AdvertisementProductCategory.JOB_POSTING }
+        val oldProductId = checkNotNull(
+            contractProductRepository.save(
+                AdvertisementContractProduct(checkNotNull(oldContract.id), checkNotNull(card.id), AdvertisementContractProductPeriod(old, old.plusDays(10))),
+            ).id,
+        )
+
+        // when
+        val audience = reportReader.read(oldContract, oldProductId, null, null, TODAY).audience
+
+        // then
+        assertNull(audience.reach)
+        assertNull(audience.avgFrequency)
+        assertNull(audience.adClickVisitors)
+    }
+
+    @Test
+    fun `타깃 직무 일치율은 공고를 연 회원 중 희망 직군이 광고 공고의 직군과 겹치는 회원이고 학년은 공고를 연 회원만 센다`() {
+        // given
+        profile(1L, "백엔드/서버 개발", UserGrade.FOURTH)
+        profile(2L, "마케터", UserGrade.FOURTH)
+        profile(3L, null)
+        profile(4L, "백엔드/서버 개발", UserGrade.GRADUATE)
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.VIEW, START.atTime(10, 0), "b", cardExposureId, ContentEventSource.AD_CARD, userId = 2L)
+        event(ContentEventType.VIEW, START.atTime(10, 0), "c", cardExposureId, ContentEventSource.AD_CARD, userId = 3L)
+        event(ContentEventType.AD_CLICK, START.atTime(10, 0), "d", cardExposureId, ContentEventSource.AD_CARD, target = false, userId = 4L)
+
+        // when
+        val audience = reportReader.read(contract, cardProductId, null, null, TODAY).audience
+
+        // then
+        assertEquals(listOf(JobField.IT_DEVELOPMENT), audience.targetJobFields)
+        assertEquals(1L, audience.targetMatch.matchedMembers)
+        assertEquals(3L, audience.targetMatch.members)
+        assertEquals(0.3333, audience.targetMatch.rate)
+        assertEquals(listOf(UserGrade.FOURTH, null), audience.byGrade.map { it.grade })
+        assertEquals(listOf(2L, 1L), audience.byGrade.map { it.memberUniqueVisitors })
+        assertEquals("학년 미설정", audience.byGrade.last().label)
+    }
+
+    @Test
+    fun `타깃 직군이 없는 배너는 일치율이 null이다`() {
+        // given
+        profile(1L, "백엔드/서버 개발")
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER, userId = 1L)
+
+        // when
+        val audience = reportReader.read(contract, bannerProductId, null, null, TODAY).audience
+
+        // then
+        assertEquals(emptyList<JobField>(), audience.targetJobFields)
+        assertNull(audience.targetMatch.rate)
+    }
+
+    @Test
+    fun `대상 공고의 공유는 공유 이벤트 수로, 저장은 북마크 읽기로 센다`() {
+        // given
+        contractTargetRepository.save(
+            AdvertisementContractTarget(checkNotNull(contract.id), AdvertisementContractPromotionTarget.JOB, JOB_ID),
+        )
+        event(ContentEventType.SHARE, START.atTime(10, 0), "a", null, ContentEventSource.LIST)
+        event(ContentEventType.SHARE, START.plusDays(1).atTime(10, 0), "a", null, ContentEventSource.LIST)
+        event(ContentEventType.SHARE, START.minusDays(1).atTime(10, 0), "a", null, ContentEventSource.LIST)
+        Mockito.`when`(jobBookmarkReader.countSaved(JOB_ID, START, TODAY)).thenReturn(4L)
+
+        // when
+        val total = reportReader.read(contract, cardProductId, null, null, TODAY).targets.single().total
+
+        // then
+        assertEquals(2L, total.shares)
+        assertEquals(4L, total.saves)
+    }
+
+    @Test
     fun `계약 합계는 리포트를 열 수 있는 상품의 상품 몫을 더한 값이다`() {
         // given
         event(ContentEventType.VIEW, START.atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
@@ -289,9 +401,9 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         assertEquals(START.datesUntil(TODAY.plusDays(1)).toList(), active.first().daily.map { it.date })
     }
 
-    private fun profile(userId: Long, wishJob: String?) {
+    private fun profile(userId: Long, wishJob: String?, grade: UserGrade? = null) {
         val profile = UserProfile(userId = userId, lastSyncedAt = NOW)
-        profile.replaceJobInfo(null, null, null, null, wishJob, null, null, null, null)
+        profile.replaceJobInfo(null, null, grade, null, wishJob, null, null, null, null)
         userProfileRepository.save(profile)
     }
 

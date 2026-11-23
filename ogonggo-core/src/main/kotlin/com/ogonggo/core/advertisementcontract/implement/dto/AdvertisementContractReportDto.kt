@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTargetType
 import com.ogonggo.core.contentevent.domain.ContentEventSource
 import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.user.domain.UserGrade
 import java.time.LocalDate
 
 /**
@@ -26,6 +27,7 @@ data class AdvertisementContractReportDto(
     val exposures: List<AdvertisementContractReportExposureDto>,
     val targets: List<AdvertisementContractReportTargetDto>,
     val byJobField: List<AdvertisementContractReportJobFieldDto>,
+    val audience: AdvertisementContractReportAudienceDto,
     val csvRows: List<AdvertisementContractReportCsvRowDto>,
 )
 
@@ -97,6 +99,8 @@ data class AdvertisementContractReportTargetDto(
 )
 
 data class AdvertisementContractReportTargetTotalDto(
+    val saves: Long,
+    val shares: Long,
     val views: Long,
     val uniqueVisitors: Long,
     val memberViews: Long,
@@ -139,6 +143,38 @@ data class AdvertisementContractReportJobFieldDto(
     val memberViews: Long,
     val ctaUniqueMembers: Long,
     val adClickMembers: Long,
+)
+
+/**
+ * 상품 몫을 본 사람의 구성이다.
+ *
+ * - [reach]는 기간 동안 광고를 본 서로 다른 사람(회원·비회원 합), [avgFrequency]는 노출수 ÷ [reach]다. 하루 집계로는 기간 합을 낼 수 없어 원본으로 세므로,
+ *   원본 보관 기간보다 앞날이 걸리면 [reach]·[adClickVisitors]·[avgFrequency]가 null이다.
+ * - [adClickVisitors]는 광고를 눌러 공고를 연 서로 다른 사람이다.
+ * - [targetJobFields]는 광고가 띄우는 공고의 직군과 노출을 띄우는 직군 탭이다. 없으면 [targetMatch]도 비율이 null이다.
+ * - [byGrade]는 로그인 회원을 학년으로 나눈 것이다. 공고를 연 회원만 센다.
+ */
+data class AdvertisementContractReportAudienceDto(
+    val reach: Long?,
+    val avgFrequency: Double?,
+    val adClickVisitors: Long?,
+    val targetJobFields: List<JobField>,
+    val targetMatch: AdvertisementContractReportTargetMatchDto,
+    val byGrade: List<AdvertisementContractReportGradeDto>,
+)
+
+/** 공고를 연 회원 [members]명 중 희망 직무의 직군이 타깃 직군과 하나라도 겹치는 회원이 [matchedMembers]명이다. */
+data class AdvertisementContractReportTargetMatchDto(
+    val matchedMembers: Long,
+    val members: Long,
+    val rate: Double?,
+)
+
+/** 학년 한 칸이다. 학년을 입력하지 않은 회원은 [grade]가 null이다. */
+data class AdvertisementContractReportGradeDto(
+    val grade: UserGrade?,
+    val label: String,
+    val memberUniqueVisitors: Long,
 )
 
 /** 대시보드에 보이는 진행 중 광고 상품 하나다. 숫자는 상품 시작일부터 오늘까지의 상품 몫이다. */

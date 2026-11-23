@@ -37,7 +37,7 @@ data class CreateContentEventsRequest(
 
 data class ContentEventRequest(
     val type: ContentEventType,
-    @Schema(description = "VIEW·CTA_CLICK·SCROLL은 필수. 대상 없는 배너의 IMPRESSION·AD_CLICK은 null")
+    @Schema(description = "VIEW·CTA_CLICK·SCROLL·SHARE는 필수. 대상 없는 배너의 IMPRESSION·AD_CLICK은 null")
     val targetType: ContentEventTargetType?,
     @field:Positive
     val targetId: Long?,

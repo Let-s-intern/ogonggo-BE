@@ -8,6 +8,7 @@ import com.ogonggo.core.job.persistence.JobBookmarkJpaRepository
 import com.ogonggo.core.job.persistence.JobQueryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import java.time.LocalDate
 
 @Component
 class JobBookmarkReader internal constructor(
@@ -41,6 +42,10 @@ class JobBookmarkReader internal constructor(
             hasNext = result.hasNext(),
         )
     }
+
+    /** [from]~[to](둘 다 포함) 사이에 저장했고 지금도 저장 중인 사람 수다. */
+    fun countSaved(jobId: Long, from: LocalDate, to: LocalDate): Long =
+        jobBookmarkRepository.countActivated(jobId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
 
     fun readBookmarkedJobIds(userId: Long, jobIds: Collection<Long>): Set<Long> =
         if (jobIds.isEmpty()) emptySet() else jobBookmarkRepository.findActiveJobIds(userId, jobIds)

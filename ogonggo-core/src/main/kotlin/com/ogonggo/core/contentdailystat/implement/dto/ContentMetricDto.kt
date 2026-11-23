@@ -73,6 +73,10 @@ data class ContentMetricDto(
         fun rate(numerator: Long, denominator: Long): Double? =
             if (denominator == 0L) null else Math.round(numerator.toDouble() / denominator * 10_000) / 10_000.0
 
+        /** 평균(분자 ÷ 분모). 분모가 0이면 null이다. 소수 첫째 자리까지. */
+        fun ratio(numerator: Long, denominator: Long): Double? =
+            if (denominator == 0L) null else round1(numerator.toDouble() / denominator)
+
         private fun round1(value: Double): Double = Math.round(value * 10) / 10.0
     }
 }
