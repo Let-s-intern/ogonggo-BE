@@ -644,8 +644,19 @@ class AdminOpenApiContractTest @Autowired constructor(
         val summary = document.at("$base~1report-summary/get")
         val targets = document.at("$base~1targets/post")
         val removeTarget = document.at("$base~1targets~1{targetType}~1{targetId}/delete")
+        val insights = document.at("$base~1products~1{contractProductId}~1report-insights/put")
 
         // then
+        assertEquals("replaceAdvertisementReportInsights", insights.at("/operationId").asText())
+        assertTrue(insights.at("/security/0/BearerAuth").isArray)
+        assertTrue(insights.at("/responses/404/description").asText().startsWith("ADVERTISEMENT_CONTRACT_NOT_FOUND"))
+        assertEquals(
+            setOf("insights", "published"),
+            document.at("/components/schemas/ReplaceAdminAdvertisementReportInsightsRequest/properties").fieldNames().asSequence().toSet(),
+        )
+        assertEquals(6, document.at("/components/schemas/ReplaceAdminAdvertisementReportInsightsRequest/properties/insights/maxItems").asInt())
+        assertEquals(60, document.at("/components/schemas/AdminAdvertisementReportInsightRequest/properties/title/maxLength").asInt())
+        assertEquals(500, document.at("/components/schemas/AdminAdvertisementReportInsightRequest/properties/body/maxLength").asInt())
         assertEquals("getAdvertisementContractProductReport", report.at("/operationId").asText())
         assertEquals("downloadAdvertisementContractProductReportCsv", csv.at("/operationId").asText())
         assertEquals("getAdvertisementContractReportSummary", summary.at("/operationId").asText())

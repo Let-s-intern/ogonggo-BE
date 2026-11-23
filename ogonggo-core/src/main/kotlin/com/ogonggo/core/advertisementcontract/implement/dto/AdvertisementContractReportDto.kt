@@ -28,6 +28,7 @@ data class AdvertisementContractReportDto(
     val targets: List<AdvertisementContractReportTargetDto>,
     val byJobField: List<AdvertisementContractReportJobFieldDto>,
     val audience: AdvertisementContractReportAudienceDto,
+    val insights: List<AdvertisementReportInsightDto>,
     val csvRows: List<AdvertisementContractReportCsvRowDto>,
 )
 

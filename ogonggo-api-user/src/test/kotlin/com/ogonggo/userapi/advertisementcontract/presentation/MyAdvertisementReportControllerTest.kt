@@ -8,6 +8,7 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportCsvRowDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportGradeDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDto
 import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportPostingDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
@@ -96,6 +97,8 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.audience.byGrade[1].label").value("학년 미설정"))
             .andExpect(jsonPath("$.data.targets[0].total.saves").value(3))
             .andExpect(jsonPath("$.data.targets[0].total.shares").value(1))
+            .andExpect(jsonPath("$.data.insights[0].title").value("마감 전 재노출을 제안해요"))
+            .andExpect(jsonPath("$.data.insights[0].published").doesNotExist())
     }
 
     @Test
@@ -233,6 +236,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
                     AdvertisementContractReportGradeDto(null, "학년 미설정", 1),
                 ),
             ),
+            insights = listOf(AdvertisementReportInsightDto("마감 전 재노출을 제안해요", "마감 2주 전 한 번 더 노출해 보세요.", true)),
             csvRows = listOf(FROM, TO).map {
                 AdvertisementContractReportCsvRowDto(it, 31L, "공고, 광고", 100, 2, 1, 1, 0, 0, 0, 50.0, null)
             },

@@ -1,5 +1,7 @@
 package com.ogonggo.adminapi.advertisementcontract.presentation
 
+import com.ogonggo.adminapi.advertisementcontract.presentation.request.ReplaceAdminAdvertisementReportInsightsRequest
+import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportInsightResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportResponse
 import com.ogonggo.adminapi.advertisementcontract.presentation.response.AdminAdvertisementReportTotalResponse
 import com.ogonggo.adminapi.config.ADMIN_BEARER_AUTH_SCHEME
@@ -13,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Positive
 import org.springframework.http.ResponseEntity
 import java.time.LocalDate
@@ -51,6 +54,34 @@ interface AdminAdvertisementReportApi {
         @Parameter(description = "조회 시작일(포함). 비우면 상품 시작일") from: LocalDate?,
         @Parameter(description = "조회 종료일(포함). 비우면 상품 종료일과 오늘 중 이른 날") to: LocalDate?,
     ): ResponseEntity<SuccessResponse<AdminAdvertisementReportResponse>>
+
+    @Operation(
+        operationId = "replaceAdvertisementReportInsights",
+        summary = "광고 상품 리포트 인사이트 저장",
+        description = """
+            계약 상품 하나의 인사이트(제목·본문)를 통째로 바꿉니다. 목록 순서가 보이는 순서이고 빈 목록이면 모두 걷어냅니다.
+            published가 true이면 기업 회원의 리포트에 보내고, false이면 운영자만 보는 임시 저장입니다(이미 보낸 것도 숨겨집니다).
+            인사이트는 최대 6개, 제목 60자·본문 500자까지입니다. 운영자는 리포트 조회 응답의 insights로 임시 저장까지 읽습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "저장 성공", useReturnTypeSchema = true),
+            ApiResponse(
+                responseCode = "400",
+                description = "BAD_REQUEST: Path ID가 양수가 아니거나 인사이트가 6개를 넘고 제목·본문이 비었거나 너무 깁니다.",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(responseCode = "401", description = "UNAUTHORIZED", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "403", description = "FORBIDDEN", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+            ApiResponse(responseCode = "404", description = NOT_FOUND, content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun replaceInsights(
+        @Positive contractId: Long,
+        @Positive contractProductId: Long,
+        @Valid request: ReplaceAdminAdvertisementReportInsightsRequest,
+    ): ResponseEntity<SuccessResponse<List<AdminAdvertisementReportInsightResponse>>>
 
     @Operation(
         operationId = "getAdvertisementContractReportSummary",

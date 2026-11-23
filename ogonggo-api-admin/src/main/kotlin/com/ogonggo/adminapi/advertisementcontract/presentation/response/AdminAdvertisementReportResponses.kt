@@ -8,6 +8,7 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportGradeDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportJobFieldDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportScrollStepDto
@@ -50,6 +51,8 @@ data class AdminAdvertisementReportResponse(
     val byJobField: List<AdminAdvertisementReportJobFieldResponse>,
     @field:Schema(description = "상품 몫을 본 사람의 구성. 도달·평균 빈도, 타깃 직무 일치율, 학년")
     val audience: AdminAdvertisementReportAudienceResponse,
+    @field:Schema(description = "운영자가 쓴 인사이트. 임시 저장도 보이며 published 로 기업 회원에게 보냈는지 가린다")
+    val insights: List<AdminAdvertisementReportInsightResponse>,
 ) {
     companion object {
         fun from(report: AdvertisementContractReportDto) = AdminAdvertisementReportResponse(
@@ -64,6 +67,7 @@ data class AdminAdvertisementReportResponse(
             targets = report.targets.map(AdminAdvertisementReportTargetResponse::from),
             byJobField = report.byJobField.map(AdminAdvertisementReportJobFieldResponse::from),
             audience = AdminAdvertisementReportAudienceResponse.from(report.audience),
+            insights = report.insights.map(AdminAdvertisementReportInsightResponse::from),
         )
     }
 }
@@ -293,6 +297,17 @@ data class AdminAdvertisementReportJobFieldResponse(
             ctaUniqueMembers = row.ctaUniqueMembers,
             adClickMembers = row.adClickMembers,
         )
+    }
+}
+
+data class AdminAdvertisementReportInsightResponse(
+    val title: String,
+    val body: String,
+    @field:Schema(description = "기업 회원의 리포트에 보냈으면 true, 운영자만 보는 임시 저장이면 false")
+    val published: Boolean,
+) {
+    companion object {
+        fun from(insight: AdvertisementReportInsightDto) = AdminAdvertisementReportInsightResponse(insight.title, insight.body, insight.published)
     }
 }
 

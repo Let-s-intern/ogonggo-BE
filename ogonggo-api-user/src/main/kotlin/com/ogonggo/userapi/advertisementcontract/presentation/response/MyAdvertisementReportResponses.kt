@@ -9,6 +9,7 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportGradeDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportJobFieldDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportScrollStepDto
@@ -52,6 +53,8 @@ data class MyAdvertisementReportResponse(
     val byJobField: List<MyAdvertisementReportJobFieldResponse>,
     @field:Schema(description = "상품 몫을 본 사람의 구성. 도달·평균 빈도, 타깃 직무 일치율, 학년")
     val audience: MyAdvertisementReportAudienceResponse,
+    @field:Schema(description = "운영자가 써서 보낸 인사이트. 보내지 않은 임시 저장은 나오지 않는다. 없으면 빈 배열")
+    val insights: List<MyAdvertisementReportInsightResponse>,
 ) {
     companion object {
         fun from(report: AdvertisementContractReportDto) = MyAdvertisementReportResponse(
@@ -66,6 +69,7 @@ data class MyAdvertisementReportResponse(
             targets = report.targets.map(MyAdvertisementReportTargetResponse::from),
             byJobField = report.byJobField.map(MyAdvertisementReportJobFieldResponse::from),
             audience = MyAdvertisementReportAudienceResponse.from(report.audience),
+            insights = report.insights.map(MyAdvertisementReportInsightResponse::from),
         )
     }
 }
@@ -295,6 +299,15 @@ data class MyAdvertisementReportJobFieldResponse(
             ctaUniqueMembers = row.ctaUniqueMembers,
             adClickMembers = row.adClickMembers,
         )
+    }
+}
+
+data class MyAdvertisementReportInsightResponse(
+    val title: String,
+    val body: String,
+) {
+    companion object {
+        fun from(insight: AdvertisementReportInsightDto) = MyAdvertisementReportInsightResponse(insight.title, insight.body)
     }
 }
 
