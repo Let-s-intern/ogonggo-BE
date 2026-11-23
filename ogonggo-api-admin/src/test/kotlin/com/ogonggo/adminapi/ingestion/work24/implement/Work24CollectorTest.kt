@@ -20,6 +20,7 @@ import com.ogonggo.core.region.domain.Region
 import com.ogonggo.core.region.domain.SubRegion
 import com.ogonggo.core.contentreview.domain.ContentSource
 import com.ogonggo.core.storage.s3.S3ObjectClient
+import com.ogonggo.core.work24jobfield.implement.Work24JobFieldReader
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -48,6 +49,12 @@ class Work24CollectorTest {
 
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val bootcampReader = Mockito.mock(BootcampReader::class.java)
+
+    /** 관리자가 켠 직군이다. 테스트마다 바꿀 수 있다. */
+    private var enabledJobFields: Set<JobField> = setOf(JobField.MARKETING_ADVERTISING, JobField.IT_DEVELOPMENT)
+    private val work24JobFieldReader = Mockito.mock(Work24JobFieldReader::class.java) { invocation ->
+        if (invocation.method.name == "findEnabled") enabledJobFields else null
+    }
 
     /** 저장소 대신 등록한 값을 기록한다. */
     private val appendedJobs = mutableListOf<JobAppendDto>()
@@ -512,13 +519,15 @@ class Work24CollectorTest {
     }
 
     @Test
-    fun `임시로 정한 직군 밖 직종의 공고는 상세를 부르지 않고 제외한다`() {
+    fun `관리자가 끈 직군의 공고는 상세를 부르지 않고 제외한다`() {
+        // given
+        enabledJobFields = setOf(JobField.MARKETING_ADVERTISING)
         server.expect(requestTo(startsWith("$BASE_URL/wk/callOpenApiSvcInfo210L01.do")))
             .andRespond(
                 xml(
                     """
                     <wantedRoot><total>2</total>
-                      <wanted><wantedAuthNo>K1</wantedAuthNo><jobsCd>140100</jobsCd><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
+                      <wanted><wantedAuthNo>K1</wantedAuthNo><jobsCd>133201</jobsCd><wantedInfoUrl>$WORKNET/K1</wantedInfoUrl></wanted>
                       <wanted><wantedAuthNo>K2</wantedAuthNo><jobsCd>024102</jobsCd><company>회사</company><title>제목</title><wantedInfoUrl>$WORKNET/K2</wantedInfoUrl></wanted>
                     </wantedRoot>
                     """.trimIndent(),
@@ -582,6 +591,7 @@ class Work24CollectorTest {
                     if (invocation.method.name == "isConfigured") true else "$CDN/${invocation.getArgument<String>(0)}"
                 },
             ),
+            work24JobFieldReader,
         )
     }
 

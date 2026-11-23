@@ -29,6 +29,7 @@ enum class Work24Destination {
  * - [itemPath]: 최상위 요소를 벗긴 목록 응답에서 항목 요소까지의 경로
  * - [idFields]: 같은 항목을 구별하는 필드. 여러 개면 `-`로 잇는다. 등록한 콘텐츠의 외부 식별값(`external_id`)이 된다.
  * - [excludes]: 목록 조건으로 거를 수 없어 목록 항목을 보고 빼는 조건. 해당하면 상세를 부르지 않는다.
+ * - [jobField]: 목록 항목의 직군. 있으면 관리자가 끈 직군(`work24_job_fields`)과 직군을 알 수 없는 항목을 상세를 부르지 않고 뺀다.
  * - [parameters]: 수집일을 받아 고정 검색 조건을 만든다. 날짜 조건은 빠진 날을 메우도록 며칠 겹치게 잡는다.
  */
 enum class Work24CollectionTarget(
@@ -40,6 +41,7 @@ enum class Work24CollectionTarget(
     val idFields: List<String>,
     val parameters: (LocalDate) -> Map<String, String>,
     val excludes: (JsonNode) -> Boolean = { false },
+    val jobField: ((JsonNode) -> JobField?)? = null,
 ) {
     /**
      * 최근 3일 안에 등록된 정규직·계약직 공고만 받는다. 전체 채용정보는 페이지 상한(1,000쪽)을 넘는다.
@@ -49,18 +51,16 @@ enum class Work24CollectionTarget(
      * 채용구분(`empTpGb`)의 일용직(2)은 이 API로 조회되지 않아, 받는 공고는 모두 상용직이다.
      *
      * 직종코드(`jobsCd`)가 [Work24JobRoles] 표에 없는 공고도 뺀다. 오공고 직군·직무로 분류할 수 있는 공고만 받는다.
+     * 표에 있어도 관리자가 끈 직군의 공고는 뺀다. 켜짐 여부는 `work24_job_fields`가 정하고, 행이 없으면 다섯 직군만 켜져 있다.
      *
-     * 임시로 [TEMPORARY_JOB_FIELDS] 직군만 받는다. 연차는 목록에 연수가 없어 상세를 받은 뒤 거른다([Work24Collector]).
+     * 연차는 목록에 연수가 없어 상세를 받은 뒤 거른다([Work24Collector]).
      */
     RECRUITMENTS(
         Work24Api.RECRUITMENTS, Work24Api.RECRUITMENT_DETAIL, Work24Destination.JOB, Work24Paging.START_PAGE,
         listOf("wanted"), listOf("wantedAuthNo"),
         { mapOf("regDate" to "D-3", "sortOrderBy" to "DESC", "empTp" to "10|20") },
-        excludes = { item ->
-            item.path("salTpNm").asText().trim() in HOURLY_OR_DAILY_WAGES ||
-                // 표에 없는 직종(null)도 임시 직군 밖이라 함께 빠진다. 임시 조건을 풀면 `== null`로 되돌린다.
-                Work24JobRoles.of(item.path("jobsCd").asText())?.jobField !in TEMPORARY_JOB_FIELDS
-        },
+        excludes = { item -> item.path("salTpNm").asText().trim() in HOURLY_OR_DAILY_WAGES },
+        jobField = { item -> Work24JobRoles.of(item.path("jobsCd").asText())?.jobField },
     ),
 
     /**
@@ -89,20 +89,7 @@ enum class Work24CollectionTarget(
     ),
 }
 
-/**
- * 임시로 받는 채용공고 직군이다(2026-10-06, LC-3444). 마케팅·인사·기획·영업·개발 직무만 받는다.
- * 2026-10-12 직군을 다섯 묶음으로 합쳐([JobField]) AI·데이터, 상품기획·MD에 더해 디자인, 회계·세무·재무,
- * 고객상담·TM, 미디어·엔터 직무도 받는다. 풀 때는 이 목록과 [TEMPORARY_MAX_CAREER_YEARS] 검사를 지운다.
- */
-internal val TEMPORARY_JOB_FIELDS: Set<JobField> = setOf(
-    JobField.MARKETING_ADVERTISING,
-    JobField.HR_GENERAL_AFFAIRS,
-    JobField.PLANNING_STRATEGY,
-    JobField.SALES,
-    JobField.IT_DEVELOPMENT,
-)
-
-/** 임시로 받는 최대 경력 연수다. 인턴부터 3년차까지 받는다. 최소 경력이 이보다 긴 공고는 뺀다. */
+/** 임시로 받는 최대 경력 연수다. 인턴부터 3년차까지 받는다. 최소 경력이 이보다 긴 공고는 뺀다. 풀 때는 [Work24Collector]의 검사를 지운다. */
 internal const val TEMPORARY_MAX_CAREER_YEARS = 3
 
 private const val TRAINING_START_DAYS = 90L

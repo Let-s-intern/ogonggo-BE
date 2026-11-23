@@ -7,6 +7,8 @@ import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.job.implement.JobAppender
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.contentreview.domain.ContentSource
+import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.work24jobfield.implement.Work24JobFieldReader
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -37,6 +39,7 @@ class Work24Collector(
     private val bootcampAppender: BootcampAppender,
     private val work24CoursePageReader: Work24CoursePageReader,
     private val work24InstitutionImageImporter: Work24InstitutionImageImporter,
+    private val work24JobFieldReader: Work24JobFieldReader,
 ) {
 
     /** 인증키가 설정되어 수집할 수 있는 대상인지 알려 준다. */
@@ -44,6 +47,8 @@ class Work24Collector(
 
     fun collect(target: Work24CollectionTarget, now: LocalDateTime): Work24CollectDto {
         val baseParameters = target.parameters(now.toLocalDate())
+        // 수집 도중 관리자가 바꿔도 이번 회차는 시작할 때의 직군으로 받는다.
+        val enabledJobFields = if (target.jobField == null) emptySet() else work24JobFieldReader.findEnabled()
         val collectedIds = mutableSetOf<String>()
         val counter = Counter()
         var receivedCount = 0
@@ -64,7 +69,7 @@ class Work24Collector(
                 break
             }
 
-            newNodes.forEach { node -> counter.record(import(target, node, now)) }
+            newNodes.forEach { node -> counter.record(import(target, node, now, enabledJobFields)) }
 
             // 식별값이 없는 항목도 받은 것이므로 전체 건수와는 받은 항목 수로 비교한다.
             val total = response.path(target.paging.totalField).asText().toIntOrNull()
@@ -84,9 +89,14 @@ class Work24Collector(
         )
     }
 
-    private fun import(target: Work24CollectionTarget, item: JsonNode, now: LocalDateTime): Outcome =
+    private fun import(
+        target: Work24CollectionTarget,
+        item: JsonNode,
+        now: LocalDateTime,
+        enabledJobFields: Set<JobField>,
+    ): Outcome =
         try {
-            if (target.excludes(item)) {
+            if (target.excludes(item) || target.jobField?.let { it(item) !in enabledJobFields } == true) {
                 Outcome.EXCLUDED
             } else {
                 when (target.destination) {
