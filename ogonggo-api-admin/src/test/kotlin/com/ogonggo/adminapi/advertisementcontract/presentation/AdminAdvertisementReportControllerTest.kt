@@ -157,7 +157,7 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
 
         val REPORT = AdvertisementContractReportDto(
             product = AdvertisementContractReportProductDto(
-                1L, 7L, 3L, AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_TOP_BANNER, "홈 상단 배너", FROM, LocalDate.of(2026, 11, 30),
+                1L, 7L, 3L, AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_TOP_BANNER, "홈 상단 배너", FROM, LocalDate.of(2026, 11, 30), null,
             ),
             from = FROM,
             to = FROM,

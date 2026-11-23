@@ -76,6 +76,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             // then
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.product.contractProductId").value(PRODUCT_ID))
+            .andExpect(jsonPath("$.data.product.price").value(300_000))
             .andExpect(jsonPath("$.data.from").value("2026-11-01"))
             .andExpect(jsonPath("$.data.summary.adClickRate").value(0.02))
             .andExpect(jsonPath("$.data.summary.scrollFunnel[2].threshold").value(50))
@@ -196,7 +197,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
         val TO: LocalDate = LocalDate.of(2026, 11, 2)
 
         val REPORT = AdvertisementContractReportDto(
-            product = AdvertisementContractReportProductDto(1L, PRODUCT_ID, 3L, AdvertisementProductCategory.JOB_POSTING, null, "목록 광고 공고", FROM, LocalDate.of(2026, 11, 30)),
+            product = AdvertisementContractReportProductDto(1L, PRODUCT_ID, 3L, AdvertisementProductCategory.JOB_POSTING, null, "목록 광고 공고", FROM, LocalDate.of(2026, 11, 30), 300_000),
             from = FROM,
             to = TO,
             collectedSince = FROM,

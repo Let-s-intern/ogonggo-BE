@@ -113,7 +113,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         Mockito.`when`(jobReader.readIncludingDeleted(JOB_ID)).thenReturn(job)
 
         contract = contractRepository.save(form())
-        val banner = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_TOP_BANNER, "홈 상단 배너", null))
+        val banner = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.BANNER, AdvertisementProductPosition.JOB_HOME_TOP_BANNER, "홈 상단 배너", 500_000))
         val card = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.JOB_POSTING, null, "목록 광고 공고", null))
         bannerProductId = addProduct(banner, START, END)
         cardProductId = addProduct(card, START, END)
@@ -158,6 +158,8 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         val cardReport = reportReader.read(contract, cardProductId, null, null, TODAY)
 
         // then
+        assertEquals(500_000, bannerReport.product.price)
+        assertEquals(null, cardReport.product.price)
         assertEquals(1L, bannerReport.summary.views)
         assertEquals(1L, bannerReport.summary.impressions)
         assertEquals(1L, cardReport.summary.views)
