@@ -10,6 +10,8 @@ import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatJpaReposito
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatQueryRepository
 import com.ogonggo.core.contentdailystat.persistence.ContentEventRow
 import com.ogonggo.core.contentevent.domain.ContentEvent
+import com.ogonggo.core.contentevent.domain.ContentEventType
+import com.ogonggo.core.contentdailystat.implement.dto.ContentAdReachDto
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 
@@ -69,18 +71,40 @@ class ContentMetricReader internal constructor(
         val activities = ContentMetricCalculator.memberActivities(rows, start.atStartOfDay())
         val adClickers = contentDailyStatQueryRepository.findAdClickMemberIds(scope, start.atStartOfDay(), toExclusive)
         val userIds = activities.keys + adClickers
-        val wishJobs = contentDailyStatQueryRepository.findWishJobs(userIds)
+        val profiles = contentDailyStatQueryRepository.findProfiles(userIds)
         return userIds.map { userId ->
             val activity = activities[userId]
             ContentMemberActivityDto(
                 userId = userId,
-                wishJob = wishJobs[userId],
+                wishJob = profiles[userId]?.wishJob,
+                grade = profiles[userId]?.grade,
                 views = activity?.views ?: 0L,
                 viewed = activity?.viewed ?: false,
                 ctaClicked = activity?.ctaClicked ?: false,
                 adClicked = userId in adClickers,
             )
         }
+    }
+
+    /**
+     * [from]~[to] 동안 광고를 본 서로 다른 방문자(도달)와 광고를 누른 서로 다른 방문자다. 하루 집계로는 기간 합을 낼 수 없어 원본에서 센다.
+     * 원본 보관 기간(365일)보다 앞인 날이 걸리면 정확히 셀 수 없어 null이다.
+     */
+    fun readAdReach(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate): ContentAdReachDto? {
+        if (from.isBefore(ContentEvent.retainedSince(today))) return null
+        val fromAt = from.atStartOfDay()
+        val toExclusive = to.plusDays(1).atStartOfDay()
+        return ContentAdReachDto(
+            impressionVisitors = contentDailyStatQueryRepository.countDistinctVisitors(scope, ContentEventType.IMPRESSION, fromAt, toExclusive),
+            adClickVisitors = contentDailyStatQueryRepository.countDistinctVisitors(scope, ContentEventType.AD_CLICK, fromAt, toExclusive),
+        )
+    }
+
+    /** [from]~[to] 공유 수다. 일별 집계에 넣지 않아 원본에서 세며, 원본 보관 기간보다 앞인 날은 빠진다. */
+    fun readShares(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate): Long {
+        val start = maxOf(from, ContentEvent.retainedSince(today))
+        if (start.isAfter(to)) return 0L
+        return contentDailyStatQueryRepository.countEvents(scope, ContentEventType.SHARE, start.atStartOfDay(), to.plusDays(1).atStartOfDay())
     }
 
     /** 이벤트를 모으기 시작한 날이다. 아직 없으면 [today]다. */

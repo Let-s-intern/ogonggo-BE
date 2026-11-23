@@ -7,6 +7,7 @@ import com.ogonggo.core.bootcamp.implement.dto.BootcampPageDto
 import com.ogonggo.core.bootcamp.persistence.BootcampBookmarkJpaRepository
 import com.ogonggo.core.bootcamp.persistence.BootcampQueryRepository
 import java.time.Clock
+import java.time.LocalDate
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
@@ -60,6 +61,10 @@ class BootcampBookmarkReader internal constructor(
             hasNext = result.hasNext(),
         )
     }
+
+    /** [from]~[to](둘 다 포함) 사이에 처음 저장했고 지금도 저장 중인 사람 수다. */
+    fun countSaved(bootcampId: Long, from: LocalDate, to: LocalDate): Long =
+        bootcampBookmarkRepository.countActivated(bootcampId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
 
     fun readBookmarkedBootcampIds(userId: Long, bootcampIds: Collection<Long>): Set<Long> =
         if (bootcampIds.isEmpty()) {

@@ -4,7 +4,10 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDailyDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportExposureDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportAudienceDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportGradeDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportJobFieldDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportScrollStepDto
@@ -18,6 +21,7 @@ import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductPosition
 import com.ogonggo.core.contentevent.domain.ContentEventSource
 import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.user.domain.UserGrade
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
@@ -44,6 +48,8 @@ data class AdminAdvertisementReportResponse(
         description = "상품 몫의 로그인 회원을 희망 직군으로 나눈 것. 여러 직군을 고른 회원은 각 직군에 한 번씩, 직무가 없으면 jobField null. 비회원은 넣지 않는다. 순 회원 수가 큰 순",
     )
     val byJobField: List<AdminAdvertisementReportJobFieldResponse>,
+    @field:Schema(description = "상품 몫을 본 사람의 구성. 도달·평균 빈도, 타깃 직무 일치율, 학년")
+    val audience: AdminAdvertisementReportAudienceResponse,
 ) {
     companion object {
         fun from(report: AdvertisementContractReportDto) = AdminAdvertisementReportResponse(
@@ -57,6 +63,7 @@ data class AdminAdvertisementReportResponse(
             exposures = report.exposures.map(AdminAdvertisementReportExposureResponse::from),
             targets = report.targets.map(AdminAdvertisementReportTargetResponse::from),
             byJobField = report.byJobField.map(AdminAdvertisementReportJobFieldResponse::from),
+            audience = AdminAdvertisementReportAudienceResponse.from(report.audience),
         )
     }
 }
@@ -224,6 +231,10 @@ data class AdminAdvertisementReportTargetResponse(
 }
 
 data class AdminAdvertisementReportTargetTotalResponse(
+    @field:Schema(description = "기간 안에 저장했고 지금도 저장 중인 사람 수. 저장을 풀면 빠진다")
+    val saves: Long,
+    @field:Schema(description = "공유 수. 원본 보관 기간(365일)보다 앞인 날은 빠진다")
+    val shares: Long,
     val views: Long,
     val uniqueVisitors: Long,
     val memberViews: Long,
@@ -236,6 +247,8 @@ data class AdminAdvertisementReportTargetTotalResponse(
 ) {
     companion object {
         fun from(total: AdvertisementContractReportTargetTotalDto) = AdminAdvertisementReportTargetTotalResponse(
+            saves = total.saves,
+            shares = total.shares,
             views = total.views,
             uniqueVisitors = total.uniqueVisitors,
             memberViews = total.memberViews,
@@ -280,6 +293,56 @@ data class AdminAdvertisementReportJobFieldResponse(
             ctaUniqueMembers = row.ctaUniqueMembers,
             adClickMembers = row.adClickMembers,
         )
+    }
+}
+
+data class AdminAdvertisementReportAudienceResponse(
+    @field:Schema(description = "도달. 기간 동안 광고를 본 서로 다른 사람(회원·비회원 합). 기간이 원본 보관 기간보다 앞이면 null", nullable = true)
+    val reach: Long?,
+    @field:Schema(description = "평균 빈도. 노출수 ÷ 도달(소수 첫째 자리). 도달이 없거나 0이면 null", nullable = true)
+    val avgFrequency: Double?,
+    @field:Schema(description = "광고를 눌러 공고를 연 서로 다른 사람. 기간이 원본 보관 기간보다 앞이면 null", nullable = true)
+    val adClickVisitors: Long?,
+    @field:Schema(description = "타깃 직군. 광고가 띄우는 공고의 직군과 노출을 띄우는 직군 탭. 없으면 빈 배열")
+    val targetJobFields: List<JobField>,
+    val targetMatch: AdminAdvertisementReportTargetMatchResponse,
+    @field:Schema(description = "공고를 연 로그인 회원을 학년으로 나눈 것. 학년 순이고 학년 미설정이 맨 뒤")
+    val byGrade: List<AdminAdvertisementReportGradeResponse>,
+) {
+    companion object {
+        fun from(audience: AdvertisementContractReportAudienceDto) = AdminAdvertisementReportAudienceResponse(
+            reach = audience.reach,
+            avgFrequency = audience.avgFrequency,
+            adClickVisitors = audience.adClickVisitors,
+            targetJobFields = audience.targetJobFields,
+            targetMatch = AdminAdvertisementReportTargetMatchResponse.from(audience.targetMatch),
+            byGrade = audience.byGrade.map(AdminAdvertisementReportGradeResponse::from),
+        )
+    }
+}
+
+@Schema(description = "공고를 연 회원 중 희망 직군이 타깃 직군과 겹치는 회원")
+data class AdminAdvertisementReportTargetMatchResponse(
+    val matchedMembers: Long,
+    val members: Long,
+    @field:Schema(description = "matchedMembers ÷ members(0~1). 타깃 직군이 없거나 회원이 없으면 null", nullable = true)
+    val rate: Double?,
+) {
+    companion object {
+        fun from(match: AdvertisementContractReportTargetMatchDto) = AdminAdvertisementReportTargetMatchResponse(match.matchedMembers, match.members, match.rate)
+    }
+}
+
+data class AdminAdvertisementReportGradeResponse(
+    @field:Schema(description = "학년. 입력하지 않은 회원은 null", nullable = true)
+    val grade: UserGrade?,
+    @field:Schema(description = "학년 이름. null 칸은 \"학년 미설정\"")
+    val label: String,
+    @field:Schema(description = "상세를 연 순 회원 수")
+    val memberUniqueVisitors: Long,
+) {
+    companion object {
+        fun from(row: AdvertisementContractReportGradeDto) = AdminAdvertisementReportGradeResponse(row.grade, row.label, row.memberUniqueVisitors)
     }
 }
 

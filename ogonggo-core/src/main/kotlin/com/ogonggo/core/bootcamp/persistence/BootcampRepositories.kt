@@ -209,6 +209,23 @@ internal interface BootcampMetricJpaRepository : JpaRepository<BootcampMetric, L
 internal interface BootcampBookmarkJpaRepository : JpaRepository<BootcampBookmark, Long> {
     fun findByBootcampIdAndUserId(bootcampId: Long, userId: Long): BootcampBookmark?
 
+    /** 기간 안에 처음 저장했고 지금도 활성인 북마크 수다. 부트캠프 북마크는 다시 저장한 시각을 따로 두지 않아 처음 저장한 날로 센다. */
+    @Query(
+        """
+        select count(bookmark)
+        from BootcampBookmark bookmark
+        where bookmark.bootcampId = :bootcampId
+          and bookmark.deletedAt is null
+          and bookmark.createdAt >= :from
+          and bookmark.createdAt < :toExclusive
+        """,
+    )
+    fun countActivated(
+        @Param("bootcampId") bootcampId: Long,
+        @Param("from") from: LocalDateTime,
+        @Param("toExclusive") toExclusive: LocalDateTime,
+    ): Long
+
     /**
      * 해제된 북마크를 다시 활성으로 되돌리고 지원·신청 관리 단계는 스크랩부터 다시 시작한다.
      * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.

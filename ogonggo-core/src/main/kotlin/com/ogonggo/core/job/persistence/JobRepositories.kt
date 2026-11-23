@@ -303,6 +303,23 @@ internal interface JobSourceJpaRepository : JpaRepository<JobSource, Long> {
 internal interface JobBookmarkJpaRepository : JpaRepository<JobBookmark, Long> {
     fun findByJobIdAndUserId(jobId: Long, userId: Long): JobBookmark?
 
+    /** 기간 안에 새로 활성이 됐고 지금도 활성인 북마크 수다. 해제 뒤 다시 저장하면 다시 저장한 날로 센다. */
+    @Query(
+        """
+        select count(bookmark)
+        from JobBookmark bookmark
+        where bookmark.jobId = :jobId
+          and bookmark.deletedAt is null
+          and bookmark.activeSince >= :from
+          and bookmark.activeSince < :toExclusive
+        """,
+    )
+    fun countActivated(
+        @Param("jobId") jobId: Long,
+        @Param("from") from: LocalDateTime,
+        @Param("toExclusive") toExclusive: LocalDateTime,
+    ): Long
+
     /**
      * 해제된 북마크를 다시 활성으로 되돌리고 지원·신청 관리 단계는 스크랩부터 다시 시작한다.
      * 조회한 값으로 분기하지 않고 조건을 UPDATE에 넣어, 동시에 들어온 해제 요청과 순서가 뒤집히지 않게 한다.

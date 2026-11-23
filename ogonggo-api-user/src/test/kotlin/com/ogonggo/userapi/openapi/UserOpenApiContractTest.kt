@@ -281,7 +281,7 @@ class UserOpenApiContractTest @Autowired constructor(
         assertEquals(1, request.at("/properties/events/minItems").asInt())
         assertEquals(20, request.at("/properties/events/maxItems").asInt())
         assertEquals(
-            setOf("VIEW", "CTA_CLICK", "SCROLL", "IMPRESSION", "AD_CLICK"),
+            setOf("VIEW", "CTA_CLICK", "SCROLL", "IMPRESSION", "AD_CLICK", "SHARE"),
             event.at("/properties/type/enum").map { it.asText() }.toSet(),
         )
         assertEquals(
@@ -388,9 +388,19 @@ class UserOpenApiContractTest @Autowired constructor(
         }
         assertEquals(
             setOf(
-                "product", "from", "to", "collectedSince", "uniqueCountsApproximate", "summary", "daily", "exposures", "targets", "byJobField",
+                "product", "from", "to", "collectedSince", "uniqueCountsApproximate", "summary", "daily", "exposures", "targets", "byJobField", "audience",
             ),
             reportSchema.at("/properties").fieldNames().asSequence().toSet(),
+        )
+        assertEquals(
+            setOf("reach", "avgFrequency", "adClickVisitors", "targetJobFields", "targetMatch", "byGrade"),
+            document.at("/components/schemas/MyAdvertisementReportAudienceResponse/properties").fieldNames().asSequence().toSet(),
+        )
+        assertTrue(document.at("/components/schemas/MyAdvertisementReportAudienceResponse/properties/reach/nullable").asBoolean())
+        assertEquals(
+            setOf("saves", "shares"),
+            document.at("/components/schemas/MyAdvertisementReportTargetTotalResponse/properties").fieldNames().asSequence()
+                .toSet().intersect(setOf("saves", "shares")),
         )
         assertTrue(document.at("/components/schemas/MyAdvertisementReportSummaryResponse/properties/scrollFunnel/nullable").asBoolean())
         assertTrue(document.at("/components/schemas/MyAdvertisementReportJobFieldResponse/properties/jobField/nullable").asBoolean())

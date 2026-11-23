@@ -2,12 +2,15 @@ package com.ogonggo.core.advertisementcontract.implement
 
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContract
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractReportUnavailableReason
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractActiveDailyDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractActiveReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportCsvRowDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportAudienceDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDailyDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportGradeDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportExposureDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportJobFieldDto
@@ -18,6 +21,7 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportSourceDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportSummaryDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetTotalDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalSumDto
@@ -29,6 +33,7 @@ import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTarget
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProduct
 import com.ogonggo.core.advertisementproduct.domain.AdvertisementProductCategory
 import com.ogonggo.core.advertisementproduct.implement.AdvertisementProductReader
+import com.ogonggo.core.bootcamp.implement.BootcampBookmarkReader
 import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.contentdailystat.implement.ContentMetricReader
 import com.ogonggo.core.contentdailystat.implement.dto.ContentMemberActivityDto
@@ -42,8 +47,10 @@ import com.ogonggo.core.error.ConflictException
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.error.InvalidValueException
 import com.ogonggo.core.job.domain.JobField
+import com.ogonggo.core.job.implement.JobBookmarkReader
 import com.ogonggo.core.job.implement.JobReader
 import com.ogonggo.core.user.domain.LetsCareerWishJobCatalog
+import com.ogonggo.core.user.domain.UserGrade
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -57,6 +64,8 @@ class AdvertisementContractReportReader internal constructor(
     private val contentMetricReader: ContentMetricReader,
     private val jobReader: JobReader,
     private val bootcampReader: BootcampReader,
+    private val jobBookmarkReader: JobBookmarkReader,
+    private val bootcampBookmarkReader: BootcampBookmarkReader,
 ) {
 
     /**
@@ -72,6 +81,8 @@ class AdvertisementContractReportReader internal constructor(
         val byDateExposure = measure.sheet.cells.groupBy { it.date to it.exposureId }.mapValues { (_, cells) -> cells.sum() }
         val byExposure = measure.sheet.cells.groupBy { it.exposureId }.mapValues { (_, cells) -> cells.sum() }
         val hidesScroll = measure.hidesScroll
+        val scope = ContentMetricScope.Exposures(measure.exposureNames.keys)
+        val activities = contentMetricReader.readMemberActivities(scope, measure.from, measure.to, today)
 
         return AdvertisementContractReportDto(
             product = AdvertisementContractReportProductDto(
@@ -101,9 +112,8 @@ class AdvertisementContractReportReader internal constructor(
                 )
             },
             targets = advertisementContractTargetReader.readTargets(contract).map { targetReportOf(it, measure.from, measure.to, today) },
-            byJobField = jobFieldsOf(
-                contentMetricReader.readMemberActivities(ContentMetricScope.Exposures(measure.exposureNames.keys), measure.from, measure.to, today),
-            ),
+            byJobField = jobFieldsOf(activities),
+            audience = audienceOf(measure, scope, activities, today),
             csvRows = measure.dates.flatMap { date ->
                 measure.exposures.map { exposure ->
                     val exposureId = checkNotNull(exposure.id)
@@ -288,6 +298,13 @@ class AdvertisementContractReportReader internal constructor(
             targetId = target.targetId,
             title = target.title,
             total = AdvertisementContractReportTargetTotalDto(
+                saves = savesOf(target, from, to),
+                shares = contentMetricReader.readShares(
+                    ContentMetricScope.Target(ContentEventTargetType.valueOf(target.targetType.name), target.targetId),
+                    from,
+                    to,
+                    today,
+                ),
                 views = total.views,
                 uniqueVisitors = total.uniqueVisitors,
                 memberViews = total.memberViews,
@@ -302,6 +319,37 @@ class AdvertisementContractReportReader internal constructor(
             },
         )
     }
+
+    private fun audienceOf(measure: ProductMeasure, scope: ContentMetricScope, activities: List<ContentMemberActivityDto>, today: LocalDate): AdvertisementContractReportAudienceDto {
+        val reach = contentMetricReader.readAdReach(scope, measure.from, measure.to, today)
+        val targetFields = targetJobFieldsOf(measure.exposures)
+        return AdvertisementContractReportAudienceDto(
+            reach = reach?.impressionVisitors,
+            avgFrequency = reach?.let { ContentMetricDto.ratio(measure.sheet.period.impressions, it.impressionVisitors) },
+            adClickVisitors = reach?.adClickVisitors,
+            targetJobFields = targetFields.sorted(),
+            targetMatch = targetMatchOf(activities, targetFields),
+            byGrade = gradesOf(activities),
+        )
+    }
+
+    /** 광고가 띄우는 공고의 직군과 노출을 띄우는 직군 탭이다. 부트캠프와 지운 공고는 직군이 없으면 빠진다. */
+    private fun targetJobFieldsOf(exposures: List<AdvertisementExposure>): Set<JobField> =
+        exposures.flatMapTo(mutableSetOf()) { exposure ->
+            val posting = if (exposure.targetType == AdvertisementExposureTargetType.JOB) {
+                exposure.targetId?.let { runCatching { jobReader.readIncludingDeleted(it).jobField }.getOrNull() }
+            } else {
+                null
+            }
+            listOfNotNull(exposure.jobField, posting)
+        }
+
+    /** 기간 안에 저장했고 지금도 저장 중인 사람 수다. 저장을 풀면 빠진다. */
+    private fun savesOf(target: AdvertisementContractTargetDto, from: LocalDate, to: LocalDate): Long =
+        when (target.targetType) {
+            AdvertisementContractPromotionTarget.JOB -> jobBookmarkReader.countSaved(target.targetId, from, to)
+            AdvertisementContractPromotionTarget.BOOTCAMP -> bootcampBookmarkReader.countSaved(target.targetId, from, to)
+        }
 
     /** 배너는 소재 이름, 광고 공고는 `<대상 제목> · <회사명>`이다. */
     private fun nameOf(exposure: AdvertisementExposure): String =
@@ -345,6 +393,7 @@ class AdvertisementContractReportReader internal constructor(
 
     companion object {
         private const val NO_JOB_FIELD_LABEL = "직무 미설정"
+        private const val NO_GRADE_LABEL = "학년 미설정"
 
         internal fun summaryOf(metric: ContentMetricDto, hidesScroll: Boolean) = AdvertisementContractReportSummaryDto(
             impressions = metric.impressions,
@@ -393,6 +442,30 @@ class AdvertisementContractReportReader internal constructor(
                     )
                 }
                 .sortedWith(compareByDescending<AdvertisementContractReportJobFieldDto> { it.memberUniqueVisitors }.thenBy { it.jobField == null }.thenBy { it.jobField })
+
+        /**
+         * 공고를 연 회원 중 희망 직무의 직군이 [targetFields]와 하나라도 겹치는 회원이다. 타깃 직군이 없으면 비율은 null이다.
+         * 희망 직무는 [jobFieldsOf]와 같이 오공고 직무로 옮겨 직군으로 본다.
+         */
+        internal fun targetMatchOf(activities: List<ContentMemberActivityDto>, targetFields: Set<JobField>): AdvertisementContractReportTargetMatchDto {
+            val viewers = activities.filter { it.viewed }
+            val matched = viewers.count { activity ->
+                LetsCareerWishJobCatalog.jobRolesOf(activity.wishJob).any { it.jobField in targetFields }
+            }.toLong()
+            return AdvertisementContractReportTargetMatchDto(
+                matchedMembers = matched,
+                members = viewers.size.toLong(),
+                rate = if (targetFields.isEmpty()) null else ContentMetricDto.rate(matched, viewers.size.toLong()),
+            )
+        }
+
+        /** 공고를 연 회원을 학년으로 나눈다. 학년 순이고 학년을 입력하지 않은 회원이 맨 뒤다. 회원이 없는 학년은 뺀다. */
+        internal fun gradesOf(activities: List<ContentMemberActivityDto>): List<AdvertisementContractReportGradeDto> =
+            activities.filter { it.viewed }
+                .groupingBy { it.grade }
+                .eachCount()
+                .map { (grade, count) -> AdvertisementContractReportGradeDto(grade, grade?.desc ?: NO_GRADE_LABEL, count.toLong()) }
+                .sortedWith(compareBy<AdvertisementContractReportGradeDto> { it.grade == null }.thenBy { it.grade })
 
         private fun dailyOf(date: LocalDate, metric: ContentMetricDto, hidesScroll: Boolean) = AdvertisementContractReportDailyDto(
             date = date,

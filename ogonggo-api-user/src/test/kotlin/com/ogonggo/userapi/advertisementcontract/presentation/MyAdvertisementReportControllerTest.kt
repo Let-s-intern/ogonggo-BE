@@ -4,7 +4,11 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCode
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractActiveDailyDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractActiveReportDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportAudienceDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportCsvRowDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportGradeDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
+import com.ogonggo.core.user.domain.UserGrade
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportPostingDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportProductSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
@@ -84,6 +88,14 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.byJobField[0].jobField").value("IT_DEVELOPMENT"))
             .andExpect(jsonPath("$.data.byJobField[1].jobField").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.byJobField[1].label").value("직무 미설정"))
+            .andExpect(jsonPath("$.data.audience.reach").value(120))
+            .andExpect(jsonPath("$.data.audience.avgFrequency").value(1.7))
+            .andExpect(jsonPath("$.data.audience.targetJobFields[0]").value("IT_DEVELOPMENT"))
+            .andExpect(jsonPath("$.data.audience.targetMatch.rate").value(0.6667))
+            .andExpect(jsonPath("$.data.audience.byGrade[0].grade").value("FOURTH"))
+            .andExpect(jsonPath("$.data.audience.byGrade[1].label").value("학년 미설정"))
+            .andExpect(jsonPath("$.data.targets[0].total.saves").value(3))
+            .andExpect(jsonPath("$.data.targets[0].total.shares").value(1))
     }
 
     @Test
@@ -202,13 +214,24 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
                     targetType = AdvertisementContractPromotionTarget.JOB,
                     targetId = 15818L,
                     title = "백엔드 개발자",
-                    total = AdvertisementContractReportTargetTotalDto(10, 8, 4, 2, 2, 40.0, 30.0),
+                    total = AdvertisementContractReportTargetTotalDto(3, 1, 10, 8, 4, 2, 2, 40.0, 30.0),
                     bySource = ContentEventSource.entries.map { AdvertisementContractReportSourceDto(it, 1, 0) },
                 ),
             ),
             byJobField = listOf(
                 AdvertisementContractReportJobFieldDto(JobField.IT_DEVELOPMENT, "IT·개발", 2, 3, 1, 1),
                 AdvertisementContractReportJobFieldDto(null, "직무 미설정", 1, 1, 0, 0),
+            ),
+            audience = AdvertisementContractReportAudienceDto(
+                reach = 120,
+                avgFrequency = 1.7,
+                adClickVisitors = 4,
+                targetJobFields = listOf(JobField.IT_DEVELOPMENT),
+                targetMatch = AdvertisementContractReportTargetMatchDto(matchedMembers = 2, members = 3, rate = 0.6667),
+                byGrade = listOf(
+                    AdvertisementContractReportGradeDto(UserGrade.FOURTH, "4학년", 2),
+                    AdvertisementContractReportGradeDto(null, "학년 미설정", 1),
+                ),
             ),
             csvRows = listOf(FROM, TO).map {
                 AdvertisementContractReportCsvRowDto(it, 31L, "공고, 광고", 100, 2, 1, 1, 0, 0, 0, 50.0, null)
