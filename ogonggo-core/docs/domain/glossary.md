@@ -163,6 +163,7 @@
 | 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`). |
 | 콘텐츠 일별 집계 | `ContentDailyStat` | 하루(KST)·대상·광고 노출·유입 경로마다 모은 콘텐츠 이벤트 숫자. 상세 조회수는 같은 방문자가 같은 대상을 직전 조회로부터 30분 안에 다시 연 것을 뺍니다. 매일 새벽 `contentDailyStatAggregation` 작업이 전날 분을 다시 씁니다. |
 | 순 노출수 | `ContentDailyStat.uniqueImpressions` | 같은 방문자(회원이면 회원, 아니면 익명 방문자)가 같은 광고 노출을 하루에 여러 번 봐도 한 번으로 센 노출수. 보일 때마다 센 노출수(`impressions`)와 따로 둡니다. |
+| 리포트 인사이트 | `AdvertisementReportInsight` | 운영자가 계약 상품의 성과 리포트에 직접 써서 기업 회원에게 보내는 제목·본문. 보내기 전에는 운영자만 봅니다. |
 | 계약 대상 | `AdvertisementContractTarget` | 광고 성과 리포트가 전체 숫자를 셀 공고·부트캠프. 운영자가 계약에 연결하며 비즈니스 공고 계약의 공고는 자동 대상입니다. |
 | 상품 몫 | (리포트 계산) | 계약 상품의 리포트에서 그 상품의 광고 노출 식별자로 들어온 이벤트만 센 숫자. 일반 목록·검색·외부 유입은 어느 상품 몫에도 넣지 않습니다. |
 | 리포트 불가 이유 | `AdvertisementContractReportUnavailableReason` | 기간 미정(`NO_PERIOD`, 계약 상품에 게시 기간이 없음), 집계 대상 아님(`NOT_EXPOSABLE`, 인스타그램·카카오톡처럼 오공고 화면에 노출하지 않는 상품). |

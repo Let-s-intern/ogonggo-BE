@@ -388,7 +388,7 @@ class UserOpenApiContractTest @Autowired constructor(
         }
         assertEquals(
             setOf(
-                "product", "from", "to", "collectedSince", "uniqueCountsApproximate", "summary", "daily", "exposures", "targets", "byJobField", "audience",
+                "product", "from", "to", "collectedSince", "uniqueCountsApproximate", "summary", "daily", "exposures", "targets", "byJobField", "audience", "insights",
             ),
             reportSchema.at("/properties").fieldNames().asSequence().toSet(),
         )

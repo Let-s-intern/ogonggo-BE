@@ -9,6 +9,8 @@ import com.ogonggo.core.advertisementcontract.error.AdvertisementContractErrorCo
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportAudienceDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportCsvRowDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTargetMatchDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDraftDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDailyDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportExposureDto
@@ -32,7 +34,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.nio.charset.StandardCharsets
@@ -64,10 +68,47 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.daily[0].avgScrollPercent").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.audience.reach").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.audience.targetMatch.members").value(0))
+            .andExpect(jsonPath("$.data.insights[0].published").value(true))
+            .andExpect(jsonPath("$.data.insights[1].published").value(false))
         val csv = mockMvc.perform(admin(get("$PATH.csv"))).andExpect(status().isOk).andReturn().response
         val lines = String(csv.contentAsByteArray, StandardCharsets.UTF_8).removePrefix("﻿").trimEnd('\n').split("\n")
         assertEquals(1 + REPORT.csvRows.size, lines.size)
         assertEquals("2026-11-01,12,11월 홈 상단,100,2,1,1,0,0,0,,", lines[1])
+    }
+
+    @Test
+    fun `관리자는 상품의 인사이트를 통째로 저장하고 보낼지 정한다`() {
+        // given
+        val drafts = listOf(AdvertisementReportInsightDraftDto("제목", "본문"))
+        Mockito.`when`(adminAdvertisementReportService.replaceInsights(1L, 7L, drafts, true))
+            .thenReturn(listOf(AdvertisementReportInsightDto("제목", "본문", true)))
+
+        // then
+        mockMvc.perform(
+            admin(
+                put("/api/v1/admin/advertisement-contracts/1/products/7/report-insights")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"insights":[{"title":"제목","body":"본문"}],"published":true}"""),
+            ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].title").value("제목"))
+            .andExpect(jsonPath("$.data[0].published").value(true))
+    }
+
+    @Test
+    fun `인사이트는 여섯 개까지이고 제목과 본문이 비면 400이다`() {
+        val seven = (1..7).joinToString(",") { """{"title":"t$it","body":"b$it"}""" }
+        listOf(
+            """{"insights":[$seven],"published":false}""",
+            """{"insights":[{"title":" ","body":"본문"}],"published":false}""",
+            """{"insights":[{"title":"제목","body":""}],"published":false}""",
+            """{"insights":[{"title":"${"가".repeat(61)}","body":"본문"}],"published":false}""",
+        ).forEach { body ->
+            mockMvc.perform(
+                admin(put("/api/v1/admin/advertisement-contracts/1/products/7/report-insights").contentType(MediaType.APPLICATION_JSON).content(body)),
+            ).andExpect(status().isBadRequest)
+        }
     }
 
     @Test
@@ -134,6 +175,10 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
                 targetJobFields = emptyList(),
                 targetMatch = AdvertisementContractReportTargetMatchDto(matchedMembers = 0, members = 0, rate = null),
                 byGrade = emptyList(),
+            ),
+            insights = listOf(
+                AdvertisementReportInsightDto("광고가 유일한 유입이었어요", "조회 29회 중 27회가 광고 카드에서 나왔어요.", true),
+                AdvertisementReportInsightDto("마감 전 재노출을 제안해요", "마감 2주 전 한 번 더 노출해 보세요.", false),
             ),
             csvRows = listOf(AdvertisementContractReportCsvRowDto(FROM, 12L, "11월 홈 상단", 100, 2, 1, 1, 0, 0, 0, null, null)),
         )

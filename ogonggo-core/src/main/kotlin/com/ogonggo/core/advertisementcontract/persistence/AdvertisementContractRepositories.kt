@@ -6,6 +6,7 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromot
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSearchCondition
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractSource
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractTarget
+import com.ogonggo.core.advertisementcontract.domain.AdvertisementReportInsight
 import com.ogonggo.core.advertisementcontract.domain.QAdvertisementContract.advertisementContract
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
 import com.ogonggo.core.advertisementexposure.domain.QAdvertisementExposure.advertisementExposure
@@ -17,9 +18,12 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 internal interface AdvertisementContractJpaRepository : JpaRepository<AdvertisementContract, Long> {
     fun findBySourceAndPromotionTargetAndTargetId(
@@ -125,4 +129,21 @@ internal class AdvertisementContractExposureQueryRepository(
             .orderBy(advertisementExposure.displayOrder.asc(), advertisementExposure.id.asc())
             .fetch()
     }
+}
+
+internal interface AdvertisementReportInsightJpaRepository : JpaRepository<AdvertisementReportInsight, Long> {
+    fun findAllByContractProductIdAndDeletedAtIsNullOrderByDisplayOrderAscIdAsc(contractProductId: Long): List<AdvertisementReportInsight>
+
+    /** 상품의 지금 인사이트를 모두 지운 것으로 한다. 조건을 UPDATE 에 넣어 동시에 저장해도 순서가 뒤집히지 않는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update AdvertisementReportInsight insight
+        set insight.deletedAt = :now,
+            insight.updatedAt = :now
+        where insight.contractProductId = :contractProductId
+          and insight.deletedAt is null
+        """,
+    )
+    fun softDeleteAll(@Param("contractProductId") contractProductId: Long, @Param("now") now: LocalDateTime): Int
 }

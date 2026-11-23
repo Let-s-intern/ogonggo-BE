@@ -26,6 +26,7 @@ import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContrac
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractReportTotalSumDto
 import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementContractTargetDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDto
 import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractExposureQueryRepository
 import com.ogonggo.core.advertisementcontract.persistence.AdvertisementContractProductJpaRepository
 import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposure
@@ -66,6 +67,7 @@ class AdvertisementContractReportReader internal constructor(
     private val bootcampReader: BootcampReader,
     private val jobBookmarkReader: JobBookmarkReader,
     private val bootcampBookmarkReader: BootcampBookmarkReader,
+    private val advertisementReportInsightReader: AdvertisementReportInsightReader,
 ) {
 
     /**
@@ -73,9 +75,17 @@ class AdvertisementContractReportReader internal constructor(
      *
      * - 계약에서 뺐거나 다른 계약의 상품이면 404, 기간이 없거나 채널 상품이면 409 `REPORT_NOT_AVAILABLE`이다.
      * - [from]·[to]는 상품 기간 안으로 자른다. 비우면 상품 기간 전체이고 진행 중이면 [today]까지다. 자른 기간이 비면 400이다.
+     * - [includeDraftInsights]가 참이면 기업 회원에게 보내지 않은 임시 저장 인사이트도 준다(운영자용). 거짓이면 보낸 것만 준다.
      * - 상품의 노출은 계약·상품이 같고 기간이 상품 기간과 겹치는 것이다. 같은 노출을 기간이 다른 두 계약 상품이 나눠 쓰면 날짜로 갈린다.
      */
-    fun read(contract: AdvertisementContract, contractProductId: Long, from: LocalDate?, to: LocalDate?, today: LocalDate): AdvertisementContractReportDto {
+    fun read(
+        contract: AdvertisementContract,
+        contractProductId: Long,
+        from: LocalDate?,
+        to: LocalDate?,
+        today: LocalDate,
+        includeDraftInsights: Boolean = false,
+    ): AdvertisementContractReportDto {
         val (contractProduct, product) = readReportable(contract, contractProductId)
         val measure = measure(contract, contractProduct, product, from, to, today)
         val byDateExposure = measure.sheet.cells.groupBy { it.date to it.exposureId }.mapValues { (_, cells) -> cells.sum() }
@@ -114,6 +124,7 @@ class AdvertisementContractReportReader internal constructor(
             targets = advertisementContractTargetReader.readTargets(contract).map { targetReportOf(it, measure.from, measure.to, today) },
             byJobField = jobFieldsOf(activities),
             audience = audienceOf(measure, scope, activities, today),
+            insights = advertisementReportInsightReader.readByContractProduct(contractProductId, includeDraftInsights),
             csvRows = measure.dates.flatMap { date ->
                 measure.exposures.map { exposure ->
                     val exposureId = checkNotNull(exposure.id)

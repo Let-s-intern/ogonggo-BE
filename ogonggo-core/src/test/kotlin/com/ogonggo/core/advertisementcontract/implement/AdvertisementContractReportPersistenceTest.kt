@@ -5,6 +5,8 @@ import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractCreati
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractInvoiceMethod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProduct
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractTarget
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDraftDto
+import com.ogonggo.core.advertisementcontract.implement.dto.AdvertisementReportInsightDto
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractProductPeriod
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPromotionTarget
 import com.ogonggo.core.advertisementcontract.domain.AdvertisementContractPurpose
@@ -63,6 +65,8 @@ import java.time.LocalDateTime
     AdvertisementContractReportReader::class,
     AdvertisementContractExposureQueryRepository::class,
     AdvertisementContractTargetReader::class,
+    AdvertisementReportInsightReader::class,
+    AdvertisementReportInsightManager::class,
     AdvertisementProductReader::class,
     AdvertisementProductQueryRepository::class,
     ContentMetricReader::class,
@@ -79,6 +83,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     private val eventRepository: ContentEventJpaRepository,
     private val userProfileRepository: UserProfileJpaRepository,
     private val contractTargetRepository: AdvertisementContractTargetJpaRepository,
+    private val insightManager: AdvertisementReportInsightManager,
 ) {
 
     @MockBean
@@ -356,6 +361,57 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         // then
         assertEquals(2L, total.shares)
         assertEquals(4L, total.saves)
+    }
+
+    @Test
+    fun `인사이트는 통째로 바꾸고 보낸 것만 기업 회원이 보며 운영자는 임시 저장도 본다`() {
+        // given
+        val drafts = listOf(
+            AdvertisementReportInsightDraftDto(" 첫 제목 ", "첫 본문"),
+            AdvertisementReportInsightDraftDto("둘째 제목", "둘째 본문"),
+        )
+
+        // when
+        insightManager.replace(contract, cardProductId, drafts, publish = false, now = NOW)
+        val draftForCompany = reportReader.read(contract, cardProductId, null, null, TODAY).insights
+        val draftForAdmin = reportReader.read(contract, cardProductId, null, null, TODAY, includeDraftInsights = true).insights
+        insightManager.replace(contract, cardProductId, drafts.take(1), publish = true, now = NOW.plusHours(1))
+        val sentForCompany = reportReader.read(contract, cardProductId, null, null, TODAY).insights
+
+        // then
+        assertEquals(emptyList<AdvertisementReportInsightDto>(), draftForCompany)
+        assertEquals(listOf("첫 제목", "둘째 제목"), draftForAdmin.map { it.title })
+        assertEquals(listOf(false, false), draftForAdmin.map { it.published })
+        assertEquals(listOf(AdvertisementReportInsightDto("첫 제목", "첫 본문", true)), sentForCompany)
+    }
+
+    @Test
+    fun `인사이트를 빈 목록으로 저장하면 모두 걷어내고 다른 상품에는 영향이 없다`() {
+        // given
+        insightManager.replace(contract, cardProductId, listOf(AdvertisementReportInsightDraftDto("카드", "본문")), publish = true, now = NOW)
+        insightManager.replace(contract, bannerProductId, listOf(AdvertisementReportInsightDraftDto("배너", "본문")), publish = true, now = NOW)
+
+        // when
+        insightManager.replace(contract, cardProductId, emptyList(), publish = true, now = NOW.plusHours(1))
+
+        // then
+        assertEquals(emptyList<AdvertisementReportInsightDto>(), reportReader.read(contract, cardProductId, null, null, TODAY).insights)
+        assertEquals(listOf("배너"), reportReader.read(contract, bannerProductId, null, null, TODAY).insights.map { it.title })
+    }
+
+    @Test
+    fun `계약에 붙지 않은 상품의 인사이트 저장은 404이고 여섯 개를 넘기면 거부한다`() {
+        // given
+        val tooMany = (1..7).map { AdvertisementReportInsightDraftDto("제목$it", "본문$it") }
+
+        // then
+        assertEquals(
+            AdvertisementContractErrorCode.ADVERTISEMENT_CONTRACT_PRODUCT_NOT_FOUND,
+            assertThrows<BusinessException> {
+                insightManager.replace(contract, 999_999L, listOf(AdvertisementReportInsightDraftDto("제목", "본문")), publish = true, now = NOW)
+            }.errorCode,
+        )
+        assertThrows<IllegalArgumentException> { insightManager.replace(contract, cardProductId, tooMany, publish = true, now = NOW) }
     }
 
     @Test
