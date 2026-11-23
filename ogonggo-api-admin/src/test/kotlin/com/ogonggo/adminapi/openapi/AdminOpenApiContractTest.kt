@@ -87,6 +87,8 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1announcements~1{announcementId}/patch",
             "/paths/~1api~1v1~1admin~1announcements~1{announcementId}/delete",
             "/paths/~1api~1v1~1admin~1work24~1{apiName}/get",
+            "/paths/~1api~1v1~1admin~1work24-job-fields/get",
+            "/paths/~1api~1v1~1admin~1work24-job-fields~1{jobField}/put",
             "/paths/~1api~1v1~1admin~1service-feedbacks/get",
             "/paths/~1api~1v1~1admin~1general-members/get",
             "/paths/~1api~1v1~1admin~1company-members/get",
