@@ -104,6 +104,7 @@ class AdvertisementContractReportReader internal constructor(
                 name = product.name,
                 startDate = measure.startDate,
                 endDate = measure.endDate,
+                price = product.price,
             ),
             from = measure.from,
             to = measure.to,

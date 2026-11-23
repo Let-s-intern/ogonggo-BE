@@ -84,6 +84,8 @@ data class MyAdvertisementReportProductResponse(
     val name: String,
     val startDate: LocalDate,
     val endDate: LocalDate,
+    @field:Schema(description = "상품의 소개용 가격(정가, 원). 견적 문의 상품은 null. 비용 효율의 광고비로 쓴다", nullable = true)
+    val price: Int?,
 ) {
     companion object {
         fun from(product: AdvertisementContractReportProductDto) = MyAdvertisementReportProductResponse(
@@ -94,6 +96,7 @@ data class MyAdvertisementReportProductResponse(
             name = product.name,
             startDate = product.startDate,
             endDate = product.endDate,
+            price = product.price,
         )
     }
 }

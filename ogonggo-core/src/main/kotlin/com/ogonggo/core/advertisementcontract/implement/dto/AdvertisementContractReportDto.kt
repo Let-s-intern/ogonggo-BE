@@ -41,6 +41,8 @@ data class AdvertisementContractReportProductDto(
     val name: String,
     val startDate: LocalDate,
     val endDate: LocalDate,
+    /** 상품의 소개용 가격(정가, 원). 리포트의 비용 효율은 이 값을 광고비로 쓴다. 견적 문의 상품은 null이다. */
+    val price: Int?,
 )
 
 data class AdvertisementContractReportSummaryDto(
