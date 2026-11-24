@@ -3,6 +3,7 @@ package com.ogonggo.core.contentdailystat.implement
 import com.ogonggo.core.contentdailystat.domain.ContentDailyStat
 import com.ogonggo.core.contentdailystat.domain.ContentStatKey
 import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricDto
+import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricScope
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatJpaRepository
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatQueryRepository
 import com.ogonggo.core.contentevent.domain.ContentEvent
@@ -29,6 +30,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
     private val contentDailyStatManager: ContentDailyStatManager,
     private val contentDailyStatRepository: ContentDailyStatJpaRepository,
     private val contentEventRepository: ContentEventJpaRepository,
+    private val contentDailyStatQueryRepository: ContentDailyStatQueryRepository,
 ) {
 
     @Test
@@ -162,6 +164,122 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         assertEquals(firstRetained, contentDailyStatRepository.findAll().single().statDate)
     }
 
+    @Test
+    fun `같은 브라우저의 회원 행과 비회원 행은 한 방문자라 순 방문자와 CTA 클릭 방문자가 1이다`() {
+        // given
+        save(view(at(10, 0), visitor = "a"))
+        save(view(at(11, 0), userId = 7L, browser = "a"))
+        save(event(ContentEventType.CTA_CLICK, at(11, 1), userId = 7L, browser = "a"))
+        save(event(ContentEventType.CTA_CLICK, at(11, 2), visitor = "a"))
+
+        // when
+        contentDailyStatManager.rebuild(DAY, TODAY)
+
+        // then
+        val stat = contentDailyStatRepository.findAll().single()
+        assertEquals(2L, stat.views)
+        assertEquals(1L, stat.uniqueVisitors)
+        assertEquals(1L, stat.memberUniqueVisitors)
+        assertEquals(2L, stat.ctaClicks)
+        assertEquals(1L, stat.ctaUniqueVisitors)
+    }
+
+    @Test
+    fun `회원 키로 본 조회와 비회원 키로 본 재조회도 30분 안이면 한 번이다`() {
+        // given
+        save(view(at(10, 0), userId = 7L, browser = "a"))
+        save(view(at(10, 10), visitor = "a"))
+        save(view(at(10, 20), visitor = "a"))
+
+        // when
+        contentDailyStatManager.rebuild(DAY, TODAY)
+
+        // then
+        val stat = contentDailyStatRepository.findAll().single()
+        assertEquals(1L, stat.views)
+        assertEquals(1L, stat.memberViews)
+        assertEquals(1L, stat.uniqueVisitors)
+    }
+
+    @Test
+    fun `조회는 비회원 키로 하고 스크롤은 회원 키로 보낸 방문자의 스크롤이 도달에 들어간다`() {
+        // given
+        save(view(at(10, 0), visitor = "a"))
+        save(event(ContentEventType.SCROLL, at(10, 5), userId = 7L, browser = "a", scrollPercent = 80, durationMs = 20_000L))
+        save(view(at(10, 0), visitor = "b"))
+
+        // when
+        contentDailyStatManager.rebuild(DAY, TODAY)
+
+        // then
+        val stat = contentDailyStatRepository.findAll().single()
+        assertEquals(2L, stat.uniqueVisitors)
+        assertEquals(listOf(1L, 1L, 1L, 0L), listOf(stat.scrollReach25, stat.scrollReach50, stat.scrollReach75, stat.scrollReach100))
+    }
+
+    @Test
+    fun `같은 브라우저의 회원 노출과 비회원 노출은 순 노출수 1이고 회원 없는 브라우저는 따로 센다`() {
+        // given
+        save(ad(ContentEventType.IMPRESSION, at(9, 0)))
+        save(ad(ContentEventType.IMPRESSION, at(9, 1)).copyAsMember(7L, "a"))
+        save(ad(ContentEventType.IMPRESSION, at(9, 2)).copyAsVisitor("b"))
+        save(ad(ContentEventType.IMPRESSION, at(9, 3)).copyAsVisitor("c"))
+
+        // when
+        contentDailyStatManager.rebuild(DAY, TODAY)
+
+        // then
+        val banner = contentDailyStatRepository.findAll().single()
+        assertEquals(4L, banner.impressions)
+        assertEquals(3L, banner.uniqueImpressions)
+    }
+
+    @Test
+    fun `도달과 광고 클릭 방문자도 같은 브라우저의 회원과 비회원을 한 사람으로 센다`() {
+        // given
+        save(ad(ContentEventType.IMPRESSION, at(9, 0)))
+        save(ad(ContentEventType.IMPRESSION, at(9, 1)).copyAsMember(7L, "a"))
+        save(ad(ContentEventType.IMPRESSION, at(9, 2)).copyAsVisitor("b"))
+        save(ad(ContentEventType.AD_CLICK, at(9, 3)))
+        save(ad(ContentEventType.AD_CLICK, at(9, 4)).copyAsMember(7L, "a"))
+
+        // when
+        val scope = ContentMetricScope.Exposures(setOf(BANNER_EXPOSURE_ID))
+        val impressionVisitors = contentDailyStatQueryRepository.countDistinctVisitors(scope, ContentEventType.IMPRESSION, DAY.atStartOfDay(), DAY.plusDays(1).atStartOfDay())
+        val clickVisitors = contentDailyStatQueryRepository.countDistinctVisitors(scope, ContentEventType.AD_CLICK, DAY.atStartOfDay(), DAY.plusDays(1).atStartOfDay())
+
+        // then
+        assertEquals(2L, impressionVisitors)
+        assertEquals(1L, clickVisitors)
+    }
+
+    @Test
+    fun `방문자와 회원을 잇는 표는 계산 범위 안의 이벤트로만 만든다`() {
+        // given
+        save(view(at(10, 0), visitor = "a"))
+        save(view(at(10, 0), userId = 7L))
+        save(view(DAY.plusDays(1).atTime(10, 0), userId = 7L, browser = "a"))
+
+        // when
+        contentDailyStatManager.rebuild(DAY, TODAY)
+
+        // then
+        assertEquals(2L, contentDailyStatRepository.findAll().single().uniqueVisitors)
+    }
+
+    private fun ContentEvent.copyAsMember(userId: Long, browser: String) = ContentEvent(
+        eventType = eventType,
+        targetType = targetType,
+        targetId = targetId,
+        exposureId = exposureId,
+        userId = userId,
+        visitorId = browser,
+        source = source,
+        scrollPercent = scrollPercent,
+        durationMs = durationMs,
+        occurredAt = occurredAt,
+    )
+
     private fun ContentEvent.copyAsVisitor(visitor: String) = ContentEvent(
         eventType = eventType,
         targetType = targetType,
@@ -189,7 +307,8 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         userId: Long? = null,
         exposureId: Long? = EXPOSURE_ID,
         source: ContentEventSource = ContentEventSource.AD_CARD,
-    ) = event(ContentEventType.VIEW, occurredAt, visitor, userId, exposureId, source)
+        browser: String? = null,
+    ) = event(ContentEventType.VIEW, occurredAt, visitor, userId, exposureId, source, browser = browser)
 
     private fun event(
         type: ContentEventType,
@@ -200,13 +319,14 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         source: ContentEventSource = ContentEventSource.AD_CARD,
         scrollPercent: Int? = null,
         durationMs: Long? = null,
+        browser: String? = null,
     ) = ContentEvent(
         eventType = type,
         targetType = ContentEventTargetType.JOB,
         targetId = JOB_ID,
         exposureId = exposureId,
         userId = userId,
-        visitorId = if (userId != null) "member-browser" else visitor,
+        visitorId = browser ?: if (userId != null) "member-browser" else visitor,
         source = source,
         scrollPercent = scrollPercent,
         durationMs = durationMs,

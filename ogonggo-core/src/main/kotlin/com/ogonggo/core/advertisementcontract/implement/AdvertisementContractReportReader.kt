@@ -129,7 +129,9 @@ class AdvertisementContractReportReader internal constructor(
             csvRows = measure.dates.flatMap { date ->
                 measure.exposures.map { exposure ->
                     val exposureId = checkNotNull(exposure.id)
-                    val daily = dailyOf(date, byDateExposure[date to exposureId] ?: ContentMetricDto.ZERO, hidesScroll)
+                    val cellSum = byDateExposure[date to exposureId] ?: ContentMetricDto.ZERO
+                    val exact = measure.sheet.exposureDailyUniques[date to exposureId]
+                    val daily = dailyOf(date, if (exact == null) cellSum else cellSum.withUniquesOf(exact), hidesScroll)
                     AdvertisementContractReportCsvRowDto(
                         date = date,
                         exposureId = exposureId,
@@ -399,7 +401,11 @@ class AdvertisementContractReportReader internal constructor(
 
         fun dailies(): List<AdvertisementContractReportDailyDto> {
             val byDate = sheet.cells.groupBy { it.date }.mapValues { (_, cells) -> cells.sum() }
-            return dates.map { dailyOf(it, byDate[it] ?: ContentMetricDto.ZERO, hidesScroll) }
+            return dates.map { date ->
+                val cellSum = byDate[date] ?: ContentMetricDto.ZERO
+                val exact = sheet.dailyUniques[date]
+                dailyOf(date, if (exact == null) cellSum else cellSum.withUniquesOf(exact), hidesScroll)
+            }
         }
     }
 

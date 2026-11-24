@@ -112,7 +112,8 @@ interface AdminAdvertisementReportApi {
         description = """
             리포트와 같은 기간·숫자를 날짜별·소재별 한 줄로 내려받습니다. UTF-8(BOM 포함) CSV이며 열은
             date,exposureId,exposureName,impressions,adClicks,views,uniqueVisitors,memberViews,ctaClicks,ctaUniqueVisitors,avgScrollPercent,avgDurationSeconds
-            입니다. 값이 없는 평균은 빈 칸입니다. 오류는 JSON 오류 응답입니다.
+            입니다. 값이 없는 평균은 빈 칸입니다. uniqueVisitors·ctaUniqueVisitors는 그 날짜·소재 단위로 센 값이라 소재별 줄을 더하면
+            한 사람이 두 소재로 들어온 만큼 날짜 합보다 큽니다(기간이 원본 보관 기간보다 앞이면 칸 합). 오류는 JSON 오류 응답입니다.
         """,
     )
     @ApiResponses(

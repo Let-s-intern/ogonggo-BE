@@ -47,6 +47,18 @@ data class ContentMetricDto(
         adClicks = adClicks + other.adClicks,
     )
 
+    /** 방문자 수로 세는 값(순 방문자·CTA 방문자·스크롤 도달)만 [exact]의 값으로 바꾼다. 더한 값으로는 낼 수 없는 값이다. */
+    fun withUniquesOf(exact: ContentMetricDto) = copy(
+        uniqueVisitors = exact.uniqueVisitors,
+        memberUniqueVisitors = exact.memberUniqueVisitors,
+        ctaUniqueVisitors = exact.ctaUniqueVisitors,
+        ctaUniqueMembers = exact.ctaUniqueMembers,
+        scrollReach25 = exact.scrollReach25,
+        scrollReach50 = exact.scrollReach50,
+        scrollReach75 = exact.scrollReach75,
+        scrollReach100 = exact.scrollReach100,
+    )
+
     /** 스크롤 이벤트의 평균 깊이(%)다. 스크롤 이벤트가 없으면 null이다. 소수 첫째 자리까지. */
     val avgScrollPercent: Double?
         get() = if (scrollCount == 0L) null else round1(scrollPercentSum.toDouble() / scrollCount)

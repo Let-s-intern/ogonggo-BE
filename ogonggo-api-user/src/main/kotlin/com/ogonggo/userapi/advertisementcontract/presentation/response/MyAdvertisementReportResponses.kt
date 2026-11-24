@@ -37,7 +37,7 @@ data class MyAdvertisementReportResponse(
     val to: LocalDate,
     @field:Schema(description = "이벤트 수집을 시작한 날. from보다 늦으면 그 앞은 집계 전")
     val collectedSince: LocalDate,
-    @field:Schema(description = "기간이 원본 보관 기간(365일)보다 앞이라 순 방문자·스크롤 깔때기를 날마다 센 값의 합으로 대신했으면 true")
+    @field:Schema(description = "기간이 원본 보관 기간(365일)보다 앞이라 순 방문자·스크롤 깔때기를 날마다 센 값의 합으로 대신했으면 true. 이때 일별·CSV의 순 방문자도 그날의 칸(노출·유입 경로·대상)을 더한 값이라 같은 사람이 여러 칸으로 들어온 날은 여러 번 센다")
     val uniqueCountsApproximate: Boolean,
     @field:Schema(description = "상품 몫. 이 상품의 노출로 들어온 이벤트만 센다")
     val summary: MyAdvertisementReportSummaryResponse,
@@ -112,7 +112,7 @@ data class MyAdvertisementReportSummaryResponse(
     val adClickRate: Double?,
     @field:Schema(description = "상세 조회수. 같은 방문자가 30분 안에 다시 연 것은 한 번")
     val views: Long,
-    @field:Schema(description = "상세를 연 순 방문자 수. 회원은 회원 id, 비회원은 익명 방문자 id로 센다")
+    @field:Schema(description = "상세를 연 순 방문자 수. 회원은 회원 id로 세고, 비회원은 익명 방문자 id로 세되 같은 브라우저가 기간 안에 로그인한 적이 있으면 그 회원으로 센다")
     val uniqueVisitors: Long,
     val memberViews: Long,
     val memberUniqueVisitors: Long,
@@ -173,6 +173,7 @@ data class MyAdvertisementReportDailyResponse(
     val uniqueImpressions: Long,
     val adClicks: Long,
     val views: Long,
+    @field:Schema(description = "그날 상세를 연 순 방문자 수. 모든 노출을 합쳐 날짜 단위로 센다(방문자 규칙은 요약과 같다). 기간이 원본 보관 기간보다 앞이면 칸 합")
     val uniqueVisitors: Long,
     val memberViews: Long,
     val ctaClicks: Long,
@@ -315,11 +316,11 @@ data class MyAdvertisementReportInsightResponse(
 }
 
 data class MyAdvertisementReportAudienceResponse(
-    @field:Schema(description = "도달. 기간 동안 광고를 본 서로 다른 사람(회원·비회원 합). 기간이 원본 보관 기간보다 앞이면 null", nullable = true)
+    @field:Schema(description = "도달. 기간 동안 광고를 본 서로 다른 사람(회원·비회원 합, 같은 브라우저가 기간 안에 로그인한 적이 있으면 한 사람). 기간이 원본 보관 기간보다 앞이면 null", nullable = true)
     val reach: Long?,
     @field:Schema(description = "평균 빈도. 노출수 ÷ 도달(소수 첫째 자리). 도달이 없거나 0이면 null", nullable = true)
     val avgFrequency: Double?,
-    @field:Schema(description = "광고를 눌러 공고를 연 서로 다른 사람. 기간이 원본 보관 기간보다 앞이면 null", nullable = true)
+    @field:Schema(description = "광고를 눌러 공고를 연 서로 다른 사람(방문자 규칙은 도달과 같다). 기간이 원본 보관 기간보다 앞이면 null", nullable = true)
     val adClickVisitors: Long?,
     @field:Schema(description = "타깃 직군. 광고가 띄우는 공고의 직군과 노출을 띄우는 직군 탭. 없으면 빈 배열")
     val targetJobFields: List<JobField>,

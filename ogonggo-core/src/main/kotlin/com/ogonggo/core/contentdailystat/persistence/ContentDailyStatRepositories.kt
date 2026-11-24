@@ -10,7 +10,6 @@ import com.ogonggo.core.contentevent.domain.QContentEvent.contentEvent
 import com.ogonggo.core.user.domain.QUserProfile.userProfile
 import com.ogonggo.core.user.domain.UserGrade
 import com.querydsl.core.types.Projections
-import com.querydsl.core.types.dsl.CaseBuilder
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.jpa.repository.JpaRepository
@@ -99,6 +98,52 @@ internal class ContentDailyStatQueryRepository(
             .fetch()
     }
 
+    /**
+     * [rows]가 센 대상의 조회 중 [scope] 밖에 있는 것이다. 30분 안 재조회를 가를 때 기준으로만 쓰고 세지 않는다.
+     * 예를 들어 목록에서 연 조회(노출 없음)가 10분 뒤 광고로 다시 연 조회의 직전 조회가 된다.
+     * 범위가 노출 몇 개일 때만 있다. 대상 하나나 전체는 그 대상의 조회가 모두 범위 안이다.
+     */
+    fun findViewsOutsideScope(
+        scope: ContentMetricScope,
+        rows: List<ContentEventRow>,
+        from: LocalDateTime,
+        toExclusive: LocalDateTime,
+    ): List<ContentEventRow> {
+        if (scope !is ContentMetricScope.Exposures || scope.isEmpty) return emptyList()
+        val idsByType = rows.filter { it.targetType != null && it.targetId != null }
+            .groupBy({ checkNotNull(it.targetType) }, { checkNotNull(it.targetId) })
+            .mapValues { (_, ids) -> ids.toSet() }
+        if (idsByType.isEmpty()) return emptyList()
+        val onTargets = idsByType.map { (type, ids) -> contentEvent.targetType.eq(type).and(contentEvent.targetId.`in`(ids)) }
+            .reduce { left, right -> left.or(right) }
+        return queryFactory
+            .select(
+                Projections.constructor(
+                    ContentEventRow::class.java,
+                    contentEvent.eventType,
+                    contentEvent.targetType,
+                    contentEvent.targetId,
+                    contentEvent.exposureId,
+                    contentEvent.userId,
+                    contentEvent.visitorId,
+                    contentEvent.source,
+                    contentEvent.scrollPercent,
+                    contentEvent.occurredAt,
+                    contentEvent.durationMs,
+                ),
+            )
+            .from(contentEvent)
+            .where(
+                contentEvent.eventType.eq(ContentEventType.VIEW),
+                onTargets,
+                contentEvent.exposureId.isNull.or(contentEvent.exposureId.notIn(scope.exposureIds)),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .orderBy(contentEvent.occurredAt.asc(), contentEvent.id.asc())
+            .fetch()
+    }
+
     fun countAdEvents(scope: ContentMetricScope, from: LocalDateTime, toExclusive: LocalDateTime): List<ContentAdEventCount> {
         if (scope.isEmpty) return emptyList()
         val count = contentEvent.id.count()
@@ -132,10 +177,13 @@ internal class ContentDailyStatQueryRepository(
             }
     }
 
-    /** 노출을 본 서로 다른 방문자 수를 집계 행 단위로 센다. 하루 범위로 부르면 "하루 한 번" 순 노출수다. */
+    /**
+     * 노출을 본 서로 다른 방문자 수를 집계 행 단위로 센다. 하루 범위로 부르면 "하루 한 번" 순 노출수다.
+     * 방문자는 [ContentVisitorKeys] 규칙으로 가르며 표는 [from]~[toExclusive] 안에서 만든다.
+     */
     fun countUniqueImpressions(scope: ContentMetricScope, from: LocalDateTime, toExclusive: LocalDateTime): List<ContentAdEventCount> {
         if (scope.isEmpty) return emptyList()
-        val visitors = visitorKey.countDistinct()
+        val visitors = ContentVisitorKeys.expression(from, toExclusive).countDistinct()
         return queryFactory
             .select(contentEvent.targetType, contentEvent.targetId, contentEvent.exposureId, contentEvent.source, visitors)
             .from(contentEvent)
@@ -205,10 +253,10 @@ internal class ContentDailyStatQueryRepository(
             .fetchOne() ?: 0L
     }
 
-    /** [type] 이벤트를 낸 서로 다른 방문자 수다. 회원이면 회원 식별자, 아니면 익명 방문자 식별자로 센다. */
+    /** [type] 이벤트를 낸 서로 다른 방문자 수다. 방문자는 [ContentVisitorKeys] 규칙으로 가르며 표는 [from]~[toExclusive] 안에서 만든다. */
     fun countDistinctVisitors(scope: ContentMetricScope, type: ContentEventType, from: LocalDateTime, toExclusive: LocalDateTime): Long {
         if (scope.isEmpty) return 0L
-        return queryFactory.select(visitorKey.countDistinct())
+        return queryFactory.select(ContentVisitorKeys.expression(from, toExclusive).countDistinct())
             .from(contentEvent)
             .where(
                 eventScope(scope),
@@ -217,6 +265,21 @@ internal class ContentDailyStatQueryRepository(
                 contentEvent.occurredAt.lt(toExclusive),
             )
             .fetchOne() ?: 0L
+    }
+
+    /**
+     * [from]~[toExclusive] 안에서 회원 이벤트를 보낸 적 있는 방문자id마다 가장 작은 회원id를 모은 표다.
+     * 범위·이벤트 종류와 상관없이 모든 이벤트에서 만든다. 회원 이벤트를 보낸 브라우저만 들어 있어 작다.
+     */
+    fun findVisitorKeys(from: LocalDateTime, toExclusive: LocalDateTime): ContentVisitorKeys {
+        val userId = contentEvent.userId.min()
+        val userByVisitor = queryFactory.select(contentEvent.visitorId, userId)
+            .from(contentEvent)
+            .where(contentEvent.userId.isNotNull, contentEvent.occurredAt.goe(from), contentEvent.occurredAt.lt(toExclusive))
+            .groupBy(contentEvent.visitorId)
+            .fetch()
+            .associate { checkNotNull(it.get(contentEvent.visitorId)) to checkNotNull(it.get(userId)) }
+        return ContentVisitorKeys(userByVisitor)
     }
 
     fun findFirstOccurredAt(): LocalDateTime? =
@@ -241,11 +304,6 @@ internal class ContentDailyStatQueryRepository(
         is ContentMetricScope.Target -> contentDailyStat.targetType.eq(scope.targetType).and(contentDailyStat.targetId.eq(scope.targetId))
         ContentMetricScope.All -> null
     }
-
-    /** 방문자는 회원이면 회원 식별자, 아니면 익명 방문자 식별자다. */
-    private val visitorKey = CaseBuilder()
-        .`when`(contentEvent.userId.isNotNull).then(contentEvent.userId.stringValue().prepend("u:"))
-        .otherwise(contentEvent.visitorId.prepend("v:"))
 
     private companion object {
         val DETAIL_EVENT_TYPES = listOf(ContentEventType.VIEW, ContentEventType.CTA_CLICK, ContentEventType.SCROLL)
