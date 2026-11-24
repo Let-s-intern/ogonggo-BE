@@ -301,7 +301,7 @@ POST /api/v1/events    사용자 API, 로그인 선택
 - 성공은 **본문 없는 202**입니다. 3절의 201·`SuccessResponse` 규칙의 예외입니다. 브라우저가 페이지를 떠날 때 `navigator.sendBeacon`으로 보내 응답을 읽지 않고, 저장할 수 없는 건을 버려 몇 행이 생겼는지 돌려줄 값도 없기 때문입니다.
 - `Content-Type`은 `application/json`과 `text/plain`(같은 JSON)을 받습니다. `sendBeacon`이 다른 오리진에 preflight 없이 보낼 수 있는 타입이 `text/plain`이라서입니다. 이 요청 타입만 읽는 변환기(`ContentEventTextPlainConfiguration`)로 열어 다른 API는 `text/plain` JSON을 받지 않습니다.
 - 걸린 건은 오류 없이 그 건만 버립니다: 종류에 필요한 대상·노출이 없음, 대상이 없거나 게시 중이 아님, 노출이 없거나 지워짐, 광고 공고 노출과 대상이 다름(`ContentEventValidator`). 요청 형식이 틀리거나 21건 이상이면 묶음 전체가 400입니다.
-- 봇 User-Agent, User-Agent 없음, 방문자 분당 60회·IP 분당 600회 초과(`ContentEventRequestGuard`)는 아무것도 저장하지 않고 똑같이 202입니다. 카운터는 인스턴스 메모리라 여러 대면 대마다 따로 셉니다. IP는 `X-Forwarded-For` 첫 주소이며 운영 앞단이 이 헤더를 어떻게 채우는지는 **확인 필요**입니다.
+- 봇 User-Agent, User-Agent 없음, 방문자 분당 60회·IP 분당 600회 초과(`ContentEventRequestGuard`)는 아무것도 저장하지 않고 똑같이 202입니다. 카운터는 인스턴스 메모리라 여러 대면 대마다 따로 셉니다. IP는 `X-Forwarded-For`의 마지막 주소입니다(앞쪽 주소는 클라이언트가 넣을 수 있어 믿지 않습니다). 운영 앞단이 ALB 직결이라고 보고 정한 값이며, 앞단에 CloudFront가 있는지는 **확인 필요**입니다.
 - 시각은 서버가 받은 시각(KST)입니다. 같은 방문자의 30분 안 재조회도 모두 저장하고, 한 번으로 세는 것은 집계가 합니다.
 
 ### 회사명 검색

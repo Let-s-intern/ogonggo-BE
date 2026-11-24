@@ -74,18 +74,20 @@ class UserContentEventControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `프록시가 붙인 첫 주소를 방문자 IP로 넘긴다`() {
+    fun `프록시가 붙인 마지막 주소를 방문자 IP로 넘기고 클라이언트가 넣은 앞 주소는 바꿔도 같다`() {
         // when & then
-        mockMvc.perform(
-            post(PATH)
-                .header("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
-                .header(HttpHeaders.USER_AGENT, USER_AGENT)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(BODY),
-        )
-            .andExpect(status().isAccepted)
+        listOf("203.0.113.7", "198.51.100.1, 203.0.113.7", "192.0.2.9, 198.51.100.2, 203.0.113.7").forEach { forwardedFor ->
+            mockMvc.perform(
+                post(PATH)
+                    .header("X-Forwarded-For", forwardedFor)
+                    .header(HttpHeaders.USER_AGENT, USER_AGENT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(BODY),
+            )
+                .andExpect(status().isAccepted)
+        }
 
-        Mockito.verify(userContentEventService).collect(null, COMMAND.copy(clientIp = "203.0.113.7"))
+        Mockito.verify(userContentEventService, Mockito.times(3)).collect(null, COMMAND.copy(clientIp = "203.0.113.7"))
     }
 
     @Test
