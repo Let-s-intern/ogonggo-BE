@@ -162,7 +162,10 @@
 | 콘텐츠 이벤트 유입 경로 | `ContentEventSource` | 광고 카드(`AD_CARD`), 배너(`BANNER`), 목록(`LIST`), 검색(`SEARCH`), 직접 방문(`DIRECT`), 외부 유입(`EXTERNAL`), 기타(`OTHER`). 브라우저가 보낸 값을 그대로 저장합니다. 광고 문의 유입 경로(`AdvertisementInquiryInflowChannel`)와 다릅니다. |
 | 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`), 취준고민(`CONCERN`), 사이드·스터디 모집글(`RECRUITMENT_POST`). 취준고민과 모집글의 이벤트는 지금 사용자에게 보이는 글(숨기거나 지우지 않은 것, 게시 중인 것)만 저장합니다. |
 | 콘텐츠 일별 집계 | `ContentDailyStat` | 하루(KST)·대상·광고 노출·유입 경로마다 모은 콘텐츠 이벤트 숫자. 상세 조회수는 같은 방문자가 같은 대상을 직전 조회로부터 30분 안에 다시 연 것을 뺍니다. 매일 새벽 `contentDailyStatAggregation` 작업이 전날 분을 다시 씁니다. |
-| 순 노출수 | `ContentDailyStat.uniqueImpressions` | 같은 방문자(회원이면 회원, 아니면 익명 방문자)가 같은 광고 노출을 하루에 여러 번 봐도 한 번으로 센 노출수. 보일 때마다 센 노출수(`impressions`)와 따로 둡니다. |
+| 방문자 키 | `ContentVisitorKeys` | 콘텐츠 이벤트를 쓰는 숫자가 서로 다른 방문자를 가르는 규칙. `userId`가 있으면 그 회원, 없으면 같은 브라우저(`visitorId`)가 계산 범위 안에서 로그인한 적이 있으면 그 회원, 아니면 익명 방문자입니다. 같은 브라우저가 로그인한 채로 보낸 이벤트와 로그인 정보 없이 보낸 이벤트(페이지를 떠날 때 `sendBeacon`)를 한 사람으로 잇기 위해서입니다. 한 브라우저에 회원이 여럿 이어지면 가장 작은 회원 식별자로 잇습니다. 코틀린 계산과 SQL 집계가 같은 파일(`ContentVisitorKeys`)의 규칙을 씁니다. 순 방문자·도달·순 노출수·광고 클릭 방문자·CTA 클릭 방문자·스크롤 도달·30분 중복 제거가 이 키를 쓰고, 회원 수(`memberUniqueVisitors`, `ctaUniqueMembers`)는 `userId`가 있는 이벤트만 셉니다. |
+| 순 방문자 | `ContentMetricDto.uniqueVisitors` | 기간·날짜·노출 안에서 상세를 연 서로 다른 방문자(방문자 키) 수. 칸을 더하면 같은 사람이 두 번 들어가므로 기간 값과 리포트의 일별 값은 원본에서 다시 셉니다. 일별 값은 날짜 단위(모든 노출을 합쳐), CSV는 날짜·노출 단위입니다. 기간이 원본 보관 기간(365일)보다 앞이면 원본이 없어 칸 합을 쓰고 `uniqueCountsApproximate`가 참입니다. |
+| 도달 | `ContentAdReachDto.impressionVisitors` | 기간 동안 광고 노출을 본 서로 다른 방문자(방문자 키) 수. 광고를 누른 방문자(`adClickVisitors`)도 같은 규칙입니다. 평균 빈도는 노출수를 도달로 나눈 값입니다. 기간이 원본 보관 기간보다 앞이면 셀 수 없어 비웁니다. |
+| 순 노출수 | `ContentDailyStat.uniqueImpressions` | 같은 방문자(방문자 키)가 같은 광고 노출을 하루에 여러 번 봐도 한 번으로 센 노출수. 보일 때마다 센 노출수(`impressions`)와 따로 둡니다. |
 | 리포트 인사이트 | `AdvertisementReportInsight` | 운영자가 계약 상품의 성과 리포트에 직접 써서 기업 회원에게 보내는 제목·본문. 보내기 전에는 운영자만 봅니다. |
 | 계약 대상 | `AdvertisementContractTarget` | 광고 성과 리포트가 전체 숫자를 셀 공고·부트캠프. 운영자가 계약에 연결하며 비즈니스 공고 계약의 공고는 자동 대상입니다. |
 | 상품 몫 | (리포트 계산) | 계약 상품의 리포트에서 그 상품의 광고 노출 식별자로 들어온 이벤트만 센 숫자. 일반 목록·검색·외부 유입은 어느 상품 몫에도 넣지 않습니다. |
