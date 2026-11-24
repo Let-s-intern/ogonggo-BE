@@ -44,7 +44,7 @@ scheduled_jobs (name, cron, enabled)
 | `notificationDelivery` | 사용자 | `* * * * * *` | 모든 채널의 due notification 발송. ShedLock으로 한 인스턴스만 실행하고 기본 4건 병렬 처리. 결과 commit이 끝난 슬롯부터 보충 |
 | `fcmTopicSync` | 사용자 | `*/30 * * * * *` | 전체 토픽 최초 구독, 토큰·회원 상태 동기화, 구독 실패 재처리. topic 설정 및 Firebase 활성화 시 실행 |
 | `notificationCleanup` | 사용자 | `0 30 3 * * *` | 최종 상태로 바뀐 지 30일 지난 알림을 500건씩 정리. ShedLock 적용 |
-| `contentDailyStatAggregation` | 사용자 | `0 20 3 * * *` | 전날(KST) 콘텐츠 이벤트를 광고 성과 리포트용 일별 집계(`content_daily_stats`)로 다시 쓴 뒤, 365일 지난 `content_events`를 1000건씩 지움. 같은 날을 다시 돌려도 결과가 같다. 하루를 다시 모으려면 `ContentDailyStatService.aggregate(날짜)`를 부른다 |
+| `contentDailyStatAggregation` | 사용자 | `0 20 3 * * *` | 마지막 집계일 다음 날부터 어제(KST)까지(집계가 처음이면 어제 하루, 최대 31일)의 콘텐츠 이벤트를 하루씩 광고 성과 리포트용 일별 집계(`content_daily_stats`)로 다시 쓴 뒤, 365일 지난 `content_events`를 1000건씩 지움. 며칠 멈췄다 켜져도 빠진 날을 채운다. 어제는 이미 모았어도 다시 쓴다. 같은 날을 다시 돌려도 결과가 같다. 하루를 다시 모으려면 `ContentDailyStatService.aggregate(날짜)`를 부른다 |
 
 2026-10-21 이전에는 `work24DailyCollection` 하나가 채용공고와 부트캠프를 함께 받아, 한쪽만 끌 수 없었다. 지금은 두 작업으로 나눠 따로 켜고 끈다.
 

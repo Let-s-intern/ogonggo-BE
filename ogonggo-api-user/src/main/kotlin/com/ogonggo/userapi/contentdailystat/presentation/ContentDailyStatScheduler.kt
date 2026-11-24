@@ -13,16 +13,19 @@ class ContentDailyStatScheduler(
 ) {
 
     /**
-     * 전날 콘텐츠 이벤트를 일별 집계로 모은 뒤 보관 기간(365일)이 지난 원본을 지운다.
+     * 마지막 집계일 다음 날부터 어제까지의 콘텐츠 이벤트를 하루씩 일별 집계로 모은 뒤 보관 기간(365일)이 지난 원본을 지운다.
      * 실행 주기와 켜짐 여부는 `scheduled_jobs`가 정한다. `UserScheduledJobConfiguration` 참고.
      */
     @SchedulerLock(name = SCHEDULER_NAME, lockAtLeastFor = "PT1M", lockAtMostFor = "PT30M")
     fun aggregate() {
         schedulerExecutionObserver.observe(SCHEDULER_NAME) {
-            val statDate = contentDailyStatService.yesterday()
-            val rowCount = contentDailyStatService.aggregate(statDate)
+            val statDates = contentDailyStatService.datesToAggregate()
+            val rowCount = statDates.sumOf { contentDailyStatService.aggregate(it) }
             val removedCount = contentDailyStatService.removeExpiredEvents(REMOVE_BATCH_SIZE)
-            log.info("콘텐츠 일별 집계 완료. statDate={}, rowCount={}, removedEventCount={}", statDate, rowCount, removedCount)
+            log.info(
+                "콘텐츠 일별 집계 완료. statDates={}~{}, dayCount={}, rowCount={}, removedEventCount={}",
+                statDates.first(), statDates.last(), statDates.size, rowCount, removedCount,
+            )
         }
     }
 

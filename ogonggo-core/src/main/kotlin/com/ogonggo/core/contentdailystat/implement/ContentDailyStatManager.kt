@@ -38,4 +38,7 @@ class ContentDailyStatManager internal constructor(
         contentDailyStatRepository.saveAll(stats)
         return stats.size
     }
+
+    /** 집계가 있는 마지막 날이다. 아직 집계가 없으면 null이다. */
+    fun lastStatDate(): LocalDate? = contentDailyStatRepository.findLastStatDate()
 }
