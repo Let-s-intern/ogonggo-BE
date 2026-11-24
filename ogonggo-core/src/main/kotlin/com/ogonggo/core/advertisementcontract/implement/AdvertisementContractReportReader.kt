@@ -498,8 +498,8 @@ class AdvertisementContractReportReader internal constructor(
             memberViews = metric.memberViews,
             ctaClicks = metric.ctaClicks,
             ctaUniqueVisitors = metric.ctaUniqueVisitors,
-            avgScrollPercent = if (hidesScroll) null else metric.avgScrollPercent ?: 0.0,
-            avgDurationSeconds = if (hidesScroll) null else metric.avgDurationSeconds ?: 0.0,
+            avgScrollPercent = if (hidesScroll) null else metric.avgScrollPercent,
+            avgDurationSeconds = if (hidesScroll) null else metric.avgDurationSeconds,
         )
 
         private fun List<ContentMetricCellDto>.sum(): ContentMetricDto = fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }

@@ -178,9 +178,9 @@ data class AdminAdvertisementReportDailyResponse(
     val memberViews: Long,
     val ctaClicks: Long,
     val ctaUniqueVisitors: Long,
-    @field:Schema(description = "그날 평균 스크롤 깊이(%). 기록이 없는 날은 0, 배너 상품은 null", nullable = true)
+    @field:Schema(description = "그날 평균 스크롤 깊이(%). 스크롤 기록이 없는 날과 배너 상품은 null", nullable = true)
     val avgScrollPercent: Double?,
-    @field:Schema(description = "그날 평균 체류 시간(초). 기록이 없는 날은 0, 배너 상품은 null", nullable = true)
+    @field:Schema(description = "그날 평균 체류 시간(초). 스크롤 기록이 없는 날과 배너 상품은 null", nullable = true)
     val avgDurationSeconds: Double?,
 ) {
     companion object {

@@ -196,6 +196,28 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     }
 
     @Test
+    fun `스크롤 기록이 없는 날의 평균 스크롤과 체류 시간은 0이 아니라 null이고 CSV 값도 null이다`() {
+        // given
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.plusDays(1).atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.SCROLL, START.plusDays(1).atTime(10, 1), "a", cardExposureId, ContentEventSource.AD_CARD, scroll = 80)
+        dailyStatManager.rebuild(START)
+        dailyStatManager.rebuild(START.plusDays(1))
+
+        // when
+        val report = reportReader.read(contract, cardProductId, START, START.plusDays(1), TODAY)
+
+        // then
+        val noScroll = report.daily.single { it.date == START }
+        assertNull(noScroll.avgScrollPercent)
+        assertNull(noScroll.avgDurationSeconds)
+        assertEquals(80.0, report.daily.single { it.date == START.plusDays(1) }.avgScrollPercent)
+        val csvNoScroll = report.csvRows.single { it.date == START }
+        assertNull(csvNoScroll.avgScrollPercent)
+        assertNull(csvNoScroll.avgDurationSeconds)
+    }
+
+    @Test
     fun `전날까지는 일별 집계를, 오늘은 원본을 읽어 기간의 모든 날을 준다`() {
         // given
         event(ContentEventType.VIEW, TODAY.minusDays(1).atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)

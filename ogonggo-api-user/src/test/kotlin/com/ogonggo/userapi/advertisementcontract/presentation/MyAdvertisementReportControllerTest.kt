@@ -82,6 +82,9 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.summary.scrollFunnel[2].threshold").value(50))
             .andExpect(jsonPath("$.data.summary.scrollFunnel[2].rate").value(0.7))
             .andExpect(jsonPath("$.data.daily.length()").value(2))
+            .andExpect(jsonPath("$.data.daily[0].avgScrollPercent").value(50.0))
+            .andExpect(jsonPath("$.data.daily[1].avgScrollPercent").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.daily[1].avgDurationSeconds").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.exposures[0].name").value("백엔드 개발자 · 뱅크"))
             .andExpect(jsonPath("$.data.targets[0].bySource[0].source").value("AD_CARD"))
             .andExpect(jsonPath("$.data.uniqueCountsApproximate").value(false))
@@ -125,6 +128,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
         )
         assertEquals(1 + REPORT.csvRows.size, lines.size)
         assertEquals("2026-11-01,31,\"공고, 광고\",100,2,1,1,0,0,0,50.0,", lines[1])
+        assertEquals("2026-11-02,31,\"공고, 광고\",100,2,1,1,0,0,0,,", lines[2])
     }
 
     @Test
@@ -213,7 +217,10 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
                 },
                 avgDurationSeconds = null,
             ),
-            daily = listOf(FROM to 60L, TO to null).map { (date, reach) -> AdvertisementContractReportDailyDto(date, 100, 80, reach, 2, 1, 1, 0, 0, 0, 50.0, 0.0) },
+            daily = listOf(FROM to 60L, TO to null).map { (date, reach) ->
+                val scrolled = date == FROM
+                AdvertisementContractReportDailyDto(date, 100, 80, reach, 2, 1, 1, 0, 0, 0, if (scrolled) 50.0 else null, if (scrolled) 12.5 else null)
+            },
             exposures = listOf(AdvertisementContractReportExposureDto(31L, "백엔드 개발자 · 뱅크", 200, 4, 0.02)),
             targets = listOf(
                 AdvertisementContractReportTargetDto(
@@ -241,7 +248,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             ),
             insights = listOf(AdvertisementReportInsightDto("마감 전 재노출을 제안해요", "마감 2주 전 한 번 더 노출해 보세요.", true)),
             csvRows = listOf(FROM, TO).map {
-                AdvertisementContractReportCsvRowDto(it, 31L, "공고, 광고", 100, 2, 1, 1, 0, 0, 0, 50.0, null)
+                AdvertisementContractReportCsvRowDto(it, 31L, "공고, 광고", 100, 2, 1, 1, 0, 0, 0, if (it == FROM) 50.0 else null, null)
             },
         )
     }
