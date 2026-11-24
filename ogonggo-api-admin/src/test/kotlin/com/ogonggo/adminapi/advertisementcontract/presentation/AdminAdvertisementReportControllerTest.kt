@@ -66,6 +66,7 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.product.category").value("BANNER"))
             .andExpect(jsonPath("$.data.summary.scrollFunnel").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.daily[0].avgScrollPercent").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.daily[0].reach").value(60))
             .andExpect(jsonPath("$.data.audience.reach").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.audience.targetMatch.members").value(0))
             .andExpect(jsonPath("$.data.insights[0].published").value(true))
@@ -164,7 +165,7 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             collectedSince = FROM,
             uniqueCountsApproximate = false,
             summary = AdvertisementContractReportSummaryDto(100, 80, 2, 0.02, 1, 1, 0, 0, 0, 0, 0, 0.0, null, null, null),
-            daily = listOf(AdvertisementContractReportDailyDto(FROM, 100, 80, 2, 1, 1, 0, 0, 0, null, null)),
+            daily = listOf(AdvertisementContractReportDailyDto(FROM, 100, 80, 60, 2, 1, 1, 0, 0, 0, null, null)),
             exposures = listOf(AdvertisementContractReportExposureDto(12L, "11월 홈 상단", 100, 2, 0.02)),
             targets = emptyList(),
             byJobField = emptyList(),

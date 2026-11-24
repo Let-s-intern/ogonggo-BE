@@ -11,6 +11,7 @@ import com.ogonggo.core.user.domain.QUserProfile.userProfile
 import com.ogonggo.core.user.domain.UserGrade
 import com.querydsl.core.types.Projections
 import com.querydsl.core.types.dsl.BooleanExpression
+import com.querydsl.core.types.dsl.Expressions
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
@@ -265,6 +266,27 @@ internal class ContentDailyStatQueryRepository(
                 contentEvent.occurredAt.lt(toExclusive),
             )
             .fetchOne() ?: 0L
+    }
+
+    /**
+     * [type] 이벤트를 낸 서로 다른 방문자 수를 날짜별로 센다. 이벤트가 없는 날은 빠진다.
+     * 방문자 표는 [countDistinctVisitors]와 같이 [from]~[toExclusive] 전체로 만들어, 하루짜리 기간이면 두 값이 같다.
+     */
+    fun countDistinctVisitorsByDate(scope: ContentMetricScope, type: ContentEventType, from: LocalDateTime, toExclusive: LocalDateTime): Map<LocalDate, Long> {
+        if (scope.isEmpty) return emptyMap()
+        val date = Expressions.dateTemplate(java.sql.Date::class.java, "cast({0} as date)", contentEvent.occurredAt)
+        val visitors = ContentVisitorKeys.expression(from, toExclusive).countDistinct()
+        return queryFactory.select(date, visitors)
+            .from(contentEvent)
+            .where(
+                eventScope(scope),
+                contentEvent.eventType.eq(type),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .groupBy(date)
+            .fetch()
+            .associate { checkNotNull(it.get(date)).toLocalDate() to checkNotNull(it.get(visitors)) }
     }
 
     /**

@@ -36,6 +36,7 @@ interface AdminAdvertisementReportApi {
             계약에 붙은 상품 하나의 성과 리포트입니다. 기업 회원이 보는 리포트와 같은 숫자입니다.
             summary·daily·exposures는 이 상품의 노출로 들어온 이벤트만 센 상품 몫이고, targets는 계약 대상 공고의 전체 숫자입니다.
             from·to(yyyy-MM-dd, 포함)는 상품 기간 안으로 자르며 비우면 상품 기간 전체(진행 중이면 오늘까지)입니다. 배너 상품은 스크롤 깊이·체류 시간이 null입니다.
+            daily의 reach는 그날 광고를 본 서로 다른 사람 수이고 원본 보관 기간(365일)보다 앞날은 null입니다.
         """,
     )
     @ApiResponses(

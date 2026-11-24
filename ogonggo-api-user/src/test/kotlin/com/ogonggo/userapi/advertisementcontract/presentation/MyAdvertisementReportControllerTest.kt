@@ -87,6 +87,8 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.uniqueCountsApproximate").value(false))
             .andExpect(jsonPath("$.data.summary.uniqueImpressions").value(150))
             .andExpect(jsonPath("$.data.daily[0].uniqueImpressions").value(80))
+            .andExpect(jsonPath("$.data.daily[0].reach").value(60))
+            .andExpect(jsonPath("$.data.daily[1].reach").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.byJobField[0].jobField").value("IT_DEVELOPMENT"))
             .andExpect(jsonPath("$.data.byJobField[1].jobField").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.data.byJobField[1].label").value("직무 미설정"))
@@ -211,7 +213,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
                 },
                 avgDurationSeconds = null,
             ),
-            daily = listOf(FROM, TO).map { AdvertisementContractReportDailyDto(it, 100, 80, 2, 1, 1, 0, 0, 0, 50.0, 0.0) },
+            daily = listOf(FROM to 60L, TO to null).map { (date, reach) -> AdvertisementContractReportDailyDto(date, 100, 80, reach, 2, 1, 1, 0, 0, 0, 50.0, 0.0) },
             exposures = listOf(AdvertisementContractReportExposureDto(31L, "백엔드 개발자 · 뱅크", 200, 4, 0.02)),
             targets = listOf(
                 AdvertisementContractReportTargetDto(

@@ -346,6 +346,80 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     }
 
     @Test
+    fun `날짜별 도달은 같은 사람이 하루에 몇 번을 봐도 1이고 두 날에 걸치면 날마다 1이다`() {
+        // given
+        event(ContentEventType.IMPRESSION, START.atTime(9, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(12, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(15, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.plusDays(1).atTime(9, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.AD_CLICK, START.plusDays(2).atTime(9, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+
+        // when
+        val report = reportReader.read(contract, cardProductId, null, null, TODAY)
+
+        // then
+        assertEquals(1L, report.daily.single { it.date == START }.reach)
+        assertEquals(1L, report.daily.single { it.date == START.plusDays(1) }.reach)
+        assertEquals(0L, report.daily.single { it.date == START.plusDays(2) }.reach)
+        assertEquals(1L, report.audience.reach)
+    }
+
+    @Test
+    fun `날짜별 도달은 같은 브라우저의 회원과 비회원 이벤트를 한 사람으로 센다`() {
+        // given
+        event(ContentEventType.IMPRESSION, START.atTime(9, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(9, 1), "a", bannerExposureId, ContentEventSource.BANNER, target = false)
+        event(ContentEventType.IMPRESSION, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, target = false, userId = 5L)
+        event(ContentEventType.IMPRESSION, START.atTime(11, 0), "b", bannerExposureId, ContentEventSource.BANNER, target = false)
+
+        // when
+        val daily = reportReader.read(contract, bannerProductId, null, null, TODAY).daily
+        val cardDaily = reportReader.read(contract, cardProductId, null, null, TODAY).daily
+
+        // then
+        assertEquals(2L, daily.single { it.date == START }.reach)
+        assertEquals(1L, cardDaily.single { it.date == START }.reach)
+    }
+
+    @Test
+    fun `날짜별 도달은 원본 보관 기간보다 앞날만 null이고 보관 기간 안의 날은 이벤트가 없어도 0이다`() {
+        // given
+        val firstRetained = TODAY.minusDays(365)
+        val oldContract = contractRepository.save(form())
+        val card = productRepository.findAll().first { it.category == AdvertisementProductCategory.JOB_POSTING }
+        val oldProductId = checkNotNull(
+            contractProductRepository.save(
+                AdvertisementContractProduct(
+                    checkNotNull(oldContract.id),
+                    checkNotNull(card.id),
+                    AdvertisementContractProductPeriod(firstRetained.minusDays(2), firstRetained.plusDays(2)),
+                ),
+            ).id,
+        )
+        val exposure = exposureRepository.save(
+            AdvertisementExposure(
+                product = card,
+                contractId = oldContract.id,
+                content = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.JOB, targetId = JOB_ID),
+                adLabel = true,
+                period = AdvertisementExposurePeriod.ALWAYS,
+                exposed = true,
+                displayOrder = 1,
+            ),
+        )
+        event(ContentEventType.IMPRESSION, firstRetained.atTime(9, 0), "a", exposure.id, ContentEventSource.AD_CARD, target = false)
+
+        // when
+        val daily = reportReader.read(oldContract, oldProductId, null, null, TODAY).daily
+
+        // then
+        assertEquals(
+            listOf(null, null, 1L, 0L, 0L),
+            daily.sortedBy { it.date }.map { it.reach },
+        )
+    }
+
+    @Test
     fun `원본 보관 기간보다 앞날이 걸린 기간은 도달과 평균 빈도를 null로 준다`() {
         // given
         val old = TODAY.minusDays(400)
