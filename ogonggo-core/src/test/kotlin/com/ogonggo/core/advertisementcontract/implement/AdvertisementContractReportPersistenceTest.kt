@@ -201,8 +201,8 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
         event(ContentEventType.VIEW, START.plusDays(1).atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
         event(ContentEventType.SCROLL, START.plusDays(1).atTime(10, 1), "a", cardExposureId, ContentEventSource.AD_CARD, scroll = 80)
-        dailyStatManager.rebuild(START)
-        dailyStatManager.rebuild(START.plusDays(1))
+        dailyStatManager.rebuild(START, TODAY)
+        dailyStatManager.rebuild(START.plusDays(1), TODAY)
 
         // when
         val report = reportReader.read(contract, cardProductId, START, START.plusDays(1), TODAY)

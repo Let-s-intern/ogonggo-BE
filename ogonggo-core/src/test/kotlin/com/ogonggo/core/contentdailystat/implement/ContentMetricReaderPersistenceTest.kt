@@ -110,7 +110,7 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
         save(cta(at(10, 7), userId = 8L, browser = "c"))
         save(cta(at(12, 0), browser = "f"))
         save(scroll(at(10, 2), browser = "a", percent = 80))
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, DAY.plusDays(1))
 
         listOf(scope, ContentMetricScope.Target(ContentEventTargetType.JOB, JOB_ID), ContentMetricScope.All).forEach { each ->
             // when
