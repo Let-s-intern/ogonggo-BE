@@ -33,11 +33,10 @@ class UserContentEventController(
 }
 
 /**
- * X-Forwarded-For의 마지막 주소를 쓴다. 없으면 연결 주소다.
- * 앞단(ALB)이 붙인 주소는 맨 뒤에 있고, 앞쪽은 클라이언트가 마음대로 넣을 수 있어 믿지 않는다.
- * 앞단이 CloudFront로 바뀌면 `CloudFront-Viewer-Address`를 읽도록 여기만 바꾼다.
+ * 앞단 프록시가 붙인 X-Forwarded-For의 첫 주소를 쓴다. 없으면 연결 주소다.
+ * 첫 주소는 클라이언트가 바꿀 수 있지만 요청 수 제한에만 쓰므로 받아들인다.
  */
 private fun HttpServletRequest.clientIp(): String? =
-    getHeader(FORWARDED_FOR_HEADER)?.substringAfterLast(',')?.trim()?.takeIf { it.isNotEmpty() } ?: remoteAddr
+    getHeader(FORWARDED_FOR_HEADER)?.substringBefore(',')?.trim()?.takeIf { it.isNotEmpty() } ?: remoteAddr
 
 private const val FORWARDED_FOR_HEADER = "X-Forwarded-For"
