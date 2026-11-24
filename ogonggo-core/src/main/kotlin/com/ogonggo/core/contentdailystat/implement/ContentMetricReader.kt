@@ -25,8 +25,12 @@ class ContentMetricReader internal constructor(
     /**
      * [from]~[to](둘 다 포함) 지표를 센다. 일별 집계가 있는 날은 집계를, 그 뒤(오늘, 아직 모으지 않은 전날)는 원본을 읽는다.
      * 어디까지 모았는지는 집계의 마지막 날로 본다. 이벤트가 없어 행이 없는 날은 원본에서 다시 세도 결과가 같다.
+     *
+     * [detailed]가 false이면 기간 값의 순 방문자·CTA 방문자·회원 수만 SQL `COUNT(DISTINCT)`로 세고 기간 전체의 원본을 읽지 않는다.
+     * 이때 스크롤 도달 수는 칸 합이고 날짜별·노출별 순 방문자([ContentMetricSheetDto.dailyUniques])는 비어 있다. 대상 하나의 합계처럼
+     * 스크롤 깔때기와 날짜별 값이 필요 없는 곳에 쓴다.
      */
-    fun read(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate): ContentMetricSheetDto {
+    fun read(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate, detailed: Boolean = true): ContentMetricSheetDto {
         require(!from.isAfter(to)) { "시작일은 종료일보다 늦을 수 없습니다." }
         if (scope.isEmpty) return ContentMetricSheetDto(emptyList(), ContentMetricDto.ZERO, uniqueCountsApproximate = false)
 
@@ -39,7 +43,7 @@ class ContentMetricReader internal constructor(
             emptyList()
         }
         val exactUniques = !from.isBefore(ContentEvent.retainedSince(today))
-        val detailFrom = if (exactUniques) from else rawFrom
+        val detailFrom = if (exactUniques && detailed) from else rawFrom
         val detailStart = detailFrom.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW)
         val detailEnd = to.plusDays(1).atStartOfDay()
         val detailRows = if (detailFrom.isAfter(to)) emptyList() else contentDailyStatQueryRepository.findDetailRows(scope, detailStart, detailEnd)
@@ -50,6 +54,21 @@ class ContentMetricReader internal constructor(
         val summed = cells.fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }
         if (!exactUniques) return ContentMetricSheetDto(cells, summed, uniqueCountsApproximate = true)
         val fromAt = from.atStartOfDay()
+        if (!detailed) {
+            val viewers = contentDailyStatQueryRepository.countUniques(scope, ContentEventType.VIEW, fromAt, detailEnd, detailStart, detailEnd)
+            val ctaClickers = contentDailyStatQueryRepository.countUniques(scope, ContentEventType.CTA_CLICK, fromAt, detailEnd, detailStart, detailEnd)
+            val exact = ContentMetricDto(
+                uniqueVisitors = viewers.visitors,
+                memberUniqueVisitors = viewers.members,
+                ctaUniqueVisitors = ctaClickers.visitors,
+                ctaUniqueMembers = ctaClickers.members,
+                scrollReach25 = summed.scrollReach25,
+                scrollReach50 = summed.scrollReach50,
+                scrollReach75 = summed.scrollReach75,
+                scrollReach100 = summed.scrollReach100,
+            )
+            return ContentMetricSheetDto(cells, summed.withUniquesOf(exact), uniqueCountsApproximate = false)
+        }
         return ContentMetricSheetDto(
             cells = cells,
             period = summed.withUniquesOf(ContentMetricCalculator.measureAll(detailRows, fromAt, visitors, judgeOnly)),

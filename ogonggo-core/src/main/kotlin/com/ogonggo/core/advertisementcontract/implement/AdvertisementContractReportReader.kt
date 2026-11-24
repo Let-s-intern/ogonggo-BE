@@ -305,6 +305,7 @@ class AdvertisementContractReportReader internal constructor(
             from,
             to,
             today,
+            detailed = false,
         )
         val bySource = sheet.cells.groupBy { it.source }.mapValues { (_, cells) -> cells.sum() }
         val total = sheet.period
