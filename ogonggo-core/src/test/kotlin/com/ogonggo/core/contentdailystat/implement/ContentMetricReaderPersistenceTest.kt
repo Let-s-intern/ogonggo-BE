@@ -93,6 +93,45 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
         assertEquals(1L, activities.getValue(8L).views)
     }
 
+    /** 기간 순 방문자를 SQL로 세도(`detailed = false`) 원본을 읽어 세던 값(`detailed = true`)과 같다. */
+    @Test
+    fun `SQL로 센 기간 순 방문자는 원본을 읽어 센 값과 같다`() {
+        // given
+        val twoDays = DAY.plusDays(1)
+        save(view(at(10, 0), browser = "a"))
+        save(view(at(11, 0), browser = "a"))
+        save(view(twoDays.atTime(9, 0), userId = 7L, browser = "a"))
+        save(view(at(10, 5), browser = "b"))
+        save(view(at(10, 6), userId = 8L, browser = "c"))
+        save(view(twoDays.atTime(10, 6), userId = 8L, browser = "d"))
+        save(view(twoDays.atTime(10, 7), browser = "e", exposureId = OTHER_EXPOSURE_ID))
+        save(cta(at(10, 1), browser = "a"))
+        save(cta(twoDays.atTime(9, 1), userId = 7L, browser = "a"))
+        save(cta(at(10, 7), userId = 8L, browser = "c"))
+        save(cta(at(12, 0), browser = "f"))
+        save(scroll(at(10, 2), browser = "a", percent = 80))
+        contentDailyStatManager.rebuild(DAY, DAY.plusDays(1))
+
+        listOf(scope, ContentMetricScope.Target(ContentEventTargetType.JOB, JOB_ID), ContentMetricScope.All).forEach { each ->
+            // when
+            val detailed = contentMetricReader.read(each, DAY, twoDays, today = twoDays).period
+            val sql = contentMetricReader.read(each, DAY, twoDays, today = twoDays, detailed = false).period
+
+            // then
+            assertEquals(detailed.uniqueVisitors, sql.uniqueVisitors, "$each uniqueVisitors")
+            assertEquals(detailed.memberUniqueVisitors, sql.memberUniqueVisitors, "$each memberUniqueVisitors")
+            assertEquals(detailed.ctaUniqueVisitors, sql.ctaUniqueVisitors, "$each ctaUniqueVisitors")
+            assertEquals(detailed.ctaUniqueMembers, sql.ctaUniqueMembers, "$each ctaUniqueMembers")
+            assertEquals(detailed.views, sql.views, "$each views")
+            assertEquals(detailed.ctaClicks, sql.ctaClicks, "$each ctaClicks")
+        }
+        val period = contentMetricReader.read(ContentMetricScope.All, DAY, twoDays, today = twoDays, detailed = false).period
+        assertEquals(4L, period.uniqueVisitors)
+        assertEquals(2L, period.memberUniqueVisitors)
+        assertEquals(3L, period.ctaUniqueVisitors)
+        assertEquals(2L, period.ctaUniqueMembers)
+    }
+
     private fun save(event: ContentEvent) = contentEventRepository.save(event)
 
     private fun at(hour: Int, minute: Int): LocalDateTime = DAY.atTime(hour, minute)
@@ -112,6 +151,25 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
         visitorId = browser,
         source = source,
         scrollPercent = null,
+        durationMs = null,
+        occurredAt = occurredAt,
+    )
+
+    private fun cta(occurredAt: LocalDateTime, userId: Long? = null, browser: String = "a") =
+        event(ContentEventType.CTA_CLICK, occurredAt, userId, browser, null)
+
+    private fun scroll(occurredAt: LocalDateTime, userId: Long? = null, browser: String = "a", percent: Int) =
+        event(ContentEventType.SCROLL, occurredAt, userId, browser, percent)
+
+    private fun event(type: ContentEventType, occurredAt: LocalDateTime, userId: Long?, browser: String, scrollPercent: Int?) = ContentEvent(
+        eventType = type,
+        targetType = ContentEventTargetType.JOB,
+        targetId = JOB_ID,
+        exposureId = EXPOSURE_ID,
+        userId = userId,
+        visitorId = browser,
+        source = ContentEventSource.AD_CARD,
+        scrollPercent = scrollPercent,
         durationMs = null,
         occurredAt = occurredAt,
     )

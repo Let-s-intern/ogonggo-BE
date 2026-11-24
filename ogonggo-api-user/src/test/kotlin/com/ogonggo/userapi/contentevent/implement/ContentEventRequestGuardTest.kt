@@ -18,11 +18,24 @@ class ContentEventRequestGuardTest {
             "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
             "Mozilla/5.0 (compatible; Yeti/1.1; +http://naver.me/spd)",
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 HeadlessChrome/120.0 Safari/537.36",
+            "Mozilla/5.0 (compatible; Daumoa/4.0; +http://webmaster.daum.net)",
+            "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
             "curl/8.4.0",
             "",
             null,
         ).forEach { assertFalse(guard.isAllowed(VISITOR_ID, IP, it), "$it") }
         assertTrue(guard.isAllowed(VISITOR_ID, IP, BROWSER))
+    }
+
+    @Test
+    fun `다음 앱과 bot으로 끝나는 이름의 단말 User-Agent는 받는다`() {
+        val guard = ContentEventRequestGuard(clockAt(START))
+
+        listOf(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 DaumApps/9.0.0 (DaumDevice/mobile)",
+            "Mozilla/5.0 (Linux; Android 11; CUBOT_X30) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36",
+            "Mozilla/5.0 (Linux; Android 11; CUBOT X30) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36",
+        ).forEach { assertTrue(guard.isAllowed(VISITOR_ID, IP, it), "$it") }
     }
 
     @Test

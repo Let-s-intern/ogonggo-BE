@@ -64,6 +64,9 @@ internal data class ContentAdEventCount(
     val count: Long,
 )
 
+/** [type] 이벤트를 낸 서로 다른 방문자 수와 서로 다른 회원 수다. */
+internal data class ContentUniqueCount(val visitors: Long, val members: Long)
+
 @Repository
 internal class ContentDailyStatQueryRepository(
     private val queryFactory: JPAQueryFactory,
@@ -266,6 +269,34 @@ internal class ContentDailyStatQueryRepository(
                 contentEvent.occurredAt.lt(toExclusive),
             )
             .fetchOne() ?: 0L
+    }
+
+    /**
+     * [from]~[toExclusive] 동안 [type] 이벤트를 낸 서로 다른 방문자(방문자 키)와 회원을 센다. 원본을 읽지 않고 SQL로 센다.
+     * 방문자 표는 [keyFrom]~[keyToExclusive] 안에서 만든다. 코틀린 계산(`ContentMetricReader.read`의 상세 경로)과 같은 값을 내려면
+     * 그 계산이 쓰는 범위(조회 시작 30분 전부터)를 넘긴다.
+     */
+    fun countUniques(
+        scope: ContentMetricScope,
+        type: ContentEventType,
+        from: LocalDateTime,
+        toExclusive: LocalDateTime,
+        keyFrom: LocalDateTime,
+        keyToExclusive: LocalDateTime,
+    ): ContentUniqueCount {
+        if (scope.isEmpty) return ContentUniqueCount(0L, 0L)
+        val visitors = ContentVisitorKeys.expression(keyFrom, keyToExclusive).countDistinct()
+        val members = contentEvent.userId.countDistinct()
+        val row = queryFactory.select(visitors, members)
+            .from(contentEvent)
+            .where(
+                eventScope(scope),
+                contentEvent.eventType.eq(type),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .fetchOne()
+        return ContentUniqueCount(row?.get(visitors) ?: 0L, row?.get(members) ?: 0L)
     }
 
     /**

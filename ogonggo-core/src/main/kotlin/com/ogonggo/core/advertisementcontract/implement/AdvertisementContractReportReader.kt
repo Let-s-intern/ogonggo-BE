@@ -111,6 +111,7 @@ class AdvertisementContractReportReader internal constructor(
             to = measure.to,
             collectedSince = contentMetricReader.readCollectedSince(today),
             uniqueCountsApproximate = measure.sheet.uniqueCountsApproximate,
+            rawCountsApproximate = contentMetricReader.isBeyondRawRetention(measure.from, today),
             summary = summaryOf(measure.sheet.period, hidesScroll),
             daily = measure.dailies(dailyReach),
             exposures = measure.exposures.map {
@@ -305,6 +306,7 @@ class AdvertisementContractReportReader internal constructor(
             from,
             to,
             today,
+            detailed = false,
         )
         val bySource = sheet.cells.groupBy { it.source }.mapValues { (_, cells) -> cells.sum() }
         val total = sheet.period
@@ -498,8 +500,8 @@ class AdvertisementContractReportReader internal constructor(
             memberViews = metric.memberViews,
             ctaClicks = metric.ctaClicks,
             ctaUniqueVisitors = metric.ctaUniqueVisitors,
-            avgScrollPercent = if (hidesScroll) null else metric.avgScrollPercent ?: 0.0,
-            avgDurationSeconds = if (hidesScroll) null else metric.avgDurationSeconds ?: 0.0,
+            avgScrollPercent = if (hidesScroll) null else metric.avgScrollPercent,
+            avgDurationSeconds = if (hidesScroll) null else metric.avgDurationSeconds,
         )
 
         private fun List<ContentMetricCellDto>.sum(): ContentMetricDto = fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }

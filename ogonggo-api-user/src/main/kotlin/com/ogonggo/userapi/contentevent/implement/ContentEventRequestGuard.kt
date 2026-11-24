@@ -46,7 +46,8 @@ class ContentEventRequestGuard(
     private fun isBot(userAgent: String?): Boolean {
         if (userAgent.isNullOrBlank()) return true
         val lowered = userAgent.lowercase()
-        return BOT_MARKERS.any { lowered.contains(it) }
+        if (BOT_MARKERS.any { lowered.contains(it) }) return true
+        return BOT_NAME.containsMatchIn(lowered) && DEVICE_NAMES.none { lowered.contains(it) }
     }
 
     companion object {
@@ -56,9 +57,18 @@ class ContentEventRequestGuard(
 
         /** 검색엔진·미리보기·자동화 도구가 User-Agent에 넣는 문자열이다. */
         private val BOT_MARKERS = listOf(
-            "bot", "crawler", "spider", "slurp", "headless", "lighthouse", "facebookexternalhit", "kakaotalk-scrap",
-            "yeti", "daum", "curl", "wget", "python-requests", "httpclient", "okhttp", "go-http-client", "java/", "axios",
+            "crawler", "spider", "slurp", "headless", "lighthouse", "facebookexternalhit", "kakaotalk-scrap",
+            "yeti", "daumoa", "curl", "wget", "python-requests", "httpclient", "okhttp", "go-http-client", "java/", "axios",
             "node-fetch", "postman",
         )
+
+        /**
+         * `Googlebot`·`bingbot`·`AhrefsBot`처럼 이름이 `bot`으로 끝나는 단어다. 단어 경계로 맞춰 `CUBOT_X30`처럼 단말 이름 안에 붙은 `bot`은 거른다.
+         * `daum`은 다음 앱 내장 브라우저(`DaumApps`)에도 있어 크롤러 이름 `daumoa`만 본다.
+         */
+        private val BOT_NAME = Regex("""\b[a-z0-9]*bot\b""")
+
+        /** 이름이 `bot`으로 끝나지만 사람이 쓰는 단말이다. */
+        private val DEVICE_NAMES = listOf("cubot")
     }
 }

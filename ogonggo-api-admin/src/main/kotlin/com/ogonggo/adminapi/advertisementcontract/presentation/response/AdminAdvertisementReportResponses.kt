@@ -37,6 +37,8 @@ data class AdminAdvertisementReportResponse(
     val collectedSince: LocalDate,
     @field:Schema(description = "기간이 원본 보관 기간(365일)보다 앞이라 순 방문자·스크롤 깔때기를 날마다 센 값의 합으로 대신했으면 true. 이때 일별·CSV의 순 방문자도 그날의 칸(노출·유입 경로·대상)을 더한 값이라 같은 사람이 여러 칸으로 들어온 날은 여러 번 센다")
     val uniqueCountsApproximate: Boolean,
+    @field:Schema(description = "기간이 원본 보관 기간(365일)보다 앞이라 원본에서만 세는 값(공유 수, 직군별·학년별·타깃 일치 회원 나눔)이 보관 기간 밖 날을 뺀 값이면 true. 실제보다 작을 수 있다")
+    val rawCountsApproximate: Boolean,
     @field:Schema(description = "상품 몫. 이 상품의 노출로 들어온 이벤트만 센다")
     val summary: AdminAdvertisementReportSummaryResponse,
     @field:Schema(description = "from~to의 모든 날짜. 이벤트가 없는 날은 0")
@@ -61,6 +63,7 @@ data class AdminAdvertisementReportResponse(
             to = report.to,
             collectedSince = report.collectedSince,
             uniqueCountsApproximate = report.uniqueCountsApproximate,
+            rawCountsApproximate = report.rawCountsApproximate,
             summary = AdminAdvertisementReportSummaryResponse.from(report.summary),
             daily = report.daily.map(AdminAdvertisementReportDailyResponse::from),
             exposures = report.exposures.map(AdminAdvertisementReportExposureResponse::from),
@@ -178,9 +181,9 @@ data class AdminAdvertisementReportDailyResponse(
     val memberViews: Long,
     val ctaClicks: Long,
     val ctaUniqueVisitors: Long,
-    @field:Schema(description = "그날 평균 스크롤 깊이(%). 기록이 없는 날은 0, 배너 상품은 null", nullable = true)
+    @field:Schema(description = "그날 평균 스크롤 깊이(%). 스크롤 기록이 없는 날과 배너 상품은 null", nullable = true)
     val avgScrollPercent: Double?,
-    @field:Schema(description = "그날 평균 체류 시간(초). 기록이 없는 날은 0, 배너 상품은 null", nullable = true)
+    @field:Schema(description = "그날 평균 체류 시간(초). 스크롤 기록이 없는 날과 배너 상품은 null", nullable = true)
     val avgDurationSeconds: Double?,
 ) {
     companion object {
