@@ -1,6 +1,8 @@
 package com.ogonggo.core.contentdailystat.implement
 
 import com.ogonggo.core.contentdailystat.domain.ContentDailyStat
+import com.ogonggo.core.contentdailystat.domain.ContentStatKey
+import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricDto
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatJpaRepository
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatQueryRepository
 import com.ogonggo.core.contentevent.domain.ContentEvent
@@ -10,6 +12,8 @@ import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentevent.persistence.ContentEventJpaRepository
 import com.ogonggo.core.jpa.CoreJpaConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -42,7 +46,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(view(DAY.plusDays(1).atTime(0, 30), visitor = "d"))
 
         // when
-        val written = contentDailyStatManager.rebuild(DAY)
+        val written = contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         val stats = contentDailyStatRepository.findAll()
@@ -71,11 +75,11 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         // given
         save(view(at(10, 0)))
         save(ad(ContentEventType.IMPRESSION, at(9, 0)))
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
         val first = snapshot()
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         assertEquals(first, snapshot())
@@ -90,7 +94,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(view(at(11, 29).plusSeconds(58)))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         assertEquals(2L, contentDailyStatRepository.findAll().single().views)
@@ -104,7 +108,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(view(at(0, 10), visitor = "other"))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         val stat = contentDailyStatRepository.findAll().single()
@@ -121,13 +125,41 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(ad(ContentEventType.IMPRESSION, DAY.plusDays(1).atTime(9, 0)))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
-        contentDailyStatManager.rebuild(DAY.plusDays(1))
+        contentDailyStatManager.rebuild(DAY, TODAY)
+        contentDailyStatManager.rebuild(DAY.plusDays(1), TODAY)
 
         // then
         val byDate = contentDailyStatRepository.findAll().associate { it.statDate to (it.impressions to it.uniqueImpressions) }
         assertEquals(3L to 2L, byDate[DAY])
         assertEquals(1L to 1L, byDate[DAY.plusDays(1)])
+    }
+
+    @Test
+    fun `원본 보관 기간이 지난 날은 거부하고 기존 집계 행을 지우지 않는다`() {
+        // given
+        val expired = ContentEvent.retainedSince(TODAY).minusDays(1)
+        contentDailyStatRepository.save(ContentDailyStat.of(expired, ContentStatKey(ContentEventTargetType.JOB, JOB_ID, EXPOSURE_ID, ContentEventSource.AD_CARD), ContentMetricDto.ZERO.copy(views = 7L)))
+
+        // when
+        val error = assertThrows(IllegalArgumentException::class.java) { contentDailyStatManager.rebuild(expired, TODAY) }
+
+        // then
+        assertTrue(error.message!!.contains(expired.toString()))
+        assertEquals(listOf(7L), contentDailyStatRepository.findAll().map { it.views })
+    }
+
+    @Test
+    fun `원본 보관 시작일 당일은 다시 집계한다`() {
+        // given
+        val firstRetained = ContentEvent.retainedSince(TODAY)
+        save(view(firstRetained.atTime(10, 0)))
+
+        // when
+        val written = contentDailyStatManager.rebuild(firstRetained, TODAY)
+
+        // then
+        assertEquals(1, written)
+        assertEquals(firstRetained, contentDailyStatRepository.findAll().single().statDate)
     }
 
     private fun ContentEvent.copyAsVisitor(visitor: String) = ContentEvent(
@@ -196,6 +228,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
 
     private companion object {
         val DAY: LocalDate = LocalDate.of(2026, 11, 18)
+        val TODAY: LocalDate = LocalDate.of(2026, 11, 25)
         const val JOB_ID = 15818L
         const val EXPOSURE_ID = 31L
         const val BANNER_EXPOSURE_ID = 12L

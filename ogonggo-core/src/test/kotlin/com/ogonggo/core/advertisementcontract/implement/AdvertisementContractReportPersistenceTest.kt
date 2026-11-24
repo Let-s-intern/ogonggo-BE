@@ -179,8 +179,8 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         event(ContentEventType.SCROLL, START.atTime(11, 1), "b", cardExposureId, ContentEventSource.AD_CARD, scroll = 50)
         event(ContentEventType.VIEW, START.atTime(12, 0), "c", bannerExposureId, ContentEventSource.BANNER)
         event(ContentEventType.SCROLL, START.atTime(12, 1), "c", bannerExposureId, ContentEventSource.BANNER, scroll = 100)
-        dailyStatManager.rebuild(START)
-        dailyStatManager.rebuild(START.plusDays(1))
+        dailyStatManager.rebuild(START, TODAY)
+        dailyStatManager.rebuild(START.plusDays(1), TODAY)
 
         // when
         val card = reportReader.read(contract, cardProductId, null, null, TODAY).summary
@@ -199,7 +199,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     fun `전날까지는 일별 집계를, 오늘은 원본을 읽어 기간의 모든 날을 준다`() {
         // given
         event(ContentEventType.VIEW, TODAY.minusDays(1).atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
-        dailyStatManager.rebuild(TODAY.minusDays(1))
+        dailyStatManager.rebuild(TODAY.minusDays(1), TODAY)
         event(ContentEventType.VIEW, TODAY.atTime(9, 0), "b", bannerExposureId, ContentEventSource.BANNER)
         event(ContentEventType.VIEW, TODAY.atTime(9, 10), "b", bannerExposureId, ContentEventSource.BANNER)
 
