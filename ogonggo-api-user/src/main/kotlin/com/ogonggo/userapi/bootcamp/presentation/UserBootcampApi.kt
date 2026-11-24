@@ -103,6 +103,7 @@ interface UserBootcampApi {
         description = """
             로그인 없이 조회할 수 있습니다. 액세스 토큰을 보내면 bookmarked에 해당 사용자의 북마크 여부가 담기고,
             보내지 않으면 항상 false입니다.
+            읽기만으로는 조회수가 오르지 않습니다. 조회수는 브라우저가 상세를 열 때 보내는 조회 이벤트(POST /api/v1/events의 VIEW)로 올라갑니다.
         """,
     )
     @SecurityRequirement(name = USER_BEARER_AUTH_SCHEME)
