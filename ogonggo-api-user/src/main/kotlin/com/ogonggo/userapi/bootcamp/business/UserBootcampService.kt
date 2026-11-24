@@ -10,7 +10,6 @@ import com.ogonggo.core.bootcamp.implement.BootcampReader
 import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import com.ogonggo.core.sourceurlclick.domain.SourceUrlClickTargetType
 import com.ogonggo.core.sourceurlclick.implement.SourceUrlClickAppender
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
 @Service
@@ -20,7 +19,6 @@ class UserBootcampService(
     private val bootcampContentReader: BootcampContentReader,
     private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val bootcampMetricReader: BootcampMetricReader,
-    private val eventPublisher: ApplicationEventPublisher,
     private val companyContentPriorityReader: CompanyContentPriorityReader,
 ) {
 
@@ -44,14 +42,11 @@ class UserBootcampService(
         )
     }
 
-    /**
-     * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.
-     * 기록이 비동기이므로 상세 응답의 조회 수에는 이번 조회가 아직 반영되지 않는다.
-     */
+    /** 읽기만으로는 조회 수를 올리지 않는다. 조회 수는 브라우저가 보내는 조회 이벤트(`POST /api/v1/events`)로 센다. */
     fun getBootcamp(userId: Long?, bootcampId: Long): UserBootcampResult {
         val bootcamp = bootcampReader.readPublic(bootcampId)
         val id = bootcamp.requiredId()
-        val result = UserBootcampResult.from(
+        return UserBootcampResult.from(
             bootcamp = bootcamp,
             bookmarked = id in readBookmarkedBootcampIds(userId, listOf(id)),
             partners = bootcampContentReader.readPartners(id),
@@ -59,8 +54,6 @@ class UserBootcampService(
             images = bootcampContentReader.readImages(id),
             metric = bootcampMetricReader.read(id),
         )
-        eventPublisher.publishEvent(BootcampViewedEvent(id))
-        return result
     }
 
     /**

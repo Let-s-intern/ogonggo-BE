@@ -27,7 +27,6 @@ import com.ogonggo.userapi.user.implement.requireActive
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -44,7 +43,6 @@ class RecruitmentPostService(
     private val imageAssetManager: ImageAssetManager,
     private val postImageReader: RecruitmentPostImageReader,
     private val postImageManager: RecruitmentPostImageManager,
-    private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
     private val userProfileReader: UserProfileReader,
     private val applicationReader: RecruitmentPostApplicationReader,
@@ -70,7 +68,6 @@ class RecruitmentPostService(
         return result.copy(
             bookmarkCount = if (userId != null) metric.bookmarkCount else 0L,
         )
-            .also { eventPublisher.publishEvent(RecruitmentPostViewedEvent(it.id)) }
     }
 
     @Transactional(readOnly = true)

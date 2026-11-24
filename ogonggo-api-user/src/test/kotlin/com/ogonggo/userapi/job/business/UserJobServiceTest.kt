@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import org.springframework.context.ApplicationEventPublisher
 
 class UserJobServiceTest {
 
@@ -44,7 +43,6 @@ class UserJobServiceTest {
     private val jobSourceReader = Mockito.mock(JobSourceReader::class.java)
     private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val userProfileReader = Mockito.mock(UserProfileReader::class.java)
-    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val companyContentPriorityReader = Mockito.mock(CompanyContentPriorityReader::class.java)
     private val service = UserJobService(
         jobReader,
@@ -54,7 +52,6 @@ class UserJobServiceTest {
         jobSourceReader,
         sourceUrlClickAppender,
         userProfileReader,
-        eventPublisher,
         companyContentPriorityReader,
         CLOCK,
     )
@@ -126,17 +123,16 @@ class UserJobServiceTest {
     }
 
     @Test
-    fun `상세 조회는 지표를 읽은 뒤 조회 이벤트를 발행한다`() {
+    fun `상세를 여러 번 읽어도 조회 수는 그대로이고 지표는 읽기만 한다`() {
         val job = createJobMock()
         Mockito.`when`(jobReader.readPublished(1L)).thenReturn(job)
         Mockito.`when`(jobMetricReader.read(1L)).thenReturn(JobMetricDto(viewCount = 1, bookmarkCount = 0, commentCount = 0))
 
-        val result = service.getJob(USER_ID, 1L)
+        val viewCounts = List(3) { service.getJob(USER_ID, 1L).viewCount }
 
-        val inOrder = Mockito.inOrder(jobMetricReader, eventPublisher)
-        inOrder.verify(jobMetricReader).read(1L)
-        inOrder.verify(eventPublisher).publishEvent(JobViewedEvent(1L))
-        assertEquals(1L, result.viewCount)
+        assertEquals(listOf(1L, 1L, 1L), viewCounts)
+        Mockito.verify(jobMetricReader, Mockito.times(3)).read(1L)
+        Mockito.verifyNoMoreInteractions(jobMetricReader)
     }
 
     @Test

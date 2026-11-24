@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -49,7 +48,6 @@ class ConcernServiceTest {
     private val concernImageManager = Mockito.mock(ConcernImageManager::class.java)
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val contentValidator = LexicalEditorStateValidator(ObjectMapper())
-    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-10-08T03:00:00Z"), ZoneId.of("Asia/Seoul"))
     private val service = ConcernService(
         userReader,
@@ -63,12 +61,11 @@ class ConcernServiceTest {
         concernImageManager,
         imageAssetManager,
         contentValidator,
-        eventPublisher,
         clock,
     )
 
     @Test
-    fun `상세를 조회하면 조회 사실을 발행하고 내가 쓴 글인지 알려 준다`() {
+    fun `상세를 조회하면 내가 쓴 글인지 알려 주고 조회 수는 올리지 않는다`() {
         // given
         val concern = concern(authorUserId = USER_ID)
         Mockito.`when`(concernReader.read(CONCERN_ID)).thenReturn(concern)
@@ -82,7 +79,8 @@ class ConcernServiceTest {
         assertTrue(result.mine)
         assertTrue(result.hasOfficialComment)
         assertEquals(7L, result.viewCount)
-        Mockito.verify(eventPublisher).publishEvent(ConcernViewedEvent(CONCERN_ID))
+        Mockito.verify(concernMetricReader).read(CONCERN_ID)
+        Mockito.verifyNoMoreInteractions(concernMetricReader)
     }
 
     @Test
