@@ -342,6 +342,7 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 
 - 항목은 `key`와 `enabled`뿐입니다. 설명과 변경자는 내리지 않습니다.
 - 플래그가 하나도 없으면 `items`는 빈 배열입니다.
+- 관리자 콘솔 목록(`GET /api/v1/admin/feature-flags`)도 같은 모양이며 항목에 `description`, `updatedAt`, `updatedBy`(바꾼 적이 없으면 `null`)가 더해집니다. 켜고 끄는 `PATCH /api/v1/admin/feature-flags/{key}`는 200과 `data: null`입니다.
 
 ### 광고 성과 리포트 CSV
 

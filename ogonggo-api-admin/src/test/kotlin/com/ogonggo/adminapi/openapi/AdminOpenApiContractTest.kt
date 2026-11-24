@@ -100,12 +100,37 @@ class AdminOpenApiContractTest @Autowired constructor(
             "/paths/~1api~1v1~1admin~1advertisement-inquiries~1{inquiryId}~1memo/patch",
             "/paths/~1api~1v1~1admin~1company-content-priority/get",
             "/paths/~1api~1v1~1admin~1company-content-priority/put",
+            "/paths/~1api~1v1~1admin~1feature-flags/get",
+            "/paths/~1api~1v1~1admin~1feature-flags~1{key}/patch",
             "/paths/~1api~1v1~1admin~1ec2-instances/get",
             "/paths/~1api~1v1~1admin~1ec2-instances~1{instance}~1start/post",
             "/paths/~1api~1v1~1admin~1ec2-instances~1{instance}~1stop/post",
         ).forEach { pointer ->
             assertTrue(document.at("$pointer/security/0/BearerAuth").isArray, "인증 명세가 없습니다: $pointer")
         }
+    }
+
+    @Test
+    fun `기능 플래그 목록과 켜기·끄기는 설명·변경자와 없는 key 404를 명세한다`() {
+        val document = openApiDocument()
+
+        val list = document.at("/paths/~1api~1v1~1admin~1feature-flags/get")
+        assertEquals("listFeatureFlags", list.at("/operationId").asText())
+        assertTrue(list.at("/responses/200/content/application~1json/schema").isObject)
+        val item = document.at("/components/schemas/AdminFeatureFlagResponse/properties")
+        listOf("key", "enabled", "description", "updatedAt", "updatedBy").forEach { field ->
+            assertTrue(item.has(field), field)
+        }
+        assertTrue(item.at("/updatedBy/nullable").asBoolean())
+
+        val update = document.at("/paths/~1api~1v1~1admin~1feature-flags~1{key}/patch")
+        assertEquals("updateFeatureFlag", update.at("/operationId").asText())
+        assertTrue(update.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(update.at("/responses/404/description").asText().startsWith("FEATURE_FLAG_NOT_FOUND"))
+        assertEquals(setOf("enabled"), document.at("/components/schemas/UpdateFeatureFlagRequest/properties").fieldNames().asSequence().toSet())
+        assertEquals("enabled", document.at("/components/schemas/UpdateFeatureFlagRequest/required/0").asText())
+        // 플래그를 새로 만드는 API는 없다(PRD D1).
+        assertFalse(document.at("/paths/~1api~1v1~1admin~1feature-flags/post").isObject)
     }
 
     @Test

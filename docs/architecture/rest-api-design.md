@@ -258,13 +258,17 @@ GET  /api/v1/admin/service-feedbacks          관리자 콘솔
 ### 기능 플래그
 
 ```text
-GET  /api/v1/feature-flags                     사용자 API, 로그인 불필요
+GET   /api/v1/feature-flags                    사용자 API, 로그인 불필요
+GET   /api/v1/admin/feature-flags              관리자 콘솔 목록
+PATCH /api/v1/admin/feature-flags/{key}        관리자 콘솔 켜기·끄기
 ```
 
 - 결정일: 2026-11-24 (LC-3660) / 리뷰 상태: 팀 리뷰 필요
 - 화면이나 기능을 코드 배포 없이 켜고 끄는 스위치입니다. 플래그 하나가 `feature_flags`의 행 하나이고, 코드가 소문자 snake_case 문자열 `flag_key`로 찾습니다. 플래그가 늘어도 칼럼이나 API는 늘지 않습니다.
 - 사용자 API의 조회는 `items: [{ key, enabled }]`를 key 순으로 모두 돌려줍니다. 화면을 그리기 전에 비로그인 방문자도 읽으므로 로그인을 요구하지 않고, 설명과 변경자는 내리지 않습니다. 목록에 없는 key는 클라이언트가 그 플래그의 기본 동작으로 처리합니다.
 - 사용자 API는 목록을 인스턴스 메모리에 30초 둡니다. 서버가 여러 대라 바꾼 값이 모든 서버에 퍼지는 데 최대 30초 걸립니다. 읽기에 실패하면 캐시를 바꾸지 않고 다음 요청이 다시 읽습니다.
+- 관리자 목록은 `items: [{ key, enabled, description, updatedAt, updatedBy }]`를 key 순으로 모두 줍니다. `updatedBy`는 켜짐 여부를 마지막으로 바꾼 관리자의 회원 id이고 바꾼 적이 없으면 `null`입니다.
+- 켜고 끄기는 본문 `{ "enabled": true }` 하나만 받는 PATCH입니다. 관리자 id를 `updated_by`에 남기고 200과 `data: null`로 응답하며(3절), 바뀐 값은 목록을 다시 조회해 확인합니다. 같은 요청을 반복해도 결과가 같습니다. 이미 그 값이어도 바꾼 관리자는 요청한 관리자로 남습니다. `enabled`가 없거나 참·거짓이 아니면 400 `BAD_REQUEST`, 없는 key는 404 `FEATURE_FLAG_NOT_FOUND`입니다. 설명과 key는 바꿀 수 없습니다.
 - 새 플래그를 등록하는 API는 두지 않습니다. 플래그는 코드가 그 key를 읽어야 효과가 있어서 새 플래그에는 어차피 클라이언트 배포가 따릅니다. 어드민에서 만들면 오타 난 key가 아무 효과 없이 남습니다. 새 플래그는 그 플래그를 쓰는 기능의 PR에 `insert` SQL로 넣습니다.
 - 응답 계약은 [API 성공 응답의 기능 플래그](api-response.md#기능-플래그)를 따릅니다.
 
