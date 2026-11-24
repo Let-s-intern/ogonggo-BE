@@ -2,11 +2,13 @@ package com.ogonggo.core.contentevent.implement
 
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureJpaRepository
 import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.contentevent.domain.ContentEventTargetType
 import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentevent.implement.dto.ContentEventAppendDto
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
@@ -14,6 +16,8 @@ import java.time.LocalDateTime
 class ContentEventValidator internal constructor(
     private val jobReader: JobReader,
     private val bootcampReader: BootcampReader,
+    private val concernReader: ConcernReader,
+    private val recruitmentPostReader: RecruitmentPostReader,
     private val advertisementExposureRepository: AdvertisementExposureJpaRepository,
 ) {
 
@@ -47,6 +51,8 @@ class ContentEventValidator internal constructor(
             when (targetType) {
                 ContentEventTargetType.JOB -> jobReader.readPublished(targetId)
                 ContentEventTargetType.BOOTCAMP -> bootcampReader.readPublic(targetId, now)
+                ContentEventTargetType.CONCERN -> concernReader.read(targetId)
+                ContentEventTargetType.RECRUITMENT_POST -> recruitmentPostReader.readPublished(targetId)
             }
             true
         } catch (exception: EntityNotFoundException) {

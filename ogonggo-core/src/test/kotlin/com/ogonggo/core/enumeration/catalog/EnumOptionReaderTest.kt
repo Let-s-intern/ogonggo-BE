@@ -20,6 +20,14 @@ class EnumOptionReaderTest {
         )
     }
 
+    @Test
+    fun `콘텐츠 이벤트 대상 종류에 취준고민과 모집글이 있다`() {
+        assertEquals(
+            listOf("JOB", "BOOTCAMP", "CONCERN", "RECRUITMENT_POST"),
+            enums.getValue("ContentEventTargetType").map { it.name },
+        )
+    }
+
     /** core에 업무 enum을 새로 만들고 목록에 빠뜨리면 두 API 모두 그 값의 라벨을 내려 주지 못한다. */
     @Test
     fun `core의 업무 enum을 모두 제공한다`() {

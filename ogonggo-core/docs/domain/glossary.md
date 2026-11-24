@@ -160,7 +160,7 @@
 | 콘텐츠 이벤트 | `ContentEvent` | 방문자 브라우저가 보낸 공고 조회·CTA 클릭·스크롤과 광고 노출·클릭 한 건. 비회원도 남기며 익명 방문자 식별자(`visitorId`, 쿠키 `ogg_vid`)로 구분합니다. 시각(`occurredAt`)은 서버가 받은 시각입니다. 고치지 않고 365일이 지나면 지웁니다(숫자는 일별 집계에 남습니다). 같은 방문자의 30분 안 재조회도 모두 저장해 집계에서 한 번으로 셉니다. 광고 성과 리포트가 이것을 셉니다. 누적 조회 수(`JobMetric.viewCount`)와는 따로 셉니다. |
 | 콘텐츠 이벤트 종류 | `ContentEventType` | 상세 조회(`VIEW`), CTA 클릭(`CTA_CLICK`, 지원하러 가기·신청하러 가기), 스크롤(`SCROLL`, 떠날 때 가장 깊이 내린 위치와 화면이 보인 시간), 광고 노출(`IMPRESSION`), 광고 클릭(`AD_CLICK`), 공유(`SHARE`, 공고·부트캠프 상세에서 링크를 공유한 것). 조회·CTA 클릭·스크롤·공유는 대상 공고가, 광고 노출·클릭은 광고 노출이 있어야 합니다. |
 | 콘텐츠 이벤트 유입 경로 | `ContentEventSource` | 광고 카드(`AD_CARD`), 배너(`BANNER`), 목록(`LIST`), 검색(`SEARCH`), 직접 방문(`DIRECT`), 외부 유입(`EXTERNAL`), 기타(`OTHER`). 브라우저가 보낸 값을 그대로 저장합니다. 광고 문의 유입 경로(`AdvertisementInquiryInflowChannel`)와 다릅니다. |
-| 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`). |
+| 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`), 취준고민(`CONCERN`), 사이드·스터디 모집글(`RECRUITMENT_POST`). 취준고민과 모집글의 이벤트는 지금 사용자에게 보이는 글(숨기거나 지우지 않은 것, 게시 중인 것)만 저장합니다. |
 | 콘텐츠 일별 집계 | `ContentDailyStat` | 하루(KST)·대상·광고 노출·유입 경로마다 모은 콘텐츠 이벤트 숫자. 상세 조회수는 같은 방문자가 같은 대상을 직전 조회로부터 30분 안에 다시 연 것을 뺍니다. 매일 새벽 `contentDailyStatAggregation` 작업이 전날 분을 다시 씁니다. |
 | 순 노출수 | `ContentDailyStat.uniqueImpressions` | 같은 방문자(회원이면 회원, 아니면 익명 방문자)가 같은 광고 노출을 하루에 여러 번 봐도 한 번으로 센 노출수. 보일 때마다 센 노출수(`impressions`)와 따로 둡니다. |
 | 리포트 인사이트 | `AdvertisementReportInsight` | 운영자가 계약 상품의 성과 리포트에 직접 써서 기업 회원에게 보내는 제목·본문. 보내기 전에는 운영자만 봅니다. |
