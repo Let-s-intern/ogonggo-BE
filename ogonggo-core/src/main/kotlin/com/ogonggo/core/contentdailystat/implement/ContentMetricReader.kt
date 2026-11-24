@@ -9,6 +9,7 @@ import com.ogonggo.core.contentdailystat.implement.dto.ContentMetricSheetDto
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatJpaRepository
 import com.ogonggo.core.contentdailystat.persistence.ContentDailyStatQueryRepository
 import com.ogonggo.core.contentdailystat.persistence.ContentEventRow
+import com.ogonggo.core.contentdailystat.persistence.ContentVisitorKeys
 import com.ogonggo.core.contentevent.domain.ContentEvent
 import com.ogonggo.core.contentevent.domain.ContentEventType
 import com.ogonggo.core.contentdailystat.implement.dto.ContentAdReachDto
@@ -39,19 +40,14 @@ class ContentMetricReader internal constructor(
         }
         val exactUniques = !from.isBefore(ContentEvent.retainedSince(today))
         val detailFrom = if (exactUniques) from else rawFrom
-        val detailRows = if (detailFrom.isAfter(to)) {
-            emptyList()
-        } else {
-            contentDailyStatQueryRepository.findDetailRows(
-                scope,
-                detailFrom.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW),
-                to.plusDays(1).atStartOfDay(),
-            )
-        }
-        val rawCells = if (rawFrom.isAfter(to)) emptyList() else rawCells(scope, detailRows, rawFrom, to)
+        val detailStart = detailFrom.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW)
+        val detailEnd = to.plusDays(1).atStartOfDay()
+        val detailRows = if (detailFrom.isAfter(to)) emptyList() else contentDailyStatQueryRepository.findDetailRows(scope, detailStart, detailEnd)
+        val visitors = if (detailRows.isEmpty()) ContentVisitorKeys.NONE else contentDailyStatQueryRepository.findVisitorKeys(detailStart, detailEnd)
+        val rawCells = if (rawFrom.isAfter(to)) emptyList() else rawCells(scope, detailRows, visitors, rawFrom, to)
         val cells = statCells + rawCells
         val summed = cells.fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }
-        val period = if (exactUniques) withUniques(summed, ContentMetricCalculator.measureAll(detailRows, from.atStartOfDay())) else summed
+        val period = if (exactUniques) withUniques(summed, ContentMetricCalculator.measureAll(detailRows, from.atStartOfDay(), visitors)) else summed
         return ContentMetricSheetDto(cells, period, uniqueCountsApproximate = !exactUniques)
     }
 
@@ -63,12 +59,10 @@ class ContentMetricReader internal constructor(
         val start = maxOf(from, ContentEvent.retainedSince(today))
         if (scope.isEmpty || start.isAfter(to)) return emptyList()
         val toExclusive = to.plusDays(1).atStartOfDay()
-        val rows = contentDailyStatQueryRepository.findDetailRows(
-            scope,
-            start.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW),
-            toExclusive,
-        )
-        val activities = ContentMetricCalculator.memberActivities(rows, start.atStartOfDay())
+        val rowsFrom = start.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW)
+        val rows = contentDailyStatQueryRepository.findDetailRows(scope, rowsFrom, toExclusive)
+        val visitors = contentDailyStatQueryRepository.findVisitorKeys(rowsFrom, toExclusive)
+        val activities = ContentMetricCalculator.memberActivities(rows, start.atStartOfDay(), visitors)
         val adClickers = contentDailyStatQueryRepository.findAdClickMemberIds(scope, start.atStartOfDay(), toExclusive)
         val userIds = activities.keys + adClickers
         val profiles = contentDailyStatQueryRepository.findProfiles(userIds)
@@ -122,10 +116,11 @@ class ContentMetricReader internal constructor(
     private fun rawCells(
         scope: ContentMetricScope,
         detailRows: List<ContentEventRow>,
+        visitors: ContentVisitorKeys,
         rawFrom: LocalDate,
         to: LocalDate,
     ): List<ContentMetricCellDto> {
-        val detail = ContentMetricCalculator.measure(detailRows, rawFrom.atStartOfDay()) {
+        val detail = ContentMetricCalculator.measure(detailRows, rawFrom.atStartOfDay(), visitors) {
             it.occurredAt.toLocalDate() to ContentMetricCalculator.statKeyOf(it)
         }
         val ads = rawFrom.datesUntil(to.plusDays(1)).toList().flatMap { date ->

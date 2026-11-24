@@ -10,7 +10,6 @@ import com.ogonggo.core.contentevent.domain.QContentEvent.contentEvent
 import com.ogonggo.core.user.domain.QUserProfile.userProfile
 import com.ogonggo.core.user.domain.UserGrade
 import com.querydsl.core.types.Projections
-import com.querydsl.core.types.dsl.CaseBuilder
 import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.data.jpa.repository.JpaRepository
@@ -132,10 +131,13 @@ internal class ContentDailyStatQueryRepository(
             }
     }
 
-    /** 노출을 본 서로 다른 방문자 수를 집계 행 단위로 센다. 하루 범위로 부르면 "하루 한 번" 순 노출수다. */
+    /**
+     * 노출을 본 서로 다른 방문자 수를 집계 행 단위로 센다. 하루 범위로 부르면 "하루 한 번" 순 노출수다.
+     * 방문자는 [ContentVisitorKeys] 규칙으로 가르며 표는 [from]~[toExclusive] 안에서 만든다.
+     */
     fun countUniqueImpressions(scope: ContentMetricScope, from: LocalDateTime, toExclusive: LocalDateTime): List<ContentAdEventCount> {
         if (scope.isEmpty) return emptyList()
-        val visitors = visitorKey.countDistinct()
+        val visitors = ContentVisitorKeys.expression(from, toExclusive).countDistinct()
         return queryFactory
             .select(contentEvent.targetType, contentEvent.targetId, contentEvent.exposureId, contentEvent.source, visitors)
             .from(contentEvent)
@@ -205,10 +207,10 @@ internal class ContentDailyStatQueryRepository(
             .fetchOne() ?: 0L
     }
 
-    /** [type] 이벤트를 낸 서로 다른 방문자 수다. 회원이면 회원 식별자, 아니면 익명 방문자 식별자로 센다. */
+    /** [type] 이벤트를 낸 서로 다른 방문자 수다. 방문자는 [ContentVisitorKeys] 규칙으로 가르며 표는 [from]~[toExclusive] 안에서 만든다. */
     fun countDistinctVisitors(scope: ContentMetricScope, type: ContentEventType, from: LocalDateTime, toExclusive: LocalDateTime): Long {
         if (scope.isEmpty) return 0L
-        return queryFactory.select(visitorKey.countDistinct())
+        return queryFactory.select(ContentVisitorKeys.expression(from, toExclusive).countDistinct())
             .from(contentEvent)
             .where(
                 eventScope(scope),
@@ -217,6 +219,21 @@ internal class ContentDailyStatQueryRepository(
                 contentEvent.occurredAt.lt(toExclusive),
             )
             .fetchOne() ?: 0L
+    }
+
+    /**
+     * [from]~[toExclusive] 안에서 회원 이벤트를 보낸 적 있는 방문자id마다 가장 작은 회원id를 모은 표다.
+     * 범위·이벤트 종류와 상관없이 모든 이벤트에서 만든다. 회원 이벤트를 보낸 브라우저만 들어 있어 작다.
+     */
+    fun findVisitorKeys(from: LocalDateTime, toExclusive: LocalDateTime): ContentVisitorKeys {
+        val userId = contentEvent.userId.min()
+        val userByVisitor = queryFactory.select(contentEvent.visitorId, userId)
+            .from(contentEvent)
+            .where(contentEvent.userId.isNotNull, contentEvent.occurredAt.goe(from), contentEvent.occurredAt.lt(toExclusive))
+            .groupBy(contentEvent.visitorId)
+            .fetch()
+            .associate { checkNotNull(it.get(contentEvent.visitorId)) to checkNotNull(it.get(userId)) }
+        return ContentVisitorKeys(userByVisitor)
     }
 
     fun findFirstOccurredAt(): LocalDateTime? =
@@ -241,11 +258,6 @@ internal class ContentDailyStatQueryRepository(
         is ContentMetricScope.Target -> contentDailyStat.targetType.eq(scope.targetType).and(contentDailyStat.targetId.eq(scope.targetId))
         ContentMetricScope.All -> null
     }
-
-    /** 방문자는 회원이면 회원 식별자, 아니면 익명 방문자 식별자다. */
-    private val visitorKey = CaseBuilder()
-        .`when`(contentEvent.userId.isNotNull).then(contentEvent.userId.stringValue().prepend("u:"))
-        .otherwise(contentEvent.visitorId.prepend("v:"))
 
     private companion object {
         val DETAIL_EVENT_TYPES = listOf(ContentEventType.VIEW, ContentEventType.CTA_CLICK, ContentEventType.SCROLL)

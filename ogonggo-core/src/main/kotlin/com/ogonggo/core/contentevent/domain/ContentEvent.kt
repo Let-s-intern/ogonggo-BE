@@ -27,6 +27,7 @@ import java.time.LocalDateTime
         Index(name = "idx_content_events_target_occurred_at", columnList = "target_type, target_id, occurred_at"),
         Index(name = "idx_content_events_exposure_occurred_at", columnList = "exposure_id, occurred_at"),
         Index(name = "idx_content_events_occurred_at", columnList = "occurred_at"),
+        Index(name = "idx_content_events_visitor_occurred_at", columnList = "visitor_id, occurred_at"),
     ],
 )
 internal class ContentEvent(
