@@ -93,6 +93,7 @@ class AdvertisementContractReportReader internal constructor(
         val hidesScroll = measure.hidesScroll
         val scope = ContentMetricScope.Exposures(measure.exposureNames.keys)
         val activities = contentMetricReader.readMemberActivities(scope, measure.from, measure.to, today)
+        val dailyReach = contentMetricReader.readAdReachByDate(scope, measure.from, measure.to, today)
 
         return AdvertisementContractReportDto(
             product = AdvertisementContractReportProductDto(
@@ -111,7 +112,7 @@ class AdvertisementContractReportReader internal constructor(
             collectedSince = contentMetricReader.readCollectedSince(today),
             uniqueCountsApproximate = measure.sheet.uniqueCountsApproximate,
             summary = summaryOf(measure.sheet.period, hidesScroll),
-            daily = measure.dailies(),
+            daily = measure.dailies(dailyReach),
             exposures = measure.exposures.map {
                 val metric = byExposure[it.id] ?: ContentMetricDto.ZERO
                 AdvertisementContractReportExposureDto(
@@ -131,7 +132,7 @@ class AdvertisementContractReportReader internal constructor(
                     val exposureId = checkNotNull(exposure.id)
                     val cellSum = byDateExposure[date to exposureId] ?: ContentMetricDto.ZERO
                     val exact = measure.sheet.exposureDailyUniques[date to exposureId]
-                    val daily = dailyOf(date, if (exact == null) cellSum else cellSum.withUniquesOf(exact), hidesScroll)
+                    val daily = dailyOf(date, if (exact == null) cellSum else cellSum.withUniquesOf(exact), null, hidesScroll)
                     AdvertisementContractReportCsvRowDto(
                         date = date,
                         exposureId = exposureId,
@@ -399,12 +400,13 @@ class AdvertisementContractReportReader internal constructor(
     ) {
         val dates: List<LocalDate> = from.datesUntil(to.plusDays(1)).toList()
 
-        fun dailies(): List<AdvertisementContractReportDailyDto> {
+        /** [dailyReach]에 없는 날의 도달은 null이다. 도달을 쓰지 않는 곳은 빈 맵을 넘긴다. */
+        fun dailies(dailyReach: Map<LocalDate, Long> = emptyMap()): List<AdvertisementContractReportDailyDto> {
             val byDate = sheet.cells.groupBy { it.date }.mapValues { (_, cells) -> cells.sum() }
             return dates.map { date ->
                 val cellSum = byDate[date] ?: ContentMetricDto.ZERO
                 val exact = sheet.dailyUniques[date]
-                dailyOf(date, if (exact == null) cellSum else cellSum.withUniquesOf(exact), hidesScroll)
+                dailyOf(date, if (exact == null) cellSum else cellSum.withUniquesOf(exact), dailyReach[date], hidesScroll)
             }
         }
     }
@@ -485,10 +487,11 @@ class AdvertisementContractReportReader internal constructor(
                 .map { (grade, count) -> AdvertisementContractReportGradeDto(grade, grade?.desc ?: NO_GRADE_LABEL, count.toLong()) }
                 .sortedWith(compareBy<AdvertisementContractReportGradeDto> { it.grade == null }.thenBy { it.grade })
 
-        private fun dailyOf(date: LocalDate, metric: ContentMetricDto, hidesScroll: Boolean) = AdvertisementContractReportDailyDto(
+        private fun dailyOf(date: LocalDate, metric: ContentMetricDto, reach: Long?, hidesScroll: Boolean) = AdvertisementContractReportDailyDto(
             date = date,
             impressions = metric.impressions,
             uniqueImpressions = metric.uniqueImpressions,
+            reach = reach,
             adClicks = metric.adClicks,
             views = metric.views,
             uniqueVisitors = metric.uniqueVisitors,

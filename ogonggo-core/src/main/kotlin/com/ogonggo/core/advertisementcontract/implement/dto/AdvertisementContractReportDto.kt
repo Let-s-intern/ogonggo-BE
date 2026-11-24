@@ -75,6 +75,8 @@ data class AdvertisementContractReportDailyDto(
     val date: LocalDate,
     val impressions: Long,
     val uniqueImpressions: Long,
+    /** 그날 광고를 본 서로 다른 사람 수다. 원본 보관 기간보다 앞날은 null이다. */
+    val reach: Long?,
     val adClicks: Long,
     val views: Long,
     val uniqueVisitors: Long,

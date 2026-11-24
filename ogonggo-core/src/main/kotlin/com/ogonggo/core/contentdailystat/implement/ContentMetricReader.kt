@@ -103,6 +103,19 @@ class ContentMetricReader internal constructor(
         )
     }
 
+    /**
+     * [from]~[to]의 날짜마다 광고를 본 서로 다른 방문자(도달)다. 방문자는 [readAdReach]와 같은 키로 세고 표는 기간 전체로 만든다.
+     * 원본 보관 기간(365일)보다 앞인 날은 맵에 없다(정확히 셀 수 없다). 보관 기간 안에서 이벤트가 없는 날은 0이다.
+     */
+    fun readAdReachByDate(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate): Map<LocalDate, Long> {
+        val start = maxOf(from, ContentEvent.retainedSince(today))
+        if (start.isAfter(to)) return emptyMap()
+        val counted = contentDailyStatQueryRepository.countDistinctVisitorsByDate(
+            scope, ContentEventType.IMPRESSION, start.atStartOfDay(), to.plusDays(1).atStartOfDay(),
+        )
+        return start.datesUntil(to.plusDays(1)).toList().associateWith { counted[it] ?: 0L }
+    }
+
     /** [from]~[to] 공유 수다. 일별 집계에 넣지 않아 원본에서 세며, 원본 보관 기간보다 앞인 날은 빠진다. */
     fun readShares(scope: ContentMetricScope, from: LocalDate, to: LocalDate, today: LocalDate): Long {
         val start = maxOf(from, ContentEvent.retainedSince(today))
