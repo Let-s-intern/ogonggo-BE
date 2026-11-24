@@ -173,7 +173,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(event(ContentEventType.CTA_CLICK, at(11, 2), visitor = "a"))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         val stat = contentDailyStatRepository.findAll().single()
@@ -192,7 +192,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(view(at(10, 20), visitor = "a"))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         val stat = contentDailyStatRepository.findAll().single()
@@ -209,7 +209,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(view(at(10, 0), visitor = "b"))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         val stat = contentDailyStatRepository.findAll().single()
@@ -226,7 +226,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(ad(ContentEventType.IMPRESSION, at(9, 3)).copyAsVisitor("c"))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         val banner = contentDailyStatRepository.findAll().single()
@@ -261,7 +261,7 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
         save(view(DAY.plusDays(1).atTime(10, 0), userId = 7L, browser = "a"))
 
         // when
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, TODAY)
 
         // then
         assertEquals(2L, contentDailyStatRepository.findAll().single().uniqueVisitors)

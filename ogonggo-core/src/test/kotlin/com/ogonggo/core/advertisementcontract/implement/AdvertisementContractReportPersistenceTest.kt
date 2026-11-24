@@ -241,8 +241,8 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         event(ContentEventType.CTA_CLICK, START.atTime(14, 1), "a", cardExposureId, ContentEventSource.AD_CARD)
         event(ContentEventType.CTA_CLICK, START.atTime(14, 2), "a", secondCardExposureId, ContentEventSource.AD_CARD)
         event(ContentEventType.VIEW, START.plusDays(1).atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
-        dailyStatManager.rebuild(START)
-        dailyStatManager.rebuild(START.plusDays(1))
+        dailyStatManager.rebuild(START, TODAY)
+        dailyStatManager.rebuild(START.plusDays(1), TODAY)
 
         // when
         val report = reportReader.read(contract, cardProductId, null, null, TODAY)
@@ -265,7 +265,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         // given
         event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
         event(ContentEventType.VIEW, START.atTime(12, 0), "a", cardExposureId, ContentEventSource.LIST)
-        dailyStatManager.rebuild(START)
+        dailyStatManager.rebuild(START, TODAY)
         val farFuture = START.plusDays(366)
 
         // when

@@ -39,7 +39,7 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
 
         // when
         val today = contentMetricReader.read(scope, DAY, DAY, today = DAY)
-        contentDailyStatManager.rebuild(DAY)
+        contentDailyStatManager.rebuild(DAY, DAY.plusDays(1))
         val aggregated = contentMetricReader.read(scope, DAY, DAY, today = DAY.plusDays(1))
 
         // then
