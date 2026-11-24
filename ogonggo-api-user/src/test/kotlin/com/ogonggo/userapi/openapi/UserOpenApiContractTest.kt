@@ -99,6 +99,24 @@ class UserOpenApiContractTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("기능 플래그 목록은 비회원 공개이며 key와 켜짐 여부만 반환한다")
+    fun `기능 플래그 목록은 비회원 공개이며 key와 켜짐 여부만 반환한다`() {
+        // given
+        val document = openApiDocument()
+
+        // when
+        val operation = document.at("/paths/~1api~1v1~1feature-flags/get")
+        val item = document.at("/components/schemas/UserFeatureFlagResponse")
+
+        // then
+        assertEquals("listPublicFeatureFlags", operation.at("/operationId").asText())
+        assertFalse(operation.has("security"))
+        assertTrue(operation.at("/responses/200/content/application~1json/schema").isObject)
+        assertTrue(document.at("/components/schemas/UserFeatureFlagListResponse/properties/items").isObject)
+        assertEquals(setOf("key", "enabled"), item.at("/properties").fieldNames().asSequence().toSet())
+    }
+
+    @Test
     @DisplayName("공개 광고 노출 명세는 필수 배너 자리와 최소 응답 및 오류를 명시한다")
     fun `공개 광고 노출 명세는 필수 배너 자리와 최소 응답 및 오류를 명시한다`() {
         // given
