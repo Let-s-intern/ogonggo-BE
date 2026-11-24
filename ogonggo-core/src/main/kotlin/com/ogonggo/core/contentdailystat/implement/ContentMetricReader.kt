@@ -142,6 +142,12 @@ class ContentMetricReader internal constructor(
         return contentDailyStatQueryRepository.countEvents(scope, ContentEventType.SHARE, start.atStartOfDay(), to.plusDays(1).atStartOfDay())
     }
 
+    /**
+     * 원본에서만 세는 값([readMemberActivities], [readShares])이 [from]부터 다 세지 못하는지다.
+     * 원본 보관 기간(365일)보다 앞인 날이 걸리면 true이고 그 앞날은 값에서 빠진다.
+     */
+    fun isBeyondRawRetention(from: LocalDate, today: LocalDate): Boolean = from.isBefore(ContentEvent.retainedSince(today))
+
     /** 이벤트를 모으기 시작한 날이다. 아직 없으면 [today]다. */
     fun readCollectedSince(today: LocalDate): LocalDate =
         listOfNotNull(

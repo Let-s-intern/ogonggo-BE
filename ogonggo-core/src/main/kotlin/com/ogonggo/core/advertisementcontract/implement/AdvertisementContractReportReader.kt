@@ -111,6 +111,7 @@ class AdvertisementContractReportReader internal constructor(
             to = measure.to,
             collectedSince = contentMetricReader.readCollectedSince(today),
             uniqueCountsApproximate = measure.sheet.uniqueCountsApproximate,
+            rawCountsApproximate = contentMetricReader.isBeyondRawRetention(measure.from, today),
             summary = summaryOf(measure.sheet.period, hidesScroll),
             daily = measure.dailies(dailyReach),
             exposures = measure.exposures.map {

@@ -164,6 +164,7 @@ class AdminAdvertisementReportControllerTest @Autowired constructor(
             to = FROM,
             collectedSince = FROM,
             uniqueCountsApproximate = false,
+            rawCountsApproximate = false,
             summary = AdvertisementContractReportSummaryDto(100, 80, 2, 0.02, 1, 1, 0, 0, 0, 0, 0, 0.0, null, null, null),
             daily = listOf(AdvertisementContractReportDailyDto(FROM, 100, 80, 60, 2, 1, 1, 0, 0, 0, null, null)),
             exposures = listOf(AdvertisementContractReportExposureDto(12L, "11월 홈 상단", 100, 2, 0.02)),

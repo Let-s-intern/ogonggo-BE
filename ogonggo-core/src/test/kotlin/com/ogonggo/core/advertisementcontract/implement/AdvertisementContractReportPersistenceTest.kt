@@ -280,6 +280,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         assertEquals(1L, csv.getValue(cardExposureId).uniqueVisitors)
         assertEquals(2L, csv.getValue(secondCardExposureId).uniqueVisitors)
         assertEquals(false, report.uniqueCountsApproximate)
+        assertEquals(false, report.rawCountsApproximate)
     }
 
     @Test
@@ -295,6 +296,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
 
         // then
         assertEquals(true, report.uniqueCountsApproximate)
+        assertEquals(true, report.rawCountsApproximate)
         assertEquals(2L, report.daily.single().uniqueVisitors)
     }
 

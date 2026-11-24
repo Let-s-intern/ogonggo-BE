@@ -88,6 +88,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.exposures[0].name").value("백엔드 개발자 · 뱅크"))
             .andExpect(jsonPath("$.data.targets[0].bySource[0].source").value("AD_CARD"))
             .andExpect(jsonPath("$.data.uniqueCountsApproximate").value(false))
+            .andExpect(jsonPath("$.data.rawCountsApproximate").value(false))
             .andExpect(jsonPath("$.data.summary.uniqueImpressions").value(150))
             .andExpect(jsonPath("$.data.daily[0].uniqueImpressions").value(80))
             .andExpect(jsonPath("$.data.daily[0].reach").value(60))
@@ -208,6 +209,7 @@ class MyAdvertisementReportControllerTest @Autowired constructor(
             to = TO,
             collectedSince = FROM,
             uniqueCountsApproximate = false,
+            rawCountsApproximate = false,
             summary = AdvertisementContractReportSummaryDto(
                 impressions = 200, uniqueImpressions = 150, adClicks = 4, adClickRate = 0.02, views = 2, uniqueVisitors = 2, memberViews = 0,
                 memberUniqueVisitors = 0, ctaClicks = 0, ctaUniqueVisitors = 0, ctaUniqueMembers = 0, ctaClickRate = 0.0,

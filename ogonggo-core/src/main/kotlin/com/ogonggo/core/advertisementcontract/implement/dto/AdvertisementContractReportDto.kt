@@ -14,6 +14,7 @@ import java.time.LocalDate
  *
  * - [summary]·[daily]·[exposures]·[csvRows]는 상품 몫이다. 이 상품의 노출 식별자로 들어온 이벤트만 센다.
  * - [targets]는 계약 대상 공고의 전체 숫자다. 유입 경로와 상관없이 세고 경로별로 나눈다.
+ * - [rawCountsApproximate]는 원본에서만 세는 값(공유 수, 회원 나눔)이 원본 보관 기간 밖 날을 뺀 값인지다.
  * - 배너 상품은 스크롤 깊이·체류 시간을 보이지 않아 그 값이 null이다.
  */
 data class AdvertisementContractReportDto(
@@ -22,6 +23,7 @@ data class AdvertisementContractReportDto(
     val to: LocalDate,
     val collectedSince: LocalDate,
     val uniqueCountsApproximate: Boolean,
+    val rawCountsApproximate: Boolean,
     val summary: AdvertisementContractReportSummaryDto,
     val daily: List<AdvertisementContractReportDailyDto>,
     val exposures: List<AdvertisementContractReportExposureDto>,
