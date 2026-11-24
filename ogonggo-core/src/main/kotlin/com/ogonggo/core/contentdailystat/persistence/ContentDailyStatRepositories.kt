@@ -98,6 +98,52 @@ internal class ContentDailyStatQueryRepository(
             .fetch()
     }
 
+    /**
+     * [rows]가 센 대상의 조회 중 [scope] 밖에 있는 것이다. 30분 안 재조회를 가를 때 기준으로만 쓰고 세지 않는다.
+     * 예를 들어 목록에서 연 조회(노출 없음)가 10분 뒤 광고로 다시 연 조회의 직전 조회가 된다.
+     * 범위가 노출 몇 개일 때만 있다. 대상 하나나 전체는 그 대상의 조회가 모두 범위 안이다.
+     */
+    fun findViewsOutsideScope(
+        scope: ContentMetricScope,
+        rows: List<ContentEventRow>,
+        from: LocalDateTime,
+        toExclusive: LocalDateTime,
+    ): List<ContentEventRow> {
+        if (scope !is ContentMetricScope.Exposures || scope.isEmpty) return emptyList()
+        val idsByType = rows.filter { it.targetType != null && it.targetId != null }
+            .groupBy({ checkNotNull(it.targetType) }, { checkNotNull(it.targetId) })
+            .mapValues { (_, ids) -> ids.toSet() }
+        if (idsByType.isEmpty()) return emptyList()
+        val onTargets = idsByType.map { (type, ids) -> contentEvent.targetType.eq(type).and(contentEvent.targetId.`in`(ids)) }
+            .reduce { left, right -> left.or(right) }
+        return queryFactory
+            .select(
+                Projections.constructor(
+                    ContentEventRow::class.java,
+                    contentEvent.eventType,
+                    contentEvent.targetType,
+                    contentEvent.targetId,
+                    contentEvent.exposureId,
+                    contentEvent.userId,
+                    contentEvent.visitorId,
+                    contentEvent.source,
+                    contentEvent.scrollPercent,
+                    contentEvent.occurredAt,
+                    contentEvent.durationMs,
+                ),
+            )
+            .from(contentEvent)
+            .where(
+                contentEvent.eventType.eq(ContentEventType.VIEW),
+                onTargets,
+                contentEvent.exposureId.isNull.or(contentEvent.exposureId.notIn(scope.exposureIds)),
+                contentEvent.occurredAt.goe(from),
+                contentEvent.occurredAt.lt(toExclusive),
+            )
+            .orderBy(contentEvent.occurredAt.asc(), contentEvent.id.asc())
+            .fetch()
+    }
+
     fun countAdEvents(scope: ContentMetricScope, from: LocalDateTime, toExclusive: LocalDateTime): List<ContentAdEventCount> {
         if (scope.isEmpty) return emptyList()
         val count = contentEvent.id.count()

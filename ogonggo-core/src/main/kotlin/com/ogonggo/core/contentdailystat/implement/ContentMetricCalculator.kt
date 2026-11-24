@@ -17,6 +17,7 @@ import java.util.IdentityHashMap
  * - 방문자는 [ContentVisitorKeys] 규칙으로 가른다. 회원이면 회원 식별자이고, 비회원이어도 같은 브라우저가 계산 범위 안에서 로그인한 적이 있으면 그 회원이다.
  * - 같은 방문자가 같은 대상을 직전 조회로부터 30분 안에 다시 열면 세지 않는다. 직전 조회가 세지 않은 조회여도 기준이 된다.
  *   30분이 정확히 지난 조회는 센다. 하루 첫 30분은 전날 끝 30분의 조회를 보고 가른다([from] 앞의 행은 이 판단에만 쓴다).
+ * - 판단에만 쓰는 조회([measure]의 `judgeOnly`)가 있다. 센 범위 밖의 같은 방문자·대상 조회(목록에서 연 조회 등)도 직전 조회로 보지만 세지는 않는다.
  * - 30분 안 재조회가 다른 유입 경로로 들어와도 세지 않는다. 센 조회는 그 조회의 유입 경로·노출로 들어간다.
  */
 internal object ContentMetricCalculator {
@@ -27,15 +28,20 @@ internal object ContentMetricCalculator {
         rows: List<ContentEventRow>,
         from: LocalDateTime,
         visitors: ContentVisitorKeys,
+        judgeOnly: List<ContentEventRow> = emptyList(),
         keyOf: (ContentEventRow) -> K,
     ): Map<K, ContentMetricDto> {
-        val countedViews = countedViews(rows, visitors)
+        val countedViews = countedViews(rows, judgeOnly, visitors)
         val inRange = rows.filter { !it.occurredAt.isBefore(from) }
         return inRange.groupBy(keyOf).mapValues { (_, keyRows) -> measureRows(keyRows, countedViews, visitors) }
     }
 
-    fun measureAll(rows: List<ContentEventRow>, from: LocalDateTime, visitors: ContentVisitorKeys): ContentMetricDto =
-        measure(rows, from, visitors) { Unit }[Unit] ?: ContentMetricDto.ZERO
+    fun measureAll(
+        rows: List<ContentEventRow>,
+        from: LocalDateTime,
+        visitors: ContentVisitorKeys,
+        judgeOnly: List<ContentEventRow> = emptyList(),
+    ): ContentMetricDto = measure(rows, from, visitors, judgeOnly) { Unit }[Unit] ?: ContentMetricDto.ZERO
 
     fun statKeyOf(row: ContentEventRow) = ContentStatKey(row.targetType, row.targetId, row.exposureId, row.source)
 
@@ -58,8 +64,13 @@ internal object ContentMetricCalculator {
     /**
      * 회원마다 [from] 뒤의 상세 활동이다. 조회수는 30분 안 재조회를 뺀 값이다. 비회원은 넣지 않는다.
      */
-    fun memberActivities(rows: List<ContentEventRow>, from: LocalDateTime, visitors: ContentVisitorKeys): Map<Long, MemberActivity> {
-        val countedViews = countedViews(rows, visitors)
+    fun memberActivities(
+        rows: List<ContentEventRow>,
+        from: LocalDateTime,
+        visitors: ContentVisitorKeys,
+        judgeOnly: List<ContentEventRow> = emptyList(),
+    ): Map<Long, MemberActivity> {
+        val countedViews = countedViews(rows, judgeOnly, visitors)
         return rows.filter { it.userId != null && !it.occurredAt.isBefore(from) }
             .groupBy { it.userId!! }
             .mapValues { (_, memberRows) ->
@@ -73,11 +84,11 @@ internal object ContentMetricCalculator {
 
     data class MemberActivity(val views: Long, val viewed: Boolean, val ctaClicked: Boolean)
 
-    private fun countedViews(rows: List<ContentEventRow>, visitors: ContentVisitorKeys): Set<ContentEventRow> {
+    private fun countedViews(rows: List<ContentEventRow>, judgeOnly: List<ContentEventRow>, visitors: ContentVisitorKeys): Set<ContentEventRow> {
         val lastViewAt = mutableMapOf<Triple<String, Any?, Long?>, LocalDateTime>()
         // 같은 순간에 같은 값으로 두 번 온 조회를 가르려고 값이 아니라 객체로 기억한다.
         val counted: MutableSet<ContentEventRow> = Collections.newSetFromMap(IdentityHashMap())
-        rows.filter { it.eventType == ContentEventType.VIEW }
+        (rows + judgeOnly).filter { it.eventType == ContentEventType.VIEW }
             .sortedBy { it.occurredAt }
             .forEach { row ->
                 val key = Triple(visitors.of(row), row.targetType, row.targetId)

@@ -44,10 +44,11 @@ class ContentMetricReader internal constructor(
         val detailEnd = to.plusDays(1).atStartOfDay()
         val detailRows = if (detailFrom.isAfter(to)) emptyList() else contentDailyStatQueryRepository.findDetailRows(scope, detailStart, detailEnd)
         val visitors = if (detailRows.isEmpty()) ContentVisitorKeys.NONE else contentDailyStatQueryRepository.findVisitorKeys(detailStart, detailEnd)
-        val rawCells = if (rawFrom.isAfter(to)) emptyList() else rawCells(scope, detailRows, visitors, rawFrom, to)
+        val judgeOnly = contentDailyStatQueryRepository.findViewsOutsideScope(scope, detailRows, detailStart, detailEnd)
+        val rawCells = if (rawFrom.isAfter(to)) emptyList() else rawCells(scope, detailRows, judgeOnly, visitors, rawFrom, to)
         val cells = statCells + rawCells
         val summed = cells.fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }
-        val period = if (exactUniques) withUniques(summed, ContentMetricCalculator.measureAll(detailRows, from.atStartOfDay(), visitors)) else summed
+        val period = if (exactUniques) withUniques(summed, ContentMetricCalculator.measureAll(detailRows, from.atStartOfDay(), visitors, judgeOnly)) else summed
         return ContentMetricSheetDto(cells, period, uniqueCountsApproximate = !exactUniques)
     }
 
@@ -62,7 +63,8 @@ class ContentMetricReader internal constructor(
         val rowsFrom = start.atStartOfDay().minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW)
         val rows = contentDailyStatQueryRepository.findDetailRows(scope, rowsFrom, toExclusive)
         val visitors = contentDailyStatQueryRepository.findVisitorKeys(rowsFrom, toExclusive)
-        val activities = ContentMetricCalculator.memberActivities(rows, start.atStartOfDay(), visitors)
+        val judgeOnly = contentDailyStatQueryRepository.findViewsOutsideScope(scope, rows, rowsFrom, toExclusive)
+        val activities = ContentMetricCalculator.memberActivities(rows, start.atStartOfDay(), visitors, judgeOnly)
         val adClickers = contentDailyStatQueryRepository.findAdClickMemberIds(scope, start.atStartOfDay(), toExclusive)
         val userIds = activities.keys + adClickers
         val profiles = contentDailyStatQueryRepository.findProfiles(userIds)
@@ -116,11 +118,12 @@ class ContentMetricReader internal constructor(
     private fun rawCells(
         scope: ContentMetricScope,
         detailRows: List<ContentEventRow>,
+        judgeOnly: List<ContentEventRow>,
         visitors: ContentVisitorKeys,
         rawFrom: LocalDate,
         to: LocalDate,
     ): List<ContentMetricCellDto> {
-        val detail = ContentMetricCalculator.measure(detailRows, rawFrom.atStartOfDay(), visitors) {
+        val detail = ContentMetricCalculator.measure(detailRows, rawFrom.atStartOfDay(), visitors, judgeOnly) {
             it.occurredAt.toLocalDate() to ContentMetricCalculator.statKeyOf(it)
         }
         val ads = rawFrom.datesUntil(to.plusDays(1)).toList().flatMap { date ->

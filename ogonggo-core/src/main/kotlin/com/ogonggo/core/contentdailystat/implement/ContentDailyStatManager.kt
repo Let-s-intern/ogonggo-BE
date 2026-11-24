@@ -33,7 +33,7 @@ class ContentDailyStatManager internal constructor(
             toExclusive,
         )
         val visitors = contentDailyStatQueryRepository.findVisitorKeys(from.minus(ContentMetricCalculator.DUPLICATE_VIEW_WINDOW), toExclusive)
-        val detail = ContentMetricCalculator.measure(rows, from, visitors, ContentMetricCalculator::statKeyOf)
+        val detail = ContentMetricCalculator.measure(rows, from, visitors, keyOf = ContentMetricCalculator::statKeyOf)
         val ads = ContentMetricCalculator.adMetricsByKey(
             contentDailyStatQueryRepository.countAdEvents(ContentMetricScope.All, from, toExclusive),
             contentDailyStatQueryRepository.countUniqueImpressions(ContentMetricScope.All, from, toExclusive),
