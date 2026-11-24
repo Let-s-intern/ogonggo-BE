@@ -2,7 +2,7 @@
 
 - 상태: Accepted
 - 결정일: 2026-08-27
-- 최종 변경일: 2026-11-19
+- 최종 변경일: 2026-11-24
 - 적용 범위: `ogonggo-api-user`, `ogonggo-api-admin` 관리자 콘솔 API
 - 예상 독자: API를 개발하거나 사용하는 서버·클라이언트 개발자
 - 리뷰 상태: 팀 리뷰 필요
@@ -325,6 +325,23 @@ Controller는 외부 `page`에서 1을 빼 API Service에 전달합니다. core�
 - 각 문항은 1000자 이하이며 넘으면 해당 필드명으로 400 `BAD_REQUEST`입니다.
 - 제출한 의견은 고치거나 지우는 기능이 없어 소프트 삭제 칼럼을 두지 않습니다.
 - 관리자 목록 `GET /api/v1/admin/service-feedbacks`는 필터·정렬 없이 최근에 남긴 순(`id DESC`)으로 주며, 항목은 `id`, `userId`(비로그인이면 `null`), `userName`, `userNickname`, `userEmail`, `satisfaction`, `improvement`, `registeredAt`입니다. 작성자 이름·닉네임·이메일은 사용자 프로필(`UserProfile`)에서 가져오며, 비로그인 작성이거나 프로필이 없으면 `null`입니다.
+
+### 기능 플래그
+
+`GET /api/v1/feature-flags`(사용자 API)는 페이지네이션 없이 모든 플래그를 key 순으로 `items`에 담아 돌려줍니다(결정일: 2026-11-24, LC-3660 / 리뷰 상태: 팀 리뷰 필요). 플래그는 몇 개 안 되고 화면이 한 번에 모두 읽기 때문입니다.
+
+```json
+{
+  "status": 200,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "items": [{ "key": "ad_report_cost_efficiency", "enabled": true }]
+  }
+}
+```
+
+- 항목은 `key`와 `enabled`뿐입니다. 설명과 변경자는 내리지 않습니다.
+- 플래그가 하나도 없으면 `items`는 빈 배열입니다.
 
 ### 광고 성과 리포트 CSV
 
