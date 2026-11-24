@@ -62,6 +62,29 @@ internal class ContentEventPersistenceTest @Autowired constructor(
     }
 
     @Test
+    fun `취준고민과 모집글의 조회도 대상 종류 이름으로 저장한다`() {
+        // given
+        val concernView = ContentEventAppendDto(
+            eventType = ContentEventType.VIEW,
+            targetType = ContentEventTargetType.CONCERN,
+            targetId = 40L,
+            exposureId = null,
+            userId = null,
+            visitorId = VISITOR_ID,
+            source = ContentEventSource.LIST,
+        )
+        val postView = concernView.copy(targetType = ContentEventTargetType.RECRUITMENT_POST, targetId = 50L)
+
+        // when
+        contentEventAppender.appendAll(listOf(concernView, postView), OCCURRED_AT)
+
+        // then
+        val saved = contentEventRepository.findAll().sortedBy { it.id }
+        assertEquals(listOf(ContentEventTargetType.CONCERN, ContentEventTargetType.RECRUITMENT_POST), saved.map { it.targetType })
+        assertEquals(listOf(40L, 50L), saved.map { it.targetId })
+    }
+
+    @Test
     fun `보관 기간 365일이 지난 이벤트만 묶음마다 지운다`() {
         // given
         val today = LocalDate.of(2026, 11, 19)

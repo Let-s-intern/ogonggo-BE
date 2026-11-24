@@ -23,7 +23,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.TemporalAdjusters
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
 @Service
@@ -35,7 +34,6 @@ class UserJobService(
     private val jobSourceReader: JobSourceReader,
     private val sourceUrlClickAppender: SourceUrlClickAppender,
     private val userProfileReader: UserProfileReader,
-    private val eventPublisher: ApplicationEventPublisher,
     private val companyContentPriorityReader: CompanyContentPriorityReader,
     private val clock: Clock,
 ) {
@@ -155,22 +153,19 @@ class UserJobService(
     }
 
     /**
-     * 조회됐다는 사실만 알리고 지표 갱신은 수신자에게 맡긴다.
-     * 기록이 비동기이므로 상세 응답의 조회 수에는 이번 조회가 아직 반영되지 않는다.
+     * 읽기만으로는 조회 수를 올리지 않는다. 조회 수는 브라우저가 보내는 조회 이벤트(`POST /api/v1/events`)로 센다.
      * 공고 분석은 지금 본문에 대한 것만 싣는다. 없거나 본문이 바뀐 뒤 아직 다시 분석하지 않았으면 비운다.
      */
     fun getJob(userId: Long?, jobId: Long): UserJobResult {
         val job = jobReader.readPublished(jobId)
         val bookmarked = jobId in readBookmarkedJobIds(userId, listOf(jobId))
-        val result = UserJobResult.from(
+        return UserJobResult.from(
             job = job,
             bookmarked = bookmarked,
             metric = jobMetricReader.read(jobId),
             analysis = jobAnalysisReader.readCurrent(job),
             sourceHtml = jobSourceReader.readHtml(jobId),
         )
-        eventPublisher.publishEvent(JobViewedEvent(jobId))
-        return result
     }
 
     /**

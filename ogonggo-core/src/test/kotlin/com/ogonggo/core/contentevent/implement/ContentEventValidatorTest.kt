@@ -5,6 +5,8 @@ import com.ogonggo.core.advertisementexposure.domain.AdvertisementExposureTarget
 import com.ogonggo.core.advertisementexposure.persistence.AdvertisementExposureJpaRepository
 import com.ogonggo.core.bootcamp.error.BootcampErrorCode
 import com.ogonggo.core.bootcamp.implement.BootcampReader
+import com.ogonggo.core.concern.error.ConcernErrorCode
+import com.ogonggo.core.concern.implement.ConcernReader
 import com.ogonggo.core.contentevent.domain.ContentEventSource
 import com.ogonggo.core.contentevent.domain.ContentEventTargetType
 import com.ogonggo.core.contentevent.domain.ContentEventType
@@ -12,6 +14,8 @@ import com.ogonggo.core.contentevent.implement.dto.ContentEventAppendDto
 import com.ogonggo.core.error.EntityNotFoundException
 import com.ogonggo.core.job.error.JobErrorCode
 import com.ogonggo.core.job.implement.JobReader
+import com.ogonggo.core.recruitmentpost.error.RecruitmentPostErrorCode
+import com.ogonggo.core.recruitmentpost.implement.RecruitmentPostReader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -21,8 +25,10 @@ class ContentEventValidatorTest {
 
     private val jobReader = Mockito.mock(JobReader::class.java)
     private val bootcampReader = Mockito.mock(BootcampReader::class.java)
+    private val concernReader = Mockito.mock(ConcernReader::class.java)
+    private val recruitmentPostReader = Mockito.mock(RecruitmentPostReader::class.java)
     private val exposureRepository = Mockito.mock(AdvertisementExposureJpaRepository::class.java)
-    private val validator = ContentEventValidator(jobReader, bootcampReader, exposureRepository)
+    private val validator = ContentEventValidator(jobReader, bootcampReader, concernReader, recruitmentPostReader, exposureRepository)
 
     @Test
     fun `게시 중이 아니거나 없는 대상의 이벤트는 그 건만 버린다`() {
@@ -39,6 +45,24 @@ class ContentEventValidatorTest {
 
         // then
         assertEquals(listOf(shown, shown), storable)
+    }
+
+    @Test
+    fun `공개된 취준고민과 모집글의 이벤트는 저장하고 지웠거나 숨긴 것은 버린다`() {
+        // given
+        Mockito.`when`(concernReader.read(HIDDEN_CONCERN_ID)).thenThrow(EntityNotFoundException(ConcernErrorCode.CONCERN_NOT_FOUND))
+        Mockito.`when`(recruitmentPostReader.readPublished(HIDDEN_POST_ID))
+            .thenThrow(EntityNotFoundException(RecruitmentPostErrorCode.RECRUITMENT_POST_NOT_FOUND))
+        val concern = view(ContentEventTargetType.CONCERN, CONCERN_ID)
+        val hiddenConcern = view(ContentEventTargetType.CONCERN, HIDDEN_CONCERN_ID)
+        val post = view(ContentEventTargetType.RECRUITMENT_POST, POST_ID)
+        val hiddenPost = view(ContentEventTargetType.RECRUITMENT_POST, HIDDEN_POST_ID)
+
+        // when
+        val storable = validator.filterStorable(listOf(concern, hiddenConcern, post, hiddenPost), NOW)
+
+        // then
+        assertEquals(listOf(concern, post), storable)
     }
 
     @Test
@@ -104,6 +128,10 @@ class ContentEventValidatorTest {
         const val JOB_ID = 15818L
         const val OTHER_JOB_ID = 15819L
         const val HIDDEN_JOB_ID = 20L
+        const val CONCERN_ID = 40L
+        const val HIDDEN_CONCERN_ID = 41L
+        const val POST_ID = 50L
+        const val HIDDEN_POST_ID = 51L
         const val MISSING_BOOTCAMP_ID = 30L
         const val AD_CARD_EXPOSURE_ID = 31L
         const val BANNER_EXPOSURE_ID = 12L

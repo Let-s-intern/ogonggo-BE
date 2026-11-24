@@ -9,4 +9,6 @@ enum class ContentEventTargetType(
 ) : EnumField {
     JOB(1, "채용공고"),
     BOOTCAMP(2, "부트캠프"),
+    CONCERN(3, "취준고민"),
+    RECRUITMENT_POST(4, "사이드·스터디 모집글"),
 }

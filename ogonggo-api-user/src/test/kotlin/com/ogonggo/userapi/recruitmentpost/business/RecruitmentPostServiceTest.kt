@@ -44,7 +44,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -66,7 +65,6 @@ class RecruitmentPostServiceTest {
     private val imageAssetManager = Mockito.mock(ImageAssetManager::class.java)
     private val postImageReader = Mockito.mock(RecruitmentPostImageReader::class.java)
     private val postImageManager = Mockito.mock(RecruitmentPostImageManager::class.java)
-    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZONE)
     private val service = RecruitmentPostService(
         userReader,
@@ -80,7 +78,6 @@ class RecruitmentPostServiceTest {
         imageAssetManager,
         postImageReader,
         postImageManager,
-        eventPublisher,
         clock,
         userProfileReader,
         applicationReader,
@@ -106,7 +103,7 @@ class RecruitmentPostServiceTest {
         assertEquals(0L, result.bookmarkCount)
         Mockito.verify(postReader).readPublished(12L)
         Mockito.verifyNoInteractions(postBookmarkReader)
-        Mockito.verify(eventPublisher).publishEvent(RecruitmentPostViewedEvent(12L))
+        Mockito.verifyNoInteractions(recruitmentPostMetricManager)
     }
 
     @Test

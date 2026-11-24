@@ -22,7 +22,6 @@ import com.ogonggo.core.user.implement.UserReader
 import com.ogonggo.core.user.implement.dto.UserProfileDto
 import com.ogonggo.userapi.error.InvalidRequestFieldException
 import com.ogonggo.userapi.user.implement.requireActive
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -41,7 +40,6 @@ class ConcernService(
     private val concernImageManager: ConcernImageManager,
     private val imageAssetManager: ImageAssetManager,
     private val contentValidator: LexicalEditorStateValidator,
-    private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock,
 ) {
 
@@ -62,7 +60,7 @@ class ConcernService(
         return toSummaries(concernReader.readPopular(createdFrom, sortType, POPULAR_CONCERN_LIMIT))
     }
 
-    /** 조회 수는 비동기로 올리므로 응답의 `viewCount`에는 이번 조회가 들어가지 않는다. */
+    /** 읽기만으로는 조회 수를 올리지 않는다. 조회 수는 브라우저가 보내는 조회 이벤트(`POST /api/v1/events`)로 센다. */
     fun readConcern(viewerUserId: Long?, concernId: Long): ConcernDetailResult {
         val concern = concernReader.read(concernId)
         val metric = concernMetricReader.read(concernId)
@@ -81,7 +79,7 @@ class ConcernService(
             commentCount = metric.commentCount,
             hasOfficialComment = hasOfficialComment,
             mine = viewerUserId == concern.authorUserId,
-        ).also { eventPublisher.publishEvent(ConcernViewedEvent(concernId)) }
+        )
     }
 
     @Transactional

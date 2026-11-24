@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import com.ogonggo.core.companycontentpriority.implement.CompanyContentPriorityReader
 import org.mockito.Mockito
-import org.springframework.context.ApplicationEventPublisher
 
 class UserBootcampServiceTest {
 
@@ -33,7 +32,6 @@ class UserBootcampServiceTest {
     private val bootcampContentReader = Mockito.mock(BootcampContentReader::class.java)
     private val sourceUrlClickAppender = Mockito.mock(SourceUrlClickAppender::class.java)
     private val bootcampMetricReader = Mockito.mock(BootcampMetricReader::class.java)
-    private val eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java)
     private val companyContentPriorityReader = Mockito.mock(CompanyContentPriorityReader::class.java)
     private val service = UserBootcampService(
         bootcampReader,
@@ -41,7 +39,6 @@ class UserBootcampServiceTest {
         bootcampContentReader,
         sourceUrlClickAppender,
         bootcampMetricReader,
-        eventPublisher,
         companyContentPriorityReader,
     )
 
@@ -81,19 +78,18 @@ class UserBootcampServiceTest {
     }
 
     @Test
-    fun `상세 조회는 지표를 읽은 뒤 조회 이벤트를 발행한다`() {
+    fun `상세를 여러 번 읽어도 조회 수는 그대로이고 지표는 읽기만 한다`() {
         val bootcamp = createBootcampMock()
         Mockito.`when`(bootcampReader.readPublic(1L)).thenReturn(bootcamp)
         Mockito.`when`(bootcampMetricReader.read(1L)).thenReturn(
             BootcampMetricDto(viewCount = 1, bookmarkCount = 0, commentCount = 0),
         )
 
-        val result = service.getBootcamp(USER_ID, 1L)
+        val viewCounts = List(3) { service.getBootcamp(USER_ID, 1L).viewCount }
 
-        val inOrder = Mockito.inOrder(bootcampMetricReader, eventPublisher)
-        inOrder.verify(bootcampMetricReader).read(1L)
-        inOrder.verify(eventPublisher).publishEvent(BootcampViewedEvent(1L))
-        assertEquals(1L, result.viewCount)
+        assertEquals(listOf(1L, 1L, 1L), viewCounts)
+        Mockito.verify(bootcampMetricReader, Mockito.times(3)).read(1L)
+        Mockito.verifyNoMoreInteractions(bootcampMetricReader)
     }
 
     @Test

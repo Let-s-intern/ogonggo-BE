@@ -39,7 +39,7 @@ internal class ContentEvent(
     val targetType: ContentEventTargetType?, /* 대상 콘텐츠 종류. 대상 없는 배너 이벤트면 없다 */
 
     @Column(name = "target_id")
-    val targetId: Long?, /* 대상 채용공고·부트캠프 식별자 */
+    val targetId: Long?, /* 대상 채용공고·부트캠프·취준고민·모집글 식별자 */
 
     @Column(name = "exposure_id")
     val exposureId: Long?, /* 광고 노출 식별자. 광고로 들어오지 않았으면 없다 */

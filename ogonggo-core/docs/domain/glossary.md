@@ -25,7 +25,7 @@
 | 커리큘럼 / 파트너사 | `BootcampCurriculum` / `BootcampPartner` | 부트캠프의 회차별 교육 내용 / 참여 기업 |
 | 운영 방식 | `BootcampOperationType` | 온라인, 오프라인, 온·오프라인 |
 | 수강료 유형 | `BootcampTuitionType` | 무료, 유료, 국비 지원 |
-| 지표 | `JobMetric`, `BootcampMetric` | 조회 수·북마크 수 같은 집계. 인기순 정렬에 씁니다. |
+| 지표 | `JobMetric`, `BootcampMetric` | 조회 수·북마크 수 같은 집계. 인기순 정렬에 씁니다. 조회 수는 상세 조회 GET이 아니라 브라우저가 보내는 조회 이벤트(`VIEW`)로 올리며, 같은 방문자의 30분 안 재조회와 봇은 올리지 않습니다. 2026-11-24 이전 값은 상세 GET마다 올린 것이라 그대로 둡니다. |
 
 ## 2. 상태
 
@@ -157,10 +157,10 @@
 | 게시 기간 | `AdvertisementContractProductPeriod` (`startDate`, `endDate`) | 계약 상품을 게시하기로 한 기간이자 데이터 집계 기간. 리포트는 이 기간의 데이터만 보여 줍니다. 하루 단위이며 종료일도 포함합니다. 운영자가 종료일만 바꿔 계약을 연장·단축할 수 있고, 이때 노출 기간은 바뀌지 않습니다. 기간 도입 전에 붙인 상품은 없습니다. |
 | 노출 기간 | `AdvertisementExposurePeriod` (`startAt`, `endAt`) | 실제로 광고가 화면에 노출되는 기간. 광고 노출마다 두며 없으면 상시입니다. 게시 기간과 따로 정합니다. |
 | 광고 노출 | `AdvertisementExposure` | 상품 자리에 띄울 배너·광고 공고의 설정. 운영자가 순서·켜짐·기간을 정하며, 노출 중·꺼짐은 켜짐과 기간으로 계산합니다. 광고주 계약이 없는 우리 홍보도 둡니다. 배너는 모바일 이미지(`mobileImageUrl`)를 선택으로 가지며, 없으면 모바일에서도 이미지(`imageUrl`)를 씁니다. 채용공고 목록 자리(`JOB_LIST`)의 광고 공고는 어느 직군 탭에 띄울지(`jobField`, 채용공고 직군 `JobField`)를 가질 수 있고, 없으면 `전체` 탭에 띄웁니다. 노출 하나가 탭 하나이므로 여러 탭에 띄우려면 탭마다 노출을 둡니다. 다른 자리는 갖지 않습니다. 오공고 PICK 자리(`JOB_PICK`)의 광고 공고는 운영자 PICK(`TodayJob`)과 같은 추천 문구 제목·설명(`recommendationTitle` 30자 이하, `recommendationDescription` 200자 이하)을 반드시 가지고, 다른 자리와 배너는 갖지 않습니다. |
-| 콘텐츠 이벤트 | `ContentEvent` | 방문자 브라우저가 보낸 공고 조회·CTA 클릭·스크롤과 광고 노출·클릭 한 건. 비회원도 남기며 익명 방문자 식별자(`visitorId`, 쿠키 `ogg_vid`)로 구분합니다. 시각(`occurredAt`)은 서버가 받은 시각입니다. 고치지 않고 365일이 지나면 지웁니다(숫자는 일별 집계에 남습니다). 같은 방문자의 30분 안 재조회도 모두 저장해 집계에서 한 번으로 셉니다. 광고 성과 리포트가 이것을 셉니다. 누적 조회 수(`JobMetric.viewCount`)와는 따로 셉니다. |
+| 콘텐츠 이벤트 | `ContentEvent` | 방문자 브라우저가 보낸 공고 조회·CTA 클릭·스크롤과 광고 노출·클릭 한 건. 비회원도 남기며 익명 방문자 식별자(`visitorId`, 쿠키 `ogg_vid`)로 구분합니다. 시각(`occurredAt`)은 서버가 받은 시각입니다. 고치지 않고 365일이 지나면 지웁니다(숫자는 일별 집계에 남습니다). 같은 방문자의 30분 안 재조회도 모두 저장해 집계에서 한 번으로 셉니다. 광고 성과 리포트가 이것을 셉니다. 상세 조회(`VIEW`)를 저장할 때 같은 규칙(같은 방문자가 같은 대상을 직전 조회로부터 30분 안에 다시 연 것은 뺍니다)으로 대상의 누적 조회 수도 올립니다. |
 | 콘텐츠 이벤트 종류 | `ContentEventType` | 상세 조회(`VIEW`), CTA 클릭(`CTA_CLICK`, 지원하러 가기·신청하러 가기), 스크롤(`SCROLL`, 떠날 때 가장 깊이 내린 위치와 화면이 보인 시간), 광고 노출(`IMPRESSION`), 광고 클릭(`AD_CLICK`), 공유(`SHARE`, 공고·부트캠프 상세에서 링크를 공유한 것). 조회·CTA 클릭·스크롤·공유는 대상 공고가, 광고 노출·클릭은 광고 노출이 있어야 합니다. |
 | 콘텐츠 이벤트 유입 경로 | `ContentEventSource` | 광고 카드(`AD_CARD`), 배너(`BANNER`), 목록(`LIST`), 검색(`SEARCH`), 직접 방문(`DIRECT`), 외부 유입(`EXTERNAL`), 기타(`OTHER`). 브라우저가 보낸 값을 그대로 저장합니다. 광고 문의 유입 경로(`AdvertisementInquiryInflowChannel`)와 다릅니다. |
-| 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`). |
+| 콘텐츠 이벤트 대상 종류 | `ContentEventTargetType` | 채용공고(`JOB`), 부트캠프(`BOOTCAMP`), 취준고민(`CONCERN`), 사이드·스터디 모집글(`RECRUITMENT_POST`). 취준고민과 모집글의 이벤트는 지금 사용자에게 보이는 글(숨기거나 지우지 않은 것, 게시 중인 것)만 저장합니다. |
 | 콘텐츠 일별 집계 | `ContentDailyStat` | 하루(KST)·대상·광고 노출·유입 경로마다 모은 콘텐츠 이벤트 숫자. 상세 조회수는 같은 방문자가 같은 대상을 직전 조회로부터 30분 안에 다시 연 것을 뺍니다. 매일 새벽 `contentDailyStatAggregation` 작업이 전날 분을 다시 씁니다. |
 | 순 노출수 | `ContentDailyStat.uniqueImpressions` | 같은 방문자(회원이면 회원, 아니면 익명 방문자)가 같은 광고 노출을 하루에 여러 번 봐도 한 번으로 센 노출수. 보일 때마다 센 노출수(`impressions`)와 따로 둡니다. |
 | 리포트 인사이트 | `AdvertisementReportInsight` | 운영자가 계약 상품의 성과 리포트에 직접 써서 기업 회원에게 보내는 제목·본문. 보내기 전에는 운영자만 봅니다. |
