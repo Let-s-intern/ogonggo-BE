@@ -48,8 +48,15 @@ class ContentMetricReader internal constructor(
         val rawCells = if (rawFrom.isAfter(to)) emptyList() else rawCells(scope, detailRows, judgeOnly, visitors, rawFrom, to)
         val cells = statCells + rawCells
         val summed = cells.fold(ContentMetricDto.ZERO) { total, cell -> total + cell.metric }
-        val period = if (exactUniques) withUniques(summed, ContentMetricCalculator.measureAll(detailRows, from.atStartOfDay(), visitors, judgeOnly)) else summed
-        return ContentMetricSheetDto(cells, period, uniqueCountsApproximate = !exactUniques)
+        if (!exactUniques) return ContentMetricSheetDto(cells, summed, uniqueCountsApproximate = true)
+        val fromAt = from.atStartOfDay()
+        return ContentMetricSheetDto(
+            cells = cells,
+            period = summed.withUniquesOf(ContentMetricCalculator.measureAll(detailRows, fromAt, visitors, judgeOnly)),
+            uniqueCountsApproximate = false,
+            dailyUniques = ContentMetricCalculator.measure(detailRows, fromAt, visitors, judgeOnly) { it.occurredAt.toLocalDate() },
+            exposureDailyUniques = ContentMetricCalculator.measure(detailRows, fromAt, visitors, judgeOnly) { it.occurredAt.toLocalDate() to it.exposureId },
+        )
     }
 
     /**
@@ -138,15 +145,4 @@ class ContentMetricReader internal constructor(
             ContentMetricCellDto(date, key.targetType, key.targetId, key.exposureId, key.source, metric)
         }
     }
-
-    private fun withUniques(summed: ContentMetricDto, exact: ContentMetricDto) = summed.copy(
-        uniqueVisitors = exact.uniqueVisitors,
-        memberUniqueVisitors = exact.memberUniqueVisitors,
-        ctaUniqueVisitors = exact.ctaUniqueVisitors,
-        ctaUniqueMembers = exact.ctaUniqueMembers,
-        scrollReach25 = exact.scrollReach25,
-        scrollReach50 = exact.scrollReach50,
-        scrollReach75 = exact.scrollReach75,
-        scrollReach100 = exact.scrollReach100,
-    )
 }

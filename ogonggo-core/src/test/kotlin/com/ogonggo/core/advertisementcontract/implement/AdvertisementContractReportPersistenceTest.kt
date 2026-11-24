@@ -218,6 +218,65 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
     }
 
     @Test
+    fun `같은 사람이 한 날 두 노출로 들어와도 그날 순 방문자와 CSV의 노출별 순 방문자는 날짜·노출 단위로 센다`() {
+        // given
+        val card = productRepository.findAll().single { it.category == AdvertisementProductCategory.JOB_POSTING }
+        val secondCardExposureId = checkNotNull(
+            exposureRepository.save(
+                AdvertisementExposure(
+                    product = card,
+                    contractId = contract.id,
+                    content = AdvertisementExposureContent(targetType = AdvertisementExposureTargetType.JOB, targetId = JOB_ID),
+                    adLabel = true,
+                    period = AdvertisementExposurePeriod.ALWAYS,
+                    exposed = true,
+                    displayOrder = 2,
+                ),
+            ).id,
+        )
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(12, 0), "a", secondCardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(13, 0), "a", cardExposureId, ContentEventSource.LIST)
+        event(ContentEventType.VIEW, START.atTime(14, 0), "b", secondCardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.CTA_CLICK, START.atTime(14, 1), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.CTA_CLICK, START.atTime(14, 2), "a", secondCardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.plusDays(1).atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        dailyStatManager.rebuild(START)
+        dailyStatManager.rebuild(START.plusDays(1))
+
+        // when
+        val report = reportReader.read(contract, cardProductId, null, null, TODAY)
+
+        // then
+        val first = report.daily.single { it.date == START }
+        assertEquals(4L, first.views)
+        assertEquals(2L, first.uniqueVisitors)
+        assertEquals(1L, first.ctaUniqueVisitors)
+        assertEquals(1L, report.daily.single { it.date == START.plusDays(1) }.uniqueVisitors)
+        assertEquals(2L, report.summary.uniqueVisitors)
+        val csv = report.csvRows.filter { it.date == START }.associateBy { it.exposureId }
+        assertEquals(1L, csv.getValue(cardExposureId).uniqueVisitors)
+        assertEquals(2L, csv.getValue(secondCardExposureId).uniqueVisitors)
+        assertEquals(false, report.uniqueCountsApproximate)
+    }
+
+    @Test
+    fun `원본 보관 기간을 벗어난 기간은 날짜별 순 방문자를 칸 합으로 두고 근사 표시를 단다`() {
+        // given
+        event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD)
+        event(ContentEventType.VIEW, START.atTime(12, 0), "a", cardExposureId, ContentEventSource.LIST)
+        dailyStatManager.rebuild(START)
+        val farFuture = START.plusDays(366)
+
+        // when
+        val report = reportReader.read(contract, cardProductId, START, START, farFuture)
+
+        // then
+        assertEquals(true, report.uniqueCountsApproximate)
+        assertEquals(2L, report.daily.single().uniqueVisitors)
+    }
+
+    @Test
     fun `조회 기간은 상품 기간 안으로 자르고 비면 400, 기간 없는 상품과 채널 상품은 409다`() {
         // given
         val kakao = productRepository.save(AdvertisementProduct(AdvertisementProductCategory.KAKAO_1, null, "카카오 톡방", null))
