@@ -103,7 +103,7 @@ internal class ContentDailyStatQueryRepository(
     }
 
     /**
-     * [rows]가 센 대상의 조회 중 [scope] 밖에 있는 것이다. 30분 안 재조회를 가를 때 기준으로만 쓰고 세지 않는다.
+     * [rows]가 센 대상의 조회 중 [scope] 밖에 있는 것이다. 1분 안 재조회를 가를 때 기준으로만 쓰고 세지 않는다.
      * 예를 들어 목록에서 연 조회(노출 없음)가 10분 뒤 광고로 다시 연 조회의 직전 조회가 된다.
      * 범위가 노출 몇 개일 때만 있다. 대상 하나나 전체는 그 대상의 조회가 모두 범위 안이다.
      */
@@ -274,7 +274,7 @@ internal class ContentDailyStatQueryRepository(
     /**
      * [from]~[toExclusive] 동안 [type] 이벤트를 낸 서로 다른 방문자(방문자 키)와 회원을 센다. 원본을 읽지 않고 SQL로 센다.
      * 방문자 표는 [keyFrom]~[keyToExclusive] 안에서 만든다. 코틀린 계산(`ContentMetricReader.read`의 상세 경로)과 같은 값을 내려면
-     * 그 계산이 쓰는 범위(조회 시작 30분 전부터)를 넘긴다.
+     * 그 계산이 쓰는 범위(조회 시작 1분 전부터)를 넘긴다.
      */
     fun countUniques(
         scope: ContentMetricScope,

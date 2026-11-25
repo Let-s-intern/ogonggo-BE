@@ -113,7 +113,7 @@ data class MyAdvertisementReportSummaryResponse(
     val adClicks: Long,
     @field:Schema(description = "소재 클릭률(adClicks / impressions, 0~1). 노출이 없으면 null", nullable = true)
     val adClickRate: Double?,
-    @field:Schema(description = "상세 조회수. 같은 방문자가 30분 안에 다시 연 것은 한 번")
+    @field:Schema(description = "상세 조회수. 같은 방문자가 1분 안에 다시 연 것은 한 번")
     val views: Long,
     @field:Schema(description = "상세를 연 순 방문자 수. 회원은 회원 id로 세고, 비회원은 익명 방문자 id로 세되 같은 브라우저가 기간 안에 로그인한 적이 있으면 그 회원으로 센다")
     val uniqueVisitors: Long,
@@ -293,7 +293,7 @@ data class MyAdvertisementReportJobFieldResponse(
     val label: String,
     @field:Schema(description = "상세를 연 순 회원 수")
     val memberUniqueVisitors: Long,
-    @field:Schema(description = "회원 상세 조회수(30분 안 재조회는 한 번)")
+    @field:Schema(description = "회원 상세 조회수(1분 안 재조회는 한 번)")
     val memberViews: Long,
     @field:Schema(description = "CTA를 누른 순 회원 수")
     val ctaUniqueMembers: Long,

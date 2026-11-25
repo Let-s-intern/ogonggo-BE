@@ -22,25 +22,25 @@ internal class ContentEventReaderTest @Autowired constructor(
 ) {
 
     @Test
-    fun `같은 방문자가 같은 대상을 30분 안에 다시 열면 조회수에 넣지 않고 정확히 30분이 지나면 넣는다`() {
+    fun `같은 방문자가 같은 대상을 1분 안에 다시 열면 조회수에 넣지 않고 정확히 1분이 지나면 넣는다`() {
         // given
         contentEventAppender.appendAll(listOf(view()), FIRST)
 
         // when & then
-        assertEquals(emptyList<ContentEventAppendDto>(), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(29).plusSeconds(59)))
-        assertEquals(listOf(view()), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(30)))
-        assertEquals(listOf(view()), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(31)))
+        assertEquals(emptyList<ContentEventAppendDto>(), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusSeconds(59)))
+        assertEquals(listOf(view()), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(1)))
+        assertEquals(listOf(view()), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(2)))
     }
 
     @Test
     fun `직전 조회가 조회수에 들어가지 않은 조회여도 그 시각이 기준이 된다`() {
-        // given: 0분 조회, 20분 재조회(중복), 40분에 다시 연다
+        // given: 0초 조회, 30초 재조회(중복), 70초에 다시 연다
         contentEventAppender.appendAll(listOf(view()), FIRST)
-        contentEventAppender.appendAll(listOf(view()), FIRST.plusMinutes(20))
+        contentEventAppender.appendAll(listOf(view()), FIRST.plusSeconds(30))
 
-        // when & then: 0분 기준으로는 30분이 지났지만 직전 조회(20분)로부터는 20분이다
-        assertEquals(emptyList<ContentEventAppendDto>(), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(40)))
-        assertEquals(listOf(view()), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(50)))
+        // when & then: 0초 기준으로는 1분이 지났지만 직전 조회(30초)로부터는 40초다
+        assertEquals(emptyList<ContentEventAppendDto>(), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusSeconds(70)))
+        assertEquals(listOf(view()), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusSeconds(90)))
     }
 
     @Test
@@ -50,7 +50,7 @@ internal class ContentEventReaderTest @Autowired constructor(
         val otherVisitor = view().copy(visitorId = OTHER_VISITOR_ID)
         val otherTarget = view().copy(targetId = 16L)
         val otherType = view().copy(targetType = ContentEventTargetType.CONCERN)
-        val now = FIRST.plusMinutes(5)
+        val now = FIRST.plusSeconds(30)
 
         // when
         val countable = contentEventReader.filterCountableViews(listOf(otherVisitor, otherTarget, otherType, view()), now)
@@ -81,7 +81,7 @@ internal class ContentEventReaderTest @Autowired constructor(
         // given: 로그인 전 익명 조회(방문자 식별자만), 다른 기기에서 회원으로 연 조회(회원 식별자만)
         contentEventAppender.appendAll(listOf(view()), FIRST)
         contentEventAppender.appendAll(listOf(view().copy(visitorId = OTHER_VISITOR_ID, userId = MEMBER_ID, targetId = 16L)), FIRST)
-        val now = FIRST.plusMinutes(10)
+        val now = FIRST.plusSeconds(30)
 
         // when
         val loginAfterAnonymousView = view().copy(userId = MEMBER_ID)
@@ -97,7 +97,7 @@ internal class ContentEventReaderTest @Autowired constructor(
     fun `익명 방문자는 같은 방문자 식별자의 회원 조회도 같은 사람으로 본다`() {
         contentEventAppender.appendAll(listOf(view().copy(userId = MEMBER_ID)), FIRST)
 
-        assertEquals(emptyList<ContentEventAppendDto>(), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusMinutes(10)))
+        assertEquals(emptyList<ContentEventAppendDto>(), contentEventReader.filterCountableViews(listOf(view()), FIRST.plusSeconds(30)))
     }
 
     private fun view() = ContentEventAppendDto(

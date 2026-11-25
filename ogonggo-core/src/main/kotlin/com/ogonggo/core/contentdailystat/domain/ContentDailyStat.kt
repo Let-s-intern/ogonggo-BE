@@ -47,7 +47,7 @@ internal class ContentDailyStat(
     @Column(nullable = false, length = 20)
     val source: ContentEventSource, /* 유입 경로 */
 
-    @Column(nullable = false) val views: Long, /* 30분 안 재조회를 뺀 상세 조회수 */
+    @Column(nullable = false) val views: Long, /* 1분 안 재조회를 뺀 상세 조회수 */
     @Column(name = "unique_visitors", nullable = false) val uniqueVisitors: Long, /* 상세를 연 순 방문자 수 */
     @Column(name = "member_views", nullable = false) val memberViews: Long, /* 회원 조회수 */
     @Column(name = "member_unique_visitors", nullable = false) val memberUniqueVisitors: Long, /* 상세를 연 순 회원 수 */
