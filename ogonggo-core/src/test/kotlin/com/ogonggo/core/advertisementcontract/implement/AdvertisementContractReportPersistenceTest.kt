@@ -223,7 +223,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         event(ContentEventType.VIEW, TODAY.minusDays(1).atTime(10, 0), "a", bannerExposureId, ContentEventSource.BANNER)
         dailyStatManager.rebuild(TODAY.minusDays(1), TODAY)
         event(ContentEventType.VIEW, TODAY.atTime(9, 0), "b", bannerExposureId, ContentEventSource.BANNER)
-        event(ContentEventType.VIEW, TODAY.atTime(9, 10), "b", bannerExposureId, ContentEventSource.BANNER)
+        event(ContentEventType.VIEW, TODAY.atTime(9, 0).plusSeconds(30), "b", bannerExposureId, ContentEventSource.BANNER)
 
         // when
         val report = reportReader.read(contract, bannerProductId, null, null, TODAY)
@@ -327,7 +327,7 @@ internal class AdvertisementContractReportPersistenceTest @Autowired constructor
         profile(1L, "백엔드/서버 개발, 마케터")
         profile(2L, null)
         event(ContentEventType.VIEW, START.atTime(10, 0), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
-        event(ContentEventType.VIEW, START.atTime(10, 10), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
+        event(ContentEventType.VIEW, START.atTime(10, 0).plusSeconds(30), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
         event(ContentEventType.CTA_CLICK, START.atTime(10, 11), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
         event(ContentEventType.AD_CLICK, START.atTime(9, 59), "a", cardExposureId, ContentEventSource.AD_CARD, userId = 1L)
         event(ContentEventType.VIEW, START.atTime(11, 0), "b", cardExposureId, ContentEventSource.AD_CARD, userId = 2L)

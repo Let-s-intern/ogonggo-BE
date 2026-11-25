@@ -88,12 +88,12 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `직전 조회에서 30분 안의 재조회는 세지 않고 정확히 30분이 지나면 센다(세지 않은 조회도 기준이 된다)`() {
+    fun `직전 조회에서 1분 안의 재조회는 세지 않고 정확히 1분이 지나면 센다(세지 않은 조회도 기준이 된다)`() {
         // given
         save(view(at(10, 0)))
-        save(view(at(10, 29).plusSeconds(59)))
-        save(view(at(10, 59).plusSeconds(58)))
-        save(view(at(11, 29).plusSeconds(58)))
+        save(view(at(10, 0).plusSeconds(59)))
+        save(view(at(10, 1).plusSeconds(58)))
+        save(view(at(10, 2).plusSeconds(58)))
 
         // when
         contentDailyStatManager.rebuild(DAY, TODAY)
@@ -103,11 +103,11 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `자정을 넘긴 재조회는 전날 끝 30분의 조회를 보고 세지 않는다`() {
+    fun `자정을 넘긴 재조회는 전날 끝 1분의 조회를 보고 세지 않는다`() {
         // given
-        save(view(DAY.minusDays(1).atTime(23, 50)))
-        save(view(at(0, 10)))
-        save(view(at(0, 10), visitor = "other"))
+        save(view(DAY.minusDays(1).atTime(23, 59, 30)))
+        save(view(at(0, 0).plusSeconds(20)))
+        save(view(at(0, 0).plusSeconds(20), visitor = "other"))
 
         // when
         contentDailyStatManager.rebuild(DAY, TODAY)
@@ -185,11 +185,11 @@ internal class ContentDailyStatPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `회원 키로 본 조회와 비회원 키로 본 재조회도 30분 안이면 한 번이다`() {
+    fun `회원 키로 본 조회와 비회원 키로 본 재조회도 1분 안이면 한 번이다`() {
         // given
         save(view(at(10, 0), userId = 7L, browser = "a"))
-        save(view(at(10, 10), visitor = "a"))
-        save(view(at(10, 20), visitor = "a"))
+        save(view(at(10, 0).plusSeconds(20), visitor = "a"))
+        save(view(at(10, 0).plusSeconds(40), visitor = "a"))
 
         // when
         contentDailyStatManager.rebuild(DAY, TODAY)

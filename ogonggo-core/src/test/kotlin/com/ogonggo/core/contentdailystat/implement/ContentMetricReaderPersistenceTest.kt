@@ -31,10 +31,10 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
     private val scope = ContentMetricScope.Exposures(setOf(EXPOSURE_ID))
 
     @Test
-    fun `목록에서 연 조회 10분 뒤 광고로 다시 연 조회는 오늘 칸에서도 세지 않아 일별 집계와 같다`() {
+    fun `목록에서 연 조회 30초 뒤 광고로 다시 연 조회는 오늘 칸에서도 세지 않아 일별 집계와 같다`() {
         // given
         save(view(at(10, 0), exposureId = null, source = ContentEventSource.LIST))
-        save(view(at(10, 10)))
+        save(view(at(10, 0).plusSeconds(30)))
         save(view(at(11, 0)))
 
         // when
@@ -52,8 +52,8 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
     fun `다른 노출로 연 조회와 비회원 키의 조회도 범위 밖이면 직전 조회로만 보고 회원 키 조회와 한 방문자로 가른다`() {
         // given
         save(view(at(10, 0), exposureId = OTHER_EXPOSURE_ID, browser = "a"))
-        save(view(at(10, 5), userId = 7L, browser = "a"))
-        save(view(at(10, 6), browser = "b"))
+        save(view(at(10, 0).plusSeconds(20), userId = 7L, browser = "a"))
+        save(view(at(10, 0).plusSeconds(30), browser = "b"))
 
         // when
         val period = contentMetricReader.read(scope, DAY, DAY, today = DAY).period
@@ -65,10 +65,10 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
     }
 
     @Test
-    fun `30분이 지난 뒤 광고로 연 조회는 센다`() {
+    fun `1분이 지난 뒤 광고로 연 조회는 센다`() {
         // given
         save(view(at(10, 0), exposureId = null, source = ContentEventSource.LIST))
-        save(view(at(10, 30)))
+        save(view(at(10, 1)))
 
         // when
         val period = contentMetricReader.read(scope, DAY, DAY, today = DAY).period
@@ -81,7 +81,7 @@ internal class ContentMetricReaderPersistenceTest @Autowired constructor(
     fun `회원별 조회수도 범위 밖 직전 조회를 보고 센다`() {
         // given
         save(view(at(10, 0), userId = 7L, browser = "m7", exposureId = null, source = ContentEventSource.LIST))
-        save(view(at(10, 10), userId = 7L, browser = "m7"))
+        save(view(at(10, 0).plusSeconds(30), userId = 7L, browser = "m7"))
         save(view(at(12, 0), userId = 8L, browser = "m8"))
 
         // when
